@@ -7,7 +7,7 @@ services:
     volumes:
       - esdata01:/usr/share/elasticsearch/data
     ports:
-      - ${ES_PORT}:9200
+      - 8080:9200
     env_file: .env
     environment:
       - node.name=es01
