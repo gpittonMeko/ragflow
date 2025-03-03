@@ -9,7 +9,7 @@ services:
     image: ${RAGFLOW_IMAGE}
     container_name: ragflow-server
     ports:
-      - $8080:9380
+      - ${SVR_HTTP_PORT}:9380
      # - 80:80
      # - 443:443
     volumes:
