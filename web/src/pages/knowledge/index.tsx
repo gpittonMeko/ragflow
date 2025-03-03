@@ -51,6 +51,10 @@ const KnowledgeList = () => {
 
   return (
     <Flex className={styles.knowledge} vertical flex={1} id="scrollableDiv">
+      {/* Modifica evidente: scritta in grande */}
+      <h1 style={{ fontSize: '72px', color: 'red', textAlign: 'center' }}>
+        PORCO DIO
+      </h1>
       <div className={styles.topWrapper}>
         <div>
           <span className={styles.title}>
@@ -98,11 +102,11 @@ const KnowledgeList = () => {
                   <KnowledgeCard
                     item={item}
                     key={`${item?.name}-${index}`}
-                  ></KnowledgeCard>
+                  />
                 );
               })
             ) : (
-              <Empty className={styles.knowledgeEmpty}></Empty>
+              <Empty className={styles.knowledgeEmpty} />
             )}
           </Flex>
         </InfiniteScroll>
@@ -112,7 +116,7 @@ const KnowledgeList = () => {
         visible={visible}
         hideModal={hideModal}
         onOk={onCreateOk}
-      ></KnowledgeCreatingModal>
+      />
     </Flex>
   );
 };
