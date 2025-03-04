@@ -35,6 +35,11 @@ const routes = [
     layout: false,
   },
   {
+    path: '/login-page',
+    component: '@/pages/login-page',
+    layout: false,
+  },
+  {
     path: '/chat/share',
     component: '@/pages/chat/share',
     layout: false,
