@@ -1,23 +1,29 @@
 import React from 'react';
-import RunDrawer from '../run-drawer';
+import ChatContainer from '@/components/ChatContainer'; // Assicurati che il percorso sia corretto
 import styles from './index.less';
 
 const PresentationPage: React.FC = () => {
   return (
     <div className={styles.pageContainer}>
       {/* Header */}
-      <header>
+      <header className={styles.header}>
         <h1 className={styles.movingGradientLogo}>SGAI</h1>
       </header>
 
+      {/* Contenuto principale */}
       <div className={styles.mainContent}>
         <div className={styles.presentationContainer}>
-          {/* Sezione di presentazione */}
+          <header className={styles.presentationHeader}>
+            <h2 className={styles.presentationTitle}>
+              Sommarizzazione Accertamenti - SGAI
+            </h2>
+          </header>
           <div className={styles.presentation}>
             <p>
-              SGAI (Sistema di Gestione e Analisi Intelligente) è una piattaforma che utilizza l’intelligenza artificiale 
-              per supportare l’analisi e la gestione delle controversie tributarie. Lavoriamo in modo indipendente, senza 
-              legami con enti istituzionali, per garantire trasparenza e imparzialità.
+              SGAI (Sistema di Gestione e Analisi Intelligente) è una piattaforma che utilizza
+              l’intelligenza artificiale per supportare l’analisi e la gestione delle controversie
+              tributarie. Lavoriamo in modo indipendente, senza legami con enti istituzionali, per
+              garantire trasparenza e imparzialità.
             </p>
             <p>
               <strong>
@@ -26,24 +32,14 @@ const PresentationPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Iframe per la chat (chat share) */}
-          <div className={styles.iframeContainer}>
-            <iframe
-              src="https://sgailegal.com:8080/chat/share?shared_id=a871ecb2eaba11efb3a10242ac120006&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm"
-              title="Chat Share"
-              width="100%"
-              height="100%"
-              frameBorder="0"
-              style={{ border: 'none' }}
-            ></iframe>
+          {/* Integrazione della chat */}
+          <div className={styles.chatSection}>
+            <ChatContainer controller={new AbortController()} />
           </div>
-
-          {/* Componente per la chat integrata (se lo utilizzi) */}
-          <RunDrawer />
         </div>
       </div>
 
-      {/* Overlay Work In Progress */}
+      {/* Overlay (Work In Progress) */}
       <div className={styles.workInProgressOverlay} id="work-in-progress-overlay">
         <div className={styles.overlayContent}>
           <p>Stiamo sviluppando l'applicazione, torneremo a breve!</p>
