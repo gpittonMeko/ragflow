@@ -1,5 +1,5 @@
 import React from 'react';
-import RunDrawer from './RunDrawer'; // Assicurati che il percorso sia corretto
+import RunDrawer from '../run-drawer';
 import styles from './index.less';
 
 const PresentationPage: React.FC = () => {
