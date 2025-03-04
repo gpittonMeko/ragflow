@@ -1,6 +1,6 @@
 import { useLogin, useRegister } from '@/hooks/login-hooks';
 import { rsaPsw } from '@/utils';
-import { Button, Checkbox, Form, Input } from 'antd';
+import { Button, Checkbox, Form, Input, message } from 'antd'; // Aggiunto "message"
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon, useNavigate } from 'umi';
@@ -29,21 +29,19 @@ const Login = () => {
   const onCheck = async () => {
     try {
       const params = await form.validateFields();
-
       const email = `${params.email}`.trim();
 
-      // Controlla se l'email è quella consentita
+      // Blocca l'accesso se l'email non è quella autorizzata
       if (email !== 'giovanni.pitton@mekosrl.it') {
         message.error('Accesso non consentito');
         return;
       }
-      
 
       const rsaPassWord = rsaPsw(params.password) as string;
 
       if (title === 'login') {
         const code = await login({
-          email: `${params.email}`.trim(),
+          email,
           password: rsaPassWord,
         });
         if (code === 0) {
@@ -52,7 +50,7 @@ const Login = () => {
       } else {
         const code = await register({
           nickname: params.nickname,
-          email: params.email,
+          email,
           password: rsaPassWord,
         });
         if (code === 0) {
@@ -63,9 +61,9 @@ const Login = () => {
       console.log('Failed:', errorInfo);
     }
   };
+
   const formItemLayout = {
     labelCol: { span: 6 },
-    // wrapperCol: { span: 8 },
   };
 
   const toGoogle = () => {
@@ -124,19 +122,18 @@ const Login = () => {
             </Form.Item>
             {title === 'login' && (
               <Form.Item name="remember" valuePropName="checked">
-                <Checkbox> {t('rememberMe')}</Checkbox>
+                <Checkbox>{t('rememberMe')}</Checkbox>
               </Form.Item>
             )}
             <div>
-              {title === 'login' && (
+              {title === 'login' ? (
                 <div>
                   {t('signInTip')}
                   <Button type="link" onClick={changeTitle}>
                     {t('signUp')}
                   </Button>
                 </div>
-              )}
-              {title === 'register' && (
+              ) : (
                 <div>
                   {t('signUpTip')}
                   <Button type="link" onClick={changeTitle}>
@@ -156,20 +153,6 @@ const Login = () => {
             </Button>
             {title === 'login' && (
               <>
-                {/* <Button
-                  block
-                  size="large"
-                  onClick={toGoogle}
-                  style={{ marginTop: 15 }}
-                >
-                  <div>
-                    <Icon
-                      icon="local:google"
-                      style={{ verticalAlign: 'middle', marginRight: 5 }}
-                    />
-                    Sign in with Google
-                  </div>
-                </Button> */}
                 {location.host === Domain && (
                   <Button
                     block
@@ -192,7 +175,7 @@ const Login = () => {
         </div>
       </div>
       <div className={styles.loginRight}>
-        <RightPanel></RightPanel>
+        <RightPanel />
       </div>
     </div>
   );
