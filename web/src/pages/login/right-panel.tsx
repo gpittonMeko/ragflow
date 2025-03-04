@@ -11,12 +11,9 @@ const LoginRightPanel = () => {
   return (
     <section className={styles.rightPanel}>
       <Flex vertical gap={40}>
-        <Title level={1} className={classNames(styles.white, styles.loginTitle)}>
+        <Title level={1} className={classNames(styles.pink, styles.loginTitle)}>
           Benvenuto nel portale support di SGAI
         </Title>
-        <Text className={classNames(styles.pink, styles.loginDescription)}>
-          {t('description')}
-        </Text>
       </Flex>
     </section>
   );
