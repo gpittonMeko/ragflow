@@ -30,6 +30,15 @@ const Login = () => {
     try {
       const params = await form.validateFields();
 
+      const email = `${params.email}`.trim();
+
+      // Controlla se l'email è quella consentita
+      if (email !== 'giovanni.pitton@mekosrl.it') {
+        message.error('Accesso non consentito');
+        return;
+      }
+      
+
       const rsaPassWord = rsaPsw(params.password) as string;
 
       if (title === 'login') {
