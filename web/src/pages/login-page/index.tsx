@@ -6,7 +6,7 @@ import MessageItem from '../../components/message-item';
 import MessageInput from '../../components/message-input';
 import PdfDrawer from '../../components/pdf-drawer';
 import { useClickDrawer } from '../../components/pdf-drawer/hooks';
-import { MessageType } from '../../constants/chat';
+import { MessageType } from '@/constants/chat';
 
 // Hook "generici" (in src/hooks)
 import {
@@ -16,7 +16,7 @@ import {
 import { useFetchUserInfo } from '../../hooks/user-setting-hooks';
 
 // Utility generiche (in src/utils)
-import { buildMessageUuidWithRole } from '../login/chat';
+import { buildMessageUuidWithRole } from '../login/utils';
 
 // Hook e utility "locali" alla chat (in src/chat)
 // Nota: non aggiungere l'estensione ".ts"
