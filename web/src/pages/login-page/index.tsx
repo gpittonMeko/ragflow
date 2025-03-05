@@ -16,7 +16,7 @@ import {
 import { useFetchUserInfo } from '../../hooks/user-setting-hooks';
 
 // Utility generiche (in src/utils)
-import { buildMessageUuidWithRole } from '../../login/chat';
+import { buildMessageUuidWithRole } from '../login/chat';
 
 // Hook e utility "locali" alla chat (in src/chat)
 // Nota: non aggiungere l'estensione ".ts"
@@ -26,9 +26,9 @@ import {
   useGetSendButtonDisabled,
   useSendButtonDisabled,
   useSendNextMessage,
-} from '../../chat/hooks';
+} from '../login/hooks';
 
-import { buildMessageItemReference } from '../../login/utils';
+import { buildMessageItemReference } from '../login/utils';
 
 // Stili locali della pagina
 import styles from './index.less';
