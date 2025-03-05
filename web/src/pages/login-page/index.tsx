@@ -18,16 +18,15 @@ import { useFetchUserInfo } from '../../hooks/user-setting-hooks';
 // 3) Utility generiche se stanno in src/utils/chat.ts
 import { buildMessageUuidWithRole } from '../../utils/chat';
 
-// 4) Hook e utility “locali” alla cartella chat (se li hai in src/chat/hooks.ts e src/chat/utils.ts)
 import {
   useCreateConversationBeforeUploadDocument,
   useGetFileIcon,
   useGetSendButtonDisabled,
   useSendButtonDisabled,
   useSendNextMessage,
-} from '../../chat/hooks';  // <-- Se "hooks.ts" sta in src/chat/hooks.ts
+} from '../../chat/hooks.ts';  // Aggiungi ".ts"
 
-import { buildMessageItemReference } from '../../chat/utils';  // <-- Se "utils.ts" sta in src/chat/utils.ts
+import { buildMessageItemReference } from '../../chat/utils.ts';  // Aggiungi ".ts"
 
 // Stili locali della pagina
 import styles from './index.less';
