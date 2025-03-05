@@ -2,15 +2,6 @@ import React, { memo } from 'react';
 import MessageItem from '@/components/message-item';
 import { MessageType } from '@/constants/chat';
 import { Flex, Spin } from 'antd';
-import {
-  useCreateConversationBeforeUploadDocument,
-  useGetFileIcon,
-  useGetSendButtonDisabled,
-  useSendButtonDisabled,
-  useSendNextMessage,
-} from '../hooks';
-import { buildMessageItemReference } from '../utils';
-
 import MessageInput from '@/components/message-input';
 import PdfDrawer from '@/components/pdf-drawer';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
