@@ -1,13 +1,16 @@
 import React, { memo } from 'react';
 import { Flex, Spin } from 'antd';
 
-// Import relativi a due livelli sopra (perché "login-page" è in "pages", 
-// e devi risalire a "src" per poi scendere in "components", "constants", ecc.)
+// ATTENZIONE AI LIVELLI DI ../
+// Da "login-page" dobbiamo risalire di 2 livelli per tornare a "src/",
+// quindi: ../../hooks e ../../utils
+
 import MessageItem from '../../components/message-item';
 import { MessageType } from '../../constants/chat';
 import MessageInput from '../../components/message-input';
 import PdfDrawer from '../../components/pdf-drawer';
 import { useClickDrawer } from '../../components/pdf-drawer/hooks';
+
 import {
   useFetchNextConversation,
   useGetChatSearchParams,
@@ -15,18 +18,19 @@ import {
 import { useFetchUserInfo } from '../../hooks/user-setting-hooks';
 import { buildMessageUuidWithRole } from '../../utils/chat';
 
-// Import relativi a un livello sopra (perché "hooks" e "utils" si trovano
-// nella stessa cartella "pages" o comunque un livello sopra "login-page").
+// Qui importiamo i moduli (hook e utils) che prima erano "../hooks" e "../utils"
 import {
   useCreateConversationBeforeUploadDocument,
   useGetFileIcon,
   useGetSendButtonDisabled,
   useSendButtonDisabled,
   useSendNextMessage,
-} from '../hooks';
-import { buildMessageItemReference } from '../utils';
+} from '../../hooks'; // Se i tuoi custom hook sono esportati in un unico index.ts
+// oppure: from '../../hooks/chat-hooks' se si trovano lì
 
-// Stili locali
+import { buildMessageItemReference } from '../../utils'; // Se la funzione si trova in "src/utils/index.ts"
+// oppure: from '../../utils/chat' se si trova in "src/utils/chat.ts"
+
 import styles from './index.less';
 
 // Interfaccia per le props di ChatContainer
@@ -50,8 +54,13 @@ const ChatContainer = ({ controller }: IProps) => {
     removeMessageById,
   } = useSendNextMessage(controller);
 
-  const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
-    useClickDrawer();
+  const {
+    visible,
+    hideModal,
+    documentId,
+    selectedChunk,
+    clickDocumentButton,
+  } = useClickDrawer();
 
   const disabled = useGetSendButtonDisabled();
   const sendDisabled = useSendButtonDisabled(value);
@@ -77,13 +86,13 @@ const ChatContainer = ({ controller }: IProps) => {
                   }
                   key={buildMessageUuidWithRole(message)}
                   item={message}
-                  nickname={userInfo.nickname}
-                  avatar={userInfo.avatar}
-                  avatarDialog={conversation.avatar}
+                  nickname={userInfo?.nickname}
+                  avatar={userInfo?.avatar}
+                  avatarDialog={conversation?.avatar}
                   reference={buildMessageItemReference(
                     {
                       message: derivedMessages,
-                      reference: conversation.reference,
+                      reference: conversation?.reference,
                     },
                     message,
                   )}
@@ -162,12 +171,7 @@ const PresentationPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Overlay (Work In Progress) */}
-      <div className={styles.workInProgressOverlay} id="work-in-progress-overlay">
-        <div className={styles.overlayContent}>
-          <p>Stiamo sviluppando l'applicazione, torneremo a breve!</p>
-        </div>
-      </div>
+
     </div>
   );
 };
