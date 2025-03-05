@@ -1,17 +1,22 @@
 import React, { memo } from 'react';
-import MessageItem from '@/components/message-item';
-import { MessageType } from '@/constants/chat';
 import { Flex, Spin } from 'antd';
-import MessageInput from '@/components/message-input';
-import PdfDrawer from '@/components/pdf-drawer';
-import { useClickDrawer } from '@/components/pdf-drawer/hooks';
+
+// Import relativi a due livelli sopra (perché "login-page" è in "pages", 
+// e devi risalire a "src" per poi scendere in "components", "constants", ecc.)
+import MessageItem from '../../components/message-item';
+import { MessageType } from '../../constants/chat';
+import MessageInput from '../../components/message-input';
+import PdfDrawer from '../../components/pdf-drawer';
+import { useClickDrawer } from '../../components/pdf-drawer/hooks';
 import {
   useFetchNextConversation,
   useGetChatSearchParams,
-} from '@/hooks/chat-hooks';
-import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
-import { buildMessageUuidWithRole } from '@/utils/chat';
-import styles from './index.less';
+} from '../../hooks/chat-hooks';
+import { useFetchUserInfo } from '../../hooks/user-setting-hooks';
+import { buildMessageUuidWithRole } from '../../utils/chat';
+
+// Import relativi a un livello sopra (perché "hooks" e "utils" si trovano
+// nella stessa cartella "pages" o comunque un livello sopra "login-page").
 import {
   useCreateConversationBeforeUploadDocument,
   useGetFileIcon,
@@ -20,6 +25,9 @@ import {
   useSendNextMessage,
 } from '../hooks';
 import { buildMessageItemReference } from '../utils';
+
+// Stili locali
+import styles from './index.less';
 
 // Interfaccia per le props di ChatContainer
 interface IProps {
@@ -44,9 +52,12 @@ const ChatContainer = ({ controller }: IProps) => {
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
     useClickDrawer();
+
   const disabled = useGetSendButtonDisabled();
   const sendDisabled = useSendButtonDisabled(value);
+
   useGetFileIcon();
+
   const { data: userInfo } = useFetchUserInfo();
   const { createConversationBeforeUploadDocument } =
     useCreateConversationBeforeUploadDocument();
@@ -87,6 +98,7 @@ const ChatContainer = ({ controller }: IProps) => {
           </div>
           <div ref={ref} />
         </Flex>
+
         <MessageInput
           disabled={disabled}
           sendDisabled={sendDisabled}
@@ -100,6 +112,7 @@ const ChatContainer = ({ controller }: IProps) => {
           }
         />
       </Flex>
+
       <PdfDrawer
         visible={visible}
         hideModal={hideModal}
