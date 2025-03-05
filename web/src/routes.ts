@@ -35,8 +35,8 @@ const routes = [
     layout: false,
   },
   {
-    path: '/login-page',
-    component: '@/pages/login-page',
+    path: '/login/login-page',
+    component: '@/pages/login/login-page',
     layout: false,
   },
   {
