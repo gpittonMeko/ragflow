@@ -16,7 +16,7 @@ import {
 import { useFetchUserInfo } from '../../hooks/user-setting-hooks';
 
 // Utility generiche (in src/utils)
-import { buildMessageUuidWithRole } from '../login/utils';
+import { buildMessageUuidWithRole } from '@/utils/chat';
 
 // Hook e utility "locali" alla chat (in src/chat)
 // Nota: non aggiungere l'estensione ".ts"
