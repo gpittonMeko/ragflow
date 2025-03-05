@@ -1,5 +1,25 @@
-import React from 'react';
-import ChatContainer from '@/components/ChatContainer'; // Assicurati che il percorso sia corretto
+import MessageItem from '@/components/message-item';
+import { MessageType } from '@/constants/chat';
+import { Flex, Spin } from 'antd';
+import {
+  useCreateConversationBeforeUploadDocument,
+  useGetFileIcon,
+  useGetSendButtonDisabled,
+  useSendButtonDisabled,
+  useSendNextMessage,
+} from '../hooks';
+import { buildMessageItemReference } from '../utils';
+
+import MessageInput from '@/components/message-input';
+import PdfDrawer from '@/components/pdf-drawer';
+import { useClickDrawer } from '@/components/pdf-drawer/hooks';
+import {
+  useFetchNextConversation,
+  useGetChatSearchParams,
+} from '@/hooks/chat-hooks';
+import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
+import { buildMessageUuidWithRole } from '@/utils/chat';
+import { memo } from 'react';
 import styles from './index.less';
 
 const PresentationPage: React.FC = () => {
