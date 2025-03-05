@@ -1,32 +1,34 @@
 import React, { memo } from 'react';
 import { Flex, Spin } from 'antd';
 
-// 1) Import di componenti e costanti (se stanno in src/components e src/constants)
+// Componenti e costanti (in src/components e src/constants)
 import MessageItem from '../../components/message-item';
 import MessageInput from '../../components/message-input';
 import PdfDrawer from '../../components/pdf-drawer';
 import { useClickDrawer } from '../../components/pdf-drawer/hooks';
 import { MessageType } from '../../constants/chat';
 
-// 2) Hook "generici" se si trovano in src/hooks (ad es. chat-hooks.ts, user-setting-hooks.ts)
+// Hook "generici" (in src/hooks)
 import {
   useFetchNextConversation,
   useGetChatSearchParams,
 } from '../../hooks/chat-hooks';
 import { useFetchUserInfo } from '../../hooks/user-setting-hooks';
 
-// 3) Utility generiche se stanno in src/utils/chat.ts
+// Utility generiche (in src/utils)
 import { buildMessageUuidWithRole } from '../../utils/chat';
 
+// Hook e utility "locali" alla chat (in src/chat)
+// Nota: non aggiungere l'estensione ".ts"
 import {
   useCreateConversationBeforeUploadDocument,
   useGetFileIcon,
   useGetSendButtonDisabled,
   useSendButtonDisabled,
   useSendNextMessage,
-} from '../../chat/hooks.ts';  // Aggiungi ".ts"
+} from '../../chat/hooks';
 
-import { buildMessageItemReference } from '../../chat/utils.ts';  // Aggiungi ".ts"
+import { buildMessageItemReference } from '../../chat/utils';
 
 // Stili locali della pagina
 import styles from './index.less';
@@ -63,7 +65,7 @@ const ChatContainer = ({ controller }: IProps) => {
   const disabled = useGetSendButtonDisabled();
   const sendDisabled = useSendButtonDisabled(value);
 
-  // Se serve, carica icone o altre risorse
+  // Carica eventuali icone o altre risorse
   useGetFileIcon();
 
   const { data: userInfo } = useFetchUserInfo();
