@@ -1,36 +1,35 @@
 import React, { memo } from 'react';
 import { Flex, Spin } from 'antd';
 
-// ATTENZIONE AI LIVELLI DI ../
-// Da "login-page" dobbiamo risalire di 2 livelli per tornare a "src/",
-// quindi: ../../hooks e ../../utils
-
+// 1) Import di componenti e costanti (se stanno in src/components e src/constants)
 import MessageItem from '../../components/message-item';
-import { MessageType } from '../../constants/chat';
 import MessageInput from '../../components/message-input';
 import PdfDrawer from '../../components/pdf-drawer';
 import { useClickDrawer } from '../../components/pdf-drawer/hooks';
+import { MessageType } from '../../constants/chat';
 
+// 2) Hook "generici" se si trovano in src/hooks (ad es. chat-hooks.ts, user-setting-hooks.ts)
 import {
   useFetchNextConversation,
   useGetChatSearchParams,
 } from '../../hooks/chat-hooks';
 import { useFetchUserInfo } from '../../hooks/user-setting-hooks';
+
+// 3) Utility generiche se stanno in src/utils/chat.ts
 import { buildMessageUuidWithRole } from '../../utils/chat';
 
-// Qui importiamo i moduli (hook e utils) che prima erano "../hooks" e "../utils"
+// 4) Hook e utility “locali” alla cartella chat (se li hai in src/chat/hooks.ts e src/chat/utils.ts)
 import {
   useCreateConversationBeforeUploadDocument,
   useGetFileIcon,
   useGetSendButtonDisabled,
   useSendButtonDisabled,
   useSendNextMessage,
-} from '../../hooks'; // Se i tuoi custom hook sono esportati in un unico index.ts
-// oppure: from '../../hooks/chat-hooks' se si trovano lì
+} from '../../chat/hooks';  // <-- Se "hooks.ts" sta in src/chat/hooks.ts
 
-import { buildMessageItemReference } from '../../utils'; // Se la funzione si trova in "src/utils/index.ts"
-// oppure: from '../../utils/chat' se si trova in "src/utils/chat.ts"
+import { buildMessageItemReference } from '../../chat/utils';  // <-- Se "utils.ts" sta in src/chat/utils.ts
 
+// Stili locali della pagina
 import styles from './index.less';
 
 // Interfaccia per le props di ChatContainer
@@ -65,6 +64,7 @@ const ChatContainer = ({ controller }: IProps) => {
   const disabled = useGetSendButtonDisabled();
   const sendDisabled = useSendButtonDisabled(value);
 
+  // Se serve, carica icone o altre risorse
   useGetFileIcon();
 
   const { data: userInfo } = useFetchUserInfo();
@@ -170,8 +170,6 @@ const PresentationPage: React.FC = () => {
           </div>
         </div>
       </div>
-
-
     </div>
   );
 };
