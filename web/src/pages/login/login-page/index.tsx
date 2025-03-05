@@ -18,8 +18,8 @@ import {
   useGetSendButtonDisabled,
   useSendButtonDisabled,
   useSendNextMessage,
-} from 'hooks';
-import { buildMessageItemReference } from 'utils';
+} from '../hooks';
+import { buildMessageItemReference } from '../utils';
 
 // Interfaccia per le props di ChatContainer
 interface IProps {
