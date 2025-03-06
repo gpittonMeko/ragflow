@@ -1,4 +1,4 @@
->> import { useAuth } from '@/hooks/auth-hooks';
+import { useAuth } from '@/hooks/auth-hooks';
 import { redirectToLogin } from '@/utils/authorization-util';
 import { Outlet, useLocation } from 'umi';
 
@@ -23,4 +23,3 @@ export default () => {
 
   return <></>;
 };
->>
