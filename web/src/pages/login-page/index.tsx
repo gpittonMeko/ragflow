@@ -56,6 +56,10 @@ const ChatContainer = ({ controller, agentMode = false }: IProps) => {
     ? useFetchNextConversation()
     : { data: {} };
 
+  // Debug: log della conversazione
+  console.log('[DEBUG] conversationId:', conversationId);
+  console.log('[DEBUG] conversation:', conversation);
+
   // Prepara le opzioni per useSendNextMessage: se siamo in agent mode, passa agentId
   const sendOptions = agentMode ? { agentId: AGENT_ID } : {};
 
@@ -70,6 +74,12 @@ const ChatContainer = ({ controller, agentMode = false }: IProps) => {
     regenerateMessage,
     removeMessageById,
   } = useSendNextMessage(controller, sendOptions);
+
+  // Debug: log degli stati di invio e dei messaggi derivati
+  console.log('[DEBUG] loading:', loading);
+  console.log('[DEBUG] sendLoading:', sendLoading);
+  console.log('[DEBUG] derivedMessages:', derivedMessages);
+  console.log('[DEBUG] input value:', value);
 
   const {
     visible,
@@ -89,13 +99,7 @@ const ChatContainer = ({ controller, agentMode = false }: IProps) => {
     ? { data: { nickname: 'Agent', avatar: undefined } }
     : useFetchUserInfo();
 
-  // Debug: stampiamo i valori chiave per capire cosa viene passato
-  console.log('[ChatContainer] agentMode:', agentMode);
-  console.log('[ChatContainer] conversationId:', conversationId);
-  console.log('[ChatContainer] conversation:', conversation);
-  console.log('[ChatContainer] derivedMessages:', derivedMessages);
-  console.log('[ChatContainer] userInfo:', userInfo);
-  console.log('[ChatContainer] input value:', value);
+  console.log('[DEBUG] userInfo:', userInfo);
 
   const { createConversationBeforeUploadDocument } =
     useCreateConversationBeforeUploadDocument();
