@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useRef } from 'react'; // <-- Aggiungi useRef qui
 import MemoizedChatContainer from '../chat/chat-container';  // <----- AGGIUNGI QUESTA RIGA!
 
 import { Flex, Spin } from 'antd';
@@ -177,6 +177,8 @@ interface IProps {
 // const MemoizedChatContainer = memo(ChatContainer);
 
 const PresentationPage: React.FC = () => {
+  const controllerRef = useRef(new AbortController()); // <-- Crea un useRef per AbortController
+
   // Per attivare la modalità agent, passa agentMode=true
   return (
     <div className={styles.pageContainer}>
@@ -206,7 +208,7 @@ const PresentationPage: React.FC = () => {
 
           {/* Per usare l’agent, attiva agentMode */}
           <div className={styles.chatSection}>
-            <MemoizedChatContainer controller={new AbortController()} agentMode={true} />
+            <MemoizedChatContainer controller={controllerRef.current} agentMode={true} /> {/* <-- Passa controllerRef.current */}
           </div>
         </div>
       </div>
