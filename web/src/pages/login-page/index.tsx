@@ -44,6 +44,7 @@ interface IProps {
 }
 
 const ChatContainer = ({ controller, agentMode = false }: IProps) => {
+  console.log('[DEBUG 1] agentMode prop value:  (Not Applicable in this ChatContainer - agentMode prop removed)'); // ADD THIS LINE
   // In conversation mode, assicuriamoci che il conversationId esista
   if (!agentMode) {
     useEnsureConversationId();
@@ -148,7 +149,7 @@ const ChatContainer = ({ controller, agentMode = false }: IProps) => {
           <div ref={ref} />
         </Flex>
         <MessageInput
-          disabled={disabled} // Use the conditionally determined 'disabled'
+          disabled={false} // Testing Disabled
           sendDisabled={sendDisabled}
           sendLoading={sendLoading}
           value={value}
