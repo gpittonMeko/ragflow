@@ -43,137 +43,136 @@ interface IProps {
   agentMode?: boolean;
 }
 
-const ChatContainer = ({ controller, agentMode = false }: IProps) => {
-  console.log('[DEBUG 1] agentMode prop value:  (Not Applicable in this ChatContainer - agentMode prop removed)'); // ADD THIS LINE
-  console.log('****[UNIQUE DEBUG MARKER - ChatContainer START]**** agentMode prop value:', agentMode); // VERY UNIQUE DEBUG LOG
+// const ChatContainer = ({ controller, agentMode = false }: IProps) => {
+//   console.log('****[UNIQUE DEBUG MARKER - ChatContainer START]**** agentMode prop value:', agentMode); // VERY UNIQUE DEBUG LOG
 
-  // In conversation mode, assicuriamoci che il conversationId esista
-  if (!agentMode) {
-    useEnsureConversationId();
-  }
-  // In agent mode, non serve un conversationId: verrà usato AGENT_ID
-  const { conversationId } = useGetChatSearchParams();
+//   // In conversation mode, assicuriamoci che il conversationId esista
+//   if (!agentMode) {
+//     useEnsureConversationId();
+//   }
+//   // In agent mode, non serve un conversationId: verrà usato AGENT_ID
+//   const { conversationId } = useGetChatSearchParams();
 
-  // Se non siamo in agent mode, recupera i dati della conversazione
-  const { data: conversation } = !agentMode
-    ? useFetchNextConversation()
-    : { data: {} };
+//   // Se non siamo in agent mode, recupera i dati della conversazione
+//   const { data: conversation } = !agentMode
+//     ? useFetchNextConversation()
+//     : { data: {} };
 
-  // Debug: log della conversazione
-  console.log('[DEBUG] conversationId:', conversationId);
-  console.log('[DEBUG] conversation:', conversation);
+//   // Debug: log della conversazione
+//   console.log('[DEBUG] conversationId:', conversationId);
+//   console.log('[DEBUG] conversation:', conversation);
 
-  // Prepara le opzioni per useSendNextMessage: se siamo in agent mode, passa agentId
-  const sendOptions = agentMode ? { agentId: AGENT_ID } : {};
+//   // Prepara le opzioni per useSendNextMessage: se siamo in agent mode, passa agentId
+//   const sendOptions = agentMode ? { agentId: AGENT_ID } : {};
 
-  const {
-    value,
-    ref,
-    loading,
-    sendLoading,
-    derivedMessages,
-    handleInputChange,
-    handlePressEnter,
-    regenerateMessage,
-    removeMessageById,
-  } = useSendNextMessage(controller, sendOptions);
+//   const {
+//     value,
+//     ref,
+//     loading,
+//     sendLoading,
+//     derivedMessages,
+//     handleInputChange,
+//     handlePressEnter,
+//     regenerateMessage,
+//     removeMessageById,
+//   } = useSendNextMessage(controller, sendOptions);
 
-  // Debug: log degli stati di invio e dei messaggi derivati
-  console.log('[DEBUG] loading:', loading);
-  console.log('[DEBUG] sendLoading:', sendLoading);
-  console.log('[DEBUG] derivedMessages:', derivedMessages);
-  console.log('[DEBUG] input value:', value);
+//   // Debug: log degli stati di invio e dei messaggi derivati
+//   console.log('[DEBUG] loading:', loading);
+//   console.log('[DEBUG] sendLoading:', sendLoading);
+//   console.log('[DEBUG] derivedMessages:', derivedMessages);
+//   console.log('[DEBUG] input value:', value);
 
-  const {
-    visible,
-    hideModal,
-    documentId,
-    selectedChunk,
-    clickDocumentButton,
-  } = useClickDrawer();
+//   const {
+//     visible,
+//     hideModal,
+//     documentId,
+//     selectedChunk,
+//     clickDocumentButton,
+//   } = useClickDrawer();
 
-  //const disabled = useGetSendButtonDisabled();
+//   //const disabled = useGetSendButtonDisabled();
 
-  const sendDisabled = useSendButtonDisabled(value);
-  const getSendButtonActuallyDisabled = agentMode ? sendDisabled : useGetSendButtonDisabled();
-  const disabled = getSendButtonActuallyDisabled;
+//   const sendDisabled = useSendButtonDisabled(value);
+//   const getSendButtonActuallyDisabled = agentMode ? sendDisabled : useGetSendButtonDisabled();
+//   const disabled = getSendButtonActuallyDisabled;
 
 
-  console.log('[DEBUG] disabled =', disabled); // Keep this log for debugging
+//   console.log('[DEBUG] disabled =', disabled); // Keep this log for debugging
 
-  useGetFileIcon();
+//   useGetFileIcon();
 
-  // Se siamo in agent mode, bypassa la richiesta user info e usa dati di default
-  const { data: userInfo } = agentMode
-    ? { data: { nickname: 'Agent', avatar: undefined } }
-    : useFetchUserInfo();
+//   // Se siamo in agent mode, bypassa la richiesta user info e usa dati di default
+//   const { data: userInfo } = agentMode
+//     ? { data: { nickname: 'Agent', avatar: undefined } }
+//     : useFetchUserInfo();
 
-  console.log('[DEBUG] userInfo:', userInfo);
+//   console.log('[DEBUG] userInfo:', userInfo);
 
-  const { createConversationBeforeUploadDocument } =
-    useCreateConversationBeforeUploadDocument();
+//   const { createConversationBeforeUploadDocument } =
+//     useCreateConversationBeforeUploadDocument();
 
-  return (
-    <>
-      <Flex flex={1} className={styles.chatContainer} vertical>
-        <Flex flex={1} vertical className={styles.messageContainer}>
-          <div>
-            <Spin spinning={loading}>
-              {derivedMessages?.map((message, i) => (
-                <MessageItem
-                  loading={
-                    message.role === MessageType.Assistant &&
-                    sendLoading &&
-                    derivedMessages.length - 1 === i
-                  }
-                  key={buildMessageUuidWithRole(message)}
-                  item={message}
-                  // Se in agent mode, usiamo dati predefiniti
-                  nickname={agentMode ? 'Agent' : userInfo?.nickname}
-                  avatar={agentMode ? undefined : userInfo?.avatar}
-                  avatarDialog={agentMode ? undefined : conversation?.avatar}
-                  reference={buildMessageItemReference(
-                    {
-                      message: derivedMessages,
-                      reference: agentMode ? {} : conversation?.reference,
-                    },
-                    message,
-                  )}
-                  clickDocumentButton={clickDocumentButton}
-                  index={i}
-                  removeMessageById={removeMessageById}
-                  regenerateMessage={regenerateMessage}
-                  sendLoading={sendLoading}
-                />
-              ))}
-            </Spin>
-          </div>
-          <div ref={ref} />
-        </Flex>
-        <MessageInput
-          disabled={false} // Testing Disabled
-          sendDisabled={sendDisabled}
-          sendLoading={sendLoading}
-          value={value}
-          onInputChange={handleInputChange}
-          onPressEnter={handlePressEnter}
-          // In agent mode, non si usa conversationId
-          conversationId={agentMode ? '' : conversationId}
-          createConversationBeforeUploadDocument={createConversationBeforeUploadDocument}
-        />
-      </Flex>
+//   return (
+//     <>
+//       <Flex flex={1} className={styles.chatContainer} vertical>
+//         <Flex flex={1} vertical className={styles.messageContainer}>
+//           <div>
+//             <Spin spinning={loading}>
+//               {derivedMessages?.map((message, i) => (
+//                 <MessageItem
+//                   loading={
+//                     message.role === MessageType.Assistant &&
+//                     sendLoading &&
+//                     derivedMessages.length - 1 === i
+//                   }
+//                   key={buildMessageUuidWithRole(message)}
+//                   item={message}
+//                   // Se in agent mode, usiamo dati predefiniti
+//                   nickname={agentMode ? 'Agent' : userInfo?.nickname}
+//                   avatar={agentMode ? undefined : userInfo?.avatar}
+//                   avatarDialog={agentMode ? undefined : conversation?.avatar}
+//                   reference={buildMessageItemReference(
+//                     {
+//                       message: derivedMessages,
+//                       reference: agentMode ? {} : conversation?.reference,
+//                     },
+//                     message,
+//                   )}
+//                   clickDocumentButton={clickDocumentButton}
+//                   index={i}
+//                   removeMessageById={removeMessageById}
+//                   regenerateMessage={regenerateMessage}
+//                   sendLoading={sendLoading}
+//                 />
+//               ))}
+//             </Spin>
+//           </div>
+//           <div ref={ref} />
+//         </Flex>
+//         <MessageInput
+//           disabled={false} // Testing Disabled
+//           sendDisabled={sendDisabled}
+//           sendLoading={sendLoading}
+//           value={value}
+//           onInputChange={handleInputChange}
+//           onPressEnter={handlePressEnter}
+//           // In agent mode, non si usa conversationId
+//           conversationId={agentMode ? '' : conversationId}
+//           createConversationBeforeUploadDocument={createConversationBeforeUploadDocument}
+//         />
+//       </Flex>
 
-      <PdfDrawer
-        visible={visible}
-        hideModal={hideModal}
-        documentId={documentId}
-        chunk={selectedChunk}
-      />
-    </>
-  );
-};
+//       <PdfDrawer
+//         visible={visible}
+//         hideModal={hideModal}
+//         documentId={documentId}
+//         chunk={selectedChunk}
+//       />
+//     </>
+//   );
+// };
 
-const MemoizedChatContainer = memo(ChatContainer);
+// const MemoizedChatContainer = memo(ChatContainer);
 
 const PresentationPage: React.FC = () => {
   // Per attivare la modalità agent, passa agentMode=true
