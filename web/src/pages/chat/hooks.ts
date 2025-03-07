@@ -354,14 +354,16 @@ export const useHandleMessageInputChange = () => {
   };
 };
 
-export const useSendNextMessage = (controller: AbortController) => {
+export const useSendNextMessage = (controller: AbortController, options?: { agentId?: string }) => {
   const { setConversation } = useSetConversation();
   const { conversationId, isNew } = useGetChatSearchParams();
   const { handleInputChange, value, setValue } = useHandleMessageInputChange();
 
-  const { send, answer, done } = useSendMessageWithSse(
-    api.completeConversation,
-  );
+  // Se viene passato options.agentId, utilizza l'endpoint agent, altrimenti quello standard
+  const completeFn = options?.agentId ? api.completeAgentConversation(options.agentId) : api.completeConversation;
+
+  const { send, answer, done } = useSendMessageWithSse(completeFn);
+
   const {
     ref,
     derivedMessages,
@@ -372,8 +374,7 @@ export const useSendNextMessage = (controller: AbortController) => {
     removeMessageById,
     removeMessagesAfterCurrentMessage,
   } = useSelectNextMessages();
-  const { setConversationIsNew, getConversationIsNew } =
-    useSetChatRouteParams();
+  const { setConversationIsNew, getConversationIsNew } = useSetChatRouteParams();
 
   const sendMessage = useCallback(
     async ({
@@ -394,7 +395,6 @@ export const useSendNextMessage = (controller: AbortController) => {
       );
 
       if (res && (res?.response.status !== 200 || res?.data?.code !== 0)) {
-        // cancel loading
         setValue(message.content);
         console.info('removeLatestMessage111');
         removeLatestMessage();
@@ -412,19 +412,14 @@ export const useSendNextMessage = (controller: AbortController) => {
 
   const handleSendMessage = useCallback(
     async (message: Message) => {
-      const isNew = getConversationIsNew();
-      if (isNew !== 'true') {
+      const isNewVal = getConversationIsNew();
+      if (isNewVal !== 'true') {
         sendMessage({ message });
       } else {
-        const data = await setConversation(
-          message.content,
-          true,
-          conversationId,
-        );
+        const data = await setConversation(message.content, true, conversationId);
         if (data.code === 0) {
           setConversationIsNew('');
           const id = data.data.id;
-          // currentConversationIdRef.current = id;
           sendMessage({
             message,
             currentConversationId: id,
@@ -449,7 +444,6 @@ export const useSendNextMessage = (controller: AbortController) => {
   });
 
   useEffect(() => {
-    //  #1289
     if (answer.answer && conversationId && isNew !== 'true') {
       addNewestAnswer(answer);
     }
@@ -492,6 +486,7 @@ export const useSendNextMessage = (controller: AbortController) => {
     removeMessageById,
   };
 };
+
 
 export const useGetFileIcon = () => {
   const getFileIcon = (filename: string) => {
