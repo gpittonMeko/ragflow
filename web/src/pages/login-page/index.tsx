@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import MemoizedChatContainer from '../../chat-container';  // <----- AGGIUNGI QUESTA RIGA!
+import MemoizedChatContainer from '../chat/chat-container';  // <----- AGGIUNGI QUESTA RIGA!
 
 import { Flex, Spin } from 'antd';
 
