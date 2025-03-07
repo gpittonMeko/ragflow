@@ -428,10 +428,10 @@ def setting_user():
             data=False, message="Update failure!", code=settings.RetCode.EXCEPTION_ERROR
         )
 
-
-@manager.route("/info", methods=["GET"])  # noqa: F821
-@login_required
-def user_profile():
+#Old version Info
+#@manager.route("/info", methods=["GET"])  # noqa: F821
+#@login_required
+#def user_profile():
     """
     Get user profile information.
     ---
@@ -455,7 +455,17 @@ def user_profile():
               type: string
               description: User email.
     """
-    return get_json_result(data=current_user.to_dict())
+#    return get_json_result(data=current_user.to_dict())
+
+@manager.route("/info", methods=["GET"])
+def user_profile():
+    # Se l'utente è autenticato, restituisci i dati utente; altrimenti, restituisci dati di default per un guest
+    if current_user.is_authenticated:
+        data = current_user.to_dict()
+    else:
+        data = {"id": "guest", "nickname": "Guest", "email": None}
+    return get_json_result(data=data)
+
 
 
 def rollback_user_registration(user_id):
