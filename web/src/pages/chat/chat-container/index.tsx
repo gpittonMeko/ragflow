@@ -24,6 +24,8 @@ import styles from './index.less';
 
 interface IProps {
   controller: AbortController;
+  agentMode?: boolean; // <---  MAKE SURE THIS LINE IS IN YOUR IProps INTERFACE in the CORRECT ChatContainer file!
+
 }
 
 const ChatContainer = ({ controller }: IProps) => {
