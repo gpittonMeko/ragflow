@@ -1,25 +1,24 @@
 import React, { memo } from 'react';
 import { Flex, Spin } from 'antd';
 
-// Componenti e costanti (in src/components e src/constants)
+// Componenti e costanti
 import MessageItem from '../../components/message-item';
 import MessageInput from '../../components/message-input';
 import PdfDrawer from '../../components/pdf-drawer';
 import { useClickDrawer } from '../../components/pdf-drawer/hooks';
 import { MessageType } from '@/constants/chat';
 
-// Hook "generici" (in src/hooks)
+// Hook "generici"
 import {
   useFetchNextConversation,
   useGetChatSearchParams,
 } from '../../hooks/chat-hooks';
 import { useFetchUserInfo } from '../../hooks/user-setting-hooks';
 
-// Utility generiche (in src/utils)
+// Utility
 import { buildMessageUuidWithRole } from '@/utils/chat';
 
-// Hook e utility "locali" alla chat (in src/chat)
-// Nota: non aggiungere l'estensione ".ts"
+// Hook e utility "locali" alla chat
 import {
   useCreateConversationBeforeUploadDocument,
   useGetFileIcon,
@@ -27,26 +26,38 @@ import {
   useSendButtonDisabled,
   useSendNextMessage,
 } from '../login/hooks';
-
 import { buildMessageItemReference } from '../login/utils';
 
-// Importa l'hook per garantire che ci sia un conversationId
+// Importa l’hook per conversationId (lo usi solo in conversation mode)
 import { useEnsureConversationId } from '@/hooks/login-page-hooks';
 
-// Stili locali della pagina
+// Stili
 import styles from './index.less';
 
-// Interfaccia per le props di ChatContainer
+// Definisci il tuo agentId (quello fornito)
+const AGENT_ID = 'IL_TUO_AGENT_ID_HERE'; // Sostituisci con l'ID corretto
+
+// Interfaccia per le props; aggiungiamo una prop opzionale per la modalità agent
 interface IProps {
   controller: AbortController;
+  agentMode?: boolean;
 }
 
-const ChatContainer = ({ controller }: IProps) => {
-  // Se il conversationId non è presente, lo genera e lo imposta nella URL
-  useEnsureConversationId();
-
+const ChatContainer = ({ controller, agentMode = false }: IProps) => {
+  // In conversation mode, assicuriamoci che il conversationId esista
+  if (!agentMode) {
+    useEnsureConversationId();
+  }
+  // In agent mode, non serve un conversationId: verrà usato AGENT_ID
   const { conversationId } = useGetChatSearchParams();
-  const { data: conversation } = useFetchNextConversation();
+
+  // Se non siamo in agent mode, recupera i dati della conversazione
+  const { data: conversation } = !agentMode
+    ? useFetchNextConversation()
+    : { data: {} };
+
+  // Prepara le opzioni per useSendNextMessage: se siamo in agent mode, passa agentId
+  const sendOptions = agentMode ? { agentId: AGENT_ID } : {};
 
   const {
     value,
@@ -58,7 +69,7 @@ const ChatContainer = ({ controller }: IProps) => {
     handlePressEnter,
     regenerateMessage,
     removeMessageById,
-  } = useSendNextMessage(controller);
+  } = useSendNextMessage(controller, sendOptions);
 
   const {
     visible,
@@ -71,7 +82,6 @@ const ChatContainer = ({ controller }: IProps) => {
   const disabled = useGetSendButtonDisabled();
   const sendDisabled = useSendButtonDisabled(value);
 
-  // Carica eventuali icone o altre risorse
   useGetFileIcon();
 
   const { data: userInfo } = useFetchUserInfo();
@@ -93,13 +103,14 @@ const ChatContainer = ({ controller }: IProps) => {
                   }
                   key={buildMessageUuidWithRole(message)}
                   item={message}
-                  nickname={userInfo?.nickname}
-                  avatar={userInfo?.avatar}
-                  avatarDialog={conversation?.avatar}
+                  // Se in agent mode, potresti usare dati predefiniti per il nome/avatar dell'agent
+                  nickname={agentMode ? 'Agent' : userInfo?.nickname}
+                  avatar={agentMode ? undefined : userInfo?.avatar}
+                  avatarDialog={agentMode ? undefined : conversation?.avatar}
                   reference={buildMessageItemReference(
                     {
                       message: derivedMessages,
-                      reference: conversation?.reference,
+                      reference: agentMode ? {} : conversation?.reference,
                     },
                     message,
                   )}
@@ -122,10 +133,9 @@ const ChatContainer = ({ controller }: IProps) => {
           value={value}
           onInputChange={handleInputChange}
           onPressEnter={handlePressEnter}
-          conversationId={conversationId}
-          createConversationBeforeUploadDocument={
-            createConversationBeforeUploadDocument
-          }
+          // In agent mode, non si usa conversationId
+          conversationId={agentMode ? '' : conversationId}
+          createConversationBeforeUploadDocument={createConversationBeforeUploadDocument}
         />
       </Flex>
 
@@ -142,14 +152,12 @@ const ChatContainer = ({ controller }: IProps) => {
 const MemoizedChatContainer = memo(ChatContainer);
 
 const PresentationPage: React.FC = () => {
+  // Per attivare la modalità agent, passa agentMode=true
   return (
     <div className={styles.pageContainer}>
-      {/* Header */}
       <header className={styles.header}>
         <h1 className={styles.movingGradientLogo}>SGAI</h1>
       </header>
-
-      {/* Contenuto principale */}
       <div className={styles.mainContent}>
         <div className={styles.presentationContainer}>
           <header className={styles.presentationHeader}>
@@ -171,9 +179,9 @@ const PresentationPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Integrazione della chat */}
+          {/* Per usare l’agent, attiva agentMode */}
           <div className={styles.chatSection}>
-            <MemoizedChatContainer controller={new AbortController()} />
+            <MemoizedChatContainer controller={new AbortController()} agentMode={true} />
           </div>
         </div>
       </div>
