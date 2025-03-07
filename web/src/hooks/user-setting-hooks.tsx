@@ -22,28 +22,46 @@ import { isEmpty } from 'lodash';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { history } from 'umi';
+import { getGuestToken } from '@/utils/token'; // AGGIUNGI QUESTO IMPORT
+
 
 export const useFetchUserInfo = (): ResponseGetType<IUserInfo> => {
   const { i18n } = useTranslation();
 
-  const { data, isFetching: loading } = useQuery({
+  return useQuery({
     queryKey: ['userInfo'],
     initialData: {},
     gcTime: 0,
     queryFn: async () => {
-      const { data } = await userService.user_info();
-      if (data.code === 0) {
+      // Recupera o genera il token guest
+      const token = getGuestToken();
+      console.log('[useFetchUserInfo] Effettuo la chiamata a:', api.user_info);
+
+      const response = await fetch(api.user_info, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      console.log('[useFetchUserInfo] Status della risposta:', response.status);
+
+      const data = await response.json();
+      console.log('[useFetchUserInfo] Dati ricevuti:', data);
+
+      if (!response.ok) {
+        throw new Error('Unauthorized o errore del server: ' + data.message);
+      }
+
+      if (data.code === 0 && data.data && data.data.language) {
         i18n.changeLanguage(
           LanguageTranslationMap[
             data.data.language as keyof typeof LanguageTranslationMap
-          ],
+          ]
         );
       }
       return data?.data ?? {};
     },
   });
-
-  return { data, loading };
 };
 
 export const useFetchTenantInfo = (
