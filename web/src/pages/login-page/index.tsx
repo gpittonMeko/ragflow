@@ -89,8 +89,14 @@ const ChatContainer = ({ controller, agentMode = false }: IProps) => {
     clickDocumentButton,
   } = useClickDrawer();
 
-  const disabled = useGetSendButtonDisabled();
+  //const disabled = useGetSendButtonDisabled();
+
   const sendDisabled = useSendButtonDisabled(value);
+  const getSendButtonActuallyDisabled = agentMode ? sendDisabled : useGetSendButtonDisabled();
+  const disabled = getSendButtonActuallyDisabled;
+
+
+  console.log('[DEBUG] disabled =', disabled); // Keep this log for debugging
 
   useGetFileIcon();
 
@@ -141,9 +147,8 @@ const ChatContainer = ({ controller, agentMode = false }: IProps) => {
           </div>
           <div ref={ref} />
         </Flex>
-
         <MessageInput
-          disabled={disabled}
+          disabled={disabled} // Use the conditionally determined 'disabled'
           sendDisabled={sendDisabled}
           sendLoading={sendLoading}
           value={value}
