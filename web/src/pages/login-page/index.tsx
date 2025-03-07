@@ -89,6 +89,14 @@ const ChatContainer = ({ controller, agentMode = false }: IProps) => {
     ? { data: { nickname: 'Agent', avatar: undefined } }
     : useFetchUserInfo();
 
+  // Debug: stampiamo i valori chiave per capire cosa viene passato
+  console.log('[ChatContainer] agentMode:', agentMode);
+  console.log('[ChatContainer] conversationId:', conversationId);
+  console.log('[ChatContainer] conversation:', conversation);
+  console.log('[ChatContainer] derivedMessages:', derivedMessages);
+  console.log('[ChatContainer] userInfo:', userInfo);
+  console.log('[ChatContainer] input value:', value);
+
   const { createConversationBeforeUploadDocument } =
     useCreateConversationBeforeUploadDocument();
 
