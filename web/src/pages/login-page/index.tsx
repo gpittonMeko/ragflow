@@ -84,7 +84,11 @@ const ChatContainer = ({ controller, agentMode = false }: IProps) => {
 
   useGetFileIcon();
 
-  const { data: userInfo } = useFetchUserInfo();
+  // Se siamo in agent mode, bypassa la richiesta user info e usa dati di default
+  const { data: userInfo } = agentMode
+    ? { data: { nickname: 'Agent', avatar: undefined } }
+    : useFetchUserInfo();
+
   const { createConversationBeforeUploadDocument } =
     useCreateConversationBeforeUploadDocument();
 
@@ -103,7 +107,7 @@ const ChatContainer = ({ controller, agentMode = false }: IProps) => {
                   }
                   key={buildMessageUuidWithRole(message)}
                   item={message}
-                  // Se in agent mode, potresti usare dati predefiniti per il nome/avatar dell'agent
+                  // Se in agent mode, usiamo dati predefiniti
                   nickname={agentMode ? 'Agent' : userInfo?.nickname}
                   avatar={agentMode ? undefined : userInfo?.avatar}
                   avatarDialog={agentMode ? undefined : conversation?.avatar}
