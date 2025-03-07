@@ -45,6 +45,8 @@ interface IProps {
 
 const ChatContainer = ({ controller, agentMode = false }: IProps) => {
   console.log('[DEBUG 1] agentMode prop value:  (Not Applicable in this ChatContainer - agentMode prop removed)'); // ADD THIS LINE
+  console.log('****[UNIQUE DEBUG MARKER - ChatContainer START]**** agentMode prop value:', agentMode); // VERY UNIQUE DEBUG LOG
+
   // In conversation mode, assicuriamoci che il conversationId esista
   if (!agentMode) {
     useEnsureConversationId();
