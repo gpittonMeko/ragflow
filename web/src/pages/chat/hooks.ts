@@ -412,15 +412,20 @@ export const useSendNextMessage = (controller: AbortController, options?: { agen
 
   const handleSendMessage = useCallback(
     async (message: Message) => {
+      console.log('[handleSendMessage] Messaggio da inviare:', message);
       const isNewVal = getConversationIsNew();
       if (isNewVal !== 'true') {
-        sendMessage({ message });
+        console.log('[handleSendMessage] Invia messaggio in conversazione esistente.');
+        await sendMessage({ message });
       } else {
+        console.log('[handleSendMessage] Creazione nuova conversazione per il messaggio:', message);
         const data = await setConversation(message.content, true, conversationId);
+        console.log('[handleSendMessage] Risposta da setConversation:', data);
         if (data.code === 0) {
           setConversationIsNew('');
           const id = data.data.id;
-          sendMessage({
+          console.log('[handleSendMessage] Nuovo conversationId ottenuto:', id);
+          await sendMessage({
             message,
             currentConversationId: id,
             messages: data.data.message,
@@ -436,6 +441,7 @@ export const useSendNextMessage = (controller: AbortController, options?: { agen
       conversationId,
     ],
   );
+  
 
   const { regenerateMessage } = useRegenerateMessage({
     removeMessagesAfterCurrentMessage,
