@@ -28,7 +28,9 @@ interface IProps {
 
 }
 
-const ChatContainer = ({ controller }: IProps) => {
+const ChatContainer = ({ controller, agentMode = false }: IProps) => {
+     console.log('****[UNIQUE DEBUG MARKER - ChatContainer START]**** agentMode prop value:', agentMode); // VERY UNIQUE DEBUG LOG
+
   const { conversationId } = useGetChatSearchParams();
   const { data: conversation } = useFetchNextConversation();
 
