@@ -30,6 +30,9 @@ import {
 
 import { buildMessageItemReference } from '../login/utils';
 
+// Importa l'hook per garantire che ci sia un conversationId
+import { useEnsureConversationId } from '../login/login-page-hooks';
+
 // Stili locali della pagina
 import styles from './index.less';
 
@@ -39,6 +42,9 @@ interface IProps {
 }
 
 const ChatContainer = ({ controller }: IProps) => {
+  // Se il conversationId non è presente, lo genera e lo imposta nella URL
+  useEnsureConversationId();
+
   const { conversationId } = useGetChatSearchParams();
   const { data: conversation } = useFetchNextConversation();
 
