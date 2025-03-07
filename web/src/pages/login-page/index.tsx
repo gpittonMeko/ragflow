@@ -35,7 +35,7 @@ import { useEnsureConversationId } from '@/hooks/login-page-hooks';
 import styles from './index.less';
 
 // Definisci il tuo agentId (quello fornito)
-const AGENT_ID = 'IL_TUO_AGENT_ID_HERE'; // Sostituisci con l'ID corretto
+const AGENT_ID = 'a871ecb2eaba11efb3a10242ac120006'; // Sostituisci con l'ID corretto
 
 // Interfaccia per le props; aggiungiamo una prop opzionale per la modalità agent
 interface IProps {
