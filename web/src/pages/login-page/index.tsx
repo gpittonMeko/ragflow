@@ -31,7 +31,7 @@ import {
 import { buildMessageItemReference } from '../login/utils';
 
 // Importa l'hook per garantire che ci sia un conversationId
-import { useEnsureConversationId } from '../login/login-page-hooks';
+import { useEnsureConversationId } from '@/hooks/login-page-hooks';
 
 // Stili locali della pagina
 import styles from './index.less';
