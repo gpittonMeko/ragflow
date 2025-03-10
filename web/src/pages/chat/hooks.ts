@@ -394,6 +394,11 @@ export const useSendNextMessage = (controller: AbortController, options?: { agen
         controller,
       );
 
+      // ADD THESE TWO DEBUG LOGS RIGHT HERE:
+      console.log("[DEBUG - Send Response Object:]", res);
+      console.log("[DEBUG - Error Condition Triggered!]", res?.response.status, res?.data?.code);
+      
+
       if (res && (res?.response.status !== 200 || res?.data?.code !== 0)) {
         setValue(message.content);
         console.info('removeLatestMessage111');
