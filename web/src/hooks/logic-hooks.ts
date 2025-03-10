@@ -43,6 +43,8 @@ export const useHandleSearchChange = () => {
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const value = e.target.value;
+      console.log("[DEBUG - handleInputChange] Input cambiato. Nuovo valore:", value); // Log quando l'input cambia
+
       setSearchString(value);
     },
     [],

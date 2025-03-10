@@ -164,6 +164,8 @@ const MessageInput = ({
   );
 
   const handlePressEnter = useCallback(async () => {
+    console.log("[DEBUG - handlePressEnter] Funzione invocata. Value attuale:", value); // Log all'inizio di handlePressEnter
+
     if (isUploadingFile) return;
     const ids = getFileIds(fileList.filter((x) => isUploadSuccess(x)));
 
