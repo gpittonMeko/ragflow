@@ -569,11 +569,13 @@ export const useRenameConversation = () => {
   };
 };
 
-export const useGetSendButtonDisabled = () => {
-  const { dialogId, conversationId } = useGetChatSearchParams();
-
-  return dialogId === '' || conversationId === '';
-};
+// Modify useGetSendButtonDisabled to accept agentMode prop
+export const useGetSendButtonDisabled = (agentMode: boolean = false) => { // <-- ADD agentMode prop with default false
+    const { dialogId, conversationId } = useGetChatSearchParams();
+  
+    // Disable send button ONLY in non-agent mode if dialogId or conversationId are empty
+    return !agentMode && (dialogId === '' || conversationId === ''); // <-- Add agentMode condition
+  };
 
 export const useSendButtonDisabled = (value: string) => {
   return trim(value) === '';

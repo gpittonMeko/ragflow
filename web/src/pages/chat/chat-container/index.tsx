@@ -48,7 +48,7 @@ const ChatContainer = ({ controller, agentMode = false }: IProps) => {
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
     useClickDrawer();
-  const disabled = useGetSendButtonDisabled();
+  const disabled = useGetSendButtonDisabled(agentMode); // <-- Pass agentMode here
   const sendDisabled = useSendButtonDisabled(value);
   useGetFileIcon();
   const { data: userInfo } = useFetchUserInfo();
