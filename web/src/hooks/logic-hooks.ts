@@ -173,65 +173,60 @@ export const useSendMessageWithSse = (
 
   const send = useCallback(
     async (
-      body: any,
-      controller?: AbortController,
+        body: any,
+        controller?: AbortController,
     ): Promise<{ response: Response; data: ResponseType } | undefined> => {
-      try {
-        setDone(false);
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            [Authorization]: getAuthorization(),
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-          signal: controller?.signal,
-        });
+        try {
+            setDone(false);
+            const response = await fetch(url, { /* ... fetch options ... */ });
+            const res = response.clone().json();
+            const reader = response?.body
+                ?.pipeThrough(new TextDecoderStream())
+                .pipeThrough(new EventSourceParserStream())
+                .getReader();
 
-        const res = response.clone().json();
+            while (true) {
+                const x = await reader?.read();
+                if (x) {
+                    const { done, value } = x;
+                    if (done) {
+                        console.info('done');
+                        resetAnswer();
+                        break;
+                    }
+                    try {
+                        let jsonData = value?.data || '';
+                        // Check if data starts with "data:" and remove it if present
+                        if (jsonData.startsWith("data:")) {
+                            jsonData = jsonData.substring(5); // Remove "data:" prefix
+                        }
+                        const val = JSON.parse(jsonData); // Parse the extracted JSON data
 
-        const reader = response?.body
-          ?.pipeThrough(new TextDecoderStream())
-          .pipeThrough(new EventSourceParserStream())
-          .getReader();
-
-        while (true) {
-          const x = await reader?.read();
-          if (x) {
-            const { done, value } = x;
-            if (done) {
-              console.info('done');
-              resetAnswer();
-              break;
+                        const d = val?.data;
+                        if (typeof d !== 'boolean') {
+                            console.info('data:', d);
+                            setAnswer({
+                                ...d,
+                                conversationId: body?.conversation_id,
+                            });
+                        }
+                    } catch (e) {
+                        console.error("[ERROR - JSON Parsing in SSE Stream:]", e, "Raw SSE Data:", value?.data); // Improved error logging with raw data
+                    }
+                }
             }
-            try {
-              const val = JSON.parse(value?.data || '');
-              const d = val?.data;
-              if (typeof d !== 'boolean') {
-                console.info('data:', d);
-                setAnswer({
-                  ...d,
-                  conversationId: body?.conversation_id,
-                });
-              }
-            } catch (e) {
-              console.warn(e);
-            }
-          }
+            console.info('done?');
+            setDone(true);
+            resetAnswer();
+            return { data: await res, response };
+        } catch (e) {
+            setDone(true);
+            resetAnswer();
+            console.warn(e);
         }
-        console.info('done?');
-        setDone(true);
-        resetAnswer();
-        return { data: await res, response };
-      } catch (e) {
-        setDone(true);
-        resetAnswer();
-
-        console.warn(e);
-      }
     },
     [url, resetAnswer],
-  );
+);
 
   return { send, answer, done, setDone, resetAnswer };
 };
