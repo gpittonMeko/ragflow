@@ -45,7 +45,11 @@ from rag.utils.storage_factory import STORAGE_IMPL
 from api.db.services.canvas_service import UserCanvasService
 from agent.canvas import Canvas
 from functools import partial
+import uuid
 
+
+GUEST_TOKEN = str(uuid.uuid4())
+print(f"GUEST_TOKEN: {GUEST_TOKEN}")
 
 @manager.route('/new_token', methods=['POST'])  # noqa: F821
 @login_required
