@@ -36,6 +36,8 @@ import { useEnsureConversationId } from '@/hooks/login-page-hooks';
 // Stili
 import styles from './index.less';
 
+
+const GUEST_TOKEN = 'c077d9dd-57bb-46f5-a914-f91171654d26'; // Sostituisci con il tuo token
 // Definisci il tuo agentId (quello fornito)
 const AGENT_ID = 'a871ecb2eaba11efb3a10242ac120006'; // Sostituisci con l'ID corretto
 

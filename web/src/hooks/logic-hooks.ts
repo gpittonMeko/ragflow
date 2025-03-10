@@ -158,6 +158,8 @@ export const useFetchAppConf = () => {
 
 export const useSendMessageWithSse = (
   url: string = api.completeConversation,
+  isGuestMode: boolean = false, // Aggiungi questo parametro
+  guestToken: string = '' // Aggiungi questo parametro
 ) => {
   const [answer, setAnswer] = useState<IAnswer>({} as IAnswer);
   const [done, setDone] = useState(true);
@@ -180,12 +182,18 @@ export const useSendMessageWithSse = (
     ): Promise<{ response: Response; data: ResponseType } | undefined> => {
       try {
         setDone(false);
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (isGuestMode && guestToken) {
+          headers['Authorization'] = `Bearer ${guestToken}`;
+        } else {
+          headers['Authorization'] = getAuthorization();
+        }
+
         const response = await fetch(url, {
           method: 'POST',
-          headers: {
-            [Authorization]: getAuthorization(),
-            'Content-Type': 'application/json',
-          },
+          headers: headers,
           body: JSON.stringify(body),
           signal: controller?.signal,
         });
@@ -232,7 +240,7 @@ export const useSendMessageWithSse = (
         console.warn(e);
       }
     },
-    [url, resetAnswer],
+    [url, resetAnswer, isGuestMode, guestToken],
   );
 
   return { send, answer, done, setDone, resetAnswer };
