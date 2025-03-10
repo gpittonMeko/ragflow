@@ -377,42 +377,43 @@ export const useSendNextMessage = (controller: AbortController, options?: { agen
   const { setConversationIsNew, getConversationIsNew } = useSetChatRouteParams();
 
   const sendMessage = useCallback(
-    async ({
-      message,
-      currentConversationId,
-      messages,
-    }: {
-      message: Message;
-      currentConversationId?: string;
-      messages?: Message[];
-    }) => {
-      const res = await send(
-        {
-          conversation_id: currentConversationId ?? conversationId,
-          messages: [...(messages ?? derivedMessages ?? []), message],
-        },
-        controller,
-      );
+      async ({
+          message,
+          currentConversationId,
+          messages,
+      }: {
+          message: Message;
+          currentConversationId?: string;
+          messages?: Message[];
+      }) => {
+          const res = await send(
+              {
+                  conversation_id: currentConversationId ?? conversationId,
+                  messages: [...(messages ?? derivedMessages ?? []), message],
+              },
+              controller,
+          );
 
-      // ADD THESE TWO DEBUG LOGS RIGHT HERE:
-      console.log("[DEBUG - Send Response Object:]", res);
-      console.log("[DEBUG - Error Condition Triggered!]", res?.response.status, res?.data?.code);
-      
+          // DEBUG LOGS (Keep these for now for verification)
+          console.log("[DEBUG - Send Response Object:]", res);
+          console.log("[DEBUG - Error Condition Triggered!] status:", res?.response.status, " code:", res?.data?.code);
 
-      if (res && (res?.response.status !== 200 || res?.data?.code !== 0)) {
-        setValue(message.content);
-        console.info('removeLatestMessage111');
-        removeLatestMessage();
-      }
-    },
-    [
-      derivedMessages,
-      conversationId,
-      removeLatestMessage,
-      setValue,
-      send,
-      controller,
-    ],
+
+          // MODIFIED ERROR CONDITION:  ONLY CHECK response.status
+          if (res && res?.response.status !== 200) {  // <--  CHANGED CONDITION:  removed  || res?.data?.code !== 0
+              setValue(message.content);
+              console.info('removeLatestMessage111');
+              removeLatestMessage();
+          }
+      },
+      [
+          derivedMessages,
+          conversationId,
+          removeLatestMessage,
+          setValue,
+          send,
+          controller,
+      ],
   );
 
   const handleSendMessage = useCallback(
