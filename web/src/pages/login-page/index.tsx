@@ -208,7 +208,7 @@ const PresentationPage: React.FC = () => {
 
           {/* Per usare l’agent, attiva agentMode */}
           <div className={styles.chatSection}>
-            <MemoizedChatContainer controller={controllerRef.current} agentMode={true} /> {/* <-- Passa controllerRef.current */}
+            <MemoizedChatContainer agentMode={true} /> {/* <-- Passa controllerRef.current */}
           </div>
         </div>
       </div>

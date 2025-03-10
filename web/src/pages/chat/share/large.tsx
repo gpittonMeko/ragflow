@@ -19,6 +19,8 @@ import { buildMessageUuidWithRole } from '@/utils/chat';
 import styles from './index.less';
 
 const ChatContainer = () => {
+  console.log("****[DEBUG - ChatContainer] Render START"); // Debug log all'inizio
+
   const {
     sharedId: conversationId,
     from,
@@ -39,22 +41,29 @@ const ChatContainer = () => {
     hasError,
   } = useSendSharedMessage();
   const sendDisabled = useSendButtonDisabled(value);
+  console.log("[DEBUG - useSendSharedMessage] Hook chiamato.  Value iniziale:", value, " sendLoading:", sendLoading, " loading:", loading, " hasError:", hasError); // Log all'inizio dell'hook
+
 
   const useFetchAvatar = useMemo(() => {
-    return from === SharedFrom.Agent
-      ? useFetchFlowSSE
-      : useFetchNextConversationSSE;
+      const fetchHook = from === SharedFrom.Agent ? useFetchFlowSSE : useFetchNextConversationSSE;
+      console.log(`[DEBUG - useFetchAvatar] Hook selezionato: ${from === SharedFrom.Agent ? 'useFetchFlowSSE' : 'useFetchNextConversationSSE'}, from prop: ${from}`); // Log quale hook è selezionato
+      return fetchHook;
   }, [from]);
+
   React.useEffect(() => {
-    if (locale && i18n.language !== locale) {
-      i18n.changeLanguage(locale);
-    }
+      console.log("[DEBUG - useEffect - i18n.changeLanguage] locale:", locale, " current i18n.language:", i18n.language); // Log dentro useEffect per i18n
+      if (locale && i18n.language !== locale) {
+          i18n.changeLanguage(locale);
+      }
   }, [locale, visibleAvatar]);
+
   const { data: avatarData } = useFetchAvatar();
+  console.log("[DEBUG - useFetchAvatar] data: avatarData:", avatarData); // Log dopo la chiamata di useFetchAvatar
 
   if (!conversationId) {
     return <div>empty</div>;
   }
+  console.log("****[DEBUG - ChatContainer] Render END");   // Debug log alla fine
 
   return (
     <>
