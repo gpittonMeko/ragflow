@@ -44,7 +44,7 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm' // **INSERISCI LA TUA API KEY!**
+                    'Authorization': 'Bearer ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm' // **INSERISCI LA TUA API KEY!**
                 },
                 body: JSON.stringify({}) // Body vuoto o con parametri "Begin" se necessari
             });
@@ -98,7 +98,7 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm' // **INSERISCI LA TUA API KEY!**
+                    'Authorization': 'Bearer ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm' // **INSERISCI LA TUA API KEY!**
                 },
                 body: JSON.stringify({
                     question: messageContent,
