@@ -25,7 +25,7 @@ export const useFetchAgentAvatar = (agentId: string): UseFetchAgentAvatar => {
                 // **MODIFICA QUESTO ENDPOINT SE NECESSARIO. VERIFICA API PER INFO AGENTE E AVATAR!**
                 const response = await fetch(`/api/v1/agents/${agentId}`, { // Esempio endpoint - DA VERIFICARE!
                     headers: {
-                        'Authorization': 'ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm' // **INSERISCI LA TUA API KEY!**
+                        'Authorization': 'Bearer ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm' // **INSERISCI LA TUA API KEY!**
                     },
                 });
                 if (!response.ok) {
