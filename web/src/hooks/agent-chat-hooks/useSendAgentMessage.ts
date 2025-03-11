@@ -40,7 +40,7 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
             return null;
         }
         try {
-            const response = await fetch(`/api/v1/agents/${agentId}/sessions`, { // **VERIFICA ENDPOINT ESATTO!**
+            const response = await fetch(`/api/v1/agents/${agentId}/sessions`, { // **ENDPOINT CORRETTO**
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -49,16 +49,16 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
                 body: JSON.stringify({}) // Body vuoto o con parametri "Begin" se necessari
             });
             const data = await response.json();
-            if (data.code === 0 && data.data && (data.data.id || data.data.session_id)) { // Verifica sia 'id' che 'session_id'
-                const newSessionId = data.data.id || data.data.session_id; // Usa 'id' o 'session_id'
+            if (data.code === 0 && data.data && (data.data.id || data.data.session_id)) {
+                const newSessionId = data.data.id || data.data.session_id;
                 setSessionId(newSessionId);
                 console.log("Sessione agente creata con ID:", newSessionId);
-                // Initialize message history after session creation
+                // **INIZIALIZZA LA HISTORY DEI MESSAGGI CON IL MESSAGGIO DI BENVENUTO DELL'AGENTE**
                 setDerivedMessages([
                     {
                         id: uuidv4(),
                         role: MessageType.Assistant,
-                        content: data.data.message?.[0]?.content || "Ciao! Come posso aiutarti?", // Use initial message from session creation or default
+                        content: data.data.message?.[0]?.content || "Ciao! Come posso aiutarti?", // Usa messaggio iniziale API o default
                     }
                 ]);
                 return newSessionId;
@@ -80,7 +80,7 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
         }
         if (!sessionId) {
             console.error("Session ID non disponibile. La sessione deve essere creata prima.");
-            return; // Sessione non creata, esci
+            return;
         }
 
         setSendLoading(true);
@@ -90,11 +90,11 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
             content: messageContent,
             doc_ids: [],
         };
-        setDerivedMessages(prevMessages => [...prevMessages, newUserMessage]); // Aggiungi messaggio utente alla history
-        setValue(''); // Pulisci l'input
+        setDerivedMessages(prevMessages => [...prevMessages, newUserMessage]);
+        setValue('');
 
         try {
-            const response = await fetch(`/api/v1/agents/${agentId}/completions`, { // **VERIFICA ENDPOINT ESATTO!**
+            const response = await fetch(`/api/v1/agents/${agentId}/completions`, { // **ENDPOINT CORRETTO**
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -102,9 +102,8 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
                 },
                 body: JSON.stringify({
                     question: messageContent,
-                    stream: false, // Puoi gestire streaming se necessario, per ora false per semplicità
-                    session_id: sessionId, // **USA session_id OTTENUTO DALLA CREAZIONE SESSIONE!**
-                    // ... altri parametri opzionali ...
+                    stream: false,
+                    session_id: sessionId,
                 }),
             });
             const data = await response.json();
@@ -114,10 +113,10 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
                 const assistantMessage: Message = {
                     id: uuidv4(),
                     role: MessageType.Assistant,
-                    content: data.data.answer || "Risposta vuota dall'agente", // Gestisci risposta vuota
-                    reference: data.data.reference, // Gestisci reference se presenti
+                    content: data.data.answer || "Risposta vuota dall'agente",
+                    reference: data.data.reference,
                 };
-                setDerivedMessages(prevMessages => [...prevMessages, assistantMessage]); // Aggiungi risposta assistente alla history
+                setDerivedMessages(prevMessages => [...prevMessages, assistantMessage]);
             } else {
                 console.error("Errore nella completion agente:", data);
                 const errorAssistantMessage: Message = {
@@ -126,7 +125,7 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
                     content: "**Errore nella risposta dell'agente.** Riprova più tardi.",
                     error: true,
                 };
-                setDerivedMessages(prevMessages => [...prevMessages, errorAssistantMessage]); // Messaggio di errore nella history
+                setDerivedMessages(prevMessages => [...prevMessages, errorAssistantMessage]);
             }
         } catch (error) {
             console.error("Errore chiamata API completion agente:", error);
@@ -137,7 +136,7 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
                 content: "**Errore di comunicazione con il server.** Riprova più tardi.",
                 error: true,
             };
-            setDerivedMessages(prevMessages => [...prevMessages, errorAssistantMessage]); // Messaggio di errore nella history
+            setDerivedMessages(prevMessages => [...prevMessages, errorAssistantMessage]);
         }
     }, [agentId, sessionId]);
 
