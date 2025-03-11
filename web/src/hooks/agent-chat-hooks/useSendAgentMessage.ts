@@ -145,27 +145,26 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
         setValue(e.target.value);
     }, []);
 
-    // Gestione pressione Enter o click su pulsante di invio
     const handlePressEnter = useCallback(
         (e?: React.KeyboardEvent<HTMLTextAreaElement> | React.MouseEvent<HTMLButtonElement>) => {
-            e?.preventDefault();
+            e?.preventDefault?.(); // <-- ADDED CHECK HERE: e?.preventDefault?.()
             const messageContent = value.trim();
             if (!messageContent) return;
-
+    
             if (!sessionId) {
                 // Se non c'è session_id, crea la sessione e poi invia il messaggio
-                setLoading(true); // Mostra spinner di caricamento creazione sessione
+                setLoading(true);
                 createAgentSession().then(newSessionId => {
-                    setLoading(false); // Nascondi spinner creazione sessione
+                    setLoading(false);
                     if (newSessionId) {
-                        sendAgentCompletion(messageContent); // Invia messaggio solo se sessione creata
+                        sendAgentCompletion(messageContent);
                     } else {
                         console.error("Impossibile creare la sessione agente, messaggio non inviato.");
                         // Gestisci errore creazione sessione (es. messaggio all'utente)
                     }
                 });
             } else {
-                sendAgentCompletion(messageContent); // Invia messaggio se sessione esiste già
+                sendAgentCompletion(messageContent);
             }
         },
         [value, sessionId, agentId, createAgentSession, sendAgentCompletion]
