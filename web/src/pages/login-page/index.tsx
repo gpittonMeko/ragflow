@@ -45,7 +45,7 @@ const PresentationPage: React.FC = () => {
 
                     {/* Usa AgentChatContainer e passa agentId */}
                     <div className={styles.chatSection}>
-                        <AgentChatContainer agentId={AGENT_ID} />
+                        <AgentChatContainer agentId={AGENT_ID} /> {/* Passa agentId e RIMUOVI agentMode */}
                     </div>
                 </div>
             </div>
