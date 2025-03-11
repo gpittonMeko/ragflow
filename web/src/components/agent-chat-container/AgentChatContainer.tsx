@@ -6,11 +6,13 @@ import PdfDrawer from '@/components/pdf-drawer';
 import { Flex, Spin } from 'antd';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import { MessageType } from '@/constants/chat';
-import { buildMessageItemReference } from '@/pages/chat/utils'; // Correggi il path
+import { buildMessageItemReference } from '@/pages/chat/utils'; // Correggi il path SE NECESSARIO
 import styles from './AgentChatContainer.less'; // Crea AgentChatContainer.less o usa stili esistenti
 import { useSendAgentMessage } from '@/hooks/agent-chat-hooks/useSendAgentMessage'; // Path corretto
 import { useFetchAgentAvatar } from '@/hooks/agent-chat-hooks/useFetchAgentAvatar'; // Path corretto
 import { useSendButtonDisabled } from '@/pages/chat/hooks'; // Path corretto
+import { buildMessageUuidWithRole } from '@/utils/chat'; // **IMPORT ADDED - IMPORTANT!**
+
 
 interface IProps {
     agentId: string; // agentId come prop
@@ -48,7 +50,7 @@ const AgentChatContainer = ({ agentId }: IProps) => {
                         <Spin spinning={loading}>
                             {derivedMessages?.map((message, i) => (
                                 <MessageItem
-                                    key={buildMessageUuidWithRole(message)}
+                                    key={buildMessageUuidWithRole(message)} // FUNZIONE IMPORTATA ORA DISPONIBILE
                                     item={message}
                                     nickname="You"
                                     avatarDialog={avatarData?.avatar} // Avatar dell'agente

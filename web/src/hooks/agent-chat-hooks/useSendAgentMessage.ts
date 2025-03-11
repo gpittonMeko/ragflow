@@ -78,7 +78,8 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
             console.error("Agent ID non disponibile per la completion.");
             return;
         }
-        if (!sessionId) {
+        
+        if (!sessionId) { // <-- THIS IS LINE 82, WHERE THE ERROR IS HAPPENING
             console.error("Session ID non disponibile. La sessione deve essere creata prima.");
             return;
         }
@@ -147,29 +148,96 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
 
     const handlePressEnter = useCallback(
         (e?: React.KeyboardEvent<HTMLTextAreaElement> | React.MouseEvent<HTMLButtonElement>) => {
-            e?.preventDefault?.(); // <-- ADDED CHECK HERE: e?.preventDefault?.()
+            e?.preventDefault?.();
             const messageContent = value.trim();
             if (!messageContent) return;
     
             if (!sessionId) {
-                // Se non c'è session_id, crea la sessione e poi invia il messaggio
+                // If no session_id, create session then send message
                 setLoading(true);
                 createAgentSession().then(newSessionId => {
                     setLoading(false);
                     if (newSessionId) {
-                        sendAgentCompletion(messageContent);
+                        setSessionId(newSessionId); // **SET SESSION ID HERE, IMMEDIATELY AFTER CREATION**
+                        sendAgentCompletion(messageContent, newSessionId); // **PASS newSessionId to sendAgentCompletion**
                     } else {
                         console.error("Impossibile creare la sessione agente, messaggio non inviato.");
-                        // Gestisci errore creazione sessione (es. messaggio all'utente)
+                        // Handle session creation error
                     }
                 });
             } else {
-                sendAgentCompletion(messageContent);
+                sendAgentCompletion(messageContent, sessionId); // **PASS existing sessionId**
             }
         },
         [value, sessionId, agentId, createAgentSession, sendAgentCompletion]
     );
-
+    
+    const sendAgentCompletion = useCallback(async (messageContent: string, currentSessionId: string | null) => { // **ACCEPT session ID as argument**
+        if (!agentId) {
+            console.error("Agent ID non disponibile per la completion.");
+            return;
+        }
+        if (!currentSessionId) { // **USE currentSessionId here**
+            console.error("Session ID non disponibile. La sessione deve essere creata prima.");
+            return;
+        }
+    
+        setSendLoading(true);
+        const newUserMessage: Message = {
+            id: uuidv4(),
+            role: MessageType.User,
+            content: messageContent,
+            doc_ids: [],
+        };
+        setDerivedMessages(prevMessages => [...prevMessages, newUserMessage]);
+        setValue('');
+    
+        try {
+            const response = await fetch(`/api/v1/agents/${agentId}/completions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer YOUR_API_KEY'
+                },
+                body: JSON.stringify({
+                    question: messageContent,
+                    stream: false,
+                    session_id: currentSessionId, // **USE currentSessionId here**
+                }),
+            });
+            const data = await response.json();
+            setSendLoading(false);
+    
+            if (data.code === 0 && data.data) {
+                const assistantMessage: Message = {
+                    id: uuidv4(),
+                    role: MessageType.Assistant,
+                    content: data.data.answer || "Risposta vuota dall'agente",
+                    reference: data.data.reference,
+                };
+                setDerivedMessages(prevMessages => [...prevMessages, assistantMessage]);
+            } else {
+                console.error("Errore nella completion agente:", data);
+                const errorAssistantMessage: Message = {
+                    id: uuidv4(),
+                    role: MessageType.Assistant,
+                    content: "**Errore nella risposta dell'agente.** Riprova più tardi.",
+                    error: true,
+                };
+                setDerivedMessages(prevMessages => [...prevMessages, errorAssistantMessage]);
+            }
+        } catch (error) {
+            console.error("Errore chiamata API completion agente:", error);
+            setSendLoading(false);
+            const errorAssistantMessage: Message = {
+                id: uuidv4(),
+                role: MessageType.Assistant,
+                content: "**Errore di comunicazione con il server.** Riprova più tardi.",
+                error: true,
+            };
+            setDerivedMessages(prevMessages => [...prevMessages, errorAssistantMessage]);
+        }
+    }, [agentId]); // sessionId REMOVED from dependency array - we now pass it directly
 
     const regenerateMessage = useCallback((messageId: string) => {
         // Implementa la logica di rigenerazione del messaggio se necessario (opzionale per ora)
