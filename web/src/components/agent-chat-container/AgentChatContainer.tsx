@@ -21,6 +21,8 @@ interface IProps {
 const AgentChatContainer = ({ agentId }: IProps) => {
     const ref = useRef(null);
     const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } = useClickDrawer();
+    console.log("AgentChatContainer: clickDocumentButton prop:", clickDocumentButton); // ADD THIS LOG
+
 
     // Usa il nuovo hook useSendAgentMessage, passando agentId
     const {
