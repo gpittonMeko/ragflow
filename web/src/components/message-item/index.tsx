@@ -53,6 +53,8 @@ const MessageItem = ({
   showLoudspeaker = true,
   visibleAvatar = true,
 }: IProps) => {
+  console.log("MessageItem: clickDocumentButton prop:", clickDocumentButton); // ADD THIS LOG
+
   const { theme } = useTheme();
   const isAssistant = item.role === MessageType.Assistant;
   const isUser = item.role === MessageType.User;

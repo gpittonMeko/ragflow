@@ -41,6 +41,8 @@ const MarkdownContent = ({
   reference: IReference;
   clickDocumentButton?: (documentId: string, chunk: IReferenceChunk) => void;
 }) => {
+  console.log("MarkdownContent: clickDocumentButton prop:", clickDocumentButton); // ADD THIS LOG
+
   const { t } = useTranslation();
   const { setDocumentIds, data: fileThumbnails } =
     useFetchDocumentThumbnailsByIds();
@@ -66,6 +68,8 @@ const MarkdownContent = ({
       documentUrl?: string,
     ) =>
       () => {
+        console.log("MarkdownContent: handleDocumentButtonClick CALLED", { documentId, chunk }); // ADD THIS LOG
+
         if (!isPdf) {
           if (!documentUrl) {
             return;
