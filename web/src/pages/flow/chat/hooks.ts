@@ -4,7 +4,7 @@ import {
   useFetchFlow,
   useHandleMessageInputChange,
   useSendMessageWithSse,
-} from '@/hooks/logic-hooks';
+} from '@/hooks/flow-hooks';
 import { Message } from '@/interfaces/database/chat';
 import api from '@/utils/api';
 import { message as antMessage } from 'antd';
