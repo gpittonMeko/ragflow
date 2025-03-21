@@ -1,43 +1,45 @@
 // web/src/pages/login-page/login-page.tsx (o PresentationPage.tsx)
-
 import React, { memo, useRef, useState } from 'react';
-import AgentChatContainer from '@/components/agent-chat-container/AgentChatContainer'; // Importa il nuovo componente
 import { Flex, Spin, Button } from 'antd';
 
-// Componenti e costanti (Rimuovi import superflui, mantieni solo PdfDrawer e relativi hook se usati in PresentationPage)
+// Se avevi AgentChatContainer e non ti serve più, puoi rimuoverlo
+// import AgentChatContainer from '@/components/agent-chat-container/AgentChatContainer';
+
+// Import del componente chat che vuoi integrare
+import FlowChatBox from '@/pages/flow/chat/box'; 
+
+// Import del PdfDrawer (se lo usi in questa pagina)
 import PdfDrawer from '@/components/pdf-drawer';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 
-// Importa il tuo FlowDrawer da pages/flow/flow-drawer/index.tsx
+// Import del FlowDrawer (se lo usi in questa pagina)
 import FormDrawer from '@/pages/flow/flow-drawer'; 
-import { RAGFlowNodeType } from '@/interfaces/database/flow'; // Se ti serve il tipo
+import { RAGFlowNodeType } from '@/interfaces/database/flow'; // se ti serve per definire il tipo
 
 // Stili
 import styles from './index.less';
 
-const AGENT_ID = 'a871ecb2eaba11efb3a10242ac120006'; // Sostituisci con l'ID corretto
+// Se ti serviva un ID (es. AGENT_ID), puoi tenerlo ma se non lo usi più rimuovilo
+// const AGENT_ID = 'a871ecb2eaba11efb3a10242ac120006'; // Sostituisci con l'ID corretto se serve
 
 const PresentationPage: React.FC = () => {
   const controllerRef = useRef(new AbortController());
 
-  // Stato per aprire/chiudere il drawer principale
+  // ---------------------------------------------------------------
+  // SE USI IL FLOWDRAWER: gestisci qui i suoi stati (altrimenti rimuovi)
+  // ---------------------------------------------------------------
   const [drawerVisible, setDrawerVisible] = useState<boolean>(false);
-
-  // Stato per aprire/chiudere il single debug drawer interno a flow-drawer
   const [singleDebugDrawerVisible, setSingleDebugDrawerVisible] = useState<boolean>(false);
-
-  // Il nodo che passeremo al FlowDrawer (con operatorName, form, ecc.)
   const [currentNode, setCurrentNode] = useState<RAGFlowNodeType | undefined>(undefined);
 
-  // Funzioni per aprire/chiudere il FlowDrawer
   const showDrawer = () => {
     // Esempio: impostiamo un operatore "Generate"
     setCurrentNode({
       id: 'my-node-id',
       data: {
-        label: 'Generate', // uno degli Operator, es: 'Generate', 'Answer', 'Retrieval', ...
+        label: 'Generate',
         form: {
-          // campi di default
+          // eventuali campi di default
         },
       },
     });
@@ -48,7 +50,6 @@ const PresentationPage: React.FC = () => {
     setDrawerVisible(false);
   };
 
-  // Funzioni per il single debug drawer
   const showSingleDebugDrawer = () => {
     setSingleDebugDrawerVisible(true);
   };
@@ -56,12 +57,14 @@ const PresentationPage: React.FC = () => {
   const hideSingleDebugDrawer = () => {
     setSingleDebugDrawerVisible(false);
   };
+  // ---------------------------------------------------------------
 
   return (
     <div className={styles.pageContainer}>
       <header className={styles.header}>
         <h1 className={styles.movingGradientLogo}>SGAI</h1>
       </header>
+
       <div className={styles.mainContent}>
         <div className={styles.presentationContainer}>
           <header className={styles.presentationHeader}>
@@ -69,6 +72,7 @@ const PresentationPage: React.FC = () => {
               Sommarizzazione Accertamenti - SGAI
             </h2>
           </header>
+
           <div className={styles.presentation}>
             <p>
               SGAI (Sistema di Gestione e Analisi Intelligente) è una piattaforma che utilizza
@@ -83,22 +87,28 @@ const PresentationPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Sezione Chat */}
+          {/*
+            Sezione Chat:
+            Qui inseriamo FlowChatBox al posto (o in aggiunta) di AgentChatContainer
+          */}
           <div className={styles.chatSection}>
-            <AgentChatContainer agentId={AGENT_ID} />
+            <FlowChatBox />
           </div>
 
-          {/* (Opzionale) Un bottone per mostrare il FlowDrawer */}
+          {/* Esempio di bottone per aprire il FlowDrawer (se lo usi) */}
           <Button type="primary" onClick={showDrawer}>
             Apri Flow Drawer
           </Button>
 
-          {/* PdfDrawer, se lo utilizzi in questa pagina */}
+          {/* PdfDrawer, se lo utilizzi anche qui */}
           <PdfDrawer />
         </div>
       </div>
 
-      {/* FlowDrawer con tutte le logiche e le form collegate */}
+      {/*
+        FlowDrawer con tutte le logiche e form collegate
+        Se non ti serve in questa pagina, puoi rimuovere.
+      */}
       <FormDrawer
         visible={drawerVisible}
         hideModal={hideDrawer}
