@@ -18,7 +18,10 @@ const antMessage = message;
 
 export const useSelectNextMessages = () => {
   const { data: flowDetail, loading } = useFetchFlow();
-  const reference = flowDetail.dsl.reference;
+
+  // fallback per evitare errori se flowDetail o flowDetail.dsl è undefined
+  const reference = flowDetail?.dsl?.reference ?? [];
+
   const {
     derivedMessages,
     ref,
@@ -41,6 +44,7 @@ export const useSelectNextMessages = () => {
     removeMessagesAfterCurrentMessage,
   };
 };
+
 
 export const useSendNextMessage = () => {
   const {
