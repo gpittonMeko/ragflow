@@ -1,5 +1,3 @@
-// C:\Users\user\ragflow\web\src\pages\flow\chat\hooks.ts
-
 import { MessageType } from '@/constants/chat';
 import { useFetchFlow } from '@/hooks/flow-hooks';
 import {
@@ -9,22 +7,19 @@ import {
 } from '@/hooks/logic-hooks';
 import { Message } from '@/interfaces/database/chat';
 import api from '@/utils/api';
-import { message } from 'antd';
+import { message as antMessage } from 'antd';
 import trim from 'lodash/trim';
 import { useCallback, useEffect } from 'react';
 import { useParams } from 'umi';
 import { v4 as uuid } from 'uuid';
 import { receiveMessageError } from '../utils';
 
-const antMessage = message;
+interface UseSendNextMessageProps {
+  agentId?: string; // lo dichiari qui
+}
 
-/**
- * Hook per selezionare i messaggi e i riferimenti (reference) dal flow
- */
 export const useSelectNextMessages = () => {
   const { data: flowDetail, loading } = useFetchFlow();
-
-  // Se flowDetail o flowDetail.dsl è undefined, assegna un array vuoto.
   const reference = flowDetail?.dsl?.reference ?? [];
 
   const {
@@ -50,10 +45,12 @@ export const useSelectNextMessages = () => {
   };
 };
 
-/**
- * Hook per inviare messaggi con SSE, basato su useSelectNextMessages
- */
-export const useSendNextMessage = () => {
+export const useSendNextMessage = ({ agentId }: UseSendNextMessageProps) => {
+  // Se vuoi loggare:
+  // console.log('useSendNextMessage => agentId:', agentId);
+
+  // Se serve, userai agentId nelle chiamate SSE
+  // Esempio: parametri agentId = ...
   const {
     reference,
     loading,
@@ -64,51 +61,51 @@ export const useSendNextMessage = () => {
     removeLatestMessage,
     removeMessageById,
   } = useSelectNextMessages();
-  
+
   const { id: flowId } = useParams();
   const { handleInputChange, value, setValue } = useHandleMessageInputChange();
   const { refetch } = useFetchFlow();
-
-  // Hook SSE
   const { send, answer, done } = useSendMessageWithSse(api.runCanvas);
 
-  // Funzione per inviare il messaggio
   const sendMessage = useCallback(
     async ({ message }: { message: Message; messages?: Message[] }) => {
       const params: Record<string, unknown> = { id: flowId };
+
       if (message.content) {
         params.message = message.content;
         params.message_id = message.id;
       }
-      const res = await send(params);
 
+      // Se devi davvero passare l'agentId all'API, fai:
+      // if (agentId) {
+      //   params.agentId = agentId;
+      // }
+
+      const res = await send(params);
       if (receiveMessageError(res)) {
         antMessage.error(res?.data?.message);
-        // Annulla il loading
         setValue(message.content);
         removeLatestMessage();
       } else {
-        refetch(); // Ricarica la lista dei messaggi
+        refetch();
       }
     },
-    [flowId, send, setValue, removeLatestMessage, refetch],
+    [flowId, send, setValue, removeLatestMessage, refetch]
   );
 
   const handleSendMessage = useCallback(
     async (msg: Message) => {
       sendMessage({ message: msg });
     },
-    [sendMessage],
+    [sendMessage]
   );
 
-  // Se abbiamo risposta dall’SSE, aggiunge la answer in derivedMessages
   useEffect(() => {
     if (answer.answer) {
       addNewestAnswer(answer);
     }
   }, [answer, addNewestAnswer]);
 
-  // Funzione per inviare messaggi all’Enter
   const handlePressEnter = useCallback(() => {
     if (trim(value) === '') return;
     const id = uuid();
@@ -123,17 +120,15 @@ export const useSendNextMessage = () => {
     });
   }, [addNewestQuestion, handleSendMessage, done, setValue, value]);
 
-  // Funzione per fetch iniziale (prologo)
   const fetchPrologue = useCallback(async () => {
     const sendRet = await send({ id: flowId });
     if (receiveMessageError(sendRet)) {
-      message.error(sendRet?.data?.message);
+      antMessage.error(sendRet?.data?.message);
     } else {
       refetch();
     }
   }, [flowId, refetch, send]);
 
-  // Richiama prologo al mount
   useEffect(() => {
     fetchPrologue();
   }, [fetchPrologue]);
@@ -142,9 +137,9 @@ export const useSendNextMessage = () => {
     handlePressEnter,
     handleInputChange,
     value,
-    sendLoading: !done,    // loading SSE
-    reference,             // fallback già pronto
-    loading,               // loading di useFetchFlow
+    sendLoading: !done,
+    reference,
+    loading,
     derivedMessages,
     ref,
     removeMessageById,

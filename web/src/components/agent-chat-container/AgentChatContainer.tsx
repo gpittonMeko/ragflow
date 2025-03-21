@@ -1,40 +1,26 @@
-// web/src/components/agent-chat-container/AgentChatContainer.tsx
-import React, { useRef } from 'react';
+import React from 'react';
 import { Flex, Spin } from 'antd';
-
-// Se usi i `MessageType` e la costante per i ruoli
 import { MessageType } from '@/constants/chat';
-
-// Componenti e util
 import MessageItem from '@/components/message-item';
 import MessageInput from '@/components/message-input';
 import PdfDrawer from '@/components/pdf-drawer';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import { buildMessageItemReference } from '@/pages/chat/utils';
 import { buildMessageUuidWithRole } from '@/utils/chat';
-
-// Hook “flow” (presente in FlowChatBox) che gestisce i messaggi, reference, ecc.
-import { useSendNextMessage } from '@/pages/flow/chat/hooks';
-
-// Altri hook
+import { useSendNextMessage } from '@/pages/flow/chat/hooks'; // HOOK
 import { useGetFileIcon } from '@/pages/chat/hooks';
 import { useFetchFlow } from '@/hooks/flow-hooks';
 import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
 
-// CSS
 import styles from './AgentChatContainer.less';
 
-// Se hai un interface per le props, la mantieni
+// Definiamo la prop con l’agentId
 interface IProps {
   agentId: string;
 }
 
-/**
- * AgentChatContainer che integra le funzioni base + documenti/PDF
- * simile a FlowChatBox
- */
 const AgentChatContainer: React.FC<IProps> = ({ agentId }) => {
-  // Hook e logiche “FlowChatBox-like”
+  // Passiamo l’oggetto { agentId } al nostro hook
   const {
     sendLoading,
     handleInputChange,
@@ -44,19 +30,16 @@ const AgentChatContainer: React.FC<IProps> = ({ agentId }) => {
     ref,
     derivedMessages,
     reference,
-  } = useSendNextMessage(agentId);
-  // ^ Se `useSendNextMessage` non supporta l'agentId, togli quell’argomento oppure
-  //   modifica l’hook per farglielo gestire.
+  } = useSendNextMessage({ agentId });
 
-  // Hook per i documenti/PDF
+  // Hook per l’apertura PDF
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } = useClickDrawer();
 
-  // Caricamento icone file (flow) e avatar (canvas/utente)
+  // Carica icone e dati per avatar
   useGetFileIcon();
   const { data: userInfo } = useFetchUserInfo();
   const { data: canvasInfo } = useFetchFlow();
 
-  // Se manca l’agentId, per sicurezza mostriamo un avviso
   if (!agentId) {
     return <div>Agent ID mancante</div>;
   }
@@ -64,12 +47,11 @@ const AgentChatContainer: React.FC<IProps> = ({ agentId }) => {
   return (
     <>
       <Flex flex={1} className={styles.agentChatContainer} vertical>
-        {/* Area con i messaggi */}
+        {/* Lista messaggi */}
         <Flex flex={1} vertical className={styles.messageContainer}>
           <div>
             <Spin spinning={loading}>
               {derivedMessages?.map((message, i) => {
-                // Ogni messaggio
                 const isAssistant = message.role === MessageType.Assistant;
                 const isLastAssistant = isAssistant && i === derivedMessages.length - 1;
 
@@ -77,20 +59,16 @@ const AgentChatContainer: React.FC<IProps> = ({ agentId }) => {
                   <MessageItem
                     key={buildMessageUuidWithRole(message)}
                     item={message}
-                    // Avatar e nickname
                     nickname={userInfo?.nickname ?? 'You'}
-                    avatar={userInfo?.avatar} // avatar utente
-                    avatarDialog={canvasInfo?.avatar} // avatar "canvas" (es. agente)
-                    // reference e doc
+                    avatar={userInfo?.avatar}
+                    avatarDialog={canvasInfo?.avatar}
                     reference={buildMessageItemReference(
                       { message: derivedMessages, reference },
                       message
                     )}
                     clickDocumentButton={clickDocumentButton}
-                    // Se sta ancora “sendLoading” e sei all’ultimo messaggio assistant
                     loading={isAssistant && sendLoading && isLastAssistant}
                     index={i}
-                    // Disabilita like e loudspeaker se non servono
                     showLikeButton={false}
                     showLoudspeaker={false}
                     sendLoading={sendLoading}
@@ -99,7 +77,7 @@ const AgentChatContainer: React.FC<IProps> = ({ agentId }) => {
               })}
             </Spin>
           </div>
-          {/* Riferimento per scroll all’ultimo messaggio */}
+          {/* Scroll anchor */}
           <div ref={ref} />
         </Flex>
 
@@ -111,12 +89,11 @@ const AgentChatContainer: React.FC<IProps> = ({ agentId }) => {
           onInputChange={handleInputChange}
           onPressEnter={handlePressEnter}
           sendLoading={sendLoading}
-          // Se devi far caricare pdf, come in FlowChatBox potresti mettere showUploadIcon={true}, ecc.
           showUploadIcon={false}
         />
       </Flex>
 
-      {/* Drawer per PDF/documenti */}
+      {/* Drawer PDF */}
       <PdfDrawer
         visible={visible}
         hideModal={hideModal}
