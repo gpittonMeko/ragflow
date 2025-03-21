@@ -1,104 +1,130 @@
 // web/src/components/agent-chat-container/AgentChatContainer.tsx
 import React, { useRef } from 'react';
-import MessageInput from '@/components/message-input';
-import MessageItem from '@/components/message-item';
-import PdfDrawer from '@/components/pdf-drawer';
 import { Flex, Spin } from 'antd';
-import { useClickDrawer } from '@/components/pdf-drawer/hooks';
+
+// Se usi i `MessageType` e la costante per i ruoli
 import { MessageType } from '@/constants/chat';
-import { buildMessageItemReference } from '@/pages/chat/utils'; // Correggi il path SE NECESSARIO
-import styles from './AgentChatContainer.less'; // Crea AgentChatContainer.less o usa stili esistenti
-import { useSendAgentMessage } from '@/hooks/agent-chat-hooks/useSendAgentMessage'; // Path corretto
-import { useFetchAgentAvatar } from '@/hooks/agent-chat-hooks/useFetchAgentAvatar'; // Path corretto
-import { useSendButtonDisabled } from '@/pages/chat/hooks'; // Path corretto
-import { buildMessageUuidWithRole } from '@/utils/chat'; // **IMPORT ADDED - IMPORTANT!**
 
+// Componenti e util
+import MessageItem from '@/components/message-item';
+import MessageInput from '@/components/message-input';
+import PdfDrawer from '@/components/pdf-drawer';
+import { useClickDrawer } from '@/components/pdf-drawer/hooks';
+import { buildMessageItemReference } from '@/pages/chat/utils';
+import { buildMessageUuidWithRole } from '@/utils/chat';
 
+// Hook “flow” (presente in FlowChatBox) che gestisce i messaggi, reference, ecc.
+import { useSendNextMessage } from '@/pages/flow/chat/hooks';
+
+// Altri hook
+import { useGetFileIcon } from '@/pages/chat/hooks';
+import { useFetchFlow } from '@/hooks/flow-hooks';
+import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
+
+// CSS
+import styles from './AgentChatContainer.less';
+
+// Se hai un interface per le props, la mantieni
 interface IProps {
-    agentId: string; // agentId come prop
+  agentId: string;
 }
 
-const AgentChatContainer = ({ agentId }: IProps) => {
-    const ref = useRef(null);
-    const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } = useClickDrawer();
-    console.log("AgentChatContainer: clickDocumentButton prop:", clickDocumentButton); // ADD THIS LOG
+/**
+ * AgentChatContainer che integra le funzioni base + documenti/PDF
+ * simile a FlowChatBox
+ */
+const AgentChatContainer: React.FC<IProps> = ({ agentId }) => {
+  // Hook e logiche “FlowChatBox-like”
+  const {
+    sendLoading,
+    handleInputChange,
+    handlePressEnter,
+    value,
+    loading,
+    ref,
+    derivedMessages,
+    reference,
+  } = useSendNextMessage(agentId);
+  // ^ Se `useSendNextMessage` non supporta l'agentId, togli quell’argomento oppure
+  //   modifica l’hook per farglielo gestire.
 
+  // Hook per i documenti/PDF
+  const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } = useClickDrawer();
 
-    // Usa il nuovo hook useSendAgentMessage, passando agentId
-    const {
-        value,
-        loading,
-        sendLoading,
-        derivedMessages,
-        handleInputChange,
-        handlePressEnter,
-        regenerateMessage,
-        removeMessageById,
-    } = useSendAgentMessage(agentId); // agentId è passato all'hook
+  // Caricamento icone file (flow) e avatar (canvas/utente)
+  useGetFileIcon();
+  const { data: userInfo } = useFetchUserInfo();
+  const { data: canvasInfo } = useFetchFlow();
 
-    const sendDisabled = useSendButtonDisabled(value); // Reutilizza hook per pulsante disabilitato
-    // Usa il nuovo hook per l'avatar dell'agente, passando agentId
-    const { data: avatarData } = useFetchAgentAvatar(agentId); // agentId è passato all'hook
+  // Se manca l’agentId, per sicurezza mostriamo un avviso
+  if (!agentId) {
+    return <div>Agent ID mancante</div>;
+  }
 
-    if (!agentId) {
-        return <div>Agent ID mancante</div>; // Gestisci il caso in cui agentId non è fornito
-    }
+  return (
+    <>
+      <Flex flex={1} className={styles.agentChatContainer} vertical>
+        {/* Area con i messaggi */}
+        <Flex flex={1} vertical className={styles.messageContainer}>
+          <div>
+            <Spin spinning={loading}>
+              {derivedMessages?.map((message, i) => {
+                // Ogni messaggio
+                const isAssistant = message.role === MessageType.Assistant;
+                const isLastAssistant = isAssistant && i === derivedMessages.length - 1;
 
-    return (
-        <>
-            <Flex flex={1} className={styles.agentChatContainer} vertical>
-                <Flex flex={1} vertical className={styles.messageContainer}>
-                    <div>
-                        <Spin spinning={loading}>
-                            {derivedMessages?.map((message, i) => (
-                                <MessageItem
-                                    key={buildMessageUuidWithRole(message)} // FUNZIONE IMPORTATA ORA DISPONIBILE
-                                    item={message}
-                                    nickname="You"
-                                    avatarDialog={avatarData?.avatar} // Avatar dell'agente
-                                    reference={buildMessageItemReference(
-                                        { message: derivedMessages, reference: [] }, message
-                                    )}
-                                    loading={
-                                        message.role === MessageType.Assistant &&
-                                        sendLoading &&
-                                        derivedMessages?.length - 1 === i
-                                    }
-                                    index={i}
-                                    clickDocumentButton={clickDocumentButton}
-                                    showLikeButton={false}
-                                    showLoudspeaker={false}
-                                    regenerateMessage={regenerateMessage}
-                                    removeMessageById={removeMessageById}
-                                    sendLoading={sendLoading}
-                                ></MessageItem>
-                            ))}
-                        </Spin>
-                    </div>
-                    <div ref={ref} />
-                </Flex>
-
-                <MessageInput
-                    value={value}
-                    disabled={false} // Puoi aggiungere logica per disabilitare input se necessario
-                    sendDisabled={sendDisabled}
-                    onInputChange={handleInputChange}
-                    onPressEnter={handlePressEnter}
+                return (
+                  <MessageItem
+                    key={buildMessageUuidWithRole(message)}
+                    item={message}
+                    // Avatar e nickname
+                    nickname={userInfo?.nickname ?? 'You'}
+                    avatar={userInfo?.avatar} // avatar utente
+                    avatarDialog={canvasInfo?.avatar} // avatar "canvas" (es. agente)
+                    // reference e doc
+                    reference={buildMessageItemReference(
+                      { message: derivedMessages, reference },
+                      message
+                    )}
+                    clickDocumentButton={clickDocumentButton}
+                    // Se sta ancora “sendLoading” e sei all’ultimo messaggio assistant
+                    loading={isAssistant && sendLoading && isLastAssistant}
+                    index={i}
+                    // Disabilita like e loudspeaker se non servono
+                    showLikeButton={false}
+                    showLoudspeaker={false}
                     sendLoading={sendLoading}
-                    uploadMethod="external_upload_and_parse" // Mantieni o modifica se necessario
-                    showUploadIcon={false} // Mantieni o modifica se necessario
-                ></MessageInput>
-            </Flex>
-            {visible && (
-                <PdfDrawer
-                    visible={visible}
-                    hideModal={hideModal}
-                    documentId={documentId}
-                    chunk={selectedChunk}
-                ></PdfDrawer>
-            )}
-        </>
-    );
+                  />
+                );
+              })}
+            </Spin>
+          </div>
+          {/* Riferimento per scroll all’ultimo messaggio */}
+          <div ref={ref} />
+        </Flex>
+
+        {/* Input messaggi */}
+        <MessageInput
+          value={value}
+          disabled={false}
+          sendDisabled={sendLoading}
+          onInputChange={handleInputChange}
+          onPressEnter={handlePressEnter}
+          sendLoading={sendLoading}
+          // Se devi far caricare pdf, come in FlowChatBox potresti mettere showUploadIcon={true}, ecc.
+          showUploadIcon={false}
+        />
+      </Flex>
+
+      {/* Drawer per PDF/documenti */}
+      <PdfDrawer
+        visible={visible}
+        hideModal={hideModal}
+        documentId={documentId}
+        chunk={selectedChunk}
+      />
+    </>
+  );
 };
 
 export default AgentChatContainer;
