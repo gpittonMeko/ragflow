@@ -7,20 +7,17 @@ import PdfDrawer from '@/components/pdf-drawer';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import { buildMessageItemReference } from '@/pages/chat/utils';
 import { buildMessageUuidWithRole } from '@/utils/chat';
-import { useSendNextMessage } from '@/pages/flow/chat/hooks'; // HOOK
+import { useSendNextMessage } from '@/pages/flow/chat/hooks';
 import { useGetFileIcon } from '@/pages/chat/hooks';
 import { useFetchFlow } from '@/hooks/flow-hooks';
 import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
-
 import styles from './AgentChatContainer.less';
 
-// Definiamo la prop con l’agentId
 interface IProps {
-  agentId: string;
+  agentId: string; // Avrai quest’ID in chiaro
 }
 
 const AgentChatContainer: React.FC<IProps> = ({ agentId }) => {
-  // Passiamo l’oggetto { agentId } al nostro hook
   const {
     sendLoading,
     handleInputChange,
@@ -30,12 +27,13 @@ const AgentChatContainer: React.FC<IProps> = ({ agentId }) => {
     ref,
     derivedMessages,
     reference,
-  } = useSendNextMessage({ agentId });
+  } = useSendNextMessage({ agentId }); 
+  // Se la tua old version funzionava passandogli `agentId` da solo,
+  // potresti farlo, ma la versione attuale dell'hook si aspetta { agentId }.
 
-  // Hook per l’apertura PDF
+  // Hook pdf-drawer
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } = useClickDrawer();
 
-  // Carica icone e dati per avatar
   useGetFileIcon();
   const { data: userInfo } = useFetchUserInfo();
   const { data: canvasInfo } = useFetchFlow();
@@ -47,7 +45,6 @@ const AgentChatContainer: React.FC<IProps> = ({ agentId }) => {
   return (
     <>
       <Flex flex={1} className={styles.agentChatContainer} vertical>
-        {/* Lista messaggi */}
         <Flex flex={1} vertical className={styles.messageContainer}>
           <div>
             <Spin spinning={loading}>
@@ -77,11 +74,9 @@ const AgentChatContainer: React.FC<IProps> = ({ agentId }) => {
               })}
             </Spin>
           </div>
-          {/* Scroll anchor */}
           <div ref={ref} />
         </Flex>
 
-        {/* Input messaggi */}
         <MessageInput
           value={value}
           disabled={false}
@@ -93,7 +88,6 @@ const AgentChatContainer: React.FC<IProps> = ({ agentId }) => {
         />
       </Flex>
 
-      {/* Drawer PDF */}
       <PdfDrawer
         visible={visible}
         hideModal={hideModal}
