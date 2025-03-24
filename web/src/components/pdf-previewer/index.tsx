@@ -42,6 +42,7 @@ const DocumentPreviewer = ({ chunk, documentId, visible }: IProps) => {
   const ref = useRef<(highlight: IHighlight) => void>(() => {});
   const [loaded, setLoaded] = useState(false);
   const url = getDocumentUrl();
+  console.log("PDF URL:", url, "DOCUMENT ID:", documentId);
   const error = useCatchDocumentError(url);
 
   const resetHash = () => {};

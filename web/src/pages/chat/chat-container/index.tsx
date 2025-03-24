@@ -107,6 +107,7 @@ const ChatContainer = ({ controller, agentMode = false }: IProps) => {
           }
         ></MessageInput>
       </Flex>
+      
       <PdfDrawer
         visible={visible}
         hideModal={hideModal}
