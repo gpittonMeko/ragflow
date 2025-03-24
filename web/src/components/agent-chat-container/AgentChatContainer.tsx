@@ -37,6 +37,8 @@ const AgentChatContainer = ({ agentId }: IProps) => {
         removeMessageById,
     } = useSendAgentMessage(agentId);
     
+    console.log("VERIFICA reference:", reference);
+
 
     console.log("Drawer visible:", visible);
     console.log("Document ID:", documentId);
