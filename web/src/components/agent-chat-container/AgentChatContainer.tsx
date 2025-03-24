@@ -36,6 +36,10 @@ const AgentChatContainer = ({ agentId }: IProps) => {
         removeMessageById,
     } = useSendAgentMessage(agentId); // agentId è passato all'hook
 
+    console.log("Drawer visible:", visible);
+    console.log("Document ID:", documentId);
+    console.log("Chunk:", selectedChunk);
+
     const sendDisabled = useSendButtonDisabled(value); // Reutilizza hook per pulsante disabilitato
     // Usa il nuovo hook per l'avatar dell'agente, passando agentId
     const { data: avatarData } = useFetchAgentAvatar(agentId); // agentId è passato all'hook
@@ -100,5 +104,6 @@ const AgentChatContainer = ({ agentId }: IProps) => {
         </>
     );
 };
+
 
 export default AgentChatContainer;
