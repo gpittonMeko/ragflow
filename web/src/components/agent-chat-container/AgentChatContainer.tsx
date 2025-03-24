@@ -30,11 +30,13 @@ const AgentChatContainer = ({ agentId }: IProps) => {
         loading,
         sendLoading,
         derivedMessages,
+        reference, // ⬅️ AGGIUNGI QUESTO
         handleInputChange,
         handlePressEnter,
         regenerateMessage,
         removeMessageById,
-    } = useSendAgentMessage(agentId); // agentId è passato all'hook
+    } = useSendAgentMessage(agentId);
+    
 
     console.log("Drawer visible:", visible);
     console.log("Document ID:", documentId);
@@ -61,8 +63,8 @@ const AgentChatContainer = ({ agentId }: IProps) => {
                                     nickname="You"
                                     avatarDialog={avatarData?.avatar} // Avatar dell'agente
                                     reference={buildMessageItemReference(
-                                        { message: derivedMessages, reference: [] }, message
-                                    )}
+                                        { message: derivedMessages, reference }, message
+                                      )} 
                                     loading={
                                         message.role === MessageType.Assistant &&
                                         sendLoading &&
