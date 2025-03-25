@@ -33,7 +33,7 @@ export const buildMessageItemReference = (
   // Se la reference è un singolo oggetto per l'intera risposta, usala direttamente.
   const reference = conversation?.reference;
 
-  return reference ?? { doc_aggs:, chunks:, total: 0 };
+  return reference ?? { doc_aggs: undefined, chunks: undefined, total: 0 };
 };
 
 const oldReg = /(#{2}\d+\${2})/g;
