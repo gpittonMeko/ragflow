@@ -32,7 +32,7 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
     const [derivedMessages, setDerivedMessages] = useState<Message[]>([]); // Stato per la history dei messaggi
     const ref = useRef<HTMLDivElement>(null);
     const [sessionId, setSessionId] = useState<string | null>(null); // Stato per session_id
-    const [reference, setReference] = useState<any>(undefined); // **INSERISCI QUI**
+
     // Funzione per creare la sessione agente (chiamata API)
     const createAgentSession = useCallback(async () => {
         if (!agentId) {
@@ -118,8 +118,7 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
                     reference: data.data.reference,
                 };
                 setDerivedMessages(prevMessages => [...prevMessages, assistantMessage]);
-                setReference(data.data.reference); // **INSERISCI QUI**
-            } else {       
+            } else {
                 console.error("Errore nella completion agente:", data);
                 const errorAssistantMessage: Message = {
                     id: uuidv4(),
@@ -189,7 +188,6 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
         sendLoading,
         derivedMessages,
         ref,
-        reference, // **AGGIUNGI QUI**
         handleInputChange,
         handlePressEnter,
         regenerateMessage,
