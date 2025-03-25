@@ -101,7 +101,7 @@ const MarkdownContent = ({
 
   const getPopoverContent = useCallback(
     (chunkIndex: number) => {
-      const chunks = reference?.chunks ??;
+      const chunks = reference?.chunks ?? [];
       const chunkItem = chunks[chunkIndex];
       const document = reference?.doc_aggs?.find(
         (x) => x?.doc_id === chunkItem?.document_id,
