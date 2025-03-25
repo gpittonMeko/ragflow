@@ -57,7 +57,7 @@ const DocumentPreviewer = ({ chunk, documentId, visible }: IProps) => {
       ref.current(state[0]);
     }
   }, [state, loaded]);
-
+  console.log("PDF URL:", url, "DOCUMENT ID:", documentId);
   return (
     <div className={styles.documentContainer}>
       <PdfLoader
