@@ -3,27 +3,29 @@ import { IReferenceChunk } from '@/interfaces/database/chat';
 import { useCallback, useState } from 'react';
 
 export const useClickDrawer = () => {
-  const { visible, showModal, hideModal } = useSetModalState();
-  const [selectedChunk, setSelectedChunk] = useState<IReferenceChunk>(
-    {} as IReferenceChunk,
-  );
-  const [documentId, setDocumentId] = useState<string>('');
+  const [visible, setVisible] = useState(false);
+  const [documentId, setDocumentId] = useState<string | undefined>(undefined);
+  const [selectedChunk, setSelectedChunk] = useState<string | undefined>(undefined);
 
-  const clickDocumentButton = useCallback(
-    (documentId: string, chunk: IReferenceChunk) => {
-      showModal();
+  const clickDocumentButton = (docId: string, chunk: string) => {
+      console.log("clickDocumentButton CALLED", { docId, chunk }); // Existing log
+      console.log("clickDocumentButton - INSIDE FUNCTION", { docId, chunk }); // ADD THIS LOG
+      setDocumentId(docId);
       setSelectedChunk(chunk);
-      setDocumentId(documentId);
-    },
-    [showModal],
-  );
+      setVisible(true);
+  };
+
+  const hideModal = () => {
+      setVisible(false);
+      setDocumentId(undefined);
+      setSelectedChunk(undefined);
+  };
 
   return {
-    clickDocumentButton,
-    visible,
-    showModal,
-    hideModal,
-    selectedChunk,
-    documentId,
+      visible,
+      clickDocumentButton,
+      hideModal,
+      documentId,
+      selectedChunk,
   };
 };

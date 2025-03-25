@@ -101,7 +101,7 @@ const MarkdownContent = ({
 
   const getPopoverContent = useCallback(
     (chunkIndex: number) => {
-      const chunks = reference?.chunks ?? [];
+      const chunks = reference?.chunks ??;
       const chunkItem = chunks[chunkIndex];
       const document = reference?.doc_aggs?.find(
         (x) => x?.doc_id === chunkItem?.document_id,
@@ -111,6 +111,13 @@ const MarkdownContent = ({
       const fileThumbnail = documentId ? fileThumbnails[documentId] : '';
       const fileExtension = documentId ? getExtension(document?.doc_name) : '';
       const imageId = chunkItem?.image_id;
+
+      console.log("MarkdownContent - getPopoverContent CALLED with chunkIndex:", chunkIndex);
+      console.log("MarkdownContent - chunkItem:", chunkItem);
+      console.log("MarkdownContent - document:", document);
+      console.log("MarkdownContent - documentId:", documentId);
+      console.log("MarkdownContent - fileExtension:", fileExtension);
+
       return (
         <Flex
           key={chunkItem?.id}
