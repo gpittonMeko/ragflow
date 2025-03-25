@@ -26,20 +26,14 @@ export const getDocumentIdsFromConversionReference = (data: IConversation) => {
 };
 
 export const buildMessageItemReference = (
-  conversation: { message: IMessage[]; reference: IReference[] },
+  conversation: { message: IMessage; reference: any }, // Aggiorna il tipo di reference a 'any' o al tipo corretto
   message: IMessage,
 ) => {
-  const assistantMessages = conversation.message
-    ?.filter((x) => x.role === MessageType.Assistant)
-    .slice(1);
-  const referenceIndex = assistantMessages.findIndex(
-    (x) => x.id === message.id,
-  );
-  const reference = !isEmpty(message?.reference)
-    ? message?.reference
-    : (conversation?.reference ?? [])[referenceIndex];
+  // Non abbiamo più bisogno di filtrare o cercare per indice a meno che la tua API non restituisca una reference per ogni messaggio.
+  // Se la reference è un singolo oggetto per l'intera risposta, usala direttamente.
+  const reference = conversation?.reference;
 
-  return reference ?? { doc_aggs: [], chunks: [], total: 0 };
+  return reference ?? { doc_aggs:, chunks:, total: 0 };
 };
 
 const oldReg = /(#{2}\d+\${2})/g;
