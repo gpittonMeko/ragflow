@@ -1,117 +1,196 @@
-// web/src/components/agent-chat-container/AgentChatContainer.tsx
-import React, { useRef } from 'react';
-import MessageInput from '@/components/message-input';
-import MessageItem from '@/components/message-item';
-import PdfDrawer from '@/components/pdf-drawer';
-import { Flex, Spin } from 'antd';
-import { useClickDrawer } from '@/components/pdf-drawer/hooks';
+// web/src/hooks/agent-chat-hooks/useSendAgentMessage.ts
+import { useState, useRef, useCallback } from 'react';
 import { MessageType } from '@/constants/chat';
-import { buildMessageItemReference } from '@/pages/chat/utils'; // Correggi il path SE NECESSARIO
-import styles from './AgentChatContainer.less'; // Crea AgentChatContainer.less o usa stili esistenti
-import { useSendAgentMessage } from '@/hooks/agent-chat-hooks/useSendAgentMessage'; // Path corretto
-import { useFetchAgentAvatar } from '@/hooks/agent-chat-hooks/useFetchAgentAvatar'; // Path corretto
-import { useSendButtonDisabled } from '@/pages/chat/hooks'; // Path corretto
-import { buildMessageUuidWithRole } from '@/utils/chat'; // **IMPORT ADDED - IMPORTANT!**
+import { v4 as uuidv4 } from 'uuid';
 
-
-interface IProps {
-    agentId: string; // agentId come prop
+interface Message {
+    id: string;
+    role: MessageType;
+    content: string;
+    doc_ids?: string[];
+    reference?: any; // Define a type for reference if needed
+    loading?: boolean;
+    error?: boolean;
 }
 
-const AgentChatContainer = ({ agentId }: IProps) => {
-    const ref = useRef(null);
-    const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } = useClickDrawer();
-    console.log("AgentChatContainer: clickDocumentButton prop:", clickDocumentButton); // ADD THIS LOG
+interface UseSendAgentMessage {
+    value: string;
+    loading: boolean;
+    sendLoading: boolean;
+    derivedMessages: Message[];
+    ref: React.RefObject<HTMLDivElement>;
+    handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+    handlePressEnter: (e?: React.KeyboardEvent<HTMLTextAreaElement> | React.MouseEvent<HTMLButtonElement>) => void;
+    regenerateMessage: (messageId: string) => void;
+    removeMessageById: (messageId: string) => void;
+}
+
+export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
+    const [value, setValue] = useState<string>('');
+    const [loading, setLoading] = useState<boolean>(false);
+    const [sendLoading, setSendLoading] = useState<boolean>(false);
+    const [derivedMessages, setDerivedMessages] = useState<Message[]>([]); // Stato per la history dei messaggi
+    const ref = useRef<HTMLDivElement>(null);
+    const [sessionId, setSessionId] = useState<string | null>(null); // Stato per session_id
+
+    // Funzione per creare la sessione agente (chiamata API)
+    const createAgentSession = useCallback(async () => {
+        if (!agentId) {
+            console.error("Agent ID non fornito.");
+            return null;
+        }
+        try {
+            const response = await fetch(`/api/v1/agents/${agentId}/sessions`, { // **ENDPOINT CORRETTO**
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm' // **INSERISCI LA TUA API KEY!**
+                },
+                body: JSON.stringify({}) // Body vuoto o con parametri "Begin" se necessari
+            });
+            const data = await response.json();
+            if (data.code === 0 && data.data && (data.data.id || data.data.session_id)) {
+                const newSessionId = data.data.id || data.data.session_id;
+                setSessionId(newSessionId);
+                console.log("Sessione agente creata con ID:", newSessionId);
+                // **INIZIALIZZA LA HISTORY DEI MESSAGGI CON IL MESSAGGIO DI BENVENUTO DELL'AGENTE**
+                setDerivedMessages([
+                    {
+                        id: uuidv4(),
+                        role: MessageType.Assistant,
+                        content: data.data.message?.[0]?.content || "Ciao! Come posso aiutarti?", // Usa messaggio iniziale API o default
+                    }
+                ]);
+                return newSessionId;
+            } else {
+                console.error("Errore nella creazione sessione agente:", data);
+                return null;
+            }
+        } catch (error) {
+            console.error("Errore chiamata API creazione sessione:", error);
+            return null;
+        }
+    }, [agentId]);
 
 
-    // Usa il nuovo hook useSendAgentMessage, passando agentId
-    const {
+    // Funzione per inviare il messaggio utente e ottenere la completion (chiamata API) - **DEFINIZIONE CORRETTA (UNA SOLA VOLTA)**
+    const sendAgentCompletion = useCallback(async (messageContent: string, currentSessionId: string | null) => { // **ACCEPT session ID as argument**
+        if (!agentId) {
+            console.error("Agent ID non disponibile per la completion.");
+            return;
+        }
+        if (!currentSessionId) { // **USE currentSessionId here**
+            console.error("Session ID non disponibile. La sessione deve essere creata prima.");
+            return;
+        }
+
+        setSendLoading(true);
+        const newUserMessage: Message = {
+            id: uuidv4(),
+            role: MessageType.User,
+            content: messageContent,
+            doc_ids: [],
+        };
+        setDerivedMessages(prevMessages => [...prevMessages, newUserMessage]);
+        setValue('');
+
+        try {
+            const response = await fetch(`/api/v1/agents/${agentId}/completions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm' // **INSERISCI LA TUA API KEY!**
+                },
+                body: JSON.stringify({
+                    question: messageContent,
+                    stream: false,
+                    session_id: currentSessionId, // **USE currentSessionId here**
+                }),
+            });
+            const data = await response.json();
+            setSendLoading(false);
+
+            if (data.code === 0 && data.data) {
+                const assistantMessage: Message = {
+                    id: uuidv4(),
+                    role: MessageType.Assistant,
+                    content: data.data.answer || "Risposta vuota dall'agente",
+                    reference: data.data.reference,
+                };
+                setDerivedMessages(prevMessages => [...prevMessages, assistantMessage]);
+            } else {
+                console.error("Errore nella completion agente:", data);
+                const errorAssistantMessage: Message = {
+                    id: uuidv4(),
+                    role: MessageType.Assistant,
+                    content: "**Errore nella risposta dell'agente.** Riprova più tardi.",
+                    error: true,
+                };
+                setDerivedMessages(prevMessages => [...prevMessages, errorAssistantMessage]);
+            }
+        } catch (error) {
+            console.error("Errore chiamata API completion agente:", error);
+            setSendLoading(false);
+            const errorAssistantMessage: Message = {
+                id: uuidv4(),
+                role: MessageType.Assistant,
+                content: "**Errore di comunicazione con il server.** Riprova più tardi.",
+                error: true,
+            };
+            setDerivedMessages(prevMessages => [...prevMessages, errorAssistantMessage]);
+        }
+    }, [agentId]); // sessionId REMOVED from dependency array - we now pass it directly
+
+
+    // Gestione input change
+    const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setValue(e.target.value);
+    }, []);
+
+    const handlePressEnter = useCallback(
+        (e?: React.KeyboardEvent<HTMLTextAreaElement> | React.MouseEvent<HTMLButtonElement>) => {
+            e?.preventDefault?.();
+            const messageContent = value.trim();
+            if (!messageContent) return;
+
+            if (!sessionId) {
+                // Se non c'è session_id, crea sessione poi invia messaggio
+                setLoading(true);
+                createAgentSession().then(newSessionId => {
+                    setLoading(false);
+                    if (newSessionId) {
+                        setSessionId(newSessionId); // **SET SESSION ID HERE, IMMEDIATELY AFTER CREATION**
+                        sendAgentCompletion(messageContent, newSessionId); // **PASS newSessionId to sendAgentCompletion**
+                    } else {
+                        console.error("Impossibile creare la sessione agente, messaggio non inviato.");
+                        // Handle session creation error
+                    }
+                });
+            } else {
+                sendAgentCompletion(messageContent, sessionId); // **PASS existing sessionId**
+            }
+        },
+        [value, sessionId, agentId, createAgentSession, sendAgentCompletion],
+    );
+
+    const regenerateMessage = useCallback((messageId: string) => {
+        // Implementa la logica di rigenerazione del messaggio se necessario (opzionale per ora)
+        console.log("Regenerate message:", messageId);
+    }, []);
+
+    const removeMessageById = useCallback((messageId: string) => {
+        setDerivedMessages(prevMessages => prevMessages.filter(msg => msg.id !== messageId));
+    }, []);
+
+    return {
         value,
         loading,
         sendLoading,
         derivedMessages,
+        ref,
         handleInputChange,
         handlePressEnter,
         regenerateMessage,
         removeMessageById,
-    } = useSendAgentMessage(agentId);
-
-    // **MODIFICA INIZIO**
-    const latestAssistantMessage = derivedMessages.slice(-1).find(msg => msg.role === MessageType.Assistant);
-    const reference = latestAssistantMessage?.reference;
-
-    console.log("VERIFICA reference:", reference);
-    // **MODIFICA FINE**
-
-
-    console.log("Drawer visible:", visible);
-    console.log("Document ID:", documentId);
-    console.log("Chunk:", selectedChunk);
-
-    const sendDisabled = useSendButtonDisabled(value); // Reutilizza hook per pulsante disabilitato
-    // Usa il nuovo hook per l'avatar dell'agente, passando agentId
-    const { data: avatarData } = useFetchAgentAvatar(agentId); // agentId è passato all'hook
-
-    if (!agentId) {
-        return <div>Agent ID mancante</div>; // Gestisci il caso in cui agentId non è fornito
-    }
-
-    return (
-        <>
-            <Flex flex={1} className={styles.agentChatContainer} vertical>
-                <Flex flex={1} vertical className={styles.messageContainer}>
-                    <div>
-                        <Spin spinning={loading}>
-                            {derivedMessages?.map((message, i) => (
-                                <MessageItem
-                                    key={buildMessageUuidWithRole(message)} // FUNZIONE IMPORTATA ORA DISPONIBILE
-                                    item={message}
-                                    nickname="You"
-                                    avatarDialog={avatarData?.avatar} // Avatar dell'agente
-                                    reference={buildMessageItemReference(
-                                        { message: derivedMessages, reference }, message
-                                    )}
-                                    loading={
-                                        message.role === MessageType.Assistant &&
-                                        sendLoading &&
-                                        derivedMessages?.length - 1 === i
-                                    }
-                                    index={i}
-                                    clickDocumentButton={clickDocumentButton}
-                                    showLikeButton={false}
-                                    showLoudspeaker={false}
-                                    regenerateMessage={regenerateMessage}
-                                    removeMessageById={removeMessageById}
-                                    sendLoading={sendLoading}
-                                ></MessageItem>
-                            ))}
-                        </Spin>
-                    </div>
-                    <div ref={ref} />
-                </Flex>
-
-                <MessageInput
-                    value={value}
-                    disabled={false} // Puoi aggiungere logica per disabilitare input se necessario
-                    sendDisabled={sendDisabled}
-                    onInputChange={handleInputChange}
-                    onPressEnter={handlePressEnter}
-                    sendLoading={sendLoading}
-                    uploadMethod="external_upload_and_parse" // Mantieni o modifica se necessario
-                    showUploadIcon={false} // Mantieni o modifica se necessario
-                ></MessageInput>
-            </Flex>
-            {visible && (
-                <PdfDrawer
-                    visible={visible}
-                    hideModal={hideModal}
-                    documentId={documentId}
-                    chunk={selectedChunk}
-                ></PdfDrawer>
-            )}
-        </>
-    );
+    };
 };
-
-
-export default AgentChatContainer;
