@@ -1,4 +1,3 @@
-// web/src/components/agent-chat-container/AgentChatContainer.tsx
 import React, { useRef } from 'react';
 import MessageInput from '@/components/message-input';
 import MessageItem from '@/components/message-item';
@@ -6,25 +5,22 @@ import PdfDrawer from '@/components/pdf-drawer';
 import { Flex, Spin } from 'antd';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import { MessageType } from '@/constants/chat';
-import { buildMessageItemReference } from '@/pages/chat/utils'; // Correggi il path SE NECESSARIO
-import styles from './AgentChatContainer.less'; // Crea AgentChatContainer.less o usa stili esistenti
-import { useSendAgentMessage } from '@/hooks/agent-chat-hooks/useSendAgentMessage'; // Path corretto
-import { useFetchAgentAvatar } from '@/hooks/agent-chat-hooks/useFetchAgentAvatar'; // Path corretto
-import { useSendButtonDisabled } from '@/pages/chat/hooks'; // Path corretto
-import { buildMessageUuidWithRole } from '@/utils/chat'; // **IMPORT ADDED - IMPORTANT!**
+import { buildMessageItemReference } from '@/pages/chat/utils';
+import styles from './AgentChatContainer.less';
+import { useSendAgentMessage } from '@/hooks/agent-chat-hooks/useSendAgentMessage';
+import { useFetchAgentAvatar } from '@/hooks/agent-chat-hooks/useFetchAgentAvatar';
+import { useSendButtonDisabled } from '@/pages/chat/hooks';
+import { buildMessageUuidWithRole } from '@/utils/chat';
 
 
 interface IProps {
-    agentId: string; // agentId come prop
+    agentId: string;
 }
 
 const AgentChatContainer = ({ agentId }: IProps) => {
     const ref = useRef(null);
     const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } = useClickDrawer();
-    console.log("AgentChatContainer: clickDocumentButton prop:", clickDocumentButton); // ADD THIS LOG
 
-
-    // Usa il nuovo hook useSendAgentMessage, passando agentId
     const {
         value,
         loading,
@@ -35,23 +31,17 @@ const AgentChatContainer = ({ agentId }: IProps) => {
         regenerateMessage,
         removeMessageById,
     } = useSendAgentMessage(agentId);
-    
-    // **INSERISCI QUI QUESTE TRE LINEE**
+
     const latestAssistantMessage = derivedMessages.slice(-1).find(msg => msg.role === MessageType.Assistant);
-    const reference = latestAssistantMessage?.reference;
+    // ACCESSO CORRETTO ALLA REFERENCE
+    const reference = latestAssistantMessage?.data?.reference;
     console.log("VERIFICA reference:", reference);
 
-
-    console.log("Drawer visible:", visible);
-    console.log("Document ID:", documentId);
-    console.log("Chunk:", selectedChunk);
-
-    const sendDisabled = useSendButtonDisabled(value); // Reutilizza hook per pulsante disabilitato
-    // Usa il nuovo hook per l'avatar dell'agente, passando agentId
-    const { data: avatarData } = useFetchAgentAvatar(agentId); // agentId è passato all'hook
+    const sendDisabled = useSendButtonDisabled(value);
+    const { data: avatarData } = useFetchAgentAvatar(agentId);
 
     if (!agentId) {
-        return <div>Agent ID mancante</div>; // Gestisci il caso in cui agentId non è fornito
+        return <div>Agent ID mancante</div>;
     }
 
     return (
@@ -62,13 +52,13 @@ const AgentChatContainer = ({ agentId }: IProps) => {
                         <Spin spinning={loading}>
                             {derivedMessages?.map((message, i) => (
                                 <MessageItem
-                                    key={buildMessageUuidWithRole(message)} // FUNZIONE IMPORTATA ORA DISPONIBILE
+                                    key={buildMessageUuidWithRole(message)}
                                     item={message}
                                     nickname="You"
-                                    avatarDialog={avatarData?.avatar} // Avatar dell'agente
+                                    avatarDialog={avatarData?.avatar}
                                     reference={buildMessageItemReference(
                                         { message: derivedMessages, reference }, message
-                                      )} 
+                                    )}
                                     loading={
                                         message.role === MessageType.Assistant &&
                                         sendLoading &&
@@ -90,13 +80,13 @@ const AgentChatContainer = ({ agentId }: IProps) => {
 
                 <MessageInput
                     value={value}
-                    disabled={false} // Puoi aggiungere logica per disabilitare input se necessario
+                    disabled={false}
                     sendDisabled={sendDisabled}
                     onInputChange={handleInputChange}
                     onPressEnter={handlePressEnter}
                     sendLoading={sendLoading}
-                    uploadMethod="external_upload_and_parse" // Mantieni o modifica se necessario
-                    showUploadIcon={false} // Mantieni o modifica se necessario
+                    uploadMethod="external_upload_and_parse"
+                    showUploadIcon={false}
                 ></MessageInput>
             </Flex>
             {visible && (
@@ -110,6 +100,5 @@ const AgentChatContainer = ({ agentId }: IProps) => {
         </>
     );
 };
-
 
 export default AgentChatContainer;
