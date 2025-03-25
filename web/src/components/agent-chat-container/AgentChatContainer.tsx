@@ -30,13 +30,15 @@ const AgentChatContainer = ({ agentId }: IProps) => {
         loading,
         sendLoading,
         derivedMessages,
-        reference, // ⬅️ AGGIUNGI QUESTO
         handleInputChange,
         handlePressEnter,
         regenerateMessage,
         removeMessageById,
     } = useSendAgentMessage(agentId);
     
+    // **INSERISCI QUI QUESTE TRE LINEE**
+    const latestAssistantMessage = derivedMessages.slice(-1).find(msg => msg.role === MessageType.Assistant);
+    const reference = latestAssistantMessage?.reference;
     console.log("VERIFICA reference:", reference);
 
 
