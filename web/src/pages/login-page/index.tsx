@@ -35,7 +35,7 @@ const PresentationPage: React.FC = () => {
                     {/* Inserisci qui l'iframe */}
                     <div className={styles.iframeSection}>
                         <iframe
-                            src="http://sgailegal.it/chat/share?shared_id=a871ecb2eaba11efb3a10242ac120006&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm"
+                            src="https://sgailegal.it/chat/share?shared_id=a871ecb2eaba11efb3a10242ac120006&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm"
                             style={{ width: '100%', height: '100%', minHeight: '600px' }}
                             frameBorder="0"
                         />
