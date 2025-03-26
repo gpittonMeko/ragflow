@@ -1,10 +1,7 @@
 import React, { memo, useRef } from 'react';
-import AgentChatContainer from '@/components/agent-chat-container/AgentChatContainer'; // Importa il nuovo componente
 
 // Stili
 import styles from './index.less';
-
-const AGENT_ID = 'a871ecb2eaba11efb3a10242ac120006'; // Sostituisci con l'ID corretto
 
 const PresentationPage: React.FC = () => {
     const controllerRef = useRef(new AbortController());
@@ -42,11 +39,6 @@ const PresentationPage: React.FC = () => {
                             style={{ width: '100%', height: '100%', minHeight: '600px' }}
                             frameBorder="0"
                         />
-                    </div>
-
-                    {/* Usa AgentChatContainer e passa agentId */}
-                    <div className={styles.chatSection}>
-                        <AgentChatContainer agentId={AGENT_ID} /> {/* Passa agentId e RIMUOVI agentMode */}
                     </div>
                 </div>
             </div>
