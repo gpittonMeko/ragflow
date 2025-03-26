@@ -33,7 +33,7 @@ const AgentChatContainer = ({ agentId }: IProps) => {
     } = useSendAgentMessage(agentId);
 
     const latestAssistantMessage = derivedMessages.slice(-1).find(msg => msg.role === MessageType.Assistant);
-    // ACCESSO CORRETTO ALLA REFERENCE
+    console.log("latestAssistantMessage:", latestAssistantMessage); // AGGIUNGI QUESTO
     const reference = latestAssistantMessage?.data?.reference;
     console.log("VERIFICA reference:", reference);
 
