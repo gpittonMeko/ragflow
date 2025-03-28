@@ -1,7 +1,8 @@
 import os
 import json
 import PyPDF2
-import openai
+import openai  # Assicurati che questa riga sia presente all'inizio del tuo script
+from openai import OpenAI # Importa specificamente la classe OpenAI
 from typing import List, Dict
 
 # =======================================================
