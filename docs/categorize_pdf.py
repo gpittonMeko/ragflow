@@ -20,6 +20,9 @@ MODEL_NAME = "gpt-4o-mini-2024-07-18"
 last_processed_metadata = None
 metadata_lock = threading.Lock()
 
+# Variabile per controllare se l'elaborazione è in corso
+processing_active = True
+
 # =======================================================
 # FUNZIONI DI BASE PER L'ESTRAZIONE DEL TESTO
 # =======================================================
@@ -30,6 +33,7 @@ def estrai_testo_parziale_da_pdf(percorso_pdf: str, pagine_iniziali: int = 2, pa
     per ridurre il numero di token inviati al modello.
     Se il PDF ha meno pagine, prende tutte quelle disponibili.
     """
+    print(f"[LOG] Estrazione testo parziale da: {percorso_pdf}")
     with open(percorso_pdf, 'rb') as f:
         reader = PyPDF2.PdfReader(f)
         num_pages = len(reader.pages)
@@ -55,6 +59,7 @@ def estrai_testo_completo_da_pdf(percorso_pdf: str) -> str:
     """
     Estrae tutto il testo da un file PDF.
     """
+    print(f"[LOG] Estrazione testo completo da: {percorso_pdf}")
     testo_completo = ""
     try:
         with open(percorso_pdf, 'rb') as f:
@@ -62,7 +67,7 @@ def estrai_testo_completo_da_pdf(percorso_pdf: str) -> str:
             for page in reader.pages:
                 testo_completo += page.extract_text() + "\n"
     except Exception as e:
-        print(f"Errore nell'estrazione del testo completo da {percorso_pdf}: {e}")
+        print(f"[LOG] Errore nell'estrazione del testo completo da {percorso_pdf}: {e}")
     return testo_completo
 
 def suddividi_testo_in_chunk(testo: str, max_caratteri: int = 1500) -> List[str]:
@@ -136,7 +141,7 @@ Testo:
 """
     try:
         client = OpenAI() # Inizializza il client OpenAI
-
+        print(f"[LOG] Chiamata API per: {filename}")
         completion = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
@@ -149,14 +154,17 @@ Testo:
         output = completion.choices[0].message.content
         try:
             parsed = json.loads(output)
+            print(f"[LOG] Risposta API ricevuta per: {filename}")
         except json.JSONDecodeError:
             parsed = {
                 "filename": filename,
                 "raw_output": output,
                 "errore": "JSONDecodeError: output non valido"
             }
+            print(f"[LOG] Errore JSONDecode per: {filename} - Output: {output}")
         return parsed
     except Exception as e:
+        print(f"[LOG] Errore nella chiamata API per {filename}: {e}")
         return {"filename": filename, "errore": f"Errore nella chiamata API: {e}"}
 
 # =======================================================
@@ -175,7 +183,9 @@ def processa_pdf_singolo(percorso_pdf: str, cartella_output: str = "output_json"
     Aggiorna la variabile globale con i metadati dell'ultima sentenza elaborata.
     """
     global last_processed_metadata
+    print(f"[LOG] Inizio elaborazione PDF: {percorso_pdf}")
     if not os.path.exists(cartella_output):
+        print(f"[LOG] Creazione cartella output: {cartella_output}")
         os.makedirs(cartella_output)
 
     nome_file = os.path.basename(percorso_pdf)
@@ -183,6 +193,7 @@ def processa_pdf_singolo(percorso_pdf: str, cartella_output: str = "output_json"
 
     # Salta se già processato e non forziamo il riprocessamento
     if not forza_riprocessa and os.path.exists(path_output):
+        print(f"[LOG] File già processato, skip: {nome_file}")
         return {"status": "skipped", "details": f"File '{nome_file}' già processato, skip.", "output_json": path_output}
 
     try:
@@ -196,14 +207,18 @@ def processa_pdf_singolo(percorso_pdf: str, cartella_output: str = "output_json"
 
         with open(path_output, "w", encoding="utf-8") as f:
             json.dump(risultati_chunk, f, ensure_ascii=False, indent=2)
+        print(f"[LOG] Metadati salvati in: {path_output}")
 
         # Aggiorna la variabile globale con i metadati (prendendo l'ultimo blocco se è una sentenza)
         if risultati_chunk and risultati_chunk[-1].get("tipo_documento") == "sentenza":
             with metadata_lock:
                 last_processed_metadata = risultati_chunk[-1]
+                print(f"[LOG] Ultimo metadato elaborato aggiornato per: {nome_file}")
 
+        print(f"[LOG] Fine elaborazione PDF: {percorso_pdf} - Status: processed")
         return {"status": "processed", "details": f"OK, salvato in '{path_output}'", "output_json": path_output}
     except Exception as exc:
+        print(f"[LOG] Errore durante l'elaborazione di {percorso_pdf}: {exc}")
         return {"status": "error", "details": f"Errore: {exc}"}
 
 def carica_progresso(nome_file: str = "progresso.json") -> Dict[str, Dict[str, str]]:
@@ -236,9 +251,10 @@ def processa_cartella(cartella_pdf: str, cartella_output: str = "output_json", f
     filters: un dizionario opzionale con criteri di filtro.
              Esempio: {"date_range": ("2022-08-10", "2023-10-10"), "contains_text": "parola chiave"}
     """
-    global last_processed_metadata
+    global last_processed_metadata, processing_active
+    print(f"[LOG] Inizio processa_cartella con cartella: {cartella_pdf}, num_workers: {num_workers}, filters: {filters}")
     if not os.path.isdir(cartella_pdf):
-        print(f"ERRORE: La cartella '{cartella_pdf}' non esiste o non è una directory.")
+        print(f"[ERRORE] La cartella '{cartella_pdf}' non esiste o non è una directory.")
         return
 
     progresso = carica_progresso(file_progresso)
@@ -248,21 +264,18 @@ def processa_cartella(cartella_pdf: str, cartella_output: str = "output_json", f
 
     if filters:
         filtered_pdf_files = []
+        print(f"[LOG] Applicazione filtri: {filters}")
         for pdf_name in pdf_files:
             path_pdf = os.path.join(cartella_pdf, pdf_name)
             include = True
             if "date_range" in filters:
                 start_date_str, end_date_str = filters["date_range"]
-                # Tentativo di estrarre la data dal nome del file (potrebbe essere necessario adattare)
                 try:
-                    anno = int(pdf_name.split('_')[-1].split('.')[0][:4]) # Esempio: Sentenza_Z46_9805_2024.pdf -> 2024
-                    # Questo è un approccio molto semplificato e potrebbe non funzionare per tutti i formati.
-                    # Idealmente, la data dovrebbe essere estratta dal contenuto del PDF.
-                    # Per ora, ci limitiamo a un'analisi basata sull'anno se presente nel nome.
+                    anno = int(pdf_name.split('_')[-1].split('.')[0][:4])
                     if not (start_date_str[:4] <= str(anno) <= end_date_str[:4]):
                         include = False
                 except:
-                    print(f"Impossibile analizzare la data dal nome del file: {pdf_name} per il filtro data.")
+                    print(f"[LOG] Impossibile analizzare la data dal nome del file: {pdf_name} per il filtro data.")
 
             if include and "contains_text" in filters:
                 text_to_find = filters["contains_text"]
@@ -273,11 +286,13 @@ def processa_cartella(cartella_pdf: str, cartella_output: str = "output_json", f
             if include:
                 filtered_pdf_files.append(pdf_name)
         pdf_files = filtered_pdf_files
+        print(f"[LOG] File dopo applicazione filtri: {pdf_files}")
 
     tot = len(pdf_files)
     processed_count = 0
     start_time = time.time()
 
+    print(f"[LOG] Inizio elaborazione parallela di {tot} file PDF.")
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
         futures = {executor.submit(processa_pdf_singolo, os.path.join(cartella_pdf, pdf_name), cartella_output, forza_riprocessa): pdf_name
                    for pdf_name in pdf_files}
@@ -291,21 +306,23 @@ def processa_cartella(cartella_pdf: str, cartella_output: str = "output_json", f
                 if esito["status"] == "processed":
                     processed_count += 1
             except Exception as exc:
-                print(f'{pdf_name} ha generato un\'eccezione: {exc}')
+                print(f'[ERRORE] {pdf_name} ha generato un\'eccezione: {exc}')
 
-        print("\nElaborazione completata.")
-        end_time = time.time()
-        total_time = end_time - start_time
-        print(f"PDF totali: {tot}, elaborati: {processed_count}.")
-        print(f"Tempo totale impiegato: {total_time:.2f} secondi.")
+    processing_active = False
+    print(f"[LOG] Elaborazione parallela completata.")
+    end_time = time.time()
+    total_time = end_time - start_time
+    print(f"\nFinito. PDF totali: {tot}, elaborati: {processed_count}.")
+    print(f"Tempo totale impiegato: {total_time:.2f} secondi.")
 
 def monitor_and_display_metadata():
     """
     Funzione per monitorare l'input dell'utente e mostrare l'ultimo metadato elaborato.
     Questa funzione ora gira in un thread separato per non bloccare l'elaborazione principale.
     """
-    global last_processed_metadata
-    while True:
+    global last_processed_metadata, processing_active
+    print("[LOG] Avvio thread monitoraggio metadati.")
+    while processing_active:
         command = input("Digita 'm' e premi Invio per mostrare l'ultimo metadato, 'q' per uscire: ").lower()
         if command == 'm':
             with metadata_lock:
@@ -315,10 +332,11 @@ def monitor_and_display_metadata():
                 else:
                     print("\nNessuna sentenza è stata ancora elaborata.")
         elif command == 'q':
-            print("Uscita dal monitoraggio metadati.")
+            print("[LOG] Uscita dal monitoraggio metadati.")
             break
         else:
             print("Comando non valido. Digita 'm' o 'q'.")
+    print("[LOG] Thread monitoraggio metadati terminato.")
 
 # =======================================================
 # MAIN: ESEMPIO DI USO
@@ -335,6 +353,8 @@ if __name__ == "__main__":
         "contains_text": "IMU" # Esempio di filtro per testo
     }
 
+    print("[LOG] Avvio programma principale.")
+
     # Avvia il processing della cartella in parallelo con filtri
     processing_thread = threading.Thread(target=processa_cartella, args=(
         CARTELLA_SENTENZE,
@@ -346,13 +366,25 @@ if __name__ == "__main__":
         filters  # Passa il dizionario dei filtri
     ))
     processing_thread.start()
+    print("[LOG] Thread di processing avviato.")
 
     # Avvia il monitoraggio dei metadati in un thread separato
     monitor_thread = threading.Thread(target=monitor_and_display_metadata)
     monitor_thread.daemon = True # Permette di uscire dal programma anche se questo thread è attivo
     monitor_thread.start()
+    print("[LOG] Thread di monitoraggio avviato.")
+
+    # Non bloccare qui, il monitoraggio e l'elaborazione girano in background
+
+    # Potremmo aggiungere qui un breve loop per mantenere attivo il thread principale
+    try:
+        while processing_active:
+            time.sleep(1) # Breve pausa per non consumare troppa CPU
+    except KeyboardInterrupt:
+        print("[LOG] Interruzione da tastiera rilevata. In attesa del completamento dei thread...")
 
     # Attendi che il thread di processing finisca
     processing_thread.join()
+    print("[LOG] Thread di processing terminato.")
 
-    print("\nProgramma terminato.")
+    print("[LOG] Programma terminato.")
