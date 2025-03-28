@@ -26,13 +26,13 @@ def estrai_testo_parziale_da_pdf(percorso_pdf: str, pagine_iniziali: int = 2, pa
         num_pages = len(reader.pages)
 
         testo_estratto = []
-        
+
         # Estrae le pagine iniziali
         fine_iniziali = min(pagine_iniziali, num_pages)
         for i in range(fine_iniziali):
             txt = reader.pages[i].extract_text() or ""
             testo_estratto.append(txt)
-        
+
         # Estrae le pagine finali (evitando duplicati)
         start_finali = max(0, num_pages - pagine_finali)
         for i in range(start_finali, num_pages):
@@ -51,7 +51,7 @@ def suddividi_testo_in_chunk(testo: str, max_caratteri: int = 1500) -> List[str]
     chunks = []
     chunk_corrente = []
     lung_corr = 0
-    
+
     for parola in parole:
         lung_p = len(parola) + 1  # +1 per lo spazio
         if lung_corr + lung_p <= max_caratteri:
@@ -61,10 +61,10 @@ def suddividi_testo_in_chunk(testo: str, max_caratteri: int = 1500) -> List[str]
             chunks.append(" ".join(chunk_corrente))
             chunk_corrente = [parola]
             lung_corr = lung_p
-    
+
     if chunk_corrente:
         chunks.append(" ".join(chunk_corrente))
-    
+
     return chunks
 
 # =======================================================
@@ -81,18 +81,20 @@ def chiama_gpt_4o_mini(testo: str, filename: str) -> dict:
     prompt_utente = f"""
 Sei un sistema che estrae metadati di una sentenza o atto (tributario).
 Rispondi con SOLO JSON valido con i seguenti campi (se pertinenti):
-  - "filename": "{filename}"
-  - "tipo_documento": "sentenza" o "prassi"
-     se "sentenza": includi "localizzazione_corte", "grado_di_giudizio", "anno_numero_sentenza", "esito_controversia"
-     se "prassi": includi "tipologia_prassi", "anno_prassi", "numero_prassi"
-  - "massimario": [etichette o capitoli]
-  - "riferimenti_normativi": [elenco di norme]
-  
+ - "filename": "{filename}"
+ - "tipo_documento": "sentenza" o "prassi"
+    se "sentenza": includi "localizzazione_corte", "grado_di_giudizio", "anno_numero_sentenza", "esito_controversia"
+    se "prassi": includi "tipologia_prassi", "anno_prassi", "numero_prassi"
+ - "massimario": [etichette o capitoli]
+ - "riferimenti_normativi": [elenco di norme]
+
 Testo:
 \"\"\"{testo}\"\"\"
 """
     try:
-        resp = openai.ChatCompletion.create(
+        client = OpenAI() # Inizializza il client OpenAI
+
+        completion = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
                 {"role": "system", "content": "Sei un assistente specializzato in testi giuridici. Fornisci solo output in JSON valido."},
@@ -101,7 +103,7 @@ Testo:
             temperature=0.0,
             max_tokens=600
         )
-        output = resp.choices[0].message["content"]
+        output = completion.choices[0].message.content
         try:
             parsed = json.loads(output)
         except json.JSONDecodeError:
@@ -112,7 +114,7 @@ Testo:
             }
         return parsed
     except Exception as e:
-        return {"filename": filename, "errore": str(e)}
+        return {"filename": filename, "errore": f"Errore nella chiamata API: {e}"}
 
 # =======================================================
 # FUNZIONI PER PROCESSARE I PDF E GESTIRE IL PROGRESSO
@@ -137,7 +139,7 @@ def processa_pdf_singolo(percorso_pdf: str, cartella_output: str = "output_json"
     # Salta se già processato e non forziamo il riprocessamento
     if not forza_riprocessa and os.path.exists(path_output):
         return {"status": "skipped", "details": f"File '{nome_file}' già processato, skip.", "output_json": path_output}
-    
+
     try:
         testo_parziale = estrai_testo_parziale_da_pdf(percorso_pdf, 2, 1)
         chunks = suddividi_testo_in_chunk(testo_parziale, max_caratteri=1500)
@@ -190,7 +192,7 @@ def processa_cartella(cartella_pdf: str, cartella_output: str = "output_json", f
     pdf_files = [f for f in os.listdir(cartella_pdf) if f.lower().endswith(".pdf")]
     if prefisso:
         pdf_files = [f for f in pdf_files if f.startswith(prefisso)]
-    
+
     pdf_files.sort()
     tot = len(pdf_files)
     processed_count = 0
