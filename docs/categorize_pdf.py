@@ -33,7 +33,7 @@ def estrai_testo_parziale_da_pdf(percorso_pdf: str, pagine_iniziali: int = 2, pa
     per ridurre il numero di token inviati al modello.
     Se il PDF ha meno pagine, prende tutte quelle disponibili.
     """
-    print(f"[LOG] Estrazione testo parziale da: {percorso_pdf}")
+    print(f"[LOG] [{threading.current_thread().name}] Estrazione testo parziale da: {percorso_pdf}")
     with open(percorso_pdf, 'rb') as f:
         reader = PyPDF2.PdfReader(f)
         num_pages = len(reader.pages)
@@ -59,7 +59,7 @@ def estrai_testo_completo_da_pdf(percorso_pdf: str) -> str:
     """
     Estrae tutto il testo da un file PDF.
     """
-    print(f"[LOG] Estrazione testo completo da: {percorso_pdf}")
+    print(f"[LOG] [{threading.current_thread().name}] Estrazione testo completo da: {percorso_pdf}")
     testo_completo = ""
     try:
         with open(percorso_pdf, 'rb') as f:
@@ -67,7 +67,7 @@ def estrai_testo_completo_da_pdf(percorso_pdf: str) -> str:
             for page in reader.pages:
                 testo_completo += page.extract_text() + "\n"
     except Exception as e:
-        print(f"[LOG] Errore nell'estrazione del testo completo da {percorso_pdf}: {e}")
+        print(f"[LOG] [{threading.current_thread().name}] Errore nell'estrazione del testo completo da {percorso_pdf}: {e}")
     return testo_completo
 
 def suddividi_testo_in_chunk(testo: str, max_caratteri: int = 1500) -> List[str]:
@@ -141,7 +141,8 @@ Testo:
 """
     try:
         client = OpenAI() # Inizializza il client OpenAI
-        print(f"[LOG] Chiamata API per: {filename}")
+        print(f"[LOG] [{threading.current_thread().name}] Chiamata API per: {filename}")
+        start_time = time.time()
         completion = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
@@ -151,20 +152,21 @@ Testo:
             temperature=0.1, # Abbasso la temperatura per risposte più deterministiche
             max_tokens=700 # Regolo i token massimi
         )
+        end_time = time.time()
+        print(f"[LOG] [{threading.current_thread().name}] Risposta API ricevuta per: {filename} in {end_time - start_time:.2f} secondi.")
         output = completion.choices[0].message.content
         try:
             parsed = json.loads(output)
-            print(f"[LOG] Risposta API ricevuta per: {filename}")
         except json.JSONDecodeError:
             parsed = {
                 "filename": filename,
                 "raw_output": output,
                 "errore": "JSONDecodeError: output non valido"
             }
-            print(f"[LOG] Errore JSONDecode per: {filename} - Output: {output}")
+            print(f"[LOG] [{threading.current_thread().name}] Errore JSONDecode per: {filename} - Output: {output}")
         return parsed
     except Exception as e:
-        print(f"[LOG] Errore nella chiamata API per {filename}: {e}")
+        print(f"[LOG] [{threading.current_thread().name}] Errore nella chiamata API per {filename}: {e}")
         return {"filename": filename, "errore": f"Errore nella chiamata API: {e}"}
 
 # =======================================================
@@ -183,42 +185,46 @@ def processa_pdf_singolo(percorso_pdf: str, cartella_output: str = "output_json"
     Aggiorna la variabile globale con i metadati dell'ultima sentenza elaborata.
     """
     global last_processed_metadata
-    print(f"[LOG] Inizio elaborazione PDF: {percorso_pdf}")
+    nome_file = os.path.basename(percorso_pdf)
+    thread_name = threading.current_thread().name
+    print(f"[LOG] [{thread_name}] Inizio elaborazione PDF: {nome_file}")
     if not os.path.exists(cartella_output):
-        print(f"[LOG] Creazione cartella output: {cartella_output}")
+        print(f"[LOG] [{thread_name}] Creazione cartella output: {cartella_output}")
         os.makedirs(cartella_output)
 
-    nome_file = os.path.basename(percorso_pdf)
     path_output = os.path.join(cartella_output, f"{nome_file}_metadata.json")
 
     # Salta se già processato e non forziamo il riprocessamento
     if not forza_riprocessa and os.path.exists(path_output):
-        print(f"[LOG] File già processato, skip: {nome_file}")
+        print(f"[LOG] [{thread_name}] File già processato, skip: {nome_file}")
         return {"status": "skipped", "details": f"File '{nome_file}' già processato, skip.", "output_json": path_output}
 
     try:
         testo_parziale = estrai_testo_parziale_da_pdf(percorso_pdf, 2, 1)
         chunks = suddividi_testo_in_chunk(testo_parziale, max_caratteri=1500)
+        num_chunks = len(chunks)
+        print(f"[LOG] [{thread_name}] {nome_file} suddiviso in {num_chunks} chunks.")
 
         risultati_chunk = []
-        for ch in chunks:
+        for i, ch in enumerate(chunks):
+            print(f"[LOG] [{thread_name}] Elaborazione chunk {i+1}/{num_chunks} per {nome_file}")
             ris = chiama_gpt_4o_mini(ch, nome_file)
             risultati_chunk.append(ris)
 
         with open(path_output, "w", encoding="utf-8") as f:
             json.dump(risultati_chunk, f, ensure_ascii=False, indent=2)
-        print(f"[LOG] Metadati salvati in: {path_output}")
+        print(f"[LOG] [{thread_name}] Metadati salvati in: {path_output}")
 
         # Aggiorna la variabile globale con i metadati (prendendo l'ultimo blocco se è una sentenza)
         if risultati_chunk and risultati_chunk[-1].get("tipo_documento") == "sentenza":
             with metadata_lock:
                 last_processed_metadata = risultati_chunk[-1]
-                print(f"[LOG] Ultimo metadato elaborato aggiornato per: {nome_file}")
+                print(f"[LOG] [{thread_name}] Ultimo metadato elaborato aggiornato per: {nome_file}")
 
-        print(f"[LOG] Fine elaborazione PDF: {percorso_pdf} - Status: processed")
+        print(f"[LOG] [{thread_name}] Fine elaborazione PDF: {nome_file} - Status: processed")
         return {"status": "processed", "details": f"OK, salvato in '{path_output}'", "output_json": path_output}
     except Exception as exc:
-        print(f"[LOG] Errore durante l'elaborazione di {percorso_pdf}: {exc}")
+        print(f"[LOG] [{thread_name}] Errore durante l'elaborazione di {nome_file}: {exc}")
         return {"status": "error", "details": f"Errore: {exc}"}
 
 def carica_progresso(nome_file: str = "progresso.json") -> Dict[str, Dict[str, str]]:
@@ -292,10 +298,13 @@ def processa_cartella(cartella_pdf: str, cartella_output: str = "output_json", f
     processed_count = 0
     start_time = time.time()
 
-    print(f"[LOG] Inizio elaborazione parallela di {tot} file PDF.")
+    print(f"[LOG] Inizio elaborazione parallela di {tot} file PDF con {num_workers} workers.")
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-        futures = {executor.submit(processa_pdf_singolo, os.path.join(cartella_pdf, pdf_name), cartella_output, forza_riprocessa): pdf_name
-                   for pdf_name in pdf_files}
+        futures = {}
+        for pdf_name in pdf_files:
+            future = executor.submit(processa_pdf_singolo, os.path.join(cartella_pdf, pdf_name), cartella_output, forza_riprocessa)
+            futures[future] = pdf_name
+            print(f"[LOG] Sottomessa elaborazione per: {pdf_name}")
 
         for future in tqdm(concurrent.futures.as_completed(futures), total=tot, desc="Elaborazione PDF"):
             pdf_name = futures[future]
@@ -376,7 +385,7 @@ if __name__ == "__main__":
 
     # Non bloccare qui, il monitoraggio e l'elaborazione girano in background
 
-    # Potremmo aggiungere qui un breve loop per mantenere attivo il thread principale
+    # Mantieni il thread principale in esecuzione per permettere ai thread di background di lavorare
     try:
         while processing_active:
             time.sleep(1) # Breve pausa per non consumare troppa CPU
