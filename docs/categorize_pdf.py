@@ -173,15 +173,17 @@ Testo:
 # FUNZIONI PER PROCESSARE I PDF E GESTIRE IL PROGRESSO
 # =======================================================
 
-def processa_pdf_singolo(percorso_pdf: str, cartella_output: str = "output_json", forza_riprocessa: bool = False) -> dict:
+def processa_pdf_singolo(percorso_pdf: str, cartella_output: str = "output_json", forza_riprocessa: bool = False, filters: Optional[Dict] = None) -> dict:
     """
     Elabora un singolo PDF:
       - Estrae il testo parziale (prime 2 pagine + ultima 1)
+      - Applica filtri sul testo parziale (se presenti)
+      - Se il filtro 'contains_text' fallisce, salta l'elaborazione.
       - Suddivide il testo in chunk
       - Per ogni chunk, chiama il modello per ottenere i metadati
       - Salva i metadati in un file JSON (un array di risultati) in cartella_output
     Se il file di output esiste e forza_riprocessa è False, salta l'elaborazione.
-    Ritorna un dict con lo "status" (processed/skipped/error) e "details".
+    Ritorna un dict con lo "status" (processed/skipped/error/filtered) e "details".
     Aggiorna la variabile globale con i metadati dell'ultima sentenza elaborata.
     """
     global last_processed_metadata
@@ -201,6 +203,14 @@ def processa_pdf_singolo(percorso_pdf: str, cartella_output: str = "output_json"
 
     try:
         testo_parziale = estrai_testo_parziale_da_pdf(percorso_pdf, 2, 1)
+
+        # Applica il filtro 'contains_text' sul testo parziale
+        if filters and "contains_text" in filters:
+            text_to_find = filters["contains_text"]
+            if text_to_find not in testo_parziale:
+                print(f"[LOG] [{thread_name}] File '{nome_file}' filtrato perché non contiene '{text_to_find}' nel testo parziale.")
+                return {"status": "filtered", "details": f"Non contiene '{text_to_find}' nel testo parziale."}
+
         chunks = suddividi_testo_in_chunk(testo_parziale, max_caratteri=1500)
         num_chunks = len(chunks)
         print(f"[LOG] [{thread_name}] {nome_file} suddiviso in {num_chunks} chunks.")
@@ -268,31 +278,34 @@ def processa_cartella(cartella_pdf: str, cartella_output: str = "output_json", f
     if prefisso:
         pdf_files = [f for f in pdf_files if f.startswith(prefisso)]
 
-    if filters:
-        filtered_pdf_files = []
-        print(f"[LOG] Applicazione filtri: {filters}")
+    filtered_pdf_files_by_name = []
+    if filters and "date_range" in filters:
+        start_date_str, end_date_str = filters["date_range"]
+        print(f"[LOG] Applicazione filtro per intervallo di date: {filters['date_range']}")
         for pdf_name in pdf_files:
-            path_pdf = os.path.join(cartella_pdf, pdf_name)
-            include = True
-            if "date_range" in filters:
-                start_date_str, end_date_str = filters["date_range"]
-                try:
-                    anno = int(pdf_name.split('_')[-1].split('.')[0][:4])
-                    if not (start_date_str[:4] <= str(anno) <= end_date_str[:4]):
-                        include = False
-                except:
-                    print(f"[LOG] Impossibile analizzare la data dal nome del file: {pdf_name} per il filtro data.")
+            try:
+                anno = int(pdf_name.split('_')[-1].split('.')[0][:4])
+                if start_date_str[:4] <= str(anno) <= end_date_str[:4]:
+                    filtered_pdf_files_by_name.append(pdf_name)
+            except:
+                print(f"[LOG] Impossibile analizzare la data dal nome del file: {pdf_name} per il filtro data.")
+        pdf_files = filtered_pdf_files_by_name
+        print(f"[LOG] File dopo applicazione filtro data: {pdf_files}")
+    elif filters and "date_range" in filters:
+        print(f"[LOG] Applicazione filtro per intervallo di date: {filters['date_range']}")
+        # Se non ci sono altri filtri, ma c'è un filtro data, lo applichiamo qui
+        filtered_pdf_files_by_name = []
+        start_date_str, end_date_str = filters["date_range"]
+        for pdf_name in pdf_files:
+            try:
+                anno = int(pdf_name.split('_')[-1].split('.')[0][:4])
+                if start_date_str[:4] <= str(anno) <= end_date_str[:4]:
+                    filtered_pdf_files_by_name.append(pdf_name)
+            except:
+                print(f"[LOG] Impossibile analizzare la data dal nome del file: {pdf_name} per il filtro data.")
+        pdf_files = filtered_pdf_files_by_name
+        print(f"[LOG] File dopo applicazione filtro data: {pdf_files}")
 
-            if include and "contains_text" in filters:
-                text_to_find = filters["contains_text"]
-                full_text = estrai_testo_completo_da_pdf(path_pdf)
-                if text_to_find not in full_text:
-                    include = False
-
-            if include:
-                filtered_pdf_files.append(pdf_name)
-        pdf_files = filtered_pdf_files
-        print(f"[LOG] File dopo applicazione filtri: {pdf_files}")
 
     tot = len(pdf_files)
     processed_count = 0
@@ -302,7 +315,7 @@ def processa_cartella(cartella_pdf: str, cartella_output: str = "output_json", f
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
         futures = {}
         for pdf_name in pdf_files:
-            future = executor.submit(processa_pdf_singolo, os.path.join(cartella_pdf, pdf_name), cartella_output, forza_riprocessa)
+            future = executor.submit(processa_pdf_singolo, os.path.join(cartella_pdf, pdf_name), cartella_output, forza_riprocessa, filters) # Passa i filtri
             futures[future] = pdf_name
             print(f"[LOG] Sottomessa elaborazione per: {pdf_name}")
 
@@ -382,8 +395,6 @@ if __name__ == "__main__":
     monitor_thread.daemon = True # Permette di uscire dal programma anche se questo thread è attivo
     monitor_thread.start()
     print("[LOG] Thread di monitoraggio avviato.")
-
-    # Non bloccare qui, il monitoraggio e l'elaborazione girano in background
 
     # Mantieni il thread principale in esecuzione per permettere ai thread di background di lavorare
     try:
