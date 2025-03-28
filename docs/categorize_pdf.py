@@ -2,7 +2,7 @@ import os
 import json
 import PyPDF2
 import openai  # Assicurati che questa riga sia presente all'inizio del tuo script
-from openai import OpenAI # Importa specificamente la classe OpenAI
+from openai import OpenAI  # Importa specificamente la classe OpenAI
 from typing import List, Dict
 
 # =======================================================
@@ -74,20 +74,38 @@ def suddividi_testo_in_chunk(testo: str, max_caratteri: int = 1500) -> List[str]
 
 def chiama_gpt_4o_mini(testo: str, filename: str) -> dict:
     """
-    Chiama il modello 'gpt-4o-mini' con un prompt che richiede di estrarre i metadati
-    (tipo_documento, localizzazione_corte, grado_di_giudizio, anno_numero_sentenza, esito_controversia,
-    oppure per prassi: tipologia_prassi, anno_prassi, numero_prassi) e alcuni tag (massimario, riferimenti_normativi).
-    La risposta deve essere un JSON valido.
+    Chiama il modello 'gpt-4o-mini' con un prompt che richiede di estrarre i metadati dettagliati
+    di una sentenza o atto (tributario). La risposta deve essere un JSON valido.
     """
     prompt_utente = f"""
-Sei un sistema che estrae metadati di una sentenza o atto (tributario).
-Rispondi con SOLO JSON valido con i seguenti campi (se pertinenti):
- - "filename": "{filename}"
- - "tipo_documento": "sentenza" o "prassi"
-    se "sentenza": includi "localizzazione_corte", "grado_di_giudizio", "anno_numero_sentenza", "esito_controversia"
-    se "prassi": includi "tipologia_prassi", "anno_prassi", "numero_prassi"
- - "massimario": [etichette o capitoli]
- - "riferimenti_normativi": [elenco di norme]
+Sei un sistema che estrae metadati dettagliati da sentenze e atti (tributari).
+Rispondi con SOLO JSON valido con i seguenti campi (se pertinenti, altrimenti lascia il campo vuoto o usa null):
+- "filename": "{filename}"
+- "tipo_documento": "sentenza" o "prassi"
+  se "sentenza":
+    - "localizzazione_corte": <string> (es. "Corte di Giustizia Tributaria di secondo grado della SICILIA")
+    - "composizione_corte": <string> (indicare presidente, relatore, giudici - es. "Presidente: ..., Relatore: ..., Giudici: ...")
+    - "grado_di_giudizio": <string> (es. "primo grado", "secondo grado")
+    - "esito_controversia": <string> (es. "rigetta il ricorso", "accoglie l'appello", "cessazione della materia del contendere")
+    - "anno_numero_sentenza": <string> (formato "AAAA_NNNNN" - es. "2024_9805")
+    - "numero_sentenza": <string> (solo il numero - es. "9805")
+    - "anno_sentenza": <number> (solo l'anno - es. 2024)
+    - "grado_autorita_emittente": <string> (es. "CGT secondo grado/Regionale", "CGT primo grado/Provinciale")
+    - "autorita_emittente": <string> (es. "Commissione Tributaria Provinciale di Caltanissetta", "Corte di Giustizia Tributaria di secondo grado della Sicilia")
+    - "sentenza_impugnata": <string> ("SI" o "NO")
+    - "data_deposito_da": <string> (formato "AAAA-MM-GG", se presente un intervallo)
+    - "data_deposito_fino_a": <string> (formato "AAAA-MM-GG", se presente un intervallo)
+    - "valore_controversia": <string> (es. "Fino a 5.000 euro", "Da 20.000,01 a 1.000.000 euro")
+    - "tipo_giudizio": <string> (es. "Monocratico", "Collegiale")
+    - "esito_giudizio": <string> (es. "Favorevole al contribuente", "Favorevole all'ufficio", "Conciliazione")
+    - "materia": <string> (es. "IMU ex Ici", "Accertamento imposte")
+    - "spese_giudizio": <string> (es. "A carico del contribuente", "Compensate")
+  se "prassi":
+    - "tipologia_prassi": <string> (es. "Circolare", "Risoluzione")
+    - "anno_prassi": <number> (es. 2023)
+    - "numero_prassi": <string> (es. "123/E")
+- "massimario": [elenco di etichette o capitoli rilevanti]
+- "riferimenti_normativi": [elenco di articoli di legge, decreti, ecc.]
 
 Testo:
 \"\"\"{testo}\"\"\"
@@ -102,7 +120,7 @@ Testo:
                 {"role": "user", "content": prompt_utente}
             ],
             temperature=0.0,
-            max_tokens=600
+            max_tokens=800 # Aumento dei token massimi per risposte più lunghe
         )
         output = completion.choices[0].message.content
         try:
