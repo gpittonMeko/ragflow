@@ -220,7 +220,7 @@ def processa_cartella(cartella_pdf: str, cartella_output: str = "output_json", f
 
 if __name__ == "__main__":
     # Imposta il percorso della cartella contenente i PDF da elaborare
-    CARTELLA_SENTENZE = "~/LLM_14/LLM_14/data/sentenze"
+    CARTELLA_SENTENZE = "/home/ubuntu/LLM_14/LLM_14/data/sentenze"
 
     # Esegui il processing della cartella. Per riprendere da dove avevi lasciato,
     # il codice usa il file "progresso.json". Se forza_riprocessa è False, salta i file già elaborati.
