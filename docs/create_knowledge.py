@@ -3,6 +3,8 @@ import requests
 import time
 import json
 import re
+from tqdm import tqdm  # Import tqdm for progress bars
+from concurrent.futures import ThreadPoolExecutor, as_completed  # For parallel processing
 
 # --- Configuration ---
 PDF_DIRECTORY = "/home/ubuntu/LLM_14/LLM_14/data/sentenze"
@@ -13,6 +15,7 @@ EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 CHUNK_METHOD = "naive"
 PARSER_CONFIG = {"chunk_token_num": 128, "delimiter": "\\n!?;。；！？", "html4excel": False, "layout_recognize": True, "raptor": {"user_raptor": False}}
 PROCESSED_FILES_FILE = "processed_files.json"
+MAX_CONCURRENT_UPLOADS = 5  # Adjust as needed
 
 # --- Helper Functions ---
 
@@ -164,18 +167,17 @@ def upload_pdf_to_ragflow(api_base_url, api_key, dataset_id, pdf_filepath):
 
         document_id = response_json.get("data", [{}])[0].get("id")
         if document_id:
-            print(f"File '{filename}' caricato con successo (Doc ID: {document_id})")
-            return document_id
+            return document_id, filename
         else:
             print(f"Errore: ID documento non trovato nella risposta di upload per '{filename}'. Risposta: {response_json}")
-            return None
+            return None, filename
 
     except FileNotFoundError:
         print(f"Errore: File locale non trovato: {pdf_filepath}")
-        return None
+        return None, filename
     except requests.exceptions.RequestException as e:
         print(f"Fallimento nell'upload di '{filename}'. Error: {e}")
-        return None
+        return None, filename
 
 def parse_documents_in_ragflow(api_base_url, api_key, dataset_id, doc_ids):
     """Attiva il parsing per una lista di documenti specifici in RAGFlow."""
@@ -197,26 +199,29 @@ def parse_documents_in_ragflow(api_base_url, api_key, dataset_id, doc_ids):
         return False
 
 def monitor_parsing_status(api_base_url, api_key, dataset_id, doc_ids):
-    """Monitora lo stato del parsing dei documenti."""
+    """Monitora lo stato del parsing dei documenti con barra di avanzamento."""
     print("\nMonitoraggio dello stato del parsing...")
-    while True:
-        documents = list_documents_in_ragflow(api_base_url, api_key, dataset_id)
-        if documents is None:
-            print("Errore durante il recupero dello stato dei documenti.")
-            break
+    with tqdm(total=len(doc_ids), desc="Parsing Progress") as pbar:
+        while True:
+            documents = list_documents_in_ragflow(api_base_url, api_key, dataset_id)
+            if documents is None:
+                print("Errore durante il recupero dello stato dei documenti.")
+                break
 
-        completed = True
-        for doc in documents:
-            if doc.get("id") in doc_ids:
-                if doc.get("run") != "3":  # 3 indica completato
-                    completed = False
-                    print(f"Documento '{doc.get('name')}': Stato '{doc.get('run')}', Progresso '{doc.get('progress_msg')}'")
+            completed_count = 0
+            for doc in documents:
+                if doc.get("id") in doc_ids:
+                    if doc.get("run") == "3":  # 3 indica completato
+                        completed_count += 1
 
-        if completed:
-            print("Parsing completato per tutti i documenti.")
-            break
+            pbar.n = completed_count
+            pbar.refresh()
 
-        time.sleep(30)  # Controlla ogni 30 secondi
+            if completed_count == len(doc_ids):
+                print("Parsing completato per tutti i documenti.")
+                break
+
+            time.sleep(30)  # Controlla ogni 30 secondi
 
 def load_processed_files():
     """Carica l'elenco dei file già processati."""
@@ -230,6 +235,64 @@ def save_processed_files(processed_files):
     """Salva l'elenco dei file processati."""
     with open(PROCESSED_FILES_FILE, "w") as f:
         json.dump(processed_files, f)
+
+def process_unparsed_documents(api_base_url, api_key, dataset_id):
+    """Trova e avvia il parsing per i documenti non parsati."""
+    print("\n--- Controllo e Parsing dei Documenti Non Parsati Esistenti ---")
+    existing_documents = list_documents_in_ragflow(api_base_url, api_key, dataset_id)
+    if existing_documents:
+        unparsed_docs = [doc for doc in existing_documents if doc.get("run") != "3" and doc.get("id")]
+        if unparsed_docs:
+            unparsed_doc_ids = [doc["id"] for doc in unparsed_docs]
+            print(f"Trovati {len(unparsed_doc_ids)} documenti non parsati. Inizio parsing...")
+            if parse_documents_in_ragflow(api_base_url, api_key, dataset_id, unparsed_doc_ids):
+                monitor_parsing_status(api_base_url, api_key, dataset_id, unparsed_doc_ids)
+            else:
+                print("!!! ERRORE nell'invio della richiesta di parsing per i documenti esistenti non parsati.")
+        else:
+            print("Nessun documento esistente trovato che necessiti di parsing.")
+    else:
+        print("Impossibile recuperare l'elenco dei documenti esistenti per controllare lo stato del parsing.")
+    print("--- Controllo e Parsing dei Documenti Non Parsati Esistenti Completato ---")
+
+def remove_duplicate_documents(api_base_url, api_key, dataset_id):
+    """Rimuove i documenti duplicati dalla knowledge base."""
+    print("\n--- Controllo ed Eliminazione dei Duplicati nella Knowledge Base ---")
+    existing_documents = list_documents_in_ragflow(api_base_url, api_key, dataset_id)
+    if existing_documents:
+        normalized_names = {}
+        duplicates_found = False
+        for doc in tqdm(existing_documents, desc="Controllo Duplicati KB"):
+            name = doc.get("name")
+            doc_id = doc.get("id")
+            if name and doc_id:
+                normalized_name = normalize_filename(name)
+                if normalized_name in normalized_names:
+                    duplicates_found = True
+                    print(f"Trovato duplicato in RAGFlow: '{name}' (ID: {doc_id}) corrisponde a '{[d['name'] for d in existing_documents if d['id'] == normalized_names[normalized_name]]}' (ID: {normalized_names[normalized_name]}). Eliminando...")
+                    delete_document_from_ragflow(api_base_url, api_key, dataset_id, doc_id)
+                else:
+                    normalized_names[normalized_name] = doc_id
+        if not duplicates_found:
+            print("Nessun documento duplicato trovato nella Knowledge Base.")
+    else:
+        print("Impossibile recuperare l'elenco dei documenti esistenti per controllare i duplicati.")
+    print("--- Controllo ed Eliminazione dei Duplicati nella Knowledge Base Completato ---")
+
+def upload_single_pdf(pdf_filepath, api_base_url, api_key, dataset_id, processed_files):
+    """Carica un singolo PDF e aggiorna la lista dei file processati."""
+    filename = os.path.basename(pdf_filepath)
+    if pdf_filepath not in processed_files:
+        document_id, uploaded_filename = upload_pdf_to_ragflow(api_base_url, api_key, dataset_id, pdf_filepath)
+        if document_id:
+            print(f"  => Caricato con successo (Doc ID: {document_id})")
+            return document_id, pdf_filepath
+        else:
+            print(f"  => !!! ERRORE nel caricamento di '{filename}' !!!")
+            return None, None
+    else:
+        print(f"  => File '{filename}' già processato, saltato.")
+        return None, None
 
 # --- Main Script ---
 if __name__ == "__main__":
@@ -253,6 +316,12 @@ if __name__ == "__main__":
     else:
         print(f"Dataset '{DATASET_NAME}' trovato con ID: {dataset_id}")
 
+    # Fase 1: Controllo e parsing dei documenti esistenti non parsati
+    process_unparsed_documents(RAGFLOW_API_BASE_URL, RAGFLOW_API_KEY, dataset_id)
+
+    # Fase 2: Rimozione dei documenti duplicati nella Knowledge Base
+    remove_duplicate_documents(RAGFLOW_API_BASE_URL, RAGFLOW_API_KEY, dataset_id)
+
     existing_documents_list = list_documents_in_ragflow(RAGFLOW_API_BASE_URL, RAGFLOW_API_KEY, dataset_id)
     if existing_documents_list is None:
         print("Attenzione: Impossibile recuperare l'elenco dei documenti esistenti.")
@@ -260,32 +329,7 @@ if __name__ == "__main__":
     existing_normalized_document_names = {normalize_filename(doc.get("name")): doc.get("id") for doc in existing_documents_list if doc.get("name")}
     print(f"Controllo completato. {len(existing_normalized_document_names)} documenti già presenti (nomi normalizzati).")
 
-    # Identifica e rimuovi i duplicati nella knowledge base
-    print("\n--- Controllo ed eliminazione di duplicati nella Knowledge Base ---")
-    normalized_names_in_ragflow = {}
-    for doc in existing_documents_list:
-        name = doc.get("name")
-        doc_id = doc.get("id")
-        if name and doc_id:
-            normalized_name = normalize_filename(name)
-            if normalized_name in normalized_names_in_ragflow:
-                print(f"Trovato duplicato in RAGFlow: '{name}' (ID: {doc_id}) corrisponde a '{[d['name'] for d in existing_documents_list if d['id'] == normalized_names_in_ragflow[normalized_name]]}' (ID: {normalized_names_in_ragflow[normalized_name]}). Eliminando...")
-                delete_document_from_ragflow(RAGFLOW_API_BASE_URL, RAGFLOW_API_KEY, dataset_id, doc_id)
-            else:
-                normalized_names_in_ragflow[normalized_name] = doc_id
-    print("--- Controllo duplicati nella Knowledge Base completato ---")
-
-    # Controllo dello stato di parsing dei documenti esistenti
-    unparsed_doc_ids = [doc.get("id") for doc in existing_documents_list if doc.get("run") != "3" and doc.get("id")]
-    if unparsed_doc_ids:
-        print(f"\n{len(unparsed_doc_ids)} documenti esistenti non sono stati parsati. Inizio parsing...")
-        if parse_documents_in_ragflow(RAGFLOW_API_BASE_URL, RAGFLOW_API_KEY, dataset_id, unparsed_doc_ids):
-            monitor_parsing_status(RAGFLOW_API_BASE_URL, RAGFLOW_API_KEY, dataset_id, unparsed_doc_ids)
-        else:
-            print(" !!! ERRORE nell'invio della richiesta di parsing per i documenti esistenti.")
-
     processed_files = load_processed_files()
-
     files_to_upload = []
     for full_path, normalized_name in local_pdf_files_with_normalized_names:
         filename = os.path.basename(full_path)
@@ -312,18 +356,18 @@ if __name__ == "__main__":
         print(f"\nInizio caricamento di {total_files_to_process} nuovi file PDF...")
         uploaded_doc_ids = []
         upload_errors = 0
-        for idx, pdf_filepath in enumerate(files_to_upload):
-            filename = os.path.basename(pdf_filepath)
-            print(f" [{idx + 1}/{total_files_to_process}] Caricamento: {filename}...")
-            document_id = upload_pdf_to_ragflow(RAGFLOW_API_BASE_URL, RAGFLOW_API_KEY, dataset_id, pdf_filepath)
-            if document_id:
-                print(f"  => Caricato con successo (Doc ID: {document_id})")
-                uploaded_doc_ids.append(document_id)
-                processed_files.append(pdf_filepath)
-                save_processed_files(processed_files)
-            else:
-                print(f"  => !!! ERRORE nel caricamento di '{filename}' !!!")
-                upload_errors += 1
+        with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_UPLOADS) as executor:
+            futures = {executor.submit(upload_single_pdf, pdf_filepath, RAGFLOW_API_BASE_URL, RAGFLOW_API_KEY, dataset_id, processed_files): pdf_filepath
+                       for pdf_filepath in files_to_upload}
+            for future in tqdm(as_completed(futures), total=total_files_to_process, desc="Caricamento PDF"):
+                doc_id, uploaded_filepath = future.result()
+                if doc_id:
+                    uploaded_doc_ids.append(doc_id)
+                    processed_files.append(uploaded_filepath)
+                else:
+                    upload_errors += 1
+        save_processed_files(processed_files)
+
         print(f"\n--- Caricamento completato ---")
         print(f" File caricati con successo: {len(uploaded_doc_ids)}")
         if upload_errors > 0:
