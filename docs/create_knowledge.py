@@ -1,15 +1,17 @@
 import os
 import requests
 import time
+import json
 
 # --- Configuration ---
 PDF_DIRECTORY = "/home/ubuntu/LLM_14/LLM_14/data/sentenze"
 RAGFLOW_API_BASE_URL = "https://sgailegal.it"
 RAGFLOW_API_KEY = "ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm"
-DATASET_NAME = "sentenze_dataset"
-EMBEDDING_MODEL = "BAAI/bge-large-zh-v1.5"
+DATASET_NAME = "sentenze_1739462764_8500"
+EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 CHUNK_METHOD = "naive"
 PARSER_CONFIG = {"chunk_token_num": 128, "delimiter": "\\n!?;。；！？", "html4excel": False, "layout_recognize": True, "raptor": {"user_raptor": False}}
+PROCESSED_FILES_FILE = "processed_files.json"
 
 # --- Helper Functions ---
 
@@ -148,8 +150,8 @@ def upload_pdf_to_ragflow(api_base_url, api_key, dataset_id, pdf_filepath):
     except FileNotFoundError:
         print(f"Errore: File locale non trovato: {pdf_filepath}")
         return None
-    except requests.exceptions.RequestException:
-        print(f"Fallimento nell'upload di '{filename}'.")
+    except requests.exceptions.RequestException as e:
+        print(f"Fallimento nell'upload di '{filename}'. Error: {e}")
         return None
 
 def parse_documents_in_ragflow(api_base_url, api_key, dataset_id, doc_ids):
@@ -193,6 +195,19 @@ def monitor_parsing_status(api_base_url, api_key, dataset_id, doc_ids):
 
         time.sleep(30)  # Controlla ogni 30 secondi
 
+def load_processed_files():
+    """Carica l'elenco dei file già processati."""
+    try:
+        with open(PROCESSED_FILES_FILE, "r") as f:
+            return json.load(f)
+        except FileNotFoundError:
+            return []
+
+def save_processed_files(processed_files):
+    """Salva l'elenco dei file processati."""
+    with open(PROCESSED_FILES_FILE, "w") as f:
+        json.dump(processed_files, f)
+
 # --- Main Script ---
 if __name__ == "__main__":
     print("--- Avvio Script Caricamento Documenti RAGFlow ---")
@@ -221,12 +236,14 @@ if __name__ == "__main__":
     existing_document_names = {doc.get("name") for doc in existing_documents_list if doc.get("name")}
     print(f"Controllo completato. {len(existing_document_names)} documenti già presenti.")
 
-    files_to_upload = [filepath for filepath in local_pdf_files if os.path.basename(filepath) not in existing_document_names]
+    processed_files = load_processed_files()
+
+    files_to_upload = [filepath for filepath in local_pdf_files if os.path.basename(filepath) not in existing_document_names and filepath not in processed_files]
     files_skipped = len(local_pdf_files) - len(files_to_upload)
     if files_skipped > 0:
-        print(f" {files_skipped} file locali sono già presenti nel Dataset e verranno saltati.")
+        print(f" {files_skipped} file locali sono già presenti nel Dataset o sono stati già processati e verranno saltati.")
     if not files_to_upload:
-        print("\nNessun nuovo file da caricare. Tutti i PDF locali sono già nel Dataset.")
+        print("\nNessun nuovo file da caricare. Tutti i PDF locali sono già nel Dataset o sono stati processati.")
     else:
         total_files_to_process = len(files_to_upload)
         print(f"\nInizio caricamento di {total_files_to_process} nuovi file PDF...")
@@ -239,6 +256,8 @@ if __name__ == "__main__":
             if document_id:
                 print(f"  => Caricato con successo (Doc ID: {document_id})")
                 uploaded_doc_ids.append(document_id)
+                processed_files.append(pdf_filepath)
+                save_processed_files(processed_files)
             else:
                 print(f"  => !!! ERRORE nel caricamento di '{filename}' !!!")
                 upload_errors += 1
