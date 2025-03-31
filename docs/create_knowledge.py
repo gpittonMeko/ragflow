@@ -292,16 +292,21 @@ if __name__ == "__main__":
         if normalized_name not in existing_normalized_document_names and full_path not in processed_files:
             files_to_upload.append(full_path)
         elif normalized_name in existing_normalized_document_names:
-            print(f"Il file locale '{filename}' (nome normalizzato '{normalized_name}') sembra essere già presente nel Dataset (ID: {existing_normalized_document_names[normalized_name]}). Sarà saltato.")
+            print(f"Il file locale '{filename}' (nome normalizzato '{normalized_name}') sembra essere già presente nel Dataset (ID: {existing_normalized_document_names[normalized_name]}).")
+            try:
+                os.remove(full_path)
+                print(f"  => File locale '{filename}' eliminato perché duplicato nella Knowledge Base.")
+            except OSError as e:
+                print(f"  => Errore durante l'eliminazione del file locale '{filename}': {e}")
         elif full_path in processed_files:
             print(f"Il file locale '{filename}' è già stato processato e sarà saltato.")
 
     files_skipped = len(local_pdf_files_with_normalized_names) - len(files_to_upload)
     if files_skipped > 0:
-        print(f" {files_skipped} file locali sono già presenti nel Dataset (con o senza suffissi), sono stati processati o sono duplicati locali e verranno saltati.")
+        print(f" {files_skipped} file locali sono già presenti nel Dataset (con o senza suffissi), sono stati processati o erano duplicati locali e sono stati gestiti.")
 
     if not files_to_upload:
-        print("\nNessun nuovo file da caricare. Tutti i PDF locali sono già nel Dataset o sono stati processati.")
+        print("\nNessun nuovo file da caricare.")
     else:
         total_files_to_process = len(files_to_upload)
         print(f"\nInizio caricamento di {total_files_to_process} nuovi file PDF...")
