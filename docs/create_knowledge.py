@@ -154,6 +154,13 @@ def upload_pdf_to_ragflow(api_base_url, api_key, dataset_id, pdf_filepath):
         print(f"Fallimento nell'upload di '{filename}'. Error: {e}")
         return None
 
+    except FileNotFoundError:
+        print(f"Errore: File locale non trovato: {pdf_filepath}")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"Fallimento nell'upload di '{filename}'. Error: {e}")
+        return None
+
 def parse_documents_in_ragflow(api_base_url, api_key, dataset_id, doc_ids):
     """Attiva il parsing per una lista di documenti specifici in RAGFlow."""
     if not doc_ids:
