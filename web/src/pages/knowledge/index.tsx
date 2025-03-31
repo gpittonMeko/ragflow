@@ -52,9 +52,7 @@ const KnowledgeList = () => {
   return (
     <Flex className={styles.knowledge} vertical flex={1} id="scrollableDiv">
       {/* Modifica evidente: scritta in grande */}
-      <h1 style={{ fontSize: '72px', color: 'red', textAlign: 'center' }}>
-        PORCO DIO
-      </h1>
+
       <div className={styles.topWrapper}>
         <div>
           <span className={styles.title}>
