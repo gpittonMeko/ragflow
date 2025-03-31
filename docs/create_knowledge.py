@@ -236,6 +236,15 @@ if __name__ == "__main__":
     existing_document_names = {doc.get("name") for doc in existing_documents_list if doc.get("name")}
     print(f"Controllo completato. {len(existing_document_names)} documenti già presenti.")
 
+    # Controllo dello stato di parsing dei documenti esistenti
+    unparsed_doc_ids = [doc.get("id") for doc in existing_documents_list if doc.get("run") != "3" and doc.get("id")]
+    if unparsed_doc_ids:
+        print(f"\n{len(unparsed_doc_ids)} documenti esistenti non sono stati parsati. Inizio parsing...")
+        if parse_documents_in_ragflow(RAGFLOW_API_BASE_URL, RAGFLOW_API_KEY, dataset_id, unparsed_doc_ids):
+            monitor_parsing_status(RAGFLOW_API_BASE_URL, RAGFLOW_API_KEY, dataset_id, unparsed_doc_ids)
+        else:
+            print(" !!! ERRORE nell'invio della richiesta di parsing per i documenti esistenti.")
+
     processed_files = load_processed_files()
 
     files_to_upload = [filepath for filepath in local_pdf_files if os.path.basename(filepath) not in existing_document_names and filepath not in processed_files]
