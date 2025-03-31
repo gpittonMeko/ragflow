@@ -2,6 +2,7 @@ import os
 import requests
 import time
 import json
+import re
 
 # --- Configuration ---
 PDF_DIRECTORY = "/home/ubuntu/LLM_14/LLM_14/data/sentenze"
@@ -15,11 +16,16 @@ PROCESSED_FILES_FILE = "processed_files.json"
 
 # --- Helper Functions ---
 
+def normalize_filename(filename):
+    """Rimuove i suffissi numerici tra parentesi e l'estensione dal nome del file."""
+    base_name = os.path.splitext(filename)[0]
+    return re.sub(r'\s*\(\d+\)$', '', base_name).strip()
+
 def list_pdf_files(directory):
-    """Elenca tutti i file PDF nella directory specificata."""
+    """Elenca tutti i file PDF nella directory specificata e restituisce il percorso completo e il nome normalizzato."""
     try:
         pdf_files = [f for f in os.listdir(directory) if f.lower().endswith(".pdf")]
-        return [os.path.join(directory, f) for f in pdf_files]
+        return [(os.path.join(directory, f), normalize_filename(f)) for f in pdf_files]
     except FileNotFoundError:
         print(f"Errore: Directory non trovata: {directory}")
         return []
@@ -129,6 +135,23 @@ def list_documents_in_ragflow(api_base_url, api_key, dataset_id):
         print(f"Fallimento nel recuperare l'elenco dei documenti per Dataset ID '{dataset_id}'.")
         return None
 
+def delete_document_from_ragflow(api_base_url, api_key, dataset_id, document_id):
+    """Elimina un documento dal dataset specificato."""
+    url = f"{api_base_url}/api/v1/datasets/{dataset_id}/documents/{document_id}"
+    headers = {"Authorization": f"Bearer {api_key}"}
+    print(f"Tentativo di eliminare il documento con ID: {document_id} dal Dataset ID: {dataset_id}...")
+    try:
+        response_json = _make_api_request("DELETE", url, api_key, headers=headers)
+        if response_json and response_json.get("code") == 0:
+            print(f"Documento con ID: {document_id} eliminato con successo.")
+            return True
+        else:
+            print(f"Errore durante l'eliminazione del documento con ID: {document_id}. Risposta: {response_json}")
+            return False
+    except requests.exceptions.RequestException as e:
+        print(f"Fallimento nell'eliminazione del documento con ID: {document_id}. Errore: {e}")
+        return False
+
 def upload_pdf_to_ragflow(api_base_url, api_key, dataset_id, pdf_filepath):
     """Carica un singolo file PDF nel dataset specificato."""
     url = f"{api_base_url}/api/v1/datasets/{dataset_id}/documents"
@@ -201,7 +224,7 @@ def load_processed_files():
         with open(PROCESSED_FILES_FILE, "r") as f:
             return json.load(f)
     except FileNotFoundError:
-            return []
+        return []
 
 def save_processed_files(processed_files):
     """Salva l'elenco dei file processati."""
@@ -213,11 +236,12 @@ if __name__ == "__main__":
     print("--- Avvio Script Caricamento Documenti RAGFlow ---")
     start_time = time.time()
 
-    local_pdf_files = list_pdf_files(PDF_DIRECTORY)
-    if not local_pdf_files:
+    local_pdf_files_with_normalized_names = list_pdf_files(PDF_DIRECTORY)
+    if not local_pdf_files_with_normalized_names:
         print("Nessun file PDF trovato nella directory specificata. Uscita.")
         exit()
-    print(f"Trovati {len(local_pdf_files)} file PDF locali.")
+    print(f"Trovati {len(local_pdf_files_with_normalized_names)} file PDF locali.")
+    local_normalized_names = {normalized_name: full_path for full_path, normalized_name in local_pdf_files_with_normalized_names}
 
     dataset_id = find_dataset_id(RAGFLOW_API_BASE_URL, RAGFLOW_API_KEY, DATASET_NAME)
     if not dataset_id:
@@ -233,8 +257,23 @@ if __name__ == "__main__":
     if existing_documents_list is None:
         print("Attenzione: Impossibile recuperare l'elenco dei documenti esistenti.")
         exit()
-    existing_document_names = {doc.get("name") for doc in existing_documents_list if doc.get("name")}
-    print(f"Controllo completato. {len(existing_document_names)} documenti già presenti.")
+    existing_normalized_document_names = {normalize_filename(doc.get("name")): doc.get("id") for doc in existing_documents_list if doc.get("name")}
+    print(f"Controllo completato. {len(existing_normalized_document_names)} documenti già presenti (nomi normalizzati).")
+
+    # Identifica e rimuovi i duplicati nella knowledge base
+    print("\n--- Controllo ed eliminazione di duplicati nella Knowledge Base ---")
+    normalized_names_in_ragflow = {}
+    for doc in existing_documents_list:
+        name = doc.get("name")
+        doc_id = doc.get("id")
+        if name and doc_id:
+            normalized_name = normalize_filename(name)
+            if normalized_name in normalized_names_in_ragflow:
+                print(f"Trovato duplicato in RAGFlow: '{name}' (ID: {doc_id}) corrisponde a '{[d['name'] for d in existing_documents_list if d['id'] == normalized_names_in_ragflow[normalized_name]]}' (ID: {normalized_names_in_ragflow[normalized_name]}). Eliminando...")
+                delete_document_from_ragflow(RAGFLOW_API_BASE_URL, RAGFLOW_API_KEY, dataset_id, doc_id)
+            else:
+                normalized_names_in_ragflow[normalized_name] = doc_id
+    print("--- Controllo duplicati nella Knowledge Base completato ---")
 
     # Controllo dello stato di parsing dei documenti esistenti
     unparsed_doc_ids = [doc.get("id") for doc in existing_documents_list if doc.get("run") != "3" and doc.get("id")]
@@ -247,10 +286,20 @@ if __name__ == "__main__":
 
     processed_files = load_processed_files()
 
-    files_to_upload = [filepath for filepath in local_pdf_files if os.path.basename(filepath) not in existing_document_names and filepath not in processed_files]
-    files_skipped = len(local_pdf_files) - len(files_to_upload)
+    files_to_upload = []
+    for full_path, normalized_name in local_pdf_files_with_normalized_names:
+        filename = os.path.basename(full_path)
+        if normalized_name not in existing_normalized_document_names and full_path not in processed_files:
+            files_to_upload.append(full_path)
+        elif normalized_name in existing_normalized_document_names:
+            print(f"Il file locale '{filename}' (nome normalizzato '{normalized_name}') sembra essere già presente nel Dataset (ID: {existing_normalized_document_names[normalized_name]}). Sarà saltato.")
+        elif full_path in processed_files:
+            print(f"Il file locale '{filename}' è già stato processato e sarà saltato.")
+
+    files_skipped = len(local_pdf_files_with_normalized_names) - len(files_to_upload)
     if files_skipped > 0:
-        print(f" {files_skipped} file locali sono già presenti nel Dataset o sono stati già processati e verranno saltati.")
+        print(f" {files_skipped} file locali sono già presenti nel Dataset (con o senza suffissi), sono stati processati o sono duplicati locali e verranno saltati.")
+
     if not files_to_upload:
         print("\nNessun nuovo file da caricare. Tutti i PDF locali sono già nel Dataset o sono stati processati.")
     else:
@@ -282,5 +331,6 @@ if __name__ == "__main__":
                 print(" !!! ERRORE nell'invio della richiesta di parsing. Controllare i log precedenti.")
         elif upload_errors == total_files_to_process:
             print("\nNessun file caricato con successo, parsing non attivato.")
+
     end_time = time.time()
     print(f"\n--- Operazione completata in {end_time - start_time:.2f} secondi ---")
