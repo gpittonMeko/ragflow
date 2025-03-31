@@ -200,7 +200,7 @@ def load_processed_files():
     try:
         with open(PROCESSED_FILES_FILE, "r") as f:
             return json.load(f)
-        except FileNotFoundError:
+    except FileNotFoundError:
             return []
 
 def save_processed_files(processed_files):
