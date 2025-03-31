@@ -16,6 +16,9 @@ CHUNK_METHOD = "naive"
 PARSER_CONFIG = {"chunk_token_num": 128, "delimiter": "\\n!?;。；！？", "html4excel": False, "layout_recognize": True, "raptor": {"user_raptor": False}}
 PROCESSED_FILES_FILE = "processed_files.json"
 MAX_CONCURRENT_UPLOADS = 5  # Adjust as needed
+API_TIMEOUT_SECONDS = 120  # Increased timeout
+MAX_RETRIES = 3
+RETRY_DELAY_SECONDS = 5
 
 # --- Helper Functions ---
 
@@ -40,7 +43,7 @@ def _make_api_request(method, url, api_key, **kwargs):
     """Funzione helper per effettuare richieste API con gestione errori standard."""
     headers = kwargs.pop("headers", {})
     headers["Authorization"] = f"Bearer {api_key}"
-    timeout = kwargs.pop("timeout", 60)
+    timeout = kwargs.pop("timeout", API_TIMEOUT_SECONDS)  # Use configured timeout
 
     try:
         response = requests.request(method, url, headers=headers, timeout=timeout, **kwargs)
@@ -156,28 +159,33 @@ def delete_document_from_ragflow(api_base_url, api_key, dataset_id, document_id)
         return False
 
 def upload_pdf_to_ragflow(api_base_url, api_key, dataset_id, pdf_filepath):
-    """Carica un singolo file PDF nel dataset specificato."""
+    """Carica un singolo file PDF nel dataset specificato con retry."""
     url = f"{api_base_url}/api/v1/datasets/{dataset_id}/documents"
     filename = os.path.basename(pdf_filepath)
 
-    try:
-        with open(pdf_filepath, "rb") as f:
-            files = {"file": (filename, f, 'application/pdf')}
-            response_json = _make_api_request("POST", url, api_key, files=files, timeout=300)
+    for attempt in range(MAX_RETRIES):
+        try:
+            with open(pdf_filepath, "rb") as f:
+                files = {"file": (filename, f, 'application/pdf')}
+                response_json = _make_api_request("POST", url, api_key, files=files, timeout=300)
 
-        document_id = response_json.get("data", [{}])[0].get("id")
-        if document_id:
-            return document_id, filename
-        else:
-            print(f"Errore: ID documento non trovato nella risposta di upload per '{filename}'. Risposta: {response_json}")
+            document_id = response_json.get("data", [{}])[0].get("id")
+            if document_id:
+                return document_id, filename
+            else:
+                print(f"Errore: ID documento non trovato nella risposta di upload per '{filename}'. Risposta: {response_json}")
+                return None, filename
+
+        except FileNotFoundError:
+            print(f"Errore: File locale non trovato: {pdf_filepath}")
             return None, filename
-
-    except FileNotFoundError:
-        print(f"Errore: File locale non trovato: {pdf_filepath}")
-        return None, filename
-    except requests.exceptions.RequestException as e:
-        print(f"Fallimento nell'upload di '{filename}'. Error: {e}")
-        return None, filename
+        except requests.exceptions.RequestException as e:
+            print(f"Fallimento nell'upload di '{filename}' (Tentativo {attempt + 1}/{MAX_RETRIES}). Errore: {e}")
+            if attempt < MAX_RETRIES - 1:
+                time.sleep(RETRY_DELAY_SECONDS)
+            else:
+                return None, filename
+    return None, filename
 
 def parse_documents_in_ragflow(api_base_url, api_key, dataset_id, doc_ids):
     """Attiva il parsing per una lista di documenti specifici in RAGFlow."""
@@ -288,7 +296,7 @@ def upload_single_pdf(pdf_filepath, api_base_url, api_key, dataset_id, processed
             print(f"  => Caricato con successo (Doc ID: {document_id})")
             return document_id, pdf_filepath
         else:
-            print(f"  => !!! ERRORE nel caricamento di '{filename}' !!!")
+            print(f"  => !!! ERRORE nel caricamento di '{filename}' dopo {MAX_RETRIES} tentativi !!!")
             return None, None
     else:
         print(f"  => File '{filename}' già processato, saltato.")
