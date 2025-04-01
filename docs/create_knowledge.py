@@ -243,7 +243,7 @@ def parse_documents_in_ragflow(api_base_url: str, api_key: str, dataset_id: int,
     headers = {"Content-Type": "application/json"}
     data = {"document_ids": [str(doc_id) for doc_id in doc_ids]}
 
-    logging.info(f"Invio richiesta di parsing per {len(doc_ids)} documenti...")
+    logging.info(f"Invio richiesta di parsing per {len(doc_ids)} documenti. IDs: {doc_ids}, Dati: {data}")
     try:
         _make_api_request("POST", url, api_key, headers=headers, json=data, timeout=API_TIMEOUT_SECONDS)
         logging.info("Richiesta di parsing inviata con successo.")
@@ -262,10 +262,16 @@ def monitor_parsing_status(api_base_url: str, api_key: str, dataset_id: int, doc
                 logging.error("Errore durante il recupero dello stato dei documenti per il monitoraggio del parsing.")
                 break
 
+            logging.debug(f"Risposta API (elenco documenti): {documents}") # Log della risposta API completa (livello DEBUG)
+
             completed_count = 0
             for doc in documents:
                 if doc.get("id") in doc_ids:
-                    if doc.get("run") == "3":  # 3 indica completato
+                    doc_id = doc.get("id")
+                    run_status = doc.get("run")
+                    progress_message = doc.get("progress_msg")
+                    logging.info(f"Document ID: {doc_id}, Stato Parsing (run): {run_status}, Messaggio di Progresso: {progress_message}")
+                    if run_status == "3":  # 3 indica completato
                         completed_count += 1
 
             pbar.n = completed_count
@@ -342,13 +348,13 @@ def upload_single_pdf(pdf_filepath: str, api_base_url: str, api_key: str, datase
     if pdf_filepath not in processed_files:
         document_id, uploaded_filename = upload_pdf_to_ragflow(api_base_url, api_key, dataset_id, pdf_filepath)
         if document_id:
-            logging.info(f"   => Caricato con successo '{uploaded_filename}' (Doc ID: {document_id})")
+            logging.info(f"  => Caricato con successo '{uploaded_filename}' (Doc ID: {document_id})")
             return document_id, pdf_filepath
         else:
-            logging.error(f"   => !!! ERRORE nel caricamento di '{filename}' dopo {MAX_RETRIES} tentativi !!!")
+            logging.error(f"  => !!! ERRORE nel caricamento di '{filename}' dopo {MAX_RETRIES} tentativi !!!")
             return None, None
     else:
-        logging.info(f"   => File '{filename}' già processato, saltato.")
+        logging.info(f"  => File '{filename}' già processato, saltato.")
         return None, None
 
 # --- Main Script ---
@@ -396,9 +402,9 @@ if __name__ == "__main__":
             logging.info(f"Il file locale '{filename}' (nome normalizzato '{normalized_name}') sembra essere già presente nel Dataset (ID: {existing_normalized_document_names[normalized_name]}).")
             try:
                 os.remove(full_path)
-                logging.info(f"   => File locale '{filename}' eliminato perché duplicato nella Knowledge Base.")
+                logging.info(f"  => File locale '{filename}' eliminato perché duplicato nella Knowledge Base.")
             except OSError as e:
-                logging.error(f"   => Errore durante l'eliminazione del file locale '{filename}': {e}")
+                logging.error(f"  => Errore durante l'eliminazione del file locale '{filename}': {e}")
         elif full_path in processed_files:
             logging.info(f"Il file locale '{filename}' è già stato processato e sarà saltato.")
 
