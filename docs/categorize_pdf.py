@@ -372,7 +372,7 @@ if __name__ == "__main__":
     # Definisci i filtri se necessario
     filters = {
         # "date_range": ("2022-08-10", "2023-10-10"),
-        "contains_text": "IMU" # Esempio di filtro per testo
+        #"contains_text": "IMU" # Esempio di filtro per testo
     }
 
     print("[LOG] Avvio programma principale.")
