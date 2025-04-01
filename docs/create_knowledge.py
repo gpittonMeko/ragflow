@@ -102,26 +102,36 @@ def upload_single_pdf(pdf_filepath: str, rag_object: RAGFlow, dataset: DataSet, 
     """Carica un singolo PDF e aggiorna la lista dei file processati."""
     filename = os.path.basename(pdf_filepath)
     if pdf_filepath not in processed_files:
-        try:
-            with open(pdf_filepath, "rb") as f:
-                blob = f.read()
-            documents = dataset.upload_documents([{"display_name": filename, "blob": blob}])
-            if documents is None:
-                logging.error(f"  => Errore durante il caricamento di '{filename}'. Nessuna risposta ricevuta.")
-                return None, None
-            elif len(documents) > 0:
-                document_id = documents[0].id
-                logging.info(f"  => Caricato con successo '{filename}' (Doc ID: {document_id})")
-                return document_id, pdf_filepath
-            else:
-                logging.error(f"  => Errore: ID documento non trovato nella risposta di upload per '{filename}'. Risposta: {documents}")
-                return None, None
-        except FileNotFoundError:
-            logging.error(f"Errore: File locale non trovato: {pdf_filepath}")
-            return None, filename
-        except Exception as e:
-            logging.error(f"Fallimento nell'upload di '{filename}' dopo {MAX_RETRIES} tentativi. Errore: {e}")
-            return None, filename
+        for attempt in range(MAX_RETRIES):
+            try:
+                with open(pdf_filepath, "rb") as f:
+                    blob = f.read()
+                documents = dataset.upload_documents([{"display_name": filename, "blob": blob}])
+                if documents is None:
+                    logging.error(f"  => Errore durante il caricamento di '{filename}'. Nessuna risposta ricevuta (Tentativo {attempt + 1}/{MAX_RETRIES}).")
+                    if attempt < MAX_RETRIES - 1:
+                        time.sleep(RETRY_DELAY_SECONDS)
+                    continue
+                elif len(documents) > 0:
+                    document_id = documents[0].id
+                    logging.info(f"  => Caricato con successo '{filename}' (Doc ID: {document_id})")
+                    return document_id, pdf_filepath
+                else:
+                    logging.error(f"  => Errore: ID documento non trovato nella risposta di upload per '{filename}' (Tentativo {attempt + 1}/{MAX_RETRIES}). Risposta: {documents}")
+                    if attempt < MAX_RETRIES - 1:
+                        time.sleep(RETRY_DELAY_SECONDS)
+                    continue
+            except FileNotFoundError:
+                logging.error(f"Errore: File locale non trovato: {pdf_filepath}")
+                return None, filename
+            except Exception as e:
+                logging.error(f"Fallimento nell'upload di '{filename}' (Tentativo {attempt + 1}/{MAX_RETRIES}). Errore: {e}")
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(RETRY_DELAY_SECONDS)
+                else:
+                    logging.error(f"  => !!! ERRORE nel caricamento di '{filename}' dopo {MAX_RETRIES} tentativi !!! Errore Finale: {e}")
+                    return None, filename
+        return None, filename
     else:
         logging.info(f"  => File '{filename}' già processato, saltato.")
         return None, None
