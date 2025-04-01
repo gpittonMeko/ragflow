@@ -210,7 +210,7 @@ def remove_duplicate_documents(dataset: DataSet) -> None:
         logging.warning("Impossibile recuperare l'elenco dei documenti esistenti per controllare i duplicati.")
     logging.info("--- Controllo ed Eliminazione dei Duplicati nella Knowledge Base Completato ---")
 
-# --- Main Script ---
+# # --- Main Script ---
 if __name__ == "__main__":
     logging.info("--- Avvio Script Caricamento Documenti RAGFlow ---")
     start_time = time.time()
@@ -264,13 +264,6 @@ if __name__ == "__main__":
             files_to_upload.append(full_path)
         elif normalized_name in existing_normalized_document_names:
             logging.info(f"Il file locale '{filename}' (nome normalizzato '{normalized_name}') sembra essere già presente nel Dataset (ID: {existing_normalized_document_names[normalized_name]}).")
-            # INIZIO SEZIONE COMMENTATA PER EVITARE L'ELIMINAZIONE DEI FILE LOCALI
-            # try:
-            #     os.remove(full_path)
-            #     logging.info(f"  => File locale '{filename}' eliminato perché duplicato nella Knowledge Base.")
-            # except OSError as e:
-            #     logging.error(f"  => Errore durante l'eliminazione del file locale '{filename}': {e}")
-            # FINE SEZIONE COMMENTATA
         elif full_path in processed_files:
             logging.info(f"Il file locale '{filename}' è già stato processato e sarà saltato.")
 
@@ -283,33 +276,50 @@ if __name__ == "__main__":
     else:
         total_files_to_process = len(files_to_upload)
         logging.info(f"\nInizio caricamento di {total_files_to_process} nuovi file PDF...")
-        uploaded_doc_ids = []
+
+        BATCH_SIZE = 10  # Definisci la dimensione del lotto
+        uploaded_count = 0
         upload_errors = 0
-        with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_UPLOADS) as executor:
-            futures = {executor.submit(upload_single_pdf, pdf_filepath, rag_object, dataset, processed_files): pdf_filepath
-                       for pdf_filepath in files_to_upload}
-            for future in tqdm(as_completed(futures), total=total_files_to_process, desc="Caricamento PDF"):
-                doc_id, uploaded_filepath = future.result()
-                if doc_id:
-                    uploaded_doc_ids.append(doc_id)
-                    processed_files.append(uploaded_filepath)
-                else:
-                    upload_errors += 1
-        save_processed_files(processed_files)
+
+        for i in range(0, len(files_to_upload), BATCH_SIZE):
+            batch_files = files_to_upload[i:i + BATCH_SIZE]
+            batch_uploaded_doc_ids = []
+            batch_upload_errors = 0
+
+            logging.info(f"\n--- Inizio caricamento del lotto di {len(batch_files)} file ({uploaded_count + 1}-{min(uploaded_count + BATCH_SIZE, total_files_to_process)}) ---")
+
+            with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_UPLOADS) as executor:
+                futures = {executor.submit(upload_single_pdf, pdf_filepath, rag_object, dataset, processed_files): pdf_filepath
+                           for pdf_filepath in batch_files}
+                for future in tqdm(as_completed(futures), total=len(batch_files), desc="Caricamento PDF (Lotto)"):
+                    doc_id, uploaded_filepath = future.result()
+                    if doc_id:
+                        batch_uploaded_doc_ids.append(doc_id)
+                        processed_files.append(uploaded_filepath)
+                    else:
+                        batch_upload_errors += 1
+
+            uploaded_count += len(batch_uploaded_doc_ids)
+            upload_errors += batch_upload_errors
+            save_processed_files(processed_files)  # Salva i file processati dopo ogni lotto
+
+            if batch_uploaded_doc_ids:
+                logging.info(f"\nAttivazione parsing per {len(batch_uploaded_doc_ids)} documenti caricati nel lotto...")
+                try:
+                    dataset.async_parse_documents(document_ids=[str(doc_id) for doc_id in batch_uploaded_doc_ids])
+                    monitor_parsing_status(dataset, [str(doc_id) for doc_id in batch_uploaded_doc_ids])
+                    logging.info(f"Parsing completato per i documenti del lotto.")
+                except Exception as e:
+                    logging.error(f"!!! ERRORE nell'invio della richiesta di parsing per il lotto: {e}")
+            else:
+                logging.info("Nessun file caricato con successo in questo lotto, parsing non attivato.")
+
+            logging.info(f"--- Fine caricamento del lotto. Caricati con successo: {len(batch_uploaded_doc_ids)}, Errori nel lotto: {batch_upload_errors}, Totale caricati: {uploaded_count}, Totale errori: {upload_errors} ---")
 
         logging.info("\n--- Caricamento completato ---")
-        logging.info(f" File caricati con successo: {len(uploaded_doc_ids)}")
+        logging.info(f" File caricati con successo: {uploaded_count}")
         if upload_errors > 0:
             logging.error(f" Errori durante il caricamento: {upload_errors} file")
-        if uploaded_doc_ids:
-            logging.info("\nAttivazione parsing per i documenti caricati...")
-            try:
-                dataset.async_parse_documents(document_ids=uploaded_doc_ids)
-                monitor_parsing_status(dataset, uploaded_doc_ids)
-            except Exception as e:
-                logging.error(f"!!! ERRORE nell'invio della richiesta di parsing: {e}")
-        elif upload_errors == total_files_to_process:
-            logging.info("\nNessun file caricato con successo, parsing non attivato.")
 
     end_time = time.time()
     logging.info(f"\n--- Operazione completata in {end_time - start_time:.2f} secondi ---")
