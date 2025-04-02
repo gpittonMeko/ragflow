@@ -7,6 +7,10 @@ import logging
 from configparser import ConfigParser
 from ragflow_sdk import RAGFlow, DataSet, Document
 
+# AGGIUNTA VALIDAZIONE PDF
+import PyPDF2
+from PyPDF2.errors import PdfReadError
+
 # --- Setup Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -96,6 +100,22 @@ def save_processed_files(processed_files: list[str]) -> None:
     """Salva l'elenco dei file processati."""
     with open(PROCESSED_FILES_FILE, "w") as f:
         json.dump(processed_files, f)
+
+# AGGIUNTA VALIDAZIONE PDF
+def is_pdf_valid(pdf_path: str) -> bool:
+    """
+    Verifica se il PDF è leggibile da PyPDF2.
+    Restituisce True se è un PDF valido, False in caso di errore.
+    """
+    try:
+        with open(pdf_path, "rb") as file:
+            pdf_reader = PyPDF2.PdfReader(file)
+            # provo ad accedere alle pagine per confermare la leggibilità
+            _ = len(pdf_reader.pages)
+        return True
+    except (PdfReadError, Exception) as e:
+        logging.error(f"PDF non valido o corrotto: {pdf_path} - Errore: {e}")
+        return False
 
 def upload_single_pdf(pdf_filepath: str, rag_object: RAGFlow, dataset: DataSet, processed_files: list[str]) -> tuple[str or None, str or None]:
     """Carica un singolo PDF e aggiorna la lista dei file processati."""
@@ -262,8 +282,16 @@ if __name__ == "__main__":
 
     processed_files = load_processed_files()
     files_to_upload = []
+
+    # AGGIUNTA VALIDAZIONE PDF: salto i PDF che non sono validi per PDFium
     for full_path, normalized_name in local_pdf_files_with_normalized_names:
         filename = os.path.basename(full_path)
+
+        # Controllo prima se il PDF è leggibile da PyPDF2
+        if not is_pdf_valid(full_path):
+            logging.error(f"Salto '{filename}' perché sembra corrotto/illeggibile.")
+            continue
+
         if normalized_name not in existing_normalized_document_names and full_path not in processed_files:
             files_to_upload.append(full_path)
         elif normalized_name in existing_normalized_document_names:
@@ -309,7 +337,6 @@ if __name__ == "__main__":
                     except Exception as e:
                         if "PDFium: Data format error" in str(e):
                             pdfium_error_files.append(filename)
-
 
             uploaded_count += len(batch_uploaded_doc_ids)
             upload_errors += batch_upload_errors
