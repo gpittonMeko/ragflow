@@ -124,12 +124,17 @@ def upload_single_pdf(pdf_filepath: str, rag_object: RAGFlow, dataset: DataSet, 
                 logging.error(f"Errore: File locale non trovato: {pdf_filepath}")
                 return None, filename
             except Exception as e:
-                logging.error(f"Fallimento nell'upload di '{filename}' (Tentativo {attempt + 1}/{MAX_RETRIES}). Errore: {e}")
-                if attempt < MAX_RETRIES - 1:
-                    time.sleep(RETRY_DELAY_SECONDS)
+                if "PDFium: Data format error" in str(e):
+                    logging.error(f"Fallimento nel caricamento di '{filename}' (Tentativo {attempt + 1}/{MAX_RETRIES}). Errore: {e}")
+                    logging.error(f"  => !!! ERRORE nel caricamento di '{filename}' dopo {MAX_RETRIES} tentativi a causa di un problema con il formato PDF !!! Errore Finale: {e}")
+                    return None, filename # Indica fallimento dovuto a formato PDF
                 else:
-                    logging.error(f"  => !!! ERRORE nel caricamento di '{filename}' dopo {MAX_RETRIES} tentativi !!! Errore Finale: {e}")
-                    return None, filename
+                    logging.error(f"Fallimento nell'upload di '{filename}' (Tentativo {attempt + 1}/{MAX_RETRIES}). Errore: {e}")
+                    if attempt < MAX_RETRIES - 1:
+                        time.sleep(RETRY_DELAY_SECONDS)
+                    else:
+                        logging.error(f"  => !!! ERRORE nel caricamento di '{filename}' dopo {MAX_RETRIES} tentativi !!! Errore Finale: {e}")
+                        return None, filename
         return None, filename
     else:
         logging.info(f"  => File '{filename}' già processato, saltato.")
@@ -279,6 +284,7 @@ if __name__ == "__main__":
         BATCH_SIZE = 10  # Definisci la dimensione del lotto
         uploaded_count = 0
         upload_errors = 0
+        pdfium_error_files = [] # Lista per tenere traccia dei file con errori PDFium
 
         for i in range(0, len(files_to_upload), BATCH_SIZE):
             batch_files = files_to_upload[i:i + BATCH_SIZE]
@@ -292,8 +298,18 @@ if __name__ == "__main__":
                 if doc_id:
                     batch_uploaded_doc_ids.append(doc_id)
                     processed_files.append(uploaded_filepath)
-                else:
+                elif uploaded_filepath: # Se uploaded_filepath non è None, c'è stato un tentativo di upload fallito
                     batch_upload_errors += 1
+                    filename = os.path.basename(uploaded_filepath)
+                    # Controlla se l'errore è specifico di PDFium
+                    try:
+                        with open(pdf_filepath, "rb") as f:
+                            blob = f.read()
+                            dataset.upload_documents([{"display_name": filename, "blob": blob}]) # Solo per verificare l'errore
+                    except Exception as e:
+                        if "PDFium: Data format error" in str(e):
+                            pdfium_error_files.append(filename)
+
 
             uploaded_count += len(batch_uploaded_doc_ids)
             upload_errors += batch_upload_errors
@@ -316,6 +332,9 @@ if __name__ == "__main__":
         logging.info(f" File caricati con successo: {uploaded_count}")
         if upload_errors > 0:
             logging.error(f" Errori durante il caricamento: {upload_errors} file")
+            if pdfium_error_files:
+                logging.error(f" I seguenti file hanno generato errori di formato PDF (PDFium): {pdfium_error_files}")
+                logging.error("  => Potrebbe essere necessario controllare questi file: sono corrotti o in un formato non supportato.")
 
     end_time = time.time()
     logging.info(f"\n--- Operazione completata in {end_time - start_time:.2f} secondi ---")
