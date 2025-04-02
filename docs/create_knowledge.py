@@ -3,7 +3,6 @@ import time
 import json
 import re
 from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 from configparser import ConfigParser
 from ragflow_sdk import RAGFlow, DataSet, Document
@@ -288,16 +287,13 @@ if __name__ == "__main__":
 
             logging.info(f"\n--- Inizio caricamento del lotto di {len(batch_files)} file ({uploaded_count + 1}-{min(uploaded_count + BATCH_SIZE, total_files_to_process)}) ---")
 
-            with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_UPLOADS) as executor:
-                futures = {executor.submit(upload_single_pdf, pdf_filepath, rag_object, dataset, processed_files): pdf_filepath
-                           for pdf_filepath in batch_files}
-                for future in tqdm(as_completed(futures), total=len(batch_files), desc="Caricamento PDF (Lotto)"):
-                    doc_id, uploaded_filepath = future.result()
-                    if doc_id:
-                        batch_uploaded_doc_ids.append(doc_id)
-                        processed_files.append(uploaded_filepath)
-                    else:
-                        batch_upload_errors += 1
+            for pdf_filepath in tqdm(batch_files, desc="Caricamento PDF (Lotto)"):
+                doc_id, uploaded_filepath = upload_single_pdf(pdf_filepath, rag_object, dataset, processed_files)
+                if doc_id:
+                    batch_uploaded_doc_ids.append(doc_id)
+                    processed_files.append(uploaded_filepath)
+                else:
+                    batch_upload_errors += 1
 
             uploaded_count += len(batch_uploaded_doc_ids)
             upload_errors += batch_upload_errors
