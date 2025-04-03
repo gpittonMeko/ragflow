@@ -1,138 +1,124 @@
 import os
-import math
-from ragflow_sdk import RAGFlow
 import PyPDF2
+from ragflow_sdk import RAGFlow
 
 def pdf_to_text(filepath: str) -> str:
     """
-    Converte il PDF in testo usando PyPDF2.
-    Restituisce l'intero contenuto come stringa.
+    Legge il PDF con PyPDF2 e restituisce il testo estratto.
+    Se non riesce a leggerlo, solleva eccezione.
     """
-    text_content = []
+    text_list = []
     with open(filepath, "rb") as f:
         reader = PyPDF2.PdfReader(f)
-        # PyPDF2.PdfReader ha l'attributo .pages con il testo pagina per pagina
-        num_pages = len(reader.pages)
-        for page_i in range(num_pages):
-            page = reader.pages[page_i]
-            text = page.extract_text()
-            if text:
-                text_content.append(text)
-    return "\n".join(text_content)
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text_list.append(page_text)
+    return "\n".join(text_list)
 
-def load_pdfs_with_local_parsing(
+def load_pdf_as_text_file_on_ragflow(
+    dataset,
+    filename: str,
+    text_content: str,
+    chunk_method: str = "naive"
+):
+    """
+    Carica su RAGFlow un documento di testo (invece di un PDF binario).
+    Usa 'filename' come display_name, ma con estensione .txt per evitare che RAGFlow
+    lo interpreti come PDF.
+    chunk_method = "naive" per lo split automatico del testo,
+                   "manual" se vuoi aggiungere chunk in un secondo momento.
+    """
+    # Costruiamo un doc "finto" .txt
+    doc_info = {
+        "display_name": filename.replace(".pdf", ".txt"),
+        "blob": text_content.encode("utf-8"),  # convertiamo la stringa in byte
+        "chunk_method": chunk_method,
+        "parser_config": {
+            "chunk_token_num": 128, 
+            "delimiter":"\n!?;。；！？",
+            "html4excel": False,
+            "layout_recognize": True,
+            "raptor":{"user_raptor":False}
+        }
+    }
+    dataset.upload_documents(document_list=[doc_info])
+
+
+def main(
     api_key: str,
     base_url: str,
     dataset_name: str,
-    folder_path: str,
-    chunk_size: int = 2000
+    folder_path: str
 ):
-    """
-    Esegue:
-      - Lettura locale dei PDF (senza PDFium) con PyPDF2;
-      - Crea un doc in RAGFlow con chunk_method='manual' per ciascun PDF;
-      - Suddivide il testo in chunk di `chunk_size` caratteri e li aggiunge al doc via doc.add_chunk(...).
-    """
-    # 1) Inizializza RAGFlow
-    rag_object = RAGFlow(api_key=api_key, base_url=base_url)
+    # 1. Inizializza RAGFlow
+    rag_obj = RAGFlow(api_key=api_key, base_url=base_url)
+    
+    # 2. Trova dataset esistente
+    ds_list = rag_obj.list_datasets(name=dataset_name)
+    if not ds_list:
+        print(f"[ERRORE] Dataset '{dataset_name}' non trovato. Crealo prima.")
+        return
+    dataset = ds_list[0]
+    print(f"[INFO] Uso dataset '{dataset.name}' (ID={dataset.id}), chunk_method={dataset.chunk_method}")
 
-    # 2) Trova o crea il dataset (chunk_method NON conta, tanto creeremo doc 'manual' a livello di doc)
-    existing = rag_object.list_datasets(name=dataset_name)
-    if existing:
-        dataset = existing[0]
-        print(f"[INFO] Uso dataset esistente: {dataset.name} (ID={dataset.id}).")
-    else:
-        # Se preferisci, puoi creare un dataset con chunk_method="naive",
-        # ma essendo che forziamo 'manual' a livello doc, PDFium non verrà usato.
-        print(f"[INFO] Creo dataset '{dataset_name}' con chunk_method='naive' (o 'manual').")
-        dataset = rag_object.create_dataset(
-            name=dataset_name,
-            chunk_method="naive"
-        )
-
-    # 3) Scansiona cartella per i PDF
+    # 3. Scansiona la cartella in cerca di PDF
     all_files = os.listdir(folder_path)
-    pdf_files = [f for f in all_files if f.lower().endswith('.pdf')]
+    pdf_files = [f for f in all_files if f.lower().endswith(".pdf")]
     total_pdf = len(pdf_files)
-    print(f"[INFO] Trovati {total_pdf} PDF in '{folder_path}'.")
+    print(f"[INFO] Trovati {total_pdf} file PDF nella cartella '{folder_path}'.")
 
     if total_pdf == 0:
-        print("[ATTENZIONE] Nessun PDF da processare, esco.")
+        print("[ATTENZIONE] Nessun PDF trovato. Esco.")
         return
 
-    # 4) Per ciascun PDF, estrai testo e crea doc 'manual'
-    for i, pdfname in enumerate(pdf_files, start=1):
-        pdfpath = os.path.join(folder_path, pdfname)
-        print(f"\n[INFO] ({i}/{total_pdf}) Converto in testo: {pdfname}")
+    # 4. Elabora i PDF uno per uno (o a blocchi, se preferisci)
+    for idx, pdf_name in enumerate(pdf_files, start=1):
+        pdf_path = os.path.join(folder_path, pdf_name)
+        print(f"\n[INFO] ({idx}/{total_pdf}) Leggo PDF localmente: {pdf_name}")
 
+        # 4.1 Converte in testo con PyPDF2
         try:
-            content_text = pdf_to_text(pdfpath)
+            text_str = pdf_to_text(pdf_path)
+            if not text_str.strip():
+                print(f"[ATTENZIONE] PDF '{pdf_name}' sembra vuoto. Lo salto.")
+                continue
         except Exception as e:
-            print(f"[ERRORE] PyPDF2 non riesce a leggere '{pdfname}': {e}. Skippato.")
-            continue  # Se un PDF è veramente corrotto
-
-        if not content_text.strip():
-            print(f"[ATTENZIONE] PDF vuoto o non estraibile: {pdfname}. Skippato.")
+            print(f"[ERRORE] Impossibile estrarre testo da '{pdf_name}': {e}")
             continue
+        
+        # 4.2 Carica il testo come .txt su RAGFlow, chunk_method=naive
+        try:
+            load_pdf_as_text_file_on_ragflow(
+                dataset=dataset,
+                filename=pdf_name,
+                text_content=text_str,
+                chunk_method="naive"   # oppure "manual" se non vuoi lo split automatico
+            )
+            print(f"[OK] Caricato su RAGFlow come testo: {pdf_name}")
+        except Exception as ex:
+            print(f"[ERRORE] Durante caricamento su RAGFlow di '{pdf_name}': {ex}")
 
-        # 4.1 Carica un doc 'vuoto' (binario) su RAGFlow con chunk_method='manual' (per non far scattare PDFium).
-        #    In realtà potremmo caricare un file binario "fittizio" o nulla. Basterebbe creare un doc senza blob,
-        #    ma l'SDK di solito vuole un blob. Facciamo un piccolo hack: un blob di 0 byte, giusto per avere un doc.
-        doc_list = [{
-            "display_name": pdfname,
-            "blob": b"",  # niente PDF in realta'
-            "chunk_method": "manual",
-            "parser_config": {"raptor": {"user_raptor": False}}
-        }]
+    # 5. Infine, avvia parse asincrono su tutti i doc del dataset
+    print("\n[INFO] Avvio parsing asincrono su tutti i documenti del dataset...")
+    all_docs = dataset.list_documents(page=1, page_size=999999)
+    doc_ids = [d.id for d in all_docs]
+    if doc_ids:
+        dataset.async_parse_documents(doc_ids)
+        print("[INFO] Parsing avviato correttamente!")
+    else:
+        print("[ATTENZIONE] Nessun documento da parsificare.")
 
-        # Carica e crea il doc
-        dataset.upload_documents(document_list=doc_list)
-        # Recupera il doc creato appena (cercandolo per nome)
-        found_docs = dataset.list_documents(keywords=pdfname, page=1, page_size=10)
-        doc = None
-        for d in found_docs:
-            if d.name == pdfname:
-                doc = d
-                break
+    print("[INFO] Fine processo. PDF caricati come testo, senza PDFium.")
 
-        if not doc:
-            print(f"[ERRORE] Non trovo il doc appena creato '{pdfname}'. Skippato.")
-            continue
-
-        print(f"[INFO] Documento '{pdfname}' creato in dataset con ID: {doc.id}")
-
-        # 4.2 Suddividi il testo in chunk e aggiungili
-        #    (es: chunk di 2000 caratteri)
-        text_len = len(content_text)
-        print(f"[INFO] Lunghezza testo estratto: {text_len} caratteri")
-        start_idx = 0
-        chunk_count = 0
-        while start_idx < text_len:
-            end_idx = min(start_idx + chunk_size, text_len)
-            chunk_text = content_text[start_idx:end_idx]
-            chunk_count += 1
-
-            # Aggiungi chunk
-            doc.add_chunk(content=chunk_text)
-            start_idx = end_idx
-
-        print(f"[INFO] Aggiunti {chunk_count} chunk di testo a '{pdfname}'.")
-
-    print("\n[INFO] Fine processo. Tutti i PDF validi sono stati caricati come testo (senza PDFium).")
-
-# ==========================
-# ESEMPIO D'USO
-# ==========================
+# ==============================
+# UTILIZZO
+# ==============================
 if __name__ == "__main__":
+    # Parametri reali
     API_KEY = "ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm"
     BASE_URL = "http://sgailegal.it:9380"
     DATASET_NAME = "sentenze_1739462764_8500"
     FOLDER_PATH = "/home/ubuntu/LLM_14/LLM_14/data/sentenze"
 
-    load_pdfs_with_local_parsing(
-        api_key=API_KEY,
-        base_url=BASE_URL,
-        dataset_name=DATASET_NAME,
-        folder_path=FOLDER_PATH,
-        chunk_size=30
-    )
+    main(API_KEY, BASE_URL, DATASET_NAME, FOLDER_PATH)
