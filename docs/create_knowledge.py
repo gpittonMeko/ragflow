@@ -1,162 +1,138 @@
 import os
 import math
-import re
 from ragflow_sdk import RAGFlow
+import PyPDF2
 
-try:
-    from tqdm import tqdm
-    USE_TQDM = True
-except ImportError:
-    USE_TQDM = False
+def pdf_to_text(filepath: str) -> str:
+    """
+    Converte il PDF in testo usando PyPDF2.
+    Restituisce l'intero contenuto come stringa.
+    """
+    text_content = []
+    with open(filepath, "rb") as f:
+        reader = PyPDF2.PdfReader(f)
+        # PyPDF2.PdfReader ha l'attributo .pages con il testo pagina per pagina
+        num_pages = len(reader.pages)
+        for page_i in range(num_pages):
+            page = reader.pages[page_i]
+            text = page.extract_text()
+            if text:
+                text_content.append(text)
+    return "\n".join(text_content)
 
-def load_pdfs_in_small_batches_skip_errors(
+def load_pdfs_with_local_parsing(
     api_key: str,
     base_url: str,
     dataset_name: str,
     folder_path: str,
-    batch_size: int = 30
+    chunk_size: int = 2000
 ):
     """
-    Carica PDF in un dataset RAGFlow *senza cambiare chunk_method* (es. naive),
-    suddividendo il caricamento in piccoli batch da 'batch_size'.
-    Se alcuni PDF generano l'errore 'Data format error' con PDFium,
-    lo script li scarta e prosegue col caricamento dei restanti.
-    Poi, per ogni batch, avvia il parsing asincrono.
+    Esegue:
+      - Lettura locale dei PDF (senza PDFium) con PyPDF2;
+      - Crea un doc in RAGFlow con chunk_method='manual' per ciascun PDF;
+      - Suddivide il testo in chunk di `chunk_size` caratteri e li aggiunge al doc via doc.add_chunk(...).
     """
-
-    print(f"[INFO] Inizializzo RAGFlow con base_url='{base_url}'...")
+    # 1) Inizializza RAGFlow
     rag_object = RAGFlow(api_key=api_key, base_url=base_url)
-    print("[INFO] Client RAGFlow inizializzato.")
 
-    # 1. Recupera il dataset (senza modificarlo)
-    print(f"[INFO] Cerco dataset '{dataset_name}' (senza forzare chunk_method).")
+    # 2) Trova o crea il dataset (chunk_method NON conta, tanto creeremo doc 'manual' a livello di doc)
     existing = rag_object.list_datasets(name=dataset_name)
-    if not existing:
-        print(f"[ERRORE] Il dataset '{dataset_name}' non esiste. Crealo prima con chunk_method=naive, se necessario.")
-        return
+    if existing:
+        dataset = existing[0]
+        print(f"[INFO] Uso dataset esistente: {dataset.name} (ID={dataset.id}).")
+    else:
+        # Se preferisci, puoi creare un dataset con chunk_method="naive",
+        # ma essendo che forziamo 'manual' a livello doc, PDFium non verrà usato.
+        print(f"[INFO] Creo dataset '{dataset_name}' con chunk_method='naive' (o 'manual').")
+        dataset = rag_object.create_dataset(
+            name=dataset_name,
+            chunk_method="naive"
+        )
 
-    dataset = existing[0]
-    print(f"[INFO] Trovato dataset '{dataset_name}' (ID={dataset.id}), chunk_method={dataset.chunk_method}")
-
-    # 2. Leggi tutti i PDF dalla cartella
+    # 3) Scansiona cartella per i PDF
     all_files = os.listdir(folder_path)
     pdf_files = [f for f in all_files if f.lower().endswith('.pdf')]
-    total_pdfs = len(pdf_files)
-    print(f"[INFO] Nella cartella '{folder_path}' trovati {total_pdfs} PDF totali.")
+    total_pdf = len(pdf_files)
+    print(f"[INFO] Trovati {total_pdf} PDF in '{folder_path}'.")
 
-    if total_pdfs == 0:
-        print("[ATTENZIONE] Nessun PDF, esco.")
+    if total_pdf == 0:
+        print("[ATTENZIONE] Nessun PDF da processare, esco.")
         return
 
-    # 3. Calcolo batch totali
-    total_batches = math.ceil(total_pdfs / batch_size)
-    print(f"[INFO] Processerò i PDF in {total_batches} batch da {batch_size} file ciascuno.")
+    # 4) Per ciascun PDF, estrai testo e crea doc 'manual'
+    for i, pdfname in enumerate(pdf_files, start=1):
+        pdfpath = os.path.join(folder_path, pdfname)
+        print(f"\n[INFO] ({i}/{total_pdf}) Converto in testo: {pdfname}")
 
-    start_index = 0
-    for batch_i in range(total_batches):
-        end_index = min(start_index + batch_size, total_pdfs)
-        batch_files = pdf_files[start_index:end_index]
-        current_batch_count = len(batch_files)
+        try:
+            content_text = pdf_to_text(pdfpath)
+        except Exception as e:
+            print(f"[ERRORE] PyPDF2 non riesce a leggere '{pdfname}': {e}. Skippato.")
+            continue  # Se un PDF è veramente corrotto
 
-        print(f"\n=== [BATCH {batch_i+1}/{total_batches}] ===")
-        print(f"[INFO] Indice PDF: {start_index} -> {end_index-1} (tot {current_batch_count}).")
-
-        # 3.1 Leggi i PDF in memoria
-        documents_to_upload = []
-        iterator = tqdm(batch_files, desc="Lettura batch", unit="file") if USE_TQDM else batch_files
-
-        for f_name in iterator:
-            f_path = os.path.join(folder_path, f_name)
-            try:
-                with open(f_path, "rb") as f:
-                    blob = f.read()
-                documents_to_upload.append({
-                    "display_name": f_name,
-                    "blob": blob
-                })
-            except Exception as e:
-                print(f"[ERRORE] Lettura file '{f_name}': {e}")
-
-        if not documents_to_upload:
-            print("[ATTENZIONE] Batch vuoto (o con errori in lettura). Passo oltre.")
-            start_index = end_index
+        if not content_text.strip():
+            print(f"[ATTENZIONE] PDF vuoto o non estraibile: {pdfname}. Skippato.")
             continue
 
-        # 3.2 Prova ad uploadare. Se compaiono errori di PDFium, rimuovi i PDF incriminati e ritenta
-        docs_to_upload_ok = documents_to_upload[:]  # copia
+        # 4.1 Carica un doc 'vuoto' (binario) su RAGFlow con chunk_method='manual' (per non far scattare PDFium).
+        #    In realtà potremmo caricare un file binario "fittizio" o nulla. Basterebbe creare un doc senza blob,
+        #    ma l'SDK di solito vuole un blob. Facciamo un piccolo hack: un blob di 0 byte, giusto per avere un doc.
+        doc_list = [{
+            "display_name": pdfname,
+            "blob": b"",  # niente PDF in realta'
+            "chunk_method": "manual",
+            "parser_config": {"raptor": {"user_raptor": False}}
+        }]
 
-        while True:
-            if not docs_to_upload_ok:
-                print("[ATTENZIONE] Tutti i PDF di questo batch erano corrotti. Batch saltato.")
+        # Carica e crea il doc
+        dataset.upload_documents(document_list=doc_list)
+        # Recupera il doc creato appena (cercandolo per nome)
+        found_docs = dataset.list_documents(keywords=pdfname, page=1, page_size=10)
+        doc = None
+        for d in found_docs:
+            if d.name == pdfname:
+                doc = d
                 break
 
-            try:
-                print(f"[INFO] Upload di {len(docs_to_upload_ok)} PDF sul dataset '{dataset_name}'...")
-                dataset.upload_documents(document_list=docs_to_upload_ok)
-                print("[INFO] Upload completato con successo!")
-                break  # esci dal while, perché l'upload è andato a buon fine
+        if not doc:
+            print(f"[ERRORE] Non trovo il doc appena creato '{pdfname}'. Skippato.")
+            continue
 
-            except Exception as e:
-                msg = str(e)
-                print(f"[ERRORE] upload_documents ha generato eccezione: {msg}")
+        print(f"[INFO] Documento '{pdfname}' creato in dataset con ID: {doc.id}")
 
-                # Trova i PDF con 'Data format error' menzionati nell'errore
-                # Spesso l'errore appare con la forma:
-                # Sentenza_XXX_YYYY.pdf: Failed to load document (PDFium: Data format error).
-                # Quindi usiamo una regex per estrarre i nomi file in errore
-                pattern = r"([^\s]+\.pdf): Failed to load document \(PDFium: Data format error\)"
-                bad_files = re.findall(pattern, msg)
-                bad_files = set(bad_files)  # per evitare duplicati
+        # 4.2 Suddividi il testo in chunk e aggiungili
+        #    (es: chunk di 2000 caratteri)
+        text_len = len(content_text)
+        print(f"[INFO] Lunghezza testo estratto: {text_len} caratteri")
+        start_idx = 0
+        chunk_count = 0
+        while start_idx < text_len:
+            end_idx = min(start_idx + chunk_size, text_len)
+            chunk_text = content_text[start_idx:end_idx]
+            chunk_count += 1
 
-                if not bad_files:
-                    print("[ERRORE] Non ho trovato PDF in errore 'Data format error' da escludere. Interrompo qui.")
-                    # Non possiamo risolvere l'errore => usciamo dal while e dal batch
-                    break
+            # Aggiungi chunk
+            doc.add_chunk(content=chunk_text)
+            start_idx = end_idx
 
-                # Rimuovo i PDF corrotti da docs_to_upload_ok
-                print(f"[INFO] Rimuovo {len(bad_files)} PDF corrotti e ritento l'upload del batch rimanente...")
-                new_list = []
-                for doc_info in docs_to_upload_ok:
-                    fname = doc_info.get("display_name", "")
-                    if fname in bad_files:
-                        print(f"  -> Skippato '{fname}' (Data format error).")
-                    else:
-                        new_list.append(doc_info)
-                docs_to_upload_ok = new_list
+        print(f"[INFO] Aggiunti {chunk_count} chunk di testo a '{pdfname}'.")
 
-                # e si ripete il while True con un batch ridotto
+    print("\n[INFO] Fine processo. Tutti i PDF validi sono stati caricati come testo (senza PDFium).")
 
-        # Se dopo vari tentativi ho caricato almeno un PDF, avvio parsing
-        if docs_to_upload_ok:
-            # 3.3 Recupero i documenti e avvio parsing
-            try:
-                all_docs = dataset.list_documents(page=1, page_size=100000)
-                doc_ids = [d.id for d in all_docs]
-                print(f"[INFO] Nel dataset ci sono ora {len(all_docs)} documenti totali.")
-                if doc_ids:
-                    print(f"[INFO] Avvio parsing asincrono su {len(doc_ids)} documenti.")
-                    dataset.async_parse_documents(doc_ids)
-                    print("[INFO] Parsing avviato correttamente.")
-            except Exception as e:
-                print(f"[ERRORE] Non riesco a lanciare o recuperare documenti per parsing: {e}")
-
-        # Avanziamo al prossimo batch
-        start_index = end_index
-
-    print("\n[INFO] Fine caricamento a batch con skip PDF corrotti.")
-
-# =============== ESEMPIO DI UTILIZZO ===============
+# ==========================
+# ESEMPIO D'USO
+# ==========================
 if __name__ == "__main__":
     API_KEY = "ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm"
     BASE_URL = "http://sgailegal.it:9380"
     DATASET_NAME = "sentenze_1739462764_8500"
     FOLDER_PATH = "/home/ubuntu/LLM_14/LLM_14/data/sentenze"
 
-    # Carichiamo 30 PDF per volta e scartiamo quelli con 'Data format error'
-    load_pdfs_in_small_batches_skip_errors(
+    load_pdfs_with_local_parsing(
         api_key=API_KEY,
         base_url=BASE_URL,
         dataset_name=DATASET_NAME,
         folder_path=FOLDER_PATH,
-        batch_size=30
+        chunk_size=30
     )
