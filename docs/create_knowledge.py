@@ -1,31 +1,31 @@
 import os
+import math
 from ragflow_sdk import RAGFlow
 
-# Se vuoi usare la progress bar di tqdm:
 try:
     from tqdm import tqdm
     USE_TQDM = True
 except ImportError:
-    # Se tqdm non è installato, imposta False
     USE_TQDM = False
 
-def load_pdfs_to_dataset(
+def load_pdfs_in_batches(
     api_key: str,
     base_url: str,
     dataset_name: str,
-    folder_path: str
+    folder_path: str,
+    batch_size: int = 1000
 ):
     """
-    Carica tutti i file PDF da 'folder_path' sul dataset 'dataset_name' usando RAGFlow,
-    con log di avanzamento. Avvia l'operazione di parsing asincrono sui documenti caricati.
+    Carica i PDF presenti in 'folder_path' sul dataset 'dataset_name' di RAGFlow,
+    suddividendo il caricamento in batch di dimensione 'batch_size'.
+    Avvia il parsing asincrono su ciascun batch appena caricato.
     """
-
     print(f"[INFO] Inizializzo RAGFlow con base_url='{base_url}'...")
     rag_object = RAGFlow(api_key=api_key, base_url=base_url)
     print("[INFO] Client RAGFlow inizializzato.")
 
-    # 1. Verifica se il dataset esiste
-    print(f"[INFO] Cerco dataset con nome: '{dataset_name}'...")
+    # 1. Verifica se esiste già il dataset
+    print(f"[INFO] Cerco dataset con nome '{dataset_name}'...")
     existing_datasets = rag_object.list_datasets(name=dataset_name)
     if existing_datasets:
         dataset = existing_datasets[0]
@@ -40,81 +40,110 @@ def load_pdfs_to_dataset(
     all_files = os.listdir(folder_path)
     pdf_files = [f for f in all_files if f.lower().endswith('.pdf')]
     total_pdfs = len(pdf_files)
-    print(f"[INFO] Trovati {total_pdfs} file PDF nella cartella.")
+    print(f"[INFO] Trovati {total_pdfs} file PDF nella cartella '{folder_path}'.")
 
     if total_pdfs == 0:
-        print("[ATTENZIONE] Nessun PDF trovato nella cartella. Interrompo.")
+        print("[ATTENZIONE] Nessun PDF trovato. Interrompo.")
         return
 
-    # 3. Lettura e preparazione dei PDF da caricare (con progress bar o log manuale)
-    documents_to_upload = []
-    print("[INFO] Inizio lettura dei PDF per creare la lista di upload...")
-    
-    if USE_TQDM:
-        iterator = tqdm(pdf_files, desc="Lettura PDF", unit="file", ncols=80)
-    else:
-        iterator = pdf_files
+    # 3. Calcolo il numero di batch totali
+    total_batches = math.ceil(total_pdfs / batch_size)
+    print(f"[INFO] Caricherò i PDF in {total_batches} batch da {batch_size} file ciascuno.")
 
-    for i, filename in enumerate(iterator, start=1):
-        file_path = os.path.join(folder_path, filename)
-        # Se non usi tqdm, stampa manualmente la progressione
-        if not USE_TQDM:
-            print(f"  -> [{i}/{total_pdfs}] Lettura file: {filename}")
+    # 4. Ciclo su ciascun batch
+    start_index = 0
+    for batch_index in range(total_batches):
+        end_index = min(start_index + batch_size, total_pdfs)
+        batch_files = pdf_files[start_index:end_index]
+        current_batch_size = len(batch_files)
 
+        print(f"\n=== [BATCH {batch_index+1}/{total_batches}] "
+              f"PDF dal {start_index} al {end_index-1} (tot {current_batch_size}) ===")
+
+        # 4.1 Lettura dei PDF di questo batch
+        documents_to_upload = []
+        if USE_TQDM:
+            iterator = tqdm(batch_files, desc="Lettura batch", unit="file", ncols=80)
+        else:
+            iterator = batch_files
+
+        for i, filename in enumerate(iterator, start=1):
+            file_path = os.path.join(folder_path, filename)
+            if not USE_TQDM:
+                print(f"  -> [{i}/{current_batch_size}] Lettura: {filename}")
+
+            try:
+                with open(file_path, "rb") as f:
+                    blob_content = f.read()
+                documents_to_upload.append({
+                    "display_name": filename,
+                    "blob": blob_content
+                })
+            except Exception as e:
+                print(f"[ERRORE] Nella lettura di '{file_path}': {e}")
+
+        # Se non ci sono file validi nel batch, passo oltre
+        if not documents_to_upload:
+            print("[ATTENZIONE] Nessun PDF valido nel batch. Passo al batch successivo.")
+            start_index = end_index
+            continue
+
+        # 4.2 Caricamento PDF di questo batch
+        print(f"[INFO] Inizio caricamento di {len(documents_to_upload)} PDF nel dataset '{dataset_name}'...")
         try:
-            with open(file_path, "rb") as f:
-                blob_content = f.read()
-            documents_to_upload.append({
-                "display_name": filename,
-                "blob": blob_content
-            })
+            dataset.upload_documents(document_list=documents_to_upload)
+            print("[INFO] Caricamento completato con successo!")
         except Exception as e:
-            print(f"[ERRORE] Nella lettura di '{file_path}': {e}")
+            print(f"[ERRORE] durante l'upload dei PDF: {e}")
+            start_index = end_index
+            continue
 
-    # 4. Se dopo la lettura non ci sono PDF validi, interrompi
-    if not documents_to_upload:
-        print("[ATTENZIONE] Non ci sono PDF da caricare (forse c'erano errori in lettura?). Interrompo.")
-        return
+        # 4.3 Recupera TUTTI i documenti nel dataset o filtra solo quelli appena caricati
+        #    In questo esempio, per semplicità, parse tutto.
+        print("[INFO] Recupero la lista di documenti dal dataset per il parsing...")
+        try:
+            all_docs = dataset.list_documents(page=1, page_size=100000)
+            print(f"[INFO] Nel dataset ora ci sono {len(all_docs)} documenti totali.")
+        except Exception as e:
+            print(f"[ERRORE] nella lettura dei documenti dal dataset: {e}")
+            start_index = end_index
+            continue
 
-    # 5. Caricamento dei documenti nel dataset
-    print(f"[INFO] Carico ora {len(documents_to_upload)} documenti PDF nel dataset '{dataset_name}'...")
-    try:
-        dataset.upload_documents(document_list=documents_to_upload)
-        print("[INFO] Caricamento completato con successo!")
-    except Exception as e:
-        print(f"[ERRORE] durante l'upload dei PDF: {e}")
-        return
+        # Creiamo la lista degli ID per il parsing
+        doc_ids = [doc.id for doc in all_docs]
+        if not doc_ids:
+            print("[ATTENZIONE] Non ci sono documenti da parsificare.")
+            start_index = end_index
+            continue
 
-    # 6. Recupera la lista di documenti caricati e avvia il parsing
-    print("[INFO] Recupero la lista dei documenti dal dataset per avviare il parsing...")
-    try:
-        all_docs = dataset.list_documents(keywords=None, page=1, page_size=100000)
-        print(f"[INFO] Nel dataset sono presenti {len(all_docs)} documenti totali.")
-    except Exception as e:
-        print(f"[ERRORE] nella lettura dei documenti dal dataset: {e}")
-        return
+        # 4.4 Avvia il parsing asincrono
+        print(f"[INFO] Avvio parsing asincrono su {len(doc_ids)} documenti (batch {batch_index+1}).")
+        try:
+            dataset.async_parse_documents(doc_ids)
+            print("[INFO] Parsing asincrono avviato correttamente.")
+        except Exception as e:
+            print(f"[ERRORE] durante l'avvio del parsing: {e}")
 
-    # Se vuoi parsificare TUTTI i documenti, prendiamone gli ID:
-    doc_ids = [doc.id for doc in all_docs]
-    if not doc_ids:
-        print("[ATTENZIONE] Non ci sono documenti da parsificare.")
-        return
+        # 4.5 Avanza l'indice per il batch successivo
+        start_index = end_index
 
-    print(f"[INFO] Avvio parsing asincrono su {len(doc_ids)} documenti...")
-    try:
-        dataset.async_parse_documents(doc_ids)
-        print("[INFO] Parsing asincrono avviato correttamente.")
-    except Exception as e:
-        print(f"[ERRORE] durante l'avvio del parsing: {e}")
+    print("\n[INFO] Tutti i batch sono stati processati. Fine.")
 
 # ============================
 # ESEMPIO DI UTILIZZO
 # ============================
 if __name__ == "__main__":
-    # Questi sono i parametri reali che hai fornito, li lasciamo invariati:
+    # Valori che ci hai fornito
     API_KEY = "ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm"
     BASE_URL = "http://sgailegal.it:9380"
     DATASET_NAME = "sentenze_1739462764_8500"
     FOLDER_PATH = "/home/ubuntu/LLM_14/LLM_14/data/sentenze"
 
-    load_pdfs_to_dataset(API_KEY, BASE_URL, DATASET_NAME, FOLDER_PATH)
+    # Esegui con batch_size = 1000 (puoi regolare in base alla RAM)
+    load_pdfs_in_batches(
+        api_key=API_KEY,
+        base_url=BASE_URL,
+        dataset_name=DATASET_NAME,
+        folder_path=FOLDER_PATH,
+        batch_size=1000
+    )
