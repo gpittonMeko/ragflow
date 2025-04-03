@@ -12,73 +12,77 @@ def load_pdfs_to_dataset(
     e avvia l'operazione di parsing asincrono sui documenti appena caricati.
     """
 
-    # 1. Inizializza il client RAGFlow
+    print(f"[INFO] Inizializzazione RAGFlow con base_url={base_url}")
     rag_object = RAGFlow(api_key=api_key, base_url=base_url)
+    print("[INFO] Client RAGFlow inizializzato.")
 
-    # 2. Crea (o recupera) il dataset desiderato
-    #    Se esiste già un dataset con lo stesso nome, possiamo recuperarlo dall’elenco.
-    #    In caso contrario, verrà creato uno nuovo.
+    # 1. Verifica se esiste già il dataset
+    print(f"[INFO] Cerco dataset con nome: '{dataset_name}'...")
     existing_datasets = rag_object.list_datasets(name=dataset_name)
     if existing_datasets:
         dataset = existing_datasets[0]
-        print(f"Dataset '{dataset_name}' trovato, utilizzo dataset esistente.")
+        print(f"[INFO] Dataset '{dataset_name}' trovato (ID={dataset.id}). Utilizzo dataset esistente.")
     else:
+        print(f"[INFO] Dataset '{dataset_name}' non trovato. Lo creo ora...")
         dataset = rag_object.create_dataset(name=dataset_name)
-        print(f"Dataset '{dataset_name}' creato con successo.")
+        print(f"[INFO] Dataset '{dataset_name}' creato con successo (ID={dataset.id}).")
 
-    # 3. Prepara la lista dei documenti da caricare
+    # 2. Prepara la lista dei documenti da caricare
+    print(f"[INFO] Scansiono la cartella: '{folder_path}' per cercare file .pdf...")
     documents_to_upload = []
     for filename in os.listdir(folder_path):
         if filename.lower().endswith('.pdf'):
             file_path = os.path.join(folder_path, filename)
+            print(f"  - Trovato PDF: {filename}")
             try:
                 with open(file_path, "rb") as f:
                     blob_content = f.read()
-                # Aggiungi il documento alla lista con display_name e contenuto
                 documents_to_upload.append({
                     "display_name": filename,
                     "blob": blob_content
                 })
             except Exception as e:
-                print(f"Errore nella lettura di '{file_path}': {e}")
+                print(f"[ERRORE] Nella lettura di '{file_path}': {e}")
 
     if not documents_to_upload:
-        print("Nessun PDF trovato nella cartella specificata.")
+        print("[ATTENZIONE] Nessun PDF trovato nella cartella specificata. Interrompo il processo.")
         return
     
-    # 4. Carica i documenti nel dataset
+    # 3. Carica i documenti nel dataset
+    print(f"[INFO] Inizio caricamento di {len(documents_to_upload)} PDF nel dataset '{dataset_name}'...")
     try:
         dataset.upload_documents(document_list=documents_to_upload)
-        print(f"Caricati {len(documents_to_upload)} documenti PDF nel dataset '{dataset_name}'.")
+        print(f"[INFO] Caricati {len(documents_to_upload)} documenti PDF nel dataset '{dataset_name}'.")
     except Exception as e:
-        print(f"Errore durante l'upload dei PDF: {e}")
+        print(f"[ERRORE] durante l'upload dei PDF: {e}")
         return
 
-    # 5. Recupera la lista dei documenti caricati per avviare il parsing
+    # 4. Recupera la lista dei documenti caricati per avviare il parsing
+    print("[INFO] Recupero la lista dei documenti nel dataset, per avviare il parsing...")
     try:
         all_docs = dataset.list_documents(
             keywords=None,
             page=1,
-            page_size=1000  # per sicurezza, se si caricano molti file
+            page_size=1000  # alziamo la pagina massima
         )
-        # Se vuoi filtrare solo i documenti appena caricati, potresti farlo
-        # confrontando i nomi, ma generalmente basta prendere tutti quelli presenti.
+        print(f"[INFO] Trovati {len(all_docs)} documenti totali nel dataset.")
     except Exception as e:
-        print(f"Errore durante la lettura dei documenti nel dataset: {e}")
+        print(f"[ERRORE] nella lettura dei documenti nel dataset: {e}")
         return
 
     # Crea una lista di ID dei documenti
     doc_ids = [doc.id for doc in all_docs]
     if not doc_ids:
-        print("Non sono stati trovati documenti da parsificare.")
+        print("[ATTENZIONE] Non sono stati trovati documenti da parsificare.")
         return
 
-    # 6. Avvia l'operazione di parsing asincrono su tutti i documenti
+    # 5. Avvia l'operazione di parsing asincrono su tutti i documenti
+    print(f"[INFO] Avvio parsing asincrono per {len(doc_ids)} documenti...")
     try:
         dataset.async_parse_documents(doc_ids)
-        print(f"Parsing asincrono avviato per {len(doc_ids)} documenti.")
+        print("[INFO] Parsing asincrono avviato correttamente.")
     except Exception as e:
-        print(f"Errore durante l'avvio del parsing dei documenti: {e}")
+        print(f"[ERRORE] durante l'avvio del parsing dei documenti: {e}")
 
 # ============================
 # ESEMPIO DI UTILIZZO
