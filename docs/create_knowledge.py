@@ -86,7 +86,7 @@ def load_pdfs_to_dataset(
 if __name__ == "__main__":
     # Sostituisci <YOUR_API_KEY> e <YOUR_BASE_URL> con i tuoi parametri reali
     API_KEY = "ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm"
-    BASE_URL = "https://sgailegal.it:9380"
+    BASE_URL = "http://sgailegal.it:9380"
 
     # Nome della knowledge base (dataset)
     DATASET_NAME = "sentenze_1739462764_8500"
