@@ -1,406 +1,98 @@
 import os
-import time
-import json
-import re
-from tqdm import tqdm
-import logging
-from configparser import ConfigParser
-from ragflow_sdk import RAGFlow, DataSet, Document
+from ragflow_sdk import RAGFlow
 
-# AGGIUNTA VALIDAZIONE PDF
-import PyPDF2
-from PyPDF2.errors import PdfReadError
+def load_pdfs_to_dataset(
+    api_key: str,
+    base_url: str,
+    dataset_name: str,
+    folder_path: str
+):
+    """
+    Carica tutti i file PDF da 'folder_path' sul dataset 'dataset_name' usando RAGFlow,
+    e avvia l'operazione di parsing asincrono sui documenti appena caricati.
+    """
 
-# --- Setup Logging ---
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    # 1. Inizializza il client RAGFlow
+    rag_object = RAGFlow(api_key=api_key, base_url=base_url)
 
-# --- Configuration ---
-CONFIG_FILE = "ragflow_config.ini"  # Using a config file for better management
+    # 2. Crea (o recupera) il dataset desiderato
+    #    Se esiste già un dataset con lo stesso nome, possiamo recuperarlo dall’elenco.
+    #    In caso contrario, verrà creato uno nuovo.
+    existing_datasets = rag_object.list_datasets(name=dataset_name)
+    if existing_datasets:
+        dataset = existing_datasets[0]
+        print(f"Dataset '{dataset_name}' trovato, utilizzo dataset esistente.")
+    else:
+        dataset = rag_object.create_dataset(name=dataset_name)
+        print(f"Dataset '{dataset_name}' creato con successo.")
 
-# Load configuration from file
-config = ConfigParser()
-config.read(CONFIG_FILE)
+    # 3. Prepara la lista dei documenti da caricare
+    documents_to_upload = []
+    for filename in os.listdir(folder_path):
+        if filename.lower().endswith('.pdf'):
+            file_path = os.path.join(folder_path, filename)
+            try:
+                with open(file_path, "rb") as f:
+                    blob_content = f.read()
+                # Aggiungi il documento alla lista con display_name e contenuto
+                documents_to_upload.append({
+                    "display_name": filename,
+                    "blob": blob_content
+                })
+            except Exception as e:
+                print(f"Errore nella lettura di '{file_path}': {e}")
 
-# Default values if config file is missing or incomplete
-DEFAULT_PDF_DIRECTORY = "/home/ubuntu/LLM_14/LLM_14/data/sentenze"
-DEFAULT_RAGFLOW_API_BASE_URL = "https://sgailegal.it"
-DEFAULT_RAGFLOW_API_KEY = "ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm"
-DEFAULT_DATASET_NAME = "sentenze_1739462764_8500"
-DEFAULT_EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
-DEFAULT_CHUNK_METHOD = "naive"
-DEFAULT_CHUNK_TOKEN_NUM = 128
-DEFAULT_CHUNK_DELIMITER = "\\n!?;。；！？"
-DEFAULT_HTML4EXCEL = False
-DEFAULT_LAYOUT_RECOGNIZE = True
-DEFAULT_USER_RAPTOR = False
-DEFAULT_PROCESSED_FILES_FILE = "processed_files.json"
-DEFAULT_MAX_CONCURRENT_UPLOADS = 5
-DEFAULT_API_TIMEOUT_SECONDS = 120
-DEFAULT_UPLOAD_TIMEOUT_SECONDS = 300
-DEFAULT_MAX_RETRIES = 3
-DEFAULT_RETRY_DELAY_SECONDS = 5
-
-PDF_DIRECTORY = config.get("ragflow", "pdf_directory", fallback=DEFAULT_PDF_DIRECTORY)
-RAGFLOW_API_BASE_URL = config.get("ragflow", "api_base_url", fallback=DEFAULT_RAGFLOW_API_BASE_URL)
-RAGFLOW_API_KEY = config.get("ragflow", "api_key", fallback=DEFAULT_RAGFLOW_API_KEY)
-DATASET_NAME = config.get("ragflow", "dataset_name", fallback=DEFAULT_DATASET_NAME)
-EMBEDDING_MODEL = config.get("ragflow", "embedding_model", fallback=DEFAULT_EMBEDDING_MODEL)
-CHUNK_METHOD = config.get("ragflow", "chunk_method", fallback=DEFAULT_CHUNK_METHOD)
-CHUNK_TOKEN_NUM = config.getint("ragflow_parser", "chunk_token_num", fallback=DEFAULT_CHUNK_TOKEN_NUM)
-CHUNK_DELIMITER = config.get("ragflow_parser", "delimiter", fallback=DEFAULT_CHUNK_DELIMITER)
-HTML4EXCEL = config.getboolean("ragflow_parser", "html4excel", fallback=DEFAULT_HTML4EXCEL)
-LAYOUT_RECOGNIZE = config.getboolean("ragflow_parser", "layout_recognize", fallback=DEFAULT_LAYOUT_RECOGNIZE)
-USER_RAPTOR = config.getboolean("ragflow_parser_raptor", "user_raptor", fallback=DEFAULT_USER_RAPTOR)
-PROCESSED_FILES_FILE = config.get("ragflow", "processed_files_file", fallback=DEFAULT_PROCESSED_FILES_FILE)
-MAX_CONCURRENT_UPLOADS = config.getint("ragflow", "max_concurrent_uploads", fallback=DEFAULT_MAX_CONCURRENT_UPLOADS)
-API_TIMEOUT_SECONDS = config.getint("ragflow", "api_timeout_seconds", fallback=DEFAULT_API_TIMEOUT_SECONDS)
-UPLOAD_TIMEOUT_SECONDS = config.getint("ragflow", "upload_timeout_seconds", fallback=DEFAULT_UPLOAD_TIMEOUT_SECONDS)
-MAX_RETRIES = config.getint("ragflow", "max_retries", fallback=DEFAULT_MAX_RETRIES)
-RETRY_DELAY_SECONDS = config.getint("ragflow", "retry_delay_seconds", fallback=DEFAULT_RETRY_DELAY_SECONDS)
-
-PARSER_CONFIG = {
-    "chunk_token_num": CHUNK_TOKEN_NUM,
-    "delimiter": CHUNK_DELIMITER,
-    "html4excel": HTML4EXCEL,
-    "layout_recognize": LAYOUT_RECOGNIZE,
-    "raptor": {"user_raptor": USER_RAPTOR}
-}
-
-# --- Helper Functions ---
-
-def normalize_filename(filename: str) -> str:
-    """Rimuove i suffissi numerici tra parentesi e l'estensione dal nome del file."""
-    base_name = os.path.splitext(filename)[0]
-    return re.sub(r'\s*\(\d+\)$', '', base_name).strip()
-
-def list_pdf_files(directory: str) -> list[tuple[str, str]]:
-    """Elenca tutti i file PDF nella directory specificata e restituisce il percorso completo e il nome normalizzato."""
+    if not documents_to_upload:
+        print("Nessun PDF trovato nella cartella specificata.")
+        return
+    
+    # 4. Carica i documenti nel dataset
     try:
-        pdf_files = [f for f in os.listdir(directory) if f.lower().endswith(".pdf")]
-        return [(os.path.join(directory, f), normalize_filename(f)) for f in pdf_files]
-    except FileNotFoundError:
-        logging.error(f"Errore: Directory non trovata: {directory}")
-        return []
+        dataset.upload_documents(document_list=documents_to_upload)
+        print(f"Caricati {len(documents_to_upload)} documenti PDF nel dataset '{dataset_name}'.")
     except Exception as e:
-        logging.error(f"Errore durante l'elenco dei file in {directory}: {e}")
-        return []
+        print(f"Errore durante l'upload dei PDF: {e}")
+        return
 
-def load_processed_files() -> list[str]:
-    """Carica l'elenco dei file già processati."""
+    # 5. Recupera la lista dei documenti caricati per avviare il parsing
     try:
-        with open(PROCESSED_FILES_FILE, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return []
-    except json.JSONDecodeError:
-        logging.warning(f"Errore nella decodifica di {PROCESSED_FILES_FILE}. Inizializzazione con una lista vuota.")
-        return []
+        all_docs = dataset.list_documents(
+            keywords=None,
+            page=1,
+            page_size=1000  # per sicurezza, se si caricano molti file
+        )
+        # Se vuoi filtrare solo i documenti appena caricati, potresti farlo
+        # confrontando i nomi, ma generalmente basta prendere tutti quelli presenti.
+    except Exception as e:
+        print(f"Errore durante la lettura dei documenti nel dataset: {e}")
+        return
 
-def save_processed_files(processed_files: list[str]) -> None:
-    """Salva l'elenco dei file processati."""
-    with open(PROCESSED_FILES_FILE, "w") as f:
-        json.dump(processed_files, f)
+    # Crea una lista di ID dei documenti
+    doc_ids = [doc.id for doc in all_docs]
+    if not doc_ids:
+        print("Non sono stati trovati documenti da parsificare.")
+        return
 
-# AGGIUNTA VALIDAZIONE PDF
-def is_pdf_valid(pdf_path: str) -> bool:
-    """
-    Verifica se il PDF è leggibile da PyPDF2.
-    Restituisce True se è un PDF valido, False in caso di errore.
-    """
+    # 6. Avvia l'operazione di parsing asincrono su tutti i documenti
     try:
-        with open(pdf_path, "rb") as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            # provo ad accedere alle pagine per confermare la leggibilità
-            _ = len(pdf_reader.pages)
-        return True
-    except (PdfReadError, Exception) as e:
-        logging.error(f"PDF non valido o corrotto: {pdf_path} - Errore: {e}")
-        return False
+        dataset.async_parse_documents(doc_ids)
+        print(f"Parsing asincrono avviato per {len(doc_ids)} documenti.")
+    except Exception as e:
+        print(f"Errore durante l'avvio del parsing dei documenti: {e}")
 
-def upload_single_pdf(pdf_filepath: str, rag_object: RAGFlow, dataset: DataSet,
-                      processed_files: list[str],
-                      pdfium_error_files: list[str]) -> tuple[str or None, str or None]:
-    """
-    Carica un singolo PDF e aggiorna la lista dei file processati.
-    In caso di errore PDFium, segna il file in pdfium_error_files e non ritenta più.
-    """
-    filename = os.path.basename(pdf_filepath)
-    if pdf_filepath not in processed_files:
-        for attempt in range(MAX_RETRIES):
-            try:
-                with open(pdf_filepath, "rb") as f:
-                    blob = f.read()
-                documents = dataset.upload_documents([{"display_name": filename, "blob": blob}])
-                if documents is None:
-                    logging.error(f"  => Errore durante il caricamento di '{filename}'. Nessuna risposta ricevuta (Tentativo {attempt + 1}/{MAX_RETRIES}).")
-                    if attempt < MAX_RETRIES - 1:
-                        time.sleep(RETRY_DELAY_SECONDS)
-                    continue
-                elif len(documents) > 0:
-                    document_id = documents[0].id
-                    logging.info(f"  => Caricato con successo '{filename}' (Doc ID: {document_id})")
-                    return document_id, pdf_filepath
-                else:
-                    logging.error(f"  => Errore: ID documento non trovato nella risposta di upload per '{filename}' (Tentativo {attempt + 1}/{MAX_RETRIES}). Risposta: {documents}")
-                    if attempt < MAX_RETRIES - 1:
-                        time.sleep(RETRY_DELAY_SECONDS)
-                    continue
-
-            except FileNotFoundError:
-                logging.error(f"Errore: File locale non trovato: {pdf_filepath}")
-                return None, filename
-
-            except Exception as e:
-                # se abbiamo errore PDFium, esci subito
-                if "PDFium: Data format error" in str(e):
-                    logging.error(f"Fallimento nel caricamento di '{filename}' (Tentativo {attempt + 1}/{MAX_RETRIES}). Errore: {e}")
-                    logging.error(
-                        f"  => !!! ERRORE nel caricamento di '{filename}' dopo {attempt+1} tentativi a causa di un problema con il formato PDF !!! Errore Finale: {e}"
-                    )
-                    # Aggiungo il file negli errori PDFium e abbandono
-                    pdfium_error_files.append(filename)
-                    return None, filename
-                else:
-                    logging.error(f"Fallimento nell'upload di '{filename}' (Tentativo {attempt + 1}/{MAX_RETRIES}). Errore: {e}")
-                    # se non è PDFium, tentiamo ancora se ci sono retry
-                    if attempt < MAX_RETRIES - 1:
-                        time.sleep(RETRY_DELAY_SECONDS)
-                    else:
-                        logging.error(
-                            f"  => !!! ERRORE nel caricamento di '{filename}' dopo {MAX_RETRIES} tentativi !!! Errore Finale: {e}"
-                        )
-                        return None, filename
-        return None, filename
-    else:
-        logging.info(f"  => File '{filename}' già processato, saltato.")
-        return None, None
-
-def monitor_parsing_status(dataset: DataSet, doc_ids: list[str]) -> None:
-    """Monitora lo stato del parsing dei documenti con barra di avanzamento."""
-    logging.info("\nMonitoraggio dello stato del parsing...")
-    with tqdm(total=len(doc_ids), desc="Parsing Progress") as pbar:
-        while True:
-            documents = dataset.list_documents()
-            if documents is None:
-                logging.error("Errore durante il recupero dello stato dei documenti per il monitoraggio del parsing.")
-                break
-
-            logging.debug(f"Risposta API (elenco documenti): {[doc.dict() for doc in documents]}")  # Log dettagliato (livello DEBUG)
-
-            completed_count = 0
-            for doc in documents:
-                if doc.id in doc_ids:
-                    run_status = doc.run
-                    progress_message = doc.progress_msg
-                    logging.info(f"Document ID: {doc.id}, Stato Parsing (run): {run_status}, Messaggio di Progresso: {progress_message}")
-                    if run_status == "DONE":
-                        completed_count += 1
-
-            pbar.n = completed_count
-            pbar.refresh()
-
-            if completed_count == len(doc_ids):
-                logging.info("Parsing completato per tutti i documenti.")
-                break
-
-            time.sleep(30)  # Controlla ogni 30 secondi
-
-def process_unparsed_documents(rag_object: RAGFlow, dataset: DataSet) -> None:
-    """Trova e avvia il parsing per i documenti non parsati già esistenti nel Dataset."""
-    logging.info("\n--- Controllo e Parsing dei Documenti Non Parsati Esistenti ---")
-    existing_documents = dataset.list_documents()
-    if existing_documents:
-        unparsed_docs = [doc for doc in existing_documents if doc.run != "DONE" and doc.id]
-        if unparsed_docs:
-            unparsed_doc_ids = [doc.id for doc in unparsed_docs]
-            logging.info(f"Trovati {len(unparsed_doc_ids)} documenti non parsati. Inizio parsing...")
-            try:
-                dataset.async_parse_documents(document_ids=unparsed_doc_ids)
-                monitor_parsing_status(dataset, unparsed_doc_ids)
-            except Exception as e:
-                logging.error(f"!!! ERRORE durante l'invio della richiesta di parsing per i documenti esistenti non parsati: {e}")
-        else:
-            logging.info("Nessun documento esistente trovato che necessiti di parsing.")
-    else:
-        logging.warning("Impossibile recuperare l'elenco dei documenti esistenti per controllare lo stato del parsing.")
-    logging.info("--- Controllo e Parsing dei Documenti Non Parsati Esistenti Completato ---")
-
-def remove_duplicate_documents(dataset: DataSet) -> None:
-    """Rimuove i documenti duplicati dalla knowledge base (stesso nome normalizzato)."""
-    logging.info("\n--- Controllo ed Eliminazione dei Duplicati nella Knowledge Base ---")
-    existing_documents = dataset.list_documents()
-    if existing_documents:
-        normalized_names = {}
-        duplicates_found = False
-        for doc in tqdm(existing_documents, desc="Controllo Duplicati KB"):
-            name = doc.name
-            doc_id = doc.id
-            if name and doc_id:
-                normalized_name = normalize_filename(name)
-                if normalized_name in normalized_names:
-                    duplicates_found = True
-                    logging.warning(f"Trovato duplicato in RAGFlow: '{name}' (ID: {doc_id}) corrisponde a ID: {normalized_names[normalized_name]}. Eliminando...")
-                    dataset.delete_documents(ids=[doc_id])
-                else:
-                    normalized_names[normalized_name] = doc_id
-        if not duplicates_found:
-            logging.info("Nessun documento duplicato trovato nella Knowledge Base.")
-    else:
-        logging.warning("Impossibile recuperare l'elenco dei documenti esistenti per controllare i duplicati.")
-    logging.info("--- Controllo ed Eliminazione dei Duplicati nella Knowledge Base Completato ---")
-
-# # --- Main Script ---
+# ============================
+# ESEMPIO DI UTILIZZO
+# ============================
 if __name__ == "__main__":
-    logging.info("--- Avvio Script Caricamento Documenti RAGFlow ---")
-    start_time = time.time()
+    # Sostituisci <YOUR_API_KEY> e <YOUR_BASE_URL> con i tuoi parametri reali
+    API_KEY = "ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm"
+    BASE_URL = "https://sgailegal.it:9380"
 
-    # Elenco dei PDF locali con nomi normalizzati
-    local_pdf_files_with_normalized_names = list_pdf_files(PDF_DIRECTORY)
-    if not local_pdf_files_with_normalized_names:
-        logging.info("Nessun file PDF trovato nella directory specificata. Uscita.")
-        exit()
-    logging.info(f"Trovati {len(local_pdf_files_with_normalized_names)} file PDF locali.")
-    local_normalized_names = {normalized_name: full_path for full_path, normalized_name in local_pdf_files_with_normalized_names}
+    # Nome della knowledge base (dataset)
+    DATASET_NAME = "sentenze_1739462764_8500"
 
-    # Inizializzazione della SDK RAGFlow
-    rag_object = RAGFlow(api_key=RAGFLOW_API_KEY, base_url=RAGFLOW_API_BASE_URL)
+    # Cartella locale in cui risiedono i file PDF
+    FOLDER_PATH = "/home/ubuntu/LLM_14/LLM_14/data/sentenze"
 
-    # Ottieni o crea il Dataset
-    datasets = rag_object.list_datasets(name=DATASET_NAME)
-    if datasets:
-        dataset = datasets[0]
-        logging.info(f"Dataset '{DATASET_NAME}' trovato con ID: {dataset.id}")
-    else:
-        try:
-            dataset = rag_object.create_dataset(
-                name=DATASET_NAME,
-                embedding_model=EMBEDDING_MODEL,
-                chunk_method=CHUNK_METHOD,
-                parser_config=PARSER_CONFIG
-            )
-            logging.info(f"Dataset '{DATASET_NAME}' creato con ID: {dataset.id}")
-        except Exception as e:
-            logging.error(f"Impossibile creare o recuperare l'ID del Dataset. L'operazione non può continuare. Errore: {e}")
-            exit()
-
-    # Fase 1: Parsing dei documenti esistenti non parsati
-    process_unparsed_documents(rag_object, dataset)
-
-    # Fase 2: Rimozione automatica dei duplicati (stesso nome normalizzato)
-    remove_duplicate_documents(dataset)
-
-    # Elenco documenti già presenti in RAGFlow
-    existing_documents_list = dataset.list_documents()
-    if existing_documents_list is None:
-        logging.warning("Attenzione: Impossibile recuperare l'elenco dei documenti esistenti.")
-        exit()
-
-    # Mappiamo i nomi normalizzati già presenti
-    existing_normalized_document_names = {
-        normalize_filename(doc.name): doc.id
-        for doc in existing_documents_list if doc.name
-    }
-    logging.info(f"Controllo completato. {len(existing_normalized_document_names)} documenti già presenti (nomi normalizzati).")
-
-    # Carichiamo la lista dei file già processati
-    processed_files = load_processed_files()
-    files_to_upload = []
-
-    # Verifichiamo i PDF localmente (via PyPDF2) ed escludiamo corrotti
-    for full_path, normalized_name in local_pdf_files_with_normalized_names:
-        filename = os.path.basename(full_path)
-
-        # 1) Se PyPDF2 segnala corruzione, saltiamo
-        if not is_pdf_valid(full_path):
-            logging.error(f"Salto '{filename}' perché sembra corrotto/illeggibile per PyPDF2.")
-            continue
-
-        # 2) Se RAGFlow ha già un doc con nome normalizzato, saltiamo
-        if normalized_name in existing_normalized_document_names:
-            logging.info(f"Il file locale '{filename}' (nome normalizzato '{normalized_name}') sembra essere già presente nel Dataset (ID: {existing_normalized_document_names[normalized_name]}).")
-            continue
-
-        # 3) Se l'abbiamo già caricato in precedenza (processed_files), saltiamo
-        if full_path in processed_files:
-            logging.info(f"Il file locale '{filename}' è già stato processato e sarà saltato.")
-            continue
-
-        # Altrimenti è pronto per l'upload
-        files_to_upload.append(full_path)
-
-    # Calcoliamo quanti ne abbiamo “saltato”
-    files_skipped = len(local_pdf_files_with_normalized_names) - len(files_to_upload)
-    if files_skipped > 0:
-        logging.info(f" {files_skipped} file locali sono già presenti nel Dataset, già processati o corrotti. Gestiti di conseguenza.")
-
-    # Se non ci sono PDF nuovi da caricare, usciamo
-    if not files_to_upload:
-        logging.info("\nNessun nuovo file da caricare.")
-    else:
-        total_files_to_process = len(files_to_upload)
-        logging.info(f"\nInizio caricamento di {total_files_to_process} nuovi file PDF...")
-
-        # Impostiamo un BATCH_SIZE per fare upload e parsing a lotti
-        BATCH_SIZE = 10
-        uploaded_count = 0
-        upload_errors = 0
-        pdfium_error_files = []
-
-        # Carichiamo i PDF in lotti di dimensione BATCH_SIZE
-        for i in range(0, len(files_to_upload), BATCH_SIZE):
-            batch_files = files_to_upload[i:i + BATCH_SIZE]
-            batch_uploaded_doc_ids = []
-            batch_upload_errors = 0
-
-            logging.info(f"\n--- Inizio caricamento del lotto di {len(batch_files)} file "
-                         f"({uploaded_count + 1}-{min(uploaded_count + BATCH_SIZE, total_files_to_process)}) ---")
-
-            # Eseguiamo l'upload di ciascun file nel lotto
-            for pdf_filepath in tqdm(batch_files, desc="Caricamento PDF (Lotto)"):
-                doc_id, uploaded_filepath = upload_single_pdf(
-                    pdf_filepath,
-                    rag_object,
-                    dataset,
-                    processed_files,
-                    pdfium_error_files
-                )
-                if doc_id:
-                    # Se l'upload è riuscito, aggiungiamo l'ID
-                    batch_uploaded_doc_ids.append(doc_id)
-                    # Aggiorniamo la lista processed_files
-                    processed_files.append(uploaded_filepath)
-                elif uploaded_filepath:
-                    # Se abbiamo un filepath (non None) ma nessun doc_id, c'è stato errore
-                    batch_upload_errors += 1
-
-            uploaded_count += len(batch_uploaded_doc_ids)
-            upload_errors += batch_upload_errors
-            # Aggiorniamo il JSON di processed_files
-            save_processed_files(processed_files)
-
-            # Se abbiamo documenti caricati con successo, avviamo il parsing e monitoriamo
-            if batch_uploaded_doc_ids:
-                logging.info(f"\nAttivazione parsing per {len(batch_uploaded_doc_ids)} documenti caricati nel lotto...")
-                try:
-                    dataset.async_parse_documents(document_ids=[str(doc_id) for doc_id in batch_uploaded_doc_ids])
-                    monitor_parsing_status(dataset, [str(doc_id) for doc_id in batch_uploaded_doc_ids])
-                    logging.info(f"Parsing completato per i documenti del lotto.")
-                except Exception as e:
-                    logging.error(f"!!! ERRORE nell'invio della richiesta di parsing per il lotto: {e}")
-            else:
-                logging.info("Nessun file caricato con successo in questo lotto, parsing non attivato.")
-
-            logging.info(f"--- Fine caricamento del lotto. Caricati con successo: {len(batch_uploaded_doc_ids)}, "
-                         f"Errori nel lotto: {batch_upload_errors}, Totale caricati: {uploaded_count}, "
-                         f"Totale errori: {upload_errors} ---")
-
-        logging.info("\n--- Caricamento completato ---")
-        logging.info(f" File caricati con successo: {uploaded_count}")
-        if upload_errors > 0:
-            logging.error(f" Errori durante il caricamento: {upload_errors} file")
-            if pdfium_error_files:
-                logging.error(f" I seguenti file hanno generato errori di formato PDF (PDFium): {pdfium_error_files}")
-                logging.error("  => Potrebbe essere necessario controllare questi file: sono corrotti o in un formato non supportato.")
-
-    end_time = time.time()
-    logging.info(f"\n--- Operazione completata in {end_time - start_time:.2f} secondi ---")
+    # Richiama la funzione per caricare i PDF e avviare il parsing
+    load_pdfs_to_dataset(API_KEY, BASE_URL, DATASET_NAME, FOLDER_PATH)
