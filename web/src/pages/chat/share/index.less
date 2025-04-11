@@ -1,13 +1,57 @@
 .chatWrapper {
   height: 100%;
+  background-color: #181818; /* Sfondo scuro simile a ChatGPT */
+  color: #f0f0f0; /* Testo chiaro */
 }
 
 .chatContainer {
   padding: 10px;
   box-sizing: border-box;
   height: 100%;
+  background-color: #222222; /* Sfondo leggermente più scuro per il contenitore */
+
   .messageContainer {
     overflow-y: auto;
     padding-right: 6px;
+
+    // Stili per i messaggi (potrebbe essere necessario adattare in base alla struttura HTML dei tuoi messaggi)
+    .messageItem {
+      background-color: #333333; /* Sfondo dei messaggi */
+      color: #f0f0f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+
+      &.user {
+        background-color: #444444; /* Sfondo dei messaggi dell'utente */
+      }
+
+      // Potrebbe essere necessario stilizzare ulteriormente avatar, timestamp, ecc.
+    }
   }
+
+  // Stili per l'input del messaggio (potrebbe essere in un altro componente)
+  .messageInputWrapper {
+    background-color: #181818;
+    border-top: 1px solid #555555;
+
+    input {
+      background-color: #333333;
+      color: #f0f0f0;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    button {
+      background-color: #555555;
+      color: #f0f0f0;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 15px;
+      cursor: pointer;
+    }
+  }
+
+  // Altri stili specifici della tua chat potrebbero essere necessari
 }
