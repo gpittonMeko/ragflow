@@ -15,7 +15,7 @@
   }
 
   .messageTextBase() {
-    padding: 6px 10px;
+    padding: 8px 12px; // Increased padding for better readability
     border-radius: 8px;
     & > p {
       margin: 0;
@@ -24,26 +24,29 @@
   .messageText {
     .chunkText();
     .messageTextBase();
-    background-color: #e6f4ff;
+    background-color: #333333; // Dark background for assistant messages
+    color: #f0f0f0; // Light text color
     word-break: break-word;
   }
   .messageTextDark {
     .chunkText();
     .messageTextBase();
-    background-color: #1668dc;
+    background-color: #1668dc; // Keeping the original color for emphasis, adjust if needed
+    color: #f0f0f0;
     word-break: break-word;
     :global(section.think) {
-      color: rgb(166, 166, 166);
-      border-left-color: rgb(78, 78, 86);
+      color: #a0a0a0; // Slightly lighter gray for better visibility
+      border-left-color: #555555; // Darker border
     }
   }
 
   .messageUserText {
     .chunkText();
     .messageTextBase();
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: #444444; // Dark background for user messages
+    color: #f0f0f0; // Light text color
     word-break: break-word;
-    text-align: justify;
+    text-align: left; // Changed to left for consistency in a dark theme
   }
   .messageEmpty {
     width: 300px;

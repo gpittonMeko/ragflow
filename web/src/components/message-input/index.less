@@ -1,11 +1,11 @@
 .messageInputWrapper {
   margin-right: 20px;
-  padding: '10px 10px 10px 10px';
+  padding: 10px; // Changed to a single value for all sides
   background-color: #1e1e1e;
   border: 1px solid #333333;
   &:hover {
     border-color: #40a9ff;
-    box-shadow: #40a9ff;
+    box-shadow: 0 0 5px rgba(64, 169, 255, 0.5); // Added a subtle shadow
   }
   border-radius: 8px;
   :global(.ant-input-affix-wrapper) {
@@ -13,6 +13,7 @@
     border-bottom-left-radius: 0;
     background-color: #1e1e1e;
     color: #f0f0f0;
+    border: 1px solid #333333; // Added border for consistency
 
     input {
       color: #f0f0f0;
@@ -32,22 +33,29 @@
     padding: 10px;
     position: relative;
     width: 100%;
+    background-color: #2c2c2c; // Dark background for the card
+    color: #f0f0f0; // Light text color for the card
   }
 }
+
 .listWrapper {
   padding: 0 10px;
   overflow: auto;
   max-height: 170px;
   width: 100%;
+  background-color: #1e1e1e; // Dark background for the list
 }
+
 .inputWrapper {
   border-radius: 8px;
 }
+
 .deleteIcon {
   position: absolute;
   right: -4px;
   top: -4px;
-  color: #d92d20;
+  color: #ff4d4f; // Changed to a more visible red for dark theme
+  cursor: pointer; // Added cursor for better UX
 }
 
 /* Stili per il pulsante di invio */
