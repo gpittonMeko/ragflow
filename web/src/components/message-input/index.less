@@ -16,25 +16,15 @@
     background-color: transparent; /* Rende trasparente lo sfondo del wrapper */
     color: #f0f0f0;
     border: 1px solid #333333;
+  }
 
-    /* Stili specifici per l'elemento TextArea */
-    textarea.ant-input {
-      background-color: #1e1e1e !important; /* Sfondo scuro per la TextArea */
-      color: #f0f0f0 !important; /* Testo chiaro per la TextArea */
-      &::placeholder {
-        color: #f0f0f0; /* Testo del placeholder bianco */
-      }
-    }
-
-    input {
-      color: #f0f0f0;
-      &::placeholder {
-        color: #a0a0a0;
-      }
-    }
-
-    .ant-input-suffix {
-      color: #f0f0f0;
+  /* Stili specifici per l'elemento TextArea */
+  textarea.ant-input,
+  .ant-input-affix-wrapper textarea.ant-input {
+    background-color: #1e1e1e !important; /* Sfondo scuro per la TextArea */
+    color: #f0f0f0 !important; /* Testo chiaro per la TextArea */
+    &::placeholder {
+      color: #f0f0f0 !important; /* Testo del placeholder bianco */
     }
   }
 }
