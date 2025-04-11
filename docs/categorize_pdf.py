@@ -367,7 +367,7 @@ def monitor_and_display_metadata():
 if __name__ == "__main__":
     # Imposta il percorso della cartella contenente i PDF da elaborare
     CARTELLA_SENTENZE = "/home/ubuntu/LLM_14/LLM_14/data/sentenze"
-    NUMERO_WORKERS = 4  # Imposta il numero di processi paralleli desiderato
+    NUMERO_WORKERS = 1  # Imposta il numero di processi paralleli desiderato
 
     # Definisci i filtri se necessario
     filters = {
