@@ -2,7 +2,6 @@ import React, { memo, useRef } from 'react';
 
 // Stili
 import styles from './index.less';
-import PlaceholderImage from '@/assets/anonymous-placeholder.png'; // Immagine placeholder anonima
 
 const PresentationPage: React.FC = () => {
   const controllerRef = useRef(new AbortController());
@@ -16,17 +15,17 @@ const PresentationPage: React.FC = () => {
 
       <div className={styles.featuresSection}>
         <div className={styles.featureCard}>
-          <img src={PlaceholderImage} alt="Analisi Intelligente" className={styles.featureImage} />
+          <img src="https://via.placeholder.com/80/cccccc/ffffff?Text=Analisi" alt="Analisi Intelligente" className={styles.featureImage} />
           <h3>Analisi Intelligente</h3>
           <p>Sfrutta l'IA per analizzare rapidamente accertamenti, normative e giurisprudenza.</p>
         </div>
         <div className={styles.featureCard}>
-          <img src={PlaceholderImage} alt="Gestione Efficiente" className={styles.featureImage} />
+          <img src="https://via.placeholder.com/80/cccccc/ffffff?Text=Gestione" alt="Gestione Efficiente" className={styles.featureImage} />
           <h3>Gestione Efficiente</h3>
           <p>Ottimizza il tuo flusso di lavoro e prendi decisioni più informate.</p>
         </div>
         <div className={styles.featureCard}>
-          <img src={PlaceholderImage} alt="Indipendenza e Imparzialità" className={styles.featureImage} />
+          <img src="https://via.placeholder.com/80/cccccc/ffffff?Text=Indipendenza" alt="Indipendenza e Imparzialità" className={styles.featureImage} />
           <h3>Indipendenza e Imparzialità</h3>
           <p>Lavoriamo senza legami istituzionali per garantire la massima trasparenza.</p>
         </div>
@@ -37,19 +36,19 @@ const PresentationPage: React.FC = () => {
         <p className={styles.aboutUsIntro}>Un team di professionisti dedicati all'innovazione nel settore della commercialistica tributaria.</p>
         <div className={styles.teamCards}>
           <div className={styles.teamCard}>
-            <img src={PlaceholderImage} alt="Marco Spadotto" className={styles.teamImage} />
+            <img src="https://via.placeholder.com/100/bbbbbb/ffffff?Text=Marco" alt="Marco Spadotto" className={styles.teamImage} />
             <h3>Marco Spadotto</h3>
             <p className={styles.teamRole}>Commercialista Tributario</p>
             <p className={styles.teamDescription}>Lunga esperienza nella consulenza fiscale e nella gestione delle pratiche contabili.</p>
           </div>
           <div className={styles.teamCard}>
-            <img src={PlaceholderImage} alt="Giovanni Pitton" className={styles.teamImage} />
+            <img src="https://via.placeholder.com/100/bbbbbb/ffffff?Text=Giovanni" alt="Giovanni Pitton" className={styles.teamImage} />
             <h3>Giovanni Pitton</h3>
             <p className={styles.teamRole}>CTO</p>
             <p className={styles.teamDescription}>Esperto nello sviluppo di soluzioni software innovative e nell'applicazione dell'intelligenza artificiale.</p>
           </div>
           <div className={styles.teamCard}>
-            <img src={PlaceholderImage} alt="Davide Cal" className={styles.teamImage} />
+            <img src="https://via.placeholder.com/100/bbbbbb/ffffff?Text=Davide" alt="Davide Cal" className={styles.teamImage} />
             <h3>Davide Cal</h3>
             <p className={styles.teamRole}>Amministratore</p>
             <p className={styles.teamDescription}>Solida esperienza nella gestione aziendale e nella definizione di strategie di crescita.</p>
