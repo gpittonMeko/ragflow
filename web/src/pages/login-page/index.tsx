@@ -2,69 +2,74 @@ import React, { memo, useRef } from 'react';
 
 // Stili
 import styles from './index.less';
+import PlaceholderImage from '@/assets/anonymous-placeholder.png'; // Immagine placeholder anonima
 
 const PresentationPage: React.FC = () => {
   const controllerRef = useRef(new AbortController());
 
   return (
     <div className={styles.pageContainer}>
-      <header className={styles.header}>
-        {/* Rimossa la riga con il titolo SGAI */}
-      </header>
-      <div className={styles.mainContent}>
-        <div className={styles.presentationContainer}>
-          <header className={styles.presentationHeader}>
-            <h2 className={styles.presentationTitle}>
-              Sommarizzazione Accertamenti - SGAI
-            </h2>
-          </header>
-          <div className={styles.presentation}>
-            <p>
-              SGAI (Sistema di Gestione e Analisi Intelligente) è una piattaforma che utilizza
-              l’intelligenza artificiale per supportare l’analisi e la gestione delle controversie
-              tributarie. Lavoriamo in modo indipendente, senza legami con enti istituzionali, per
-              garantire trasparenza e imparzialità.
-            </p>
-            <p>
-              Il nostro obiettivo è fornire uno strumento potente e intuitivo per semplificare la
-              comprensione di accertamenti, normative e giurisprudenza, aiutando i professionisti a
-              prendere decisioni più informate e a gestire il proprio lavoro in modo più efficiente.
-            </p>
-            <p>
-              <strong>
-                SGAI è l'assistente legale che avresti sempre desiderato, ma che non hai mai trovato tra gli umani.
-              </strong>
-            </p>
-          </div>
+      <div className={styles.heroSection}>
+        <h1 className={styles.heroTitle}>SGAI: La tua Intelligenza Artificiale per la Commercialistica Tributaria</h1>
+        <p className={styles.heroSubtitle}>Semplifichiamo l'analisi e la gestione delle controversie tributarie con la potenza dell'IA.</p>
+      </div>
 
-          {/* Inserisci qui l'iframe */}
-          <div className={styles.iframeSection}>
-            <iframe
-              src="https://sgailegal.it/chat/share?shared_id=a871ecb2eaba11efb3a10242ac120006&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm"
-              style={{ width: '100%', height: '100%', minHeight: '600px' }}
-              frameBorder="0"
-            />
-          </div>
+      <div className={styles.featuresSection}>
+        <div className={styles.featureCard}>
+          <img src={PlaceholderImage} alt="Analisi Intelligente" className={styles.featureImage} />
+          <h3>Analisi Intelligente</h3>
+          <p>Sfrutta l'IA per analizzare rapidamente accertamenti, normative e giurisprudenza.</p>
+        </div>
+        <div className={styles.featureCard}>
+          <img src={PlaceholderImage} alt="Gestione Efficiente" className={styles.featureImage} />
+          <h3>Gestione Efficiente</h3>
+          <p>Ottimizza il tuo flusso di lavoro e prendi decisioni più informate.</p>
+        </div>
+        <div className={styles.featureCard}>
+          <img src={PlaceholderImage} alt="Indipendenza e Imparzialità" className={styles.featureImage} />
+          <h3>Indipendenza e Imparzialità</h3>
+          <p>Lavoriamo senza legami istituzionali per garantire la massima trasparenza.</p>
+        </div>
+      </div>
 
-          {/* Sezione Chi Siamo */}
-          <div className={styles.aboutUsSection}>
-            <h3>Chi Siamo</h3>
-            <p>Siamo un team di professionisti con competenze complementari, uniti dalla volontà di innovare il settore della commercialistica tributaria:</p>
-            <ul>
-              <li><strong>Marco Spadotto:</strong> Commercialista Tributario con una lunga esperienza nella consulenza fiscale e nella gestione delle pratiche contabili.</li>
-              <li><strong>Giovanni Pitton:</strong> CTO (Chief Technology Officer) esperto nello sviluppo di soluzioni software innovative e nell'applicazione dell'intelligenza artificiale.</li>
-              <li><strong>Davide Cal:</strong> Amministratore con una solida esperienza nella gestione aziendale e nella definizione di strategie di crescita.</li>
-            </ul>
-            <h4>Missione</h4>
-            <p>La nostra missione è rendere più efficienti e accessibili le attività della commercialistica tributaria attraverso l'intelligenza artificiale, fornendo strumenti innovativi che semplifichino il lavoro dei professionisti e migliorino la gestione per i clienti.</p>
+      <div className={styles.aboutUsSection}>
+        <h2>Chi Siamo</h2>
+        <p className={styles.aboutUsIntro}>Un team di professionisti dedicati all'innovazione nel settore della commercialistica tributaria.</p>
+        <div className={styles.teamCards}>
+          <div className={styles.teamCard}>
+            <img src={PlaceholderImage} alt="Marco Spadotto" className={styles.teamImage} />
+            <h3>Marco Spadotto</h3>
+            <p className={styles.teamRole}>Commercialista Tributario</p>
+            <p className={styles.teamDescription}>Lunga esperienza nella consulenza fiscale e nella gestione delle pratiche contabili.</p>
           </div>
-
-          {/* Disclaimer */}
-          <div className={styles.disclaimerSection}>
-            <p><strong>Disclaimer:</strong></p>
-            <p>Si prega di notare che SGAI è un sistema basato sull'intelligenza artificiale. Sebbene ci impegniamo a fornire informazioni accurate e utili, il modello può occasionalmente commettere errori o produrre informazioni non corrette. È fondamentale verificare sempre le informazioni fornite con fonti affidabili e consultare professionisti qualificati per decisioni importanti.</p>
+          <div className={styles.teamCard}>
+            <img src={PlaceholderImage} alt="Giovanni Pitton" className={styles.teamImage} />
+            <h3>Giovanni Pitton</h3>
+            <p className={styles.teamRole}>CTO</p>
+            <p className={styles.teamDescription}>Esperto nello sviluppo di soluzioni software innovative e nell'applicazione dell'intelligenza artificiale.</p>
+          </div>
+          <div className={styles.teamCard}>
+            <img src={PlaceholderImage} alt="Davide Cal" className={styles.teamImage} />
+            <h3>Davide Cal</h3>
+            <p className={styles.teamRole}>Amministratore</p>
+            <p className={styles.teamDescription}>Solida esperienza nella gestione aziendale e nella definizione di strategie di crescita.</p>
           </div>
         </div>
+        <h3>La Nostra Missione</h3>
+        <p className={styles.missionStatement}>Rendere più efficienti e accessibili le attività della commercialistica tributaria attraverso l'intelligenza artificiale, fornendo strumenti innovativi che semplifichino il lavoro dei professionisti e migliorino la gestione per i clienti.</p>
+      </div>
+
+      <div className={styles.iframeSection}>
+        <iframe
+          src="https://sgailegal.it/chat/share?shared_id=a871ecb2eaba11efb3a10242ac120006&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm"
+          style={{ width: '100%', height: '100%', minHeight: '600px' }}
+          frameBorder="0"
+        />
+      </div>
+
+      <div className={styles.disclaimerSection}>
+        <p><strong>Disclaimer:</strong></p>
+        <p>Si prega di notare che SGAI è un sistema basato sull'intelligenza artificiale. Sebbene ci impegniamo a fornire informazioni accurate e utili, il modello può occasionalmente commettere errori o produrre informazioni non corrette. È fondamentale verificare sempre le informazioni fornite con fonti affidabili e consultare professionisti qualificati per decisioni importanti.</p>
       </div>
     </div>
   );

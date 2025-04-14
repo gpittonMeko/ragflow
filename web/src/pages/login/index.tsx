@@ -31,7 +31,7 @@ const Login = () => {
       const params = await form.validateFields();
       const email = `${params.email}`.trim();
 
-      // Blocca l'accesso se l'email non è quella autorizzata
+      // Mantiene il controllo sull'email specifica
       if (email !== 'giovanni.pitton@mekosrl.it') {
         message.error('Accesso non consentito');
         return;
