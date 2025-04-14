@@ -1,13 +1,25 @@
-import React, { memo, useRef } from 'react';
+import React, { memo, useRef, useState } from 'react';
 
 // Stili
 import styles from './index.less';
 
 const PresentationPage: React.FC = () => {
   const controllerRef = useRef(new AbortController());
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark'); // Stato per il tema (inizialmente scuro)
+
+  const toggleTheme = () => {
+    setTheme((prevTheme) => (prevTheme === 'dark' ? 'light' : 'dark'));
+    // Qui potresti aggiungere la logica per cambiare dinamicamente i fogli di stile
+    // o utilizzare un sistema di gestione dei temi più complesso.
+    // Per ora, cambieremo semplicemente il colore di sfondo del body.
+    document.body.classList.toggle('light-theme');
+  };
 
   return (
-    <div className={styles.pageContainer}>
+    <div className={`${styles.pageContainer} ${theme === 'light' ? 'light-theme' : ''}`}>
+      <button onClick={toggleTheme} className={styles.themeToggleButton}>
+        {theme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
+      </button>
       <div className={styles.heroSection}>
         <h1 className={styles.heroTitle}>SGAI: La tua Intelligenza Artificiale per la Commercialistica Tributaria</h1>
         <p className={styles.heroSubtitle}>Semplifichiamo l'analisi e la gestione delle controversie tributarie con la potenza dell'IA.</p>
@@ -30,6 +42,8 @@ const PresentationPage: React.FC = () => {
           <p>Lavoriamo senza legami istituzionali per garantire la massima trasparenza.</p>
         </div>
       </div>
+
+      {/* ... (resto del contenuto della pagina) ... */}
 
       <div className={styles.aboutUsSection}>
         <h2>Chi Siamo</h2>

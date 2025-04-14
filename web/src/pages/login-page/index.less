@@ -6,16 +6,15 @@ body {
   padding: 0;
   background-color: #282c34; /* Sfondo grigio scuro (come la chat) */
   color: #fff; /* Testo chiaro per sfondo scuro */
-  overflow-y: auto; /* Forza la barra di scorrimento verticale se necessario */
-  min-height: 100vh; /* Assicura che il body occupi almeno l'altezza della viewport */
+  overflow-y: auto;
+  min-height: 100vh;
 }
 
 .pageContainer {
   max-width: 1200px;
   margin: 40px auto;
   padding: 20px;
-  /* height: 100%; RIMUOVI questa linea, può causare problemi con lo scroll */
-  min-height: calc(100vh - 80px); /* Assicura che il container occupi almeno l'altezza della viewport meno il margin top/bottom */
+  min-height: calc(100vh - 80px);
 }
 
 .heroSection {
@@ -28,11 +27,12 @@ body {
   font-size: 2.5em;
   font-weight: 600;
   margin-bottom: 20px;
+  color: #fff; /* Titolo chiaro */
 }
 
 .heroSubtitle {
   font-size: 1.2em;
-  color: #ccc;
+  color: #ccc; /* Sottotitolo leggermente più chiaro */
 }
 
 .featuresSection {
@@ -40,7 +40,7 @@ body {
   justify-content: space-around;
   margin-bottom: 40px;
   padding: 0 20px;
-  flex-wrap: wrap; /* Permetti alle card di andare a capo su schermi piccoli */
+  flex-wrap: wrap;
 }
 
 .featureCard {
@@ -49,8 +49,9 @@ body {
   border-radius: 12px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   text-align: center;
-  width: calc(33% - 20px); /* Adatta la larghezza per lasciare spazio tra le card */
-  margin-bottom: 20px; /* Aggiungi un po' di spazio tra le card */
+  width: calc(33% - 20px);
+  margin-bottom: 20px;
+  color: #fff; /* Testo chiaro nelle card */
 }
 
 .featureImage {
@@ -64,6 +65,7 @@ body {
   margin-top: 0;
   margin-bottom: 10px;
   font-size: 1.5em;
+  color: #fff; /* Titolo delle feature chiaro */
 }
 
 .aboutUsSection {
@@ -72,6 +74,7 @@ body {
   border-radius: 12px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   margin-bottom: 40px;
+  color: #fff; /* Testo chiaro nella sezione Chi Siamo */
 }
 
 .aboutUsIntro {
@@ -84,12 +87,12 @@ body {
   display: flex;
   justify-content: space-around;
   margin-bottom: 30px;
-  flex-wrap: wrap; /* Permetti alle card del team di andare a capo */
+  flex-wrap: wrap;
 }
 
 .teamCard {
   text-align: center;
-  width: calc(33% - 20px); /* Adatta la larghezza per lasciare spazio tra le card del team */
+  width: calc(33% - 20px);
   margin-bottom: 20px;
 }
 
@@ -105,6 +108,7 @@ body {
   margin-top: 0;
   margin-bottom: 5px;
   font-size: 1.3em;
+  color: #fff; /* Nomi del team chiari */
 }
 
 .teamRole {
@@ -123,6 +127,7 @@ body {
   margin-top: 30px;
   margin-bottom: 10px;
   text-align: center;
+  color: #fff; /* Titolo "La Nostra Missione" chiaro */
 }
 
 .missionStatement {
@@ -149,7 +154,7 @@ iframe {
 
 .disclaimerSection {
   text-align: center;
-  color: #777;
+  color: #ccc;
   font-size: 0.9em;
   padding: 20px;
   background-color: #444; /* Sfondo leggermente più chiaro per il disclaimer */
