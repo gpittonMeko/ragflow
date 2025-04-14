@@ -6,12 +6,16 @@ body {
   padding: 0;
   background-color: #f4f4f4; /* Sfondo chiaro come Apple */
   color: #333; /* Testo scuro */
+  overflow-y: auto; /* Forza la barra di scorrimento verticale se necessario */
+  min-height: 100vh; /* Assicura che il body occupi almeno l'altezza della viewport */
 }
 
 .pageContainer {
   max-width: 1200px;
   margin: 40px auto;
   padding: 20px;
+  /* height: 100%; RIMUOVI questa linea, può causare problemi con lo scroll */
+  min-height: calc(100vh - 80px); /* Assicura che il container occupi almeno l'altezza della viewport meno il margin top/bottom */
 }
 
 .heroSection {
@@ -36,6 +40,7 @@ body {
   justify-content: space-around;
   margin-bottom: 40px;
   padding: 0 20px;
+  flex-wrap: wrap; /* Permetti alle card di andare a capo su schermi piccoli */
 }
 
 .featureCard {
@@ -44,7 +49,8 @@ body {
   border-radius: 12px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   text-align: center;
-  width: 30%;
+  width: calc(33% - 20px); /* Adatta la larghezza per lasciare spazio tra le card */
+  margin-bottom: 20px; /* Aggiungi un po' di spazio tra le card */
 }
 
 .featureImage {
@@ -78,11 +84,13 @@ body {
   display: flex;
   justify-content: space-around;
   margin-bottom: 30px;
+  flex-wrap: wrap; /* Permetti alle card del team di andare a capo */
 }
 
 .teamCard {
   text-align: center;
-  width: 30%;
+  width: calc(33% - 20px); /* Adatta la larghezza per lasciare spazio tra le card del team */
+  margin-bottom: 20px;
 }
 
 .teamImage {
