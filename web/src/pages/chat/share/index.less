@@ -11,6 +11,8 @@
   --accent-color: #0070f3;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   --transition-time: 0.3s;
+  --input-text-color: #ffffff;
+  --input-placeholder-color: rgba(255, 255, 255, 0.6);
 }
 
 [data-theme="light"] {
@@ -24,6 +26,8 @@
   --text-secondary: #666666;
   --border-color: #e0e0e0;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --input-text-color: #333333;
+  --input-placeholder-color: rgba(0, 0, 0, 0.4);
 }
 
 .chatWrapper {
@@ -40,6 +44,14 @@
 
 .dark {
   background-color: var(--bg-secondary);
+  
+  :global(.messageInputWrapper___nie1o .ant-input) {
+    color: #ffffff !important;
+  }
+  
+  :global(.messageInputWrapper___nie1o .ant-input::placeholder) {
+    color: rgba(255, 255, 255, 0.6) !important;
+  }
 }
 
 .chatContainer {
@@ -91,9 +103,13 @@
 
     :global(.ant-input) {
       background-color: var(--bg-input);
-      color: var(--text-primary);
+      color: var(--input-text-color) !important;
       border-radius: 12px;
       transition: background-color var(--transition-time), color var(--transition-time);
+    }
+    
+    :global(.ant-input::placeholder) {
+      color: var(--input-placeholder-color) !important;
     }
 
     :global(.ant-btn-primary) {

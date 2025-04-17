@@ -119,5 +119,4 @@ const ChatContainer = ({ theme }) => {
   );
 };
 
-// Utilizzare forwardRef per passare correttamente il ref e le props
 export default forwardRef((props, ref) => <ChatContainer {...props} ref={ref} />);
