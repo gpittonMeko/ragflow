@@ -43,6 +43,7 @@ const ChatContainer = ({ theme }) => {
   const isGeneratingRef = useRef(false);
   const inputRef = useRef(null);
   const inputContainerRef = useRef(null);
+  const lastMessageRef = useRef(null);
 
   const useFetchAvatar = useMemo(() => {
     return from === SharedFrom.Agent
@@ -86,27 +87,7 @@ const ChatContainer = ({ theme }) => {
       
       // Piccolo ritardo per permettere il rendering completo
       setTimeout(() => {
-        // Focus sull'input
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-        
-        // Scroll che mostra sia parte della generazione che l'input
-        if (inputContainerRef.current) {
-          // Calcola una posizione che mostra parte della generazione e l'input
-          const inputContainer = inputContainerRef.current;
-          const containerHeight = window.innerHeight;
-          const inputHeight = inputContainer.offsetHeight;
-          const scrollPosition = inputContainer.offsetTop - (containerHeight / 2) + (inputHeight / 2);
-          
-          // Scroll a quella posizione
-          window.scrollTo({
-            top: scrollPosition,
-            behavior: 'smooth'
-          });
-        }
-        
-        // Notifica al parent che la generazione è terminata
+        // Prima notifica al parent che la generazione è terminata
         try {
           window.parent.postMessage({
             type: 'expand-iframe',
@@ -115,7 +96,29 @@ const ChatContainer = ({ theme }) => {
         } catch (e) {
           console.warn("Errore nell'invio del messaggio al parent", e);
         }
-      }, 500);
+        
+        // Attendi che l'iframe sia ridimensionato
+        setTimeout(() => {
+          // Focus sull'input
+          if (inputRef.current) {
+            try {
+              // Esegui focus e scroll allo stesso tempo
+              inputRef.current.focus();
+              
+              // Scroll direttamente all'input
+              if (inputContainerRef.current) {
+                // Assicurati che l'input sia completamente visibile
+                inputContainerRef.current.scrollIntoView({ 
+                  behavior: 'smooth', 
+                  block: 'center' // Posiziona l'input al centro della viewport
+                });
+              }
+            } catch (error) {
+              console.warn('Errore durante il focus/scroll:', error);
+            }
+          }
+        }, 200);
+      }, 300);
     }
   }, [sendLoading, derivedMessages, ref]);
   
@@ -123,14 +126,9 @@ const ChatContainer = ({ theme }) => {
   useEffect(() => {
     // Impedisce il focus automatico e lo scrolling durante la digitazione
     const preventAutofocusScroll = (e) => {
-      if (sendLoading) return; // Permetti lo scrolling durante la generazione
+      if (sendLoading || isGeneratingRef.current) return; // Permetti lo scrolling durante la generazione
       
       if (inputRef.current && document.activeElement === inputRef.current) {
-        // Impedisci focus durante digitazione
-        if (isGeneratingRef.current) {
-          inputRef.current.blur();
-        }
-        
         // Impedisci scrolling durante digitazione
         if (e.type === 'scroll') {
           e.preventDefault();
@@ -142,13 +140,9 @@ const ChatContainer = ({ theme }) => {
     
     // Aggiungi multipli eventi per massima compatibilità
     document.addEventListener('scroll', preventAutofocusScroll, { passive: false });
-    document.addEventListener('focus', preventAutofocusScroll, true);
-    window.addEventListener('scroll', preventAutofocusScroll, { passive: false });
     
     return () => {
       document.removeEventListener('scroll', preventAutofocusScroll);
-      document.removeEventListener('focus', preventAutofocusScroll);
-      window.removeEventListener('scroll', preventAutofocusScroll);
     };
   }, [sendLoading]);
   
@@ -157,6 +151,9 @@ const ChatContainer = ({ theme }) => {
   if (!conversationId) {
     return <div>empty</div>;
   }
+
+  // Determina l'ultimo messaggio per il riferimento
+  const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
 
   return (
     <>
@@ -170,30 +167,36 @@ const ChatContainer = ({ theme }) => {
           <div>
             <Spin spinning={loading}>
               {derivedMessages?.map((message, i) => {
+                const isLastMessage = i === lastMessageIndex;
+                
                 return (
-                  <MessageItem
-                    visibleAvatar={visibleAvatar}
+                  <div 
+                    ref={isLastMessage ? lastMessageRef : null}
                     key={buildMessageUuidWithRole(message)}
-                    avatarDialog={avatarData?.avatar}
-                    item={message}
-                    nickname="You"
-                    reference={buildMessageItemReference(
-                      {
-                        message: derivedMessages,
-                        reference: [],
-                      },
-                      message,
-                    )}
-                    loading={
-                      message.role === MessageType.Assistant &&
-                      sendLoading &&
-                      derivedMessages?.length - 1 === i
-                    }
-                    index={i}
-                    clickDocumentButton={clickDocumentButton}
-                    showLikeButton={false}
-                    showLoudspeaker={false}
-                  ></MessageItem>
+                  >
+                    <MessageItem
+                      visibleAvatar={visibleAvatar}
+                      avatarDialog={avatarData?.avatar}
+                      item={message}
+                      nickname="You"
+                      reference={buildMessageItemReference(
+                        {
+                          message: derivedMessages,
+                          reference: [],
+                        },
+                        message,
+                      )}
+                      loading={
+                        message.role === MessageType.Assistant &&
+                        sendLoading &&
+                        isLastMessage
+                      }
+                      index={i}
+                      clickDocumentButton={clickDocumentButton}
+                      showLikeButton={false}
+                      showLoudspeaker={false}
+                    ></MessageItem>
+                  </div>
                 );
               })}
             </Spin>
@@ -201,7 +204,7 @@ const ChatContainer = ({ theme }) => {
           <div ref={ref} />
         </Flex>
 
-        <div ref={inputContainerRef}>
+        <div ref={inputContainerRef} className="message-input-container">
           <MessageInput
             isShared
             value={value}
