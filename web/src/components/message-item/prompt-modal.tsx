@@ -8,7 +8,8 @@ const PromptModal = ({
   visible,
   hideModal,
   prompt,
-}: IModalProps<IFeedbackRequestBody> & { prompt?: string }) => {
+  className,
+}: IModalProps<IFeedbackRequestBody> & { prompt?: string, className?: string }) => {
   return (
     <Modal
       title={
@@ -21,6 +22,7 @@ const PromptModal = ({
       open={visible}
       onCancel={hideModal}
       footer={null}
+      className={`theme-aware-modal ${className || ''}`}
     >
       <HightLightMarkdown>{prompt}</HightLightMarkdown>
     </Modal>
