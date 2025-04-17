@@ -2,6 +2,7 @@ import { PromptIcon } from '@/assets/icon/Icon';
 import CopyToClipboard from '@/components/copy-to-clipboard';
 import { useSetModalState } from '@/hooks/common-hooks';
 import { IRemoveMessageById } from '@/hooks/logic-hooks';
+import './group-button.less'; // Aggiungi questa riga
 import {
   DeleteOutlined,
   DislikeOutlined,
@@ -50,40 +51,43 @@ export const AssistantGroupButton = ({
 
   return (
     <>
-      <Radio.Group size="small">
-        <Radio.Button value="a">
-          <CopyToClipboard text={content}></CopyToClipboard>
-        </Radio.Button>
-        {showLoudspeaker && (
-          <Radio.Button value="b" onClick={handleRead}>
-            <Tooltip title={t('chat.read')}>
-              {isPlaying ? <PauseCircleOutlined /> : <SoundOutlined />}
-            </Tooltip>
-            <audio src="" ref={ref}></audio>
+      <div className="theme-aware-buttons">
+        <Radio.Group size="small">
+          <Radio.Button value="a">
+            <CopyToClipboard text={content}></CopyToClipboard>
           </Radio.Button>
-        )}
-        {showLikeButton && (
-          <>
-            <Radio.Button value="c" onClick={handleLike}>
-              <LikeOutlined />
+          {showLoudspeaker && (
+            <Radio.Button value="b" onClick={handleRead}>
+              <Tooltip title={t('chat.read')}>
+                {isPlaying ? <PauseCircleOutlined /> : <SoundOutlined />}
+              </Tooltip>
+              <audio src="" ref={ref}></audio>
             </Radio.Button>
-            <Radio.Button value="d" onClick={showModal}>
-              <DislikeOutlined />
+          )}
+          {showLikeButton && (
+            <>
+              <Radio.Button value="c" onClick={handleLike}>
+                <LikeOutlined />
+              </Radio.Button>
+              <Radio.Button value="d" onClick={showModal}>
+                <DislikeOutlined />
+              </Radio.Button>
+            </>
+          )}
+          {prompt && (
+            <Radio.Button value="e" onClick={showPromptModal}>
+              <PromptIcon style={{ fontSize: '16px' }} />
             </Radio.Button>
-          </>
-        )}
-        {prompt && (
-          <Radio.Button value="e" onClick={showPromptModal}>
-            <PromptIcon style={{ fontSize: '16px' }} />
-          </Radio.Button>
-        )}
-      </Radio.Group>
+          )}
+        </Radio.Group>
+      </div>
       {visible && (
         <FeedbackModal
           visible={visible}
           hideModal={hideModal}
           onOk={onFeedbackOk}
           loading={loading}
+          className="theme-aware-modal"
         ></FeedbackModal>
       )}
       {promptVisible && (
@@ -91,6 +95,7 @@ export const AssistantGroupButton = ({
           visible={promptVisible}
           hideModal={hidePromptModal}
           prompt={prompt}
+          className="theme-aware-modal"
         ></PromptModal>
       )}
     </>
@@ -118,28 +123,30 @@ export const UserGroupButton = ({
   const { t } = useTranslation();
 
   return (
-    <Radio.Group size="small">
-      <Radio.Button value="a">
-        <CopyToClipboard text={content}></CopyToClipboard>
-      </Radio.Button>
-      {regenerateMessage && (
-        <Radio.Button
-          value="b"
-          onClick={regenerateMessage}
-          disabled={sendLoading}
-        >
-          <Tooltip title={t('chat.regenerate')}>
-            <SyncOutlined spin={sendLoading} />
-          </Tooltip>
+    <div className="theme-aware-buttons">
+      <Radio.Group size="small">
+        <Radio.Button value="a">
+          <CopyToClipboard text={content}></CopyToClipboard>
         </Radio.Button>
-      )}
-      {removeMessageById && (
-        <Radio.Button value="c" onClick={onRemoveMessage} disabled={loading}>
-          <Tooltip title={t('common.delete')}>
-            <DeleteOutlined spin={loading} />
-          </Tooltip>
-        </Radio.Button>
-      )}
-    </Radio.Group>
+        {regenerateMessage && (
+          <Radio.Button
+            value="b"
+            onClick={regenerateMessage}
+            disabled={sendLoading}
+          >
+            <Tooltip title={t('chat.regenerate')}>
+              <SyncOutlined spin={sendLoading} />
+            </Tooltip>
+          </Radio.Button>
+        )}
+        {removeMessageById && (
+          <Radio.Button value="c" onClick={onRemoveMessage} disabled={loading}>
+            <Tooltip title={t('common.delete')}>
+              <DeleteOutlined spin={loading} />
+            </Tooltip>
+          </Radio.Button>
+        )}
+      </Radio.Group>
+    </div>
   );
 };

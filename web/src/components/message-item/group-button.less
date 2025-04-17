@@ -1,0 +1,64 @@
+@import '../../theme/vars.less';
+
+/* Group button styles with theme awareness */
+:global(.ant-radio-button-wrapper) {
+  background-color: var(--button-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+  transition: all 0.2s ease;
+}
+
+:global(.ant-radio-button-wrapper:hover) {
+  background-color: var(--button-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+:global(.ant-radio-button-wrapper-checked) {
+  background-color: var(--accent-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Modal theme support */
+:global(.ant-modal-content) {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+:global(.ant-modal-header) {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+
+:global(.ant-modal-title) {
+  color: var(--text-primary) !important;
+}
+
+:global(.ant-modal-close-x) {
+  color: var(--text-primary) !important;
+}
+
+:global(.ant-modal-footer) {
+  border-top-color: var(--border-color) !important;
+}
+
+:global(.ant-form) {
+  color: var(--text-primary) !important;
+}
+
+:global(.ant-form-item-label > label) {
+  color: var(--text-primary) !important;
+}
+
+:global(.ant-input), 
+:global(.ant-input-affix-wrapper),
+:global(.ant-input-textarea) {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+:global(.ant-input::placeholder) {
+  color: var(--text-secondary) !important;
+}
