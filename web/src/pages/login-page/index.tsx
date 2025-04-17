@@ -89,7 +89,7 @@ const PresentationPage: React.FC = () => {
       <div className={styles.iframeSection}>
         <iframe
           ref={iframeRef}
-          src="https://sgailegal.it/chat/share?shared_id=a871ecb2eaba11efb3a10242ac120006&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm"
+          src="https://sgailegal.it/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm"
           title="SGAI Chat Interface"
         />
       </div>
