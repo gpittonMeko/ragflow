@@ -1,23 +1,33 @@
 import React, { useRef, useState, useEffect } from 'react';
-
-// Stili
 import styles from './index.less';
 
 const PresentationPage: React.FC = () => {
   const controllerRef = useRef(new AbortController());
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    // Ottieni il tema salvato o usa il tema predefinito 'dark'
+    return localStorage.getItem('sgai-theme') as 'light' | 'dark' || 'dark';
+  });
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   
   // Applica il tema quando cambia
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
+    
+    // Salva nel localStorage per condividere con l'iframe
+    localStorage.setItem('sgai-theme', theme);
+    
+    // Tenta di inviare un messaggio all'iframe
+    try {
+      if (iframeRef.current && iframeRef.current.contentWindow) {
+        iframeRef.current.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
+      }
+    } catch (e) {
+      console.warn("Non è stato possibile inviare un messaggio all'iframe", e);
+    }
   }, [theme]);
 
-  // Nel componente della pagina login-page
   const toggleTheme = () => {
-    const newTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme); // Opzionale: salva la preferenza
+    setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
   };
 
   return (
@@ -78,6 +88,7 @@ const PresentationPage: React.FC = () => {
 
       <div className={styles.iframeSection}>
         <iframe
+          ref={iframeRef}
           src="https://sgailegal.it/chat/share?shared_id=a871ecb2eaba11efb3a10242ac120006&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm"
           title="SGAI Chat Interface"
         />
