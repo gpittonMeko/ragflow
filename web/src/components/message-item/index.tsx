@@ -61,6 +61,26 @@ const MessageItem = ({
     useFetchDocumentThumbnailsByIds();
   const { visible, hideModal, showModal } = useSetModalState();
   const [clickedDocumentId, setClickedDocumentId] = useState('');
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  // Imposta la dimensione corretta per avatar basata su dimensione schermo
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calcola la dimensione avatar in base alla larghezza della finestra
+  const getAvatarSize = () => {
+    if (windowWidth <= 480) return 28;
+    if (windowWidth <= 768) return 32;
+    return 40;
+  };
+
+  const avatarSize = getAvatarSize();
 
   const referenceDocumentList = useMemo(() => {
     return reference?.doc_aggs ?? [];
@@ -120,11 +140,25 @@ const MessageItem = ({
         >
           {visibleAvatar &&
             (item.role === MessageType.User ? (
-              <Avatar size={40} src={avatar ?? '/logo.svg'} />
+              <Avatar 
+                size={avatarSize} 
+                src={avatar ?? '/logo.svg'}
+                style={{ minWidth: `${avatarSize}px` }}
+              />
             ) : avatarDialog ? (
-              <Avatar size={40} src={avatarDialog} />
+              <Avatar 
+                size={avatarSize} 
+                src={avatarDialog}
+                style={{ minWidth: `${avatarSize}px` }}
+              />
             ) : (
-              <AssistantIcon />
+              <div style={{ 
+                width: `${avatarSize}px`, 
+                height: `${avatarSize}px`, 
+                minWidth: `${avatarSize}px` 
+              }}>
+                <AssistantIcon style={{ width: '100%', height: '100%' }} />
+              </div>
             ))}
 
           <Flex vertical gap={8} flex={1}>

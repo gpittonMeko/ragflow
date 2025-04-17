@@ -26,6 +26,55 @@ const PresentationPage: React.FC = () => {
     }
   }, [theme]);
 
+  // Adatta altezza iframe ai contenuti
+  useEffect(() => {
+    const handleIframeResize = () => {
+      if (iframeRef.current && iframeRef.current.contentWindow) {
+        try {
+          // Invia un messaggio per richiedere l'altezza
+          iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
+        } catch (e) {
+          console.warn("Errore nel richiedere l'altezza dall'iframe", e);
+        }
+      }
+    };
+
+    // Ascolta i messaggi dall'iframe
+    const handleIframeMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'iframe-height') {
+        const iframeHeight = event.data.height;
+        if (iframeRef.current && iframeHeight) {
+          // Imposta l'altezza dell'iframe
+          iframeRef.current.style.height = `${iframeHeight}px`;
+        }
+      }
+    };
+
+    window.addEventListener('message', handleIframeMessage);
+    
+    // Monitora dimensioni
+    const resizeObserver = new ResizeObserver(() => {
+      handleIframeResize();
+    });
+    
+    if (iframeRef.current) {
+      resizeObserver.observe(iframeRef.current);
+      
+      // Chiedi periodicamente l'altezza in caso di nuovi contenuti
+      const heightInterval = setInterval(handleIframeResize, 2000);
+      
+      return () => {
+        window.removeEventListener('message', handleIframeMessage);
+        resizeObserver.disconnect();
+        clearInterval(heightInterval);
+      };
+    }
+    
+    return () => {
+      window.removeEventListener('message', handleIframeMessage);
+    };
+  }, []);
+
   const toggleTheme = () => {
     setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
   };
