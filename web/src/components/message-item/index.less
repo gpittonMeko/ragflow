@@ -6,7 +6,7 @@
     display: inline-block;
   }
   .messageItemSectionLeft {
-    width: 90%; /* aumentato da 80% a 90% per occupare più spazio */
+    width: 95%; /* aumentato da 90% a 95% per dare più spazio al testo */
   }
   .messageItemContent {
     display: inline-flex;
@@ -18,11 +18,11 @@
   }
 
   .messageTextBase() {
-    padding: 12px 16px; /* aumentato il padding per dare più respiro al testo */
+    padding: 12px 16px; 
     border-radius: 8px;
     transition: background-color 0.3s, color 0.3s;
-    font-size: 1.05rem; /* aumentato leggermente la dimensione del testo */
-    line-height: 1.6; /* aumentato l'interlinea per migliorare la leggibilità */
+    font-size: 1.05rem;
+    line-height: 1.6;
     & > p {
       margin: 0;
     }
@@ -33,8 +33,8 @@
     background-color: var(--message-bg, #333333);
     color: var(--text-primary, #f0f0f0);
     word-break: break-word;
-    max-width: 100%; /* assicura che il testo non superi la larghezza disponibile */
-    width: 100%; /* prende tutta la larghezza disponibile */
+    max-width: 100%; 
+    width: 100%; 
   }
   .messageTextDark {
     .chunkText();
@@ -42,8 +42,8 @@
     background-color: var(--accent-color, #1668dc);
     color: var(--text-primary, #f0f0f0);
     word-break: break-word;
-    max-width: 100%; /* assicura che il testo non superi la larghezza disponibile */
-    width: 100%; /* prende tutta la larghezza disponibile */
+    max-width: 100%;
+    width: 100%;
     :global(section.think) {
       color: var(--text-secondary, #a0a0a0);
       border-left-color: var(--border-color, #555555);
@@ -57,8 +57,8 @@
     color: var(--text-primary, #f0f0f0);
     word-break: break-word;
     text-align: left;
-    max-width: 100%; /* assicura che il testo non superi la larghezza disponibile */
-    width: 100%; /* prende tutta la larghezza disponibile */
+    max-width: 100%;
+    width: 100%;
   }
   .messageEmpty {
     width: 300px;
@@ -77,21 +77,84 @@
   text-align: right;
 }
 
+/* Migliora handling scorrimento */
+.messageContainer {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scroll-behavior: smooth; /* Per smooth autoscroll */
+  
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+}
+
 /* Aggiungi media query per dispositivi mobili */
 @media (max-width: 768px) {
   .messageItem {
+    padding: 18px 0; /* Ridotto padding verticale */
+    
     .messageItemSection {
       width: 100%; /* prende tutta la larghezza su mobile */
     }
+    
     .messageItemSectionLeft {
-      width: 95%; /* ancora più largo su mobile */
+      width: 98%; /* ancora più largo su mobile */
     }
+    
     .messageTextBase() {
-      padding: 10px 14px; /* leggermente meno padding su mobile */
-      font-size: 1rem; /* testo leggermente più piccolo su mobile */
+      padding: 10px 12px; /* Padding ridotto in mobile */
+      font-size: 0.95rem; /* Testo più piccolo in mobile */
+      line-height: 1.5;
     }
+    
     .messageItemContent {
-      gap: 12px; /* riduce lo spazio tra avatar e testo su mobile */
+      gap: 10px; /* riduce lo spazio tra avatar e testo su mobile */
     }
+  }
+  
+  /* Riduzione spazio avatar */
+  :global(.ant-avatar) {
+    width: 32px !important; 
+    height: 32px !important;
+    min-width: 32px !important;
+  }
+  
+  /* Regolazione dimensione SVG dell'assistente */
+  :global(svg[class*="assistant"]) {
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
+
+/* Regolazioni extra per dispositivi molto piccoli */
+@media (max-width: 480px) {
+  .messageItem {
+    padding: 16px 0;
+    
+    .messageTextBase() {
+      font-size: 0.9rem;
+      padding: 8px 10px;
+    }
+    
+    .messageItemContent {
+      gap: 8px;
+    }
+    
+    .messageItemSectionLeft {
+      width: 100%; /* Massimizza lo spazio per il testo in schermi molto piccoli */
+    }
+  }
+  
+  /* Riduzione ulteriore spazio avatar */
+  :global(.ant-avatar) {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+  }
+  
+  /* Riduzione margin e padding nei messaggi */
+  .messageItemSection {
+    padding: 6px !important;
   }
 }

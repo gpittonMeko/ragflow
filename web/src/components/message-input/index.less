@@ -55,6 +55,15 @@
   width: 100%;
   background-color: var(--bg-color, #1e1e1e);
   transition: background-color 0.3s;
+  
+  /* Nascondi scrollbar ma mantieni funzionalità */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
 }
 
 .inputWrapper {
@@ -98,5 +107,36 @@
   svg[data-icon='send'] {
     color: var(--text-primary, #f0f0f0);
     transition: color 0.3s;
+  }
+}
+
+/* Responsive styles per dispositivi mobili */
+@media (max-width: 768px) {
+  .messageInputWrapper {
+    margin-right: 10px;
+    padding: 8px;
+    
+    textarea.ant-input,
+    .ant-input-affix-wrapper textarea.ant-input {
+      font-size: 0.95rem !important;
+    }
+  }
+  
+  .documentCard {
+    :global(.ant-card-body) {
+      padding: 8px;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .messageInputWrapper {
+    margin-right: 5px;
+    padding: 6px;
+    
+    textarea.ant-input,
+    .ant-input-affix-wrapper textarea.ant-input {
+      font-size: 0.9rem !important;
+    }
   }
 }

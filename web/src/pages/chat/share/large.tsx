@@ -4,7 +4,7 @@ import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import { MessageType, SharedFrom } from '@/constants/chat';
 import { useSendButtonDisabled } from '@/pages/chat/hooks';
 import { Flex, Spin } from 'antd';
-import React, { forwardRef, useMemo } from 'react';
+import React, { forwardRef, useMemo, useRef, useEffect } from 'react';
 import {
   useGetSharedChatSearchParams,
   useSendSharedMessage,
@@ -39,17 +39,59 @@ const ChatContainer = ({ theme }) => {
     hasError,
   } = useSendSharedMessage();
   const sendDisabled = useSendButtonDisabled(value);
+  const messagesContainerRef = useRef(null);
 
   const useFetchAvatar = useMemo(() => {
     return from === SharedFrom.Agent
       ? useFetchFlowSSE
       : useFetchNextConversationSSE;
   }, [from]);
+  
   React.useEffect(() => {
     if (locale && i18n.language !== locale) {
       i18n.changeLanguage(locale);
     }
   }, [locale, visibleAvatar]);
+  
+  // Migliora lo scrolling automatico per seguire il testo generato
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      const scrollToBottom = () => {
+        if (ref.current) {
+          ref.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+      };
+      
+      // Scroll quando ci sono cambiamenti nei messaggi
+      scrollToBottom();
+      
+      // Setup un timer per lo scroll continuo durante la generazione se sendLoading è true
+      if (sendLoading) {
+        const scrollInterval = setInterval(scrollToBottom, 1000);
+        return () => clearInterval(scrollInterval);
+      }
+    }
+  }, [sendLoading, derivedMessages, ref]);
+  
+  // Observer per rilevare nuovi contenuti aggiunti e fare scroll automatico
+  useEffect(() => {
+    if (!messagesContainerRef.current || !ref.current) return;
+    
+    const observer = new MutationObserver(() => {
+      if (ref.current) {
+        ref.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    });
+    
+    observer.observe(messagesContainerRef.current, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+    
+    return () => observer.disconnect();
+  }, [ref]);
+  
   const { data: avatarData } = useFetchAvatar();
 
   if (!conversationId) {
@@ -59,7 +101,12 @@ const ChatContainer = ({ theme }) => {
   return (
     <>
       <Flex flex={1} className={`${styles.chatContainer} ${styles[theme]}`} vertical>
-        <Flex flex={1} vertical className={styles.messageContainer}>
+        <Flex 
+          flex={1} 
+          vertical 
+          className={styles.messageContainer}
+          ref={messagesContainerRef}
+        >
           <div>
             <Spin spinning={loading}>
               {derivedMessages?.map((message, i) => {

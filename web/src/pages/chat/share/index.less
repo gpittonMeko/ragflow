@@ -64,6 +64,14 @@
   .messageContainer {
     overflow-y: auto;
     padding-right: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+    
+    &::-webkit-scrollbar {
+      display: none; /* Chrome, Safari and Opera */
+    }
 
     // Stili globali per i messaggi
     :global(.messageItem___OK1Zd) {
@@ -139,15 +147,49 @@
 @media (max-width: 768px) {
   .chatContainer {
     padding: 8px;
+    
+    .messageContainer {
+      padding-right: 2px;
+      
+      :global(.messageItemSection___a_W_M) {
+        padding: 10px;
+      }
+      
+      :global(.messageItem___OK1Zd) {
+        margin-bottom: 10px;
+        border-radius: 10px;
+      }
+    }
+  }
+  
+  :global(.ant-avatar) {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
   }
 }
 
 @media (max-width: 480px) {
   .chatContainer {
     padding: 5px;
+    
+    .messageContainer {
+      padding-right: 0;
+      
+      :global(.messageItemSection___a_W_M) {
+        padding: 8px !important;
+      }
+      
+      :global(.messageItem___OK1Zd) {
+        margin-bottom: 8px;
+        border-radius: 8px;
+      }
+    }
   }
-
-  :global(.messageItemSection___a_W_M) {
-    padding: 8px !important;
+  
+  :global(.ant-avatar) {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
   }
 }
