@@ -6,20 +6,23 @@
     display: inline-block;
   }
   .messageItemSectionLeft {
-    width: 80%;
+    width: 90%; /* aumentato da 80% a 90% per occupare più spazio */
   }
   .messageItemContent {
     display: inline-flex;
     gap: 20px;
+    max-width: 100%; /* assicura che il contenuto non superi la larghezza disponibile */
   }
   .messageItemContentReverse {
     flex-direction: row-reverse;
   }
 
   .messageTextBase() {
-    padding: 8px 12px; // Increased padding for better readability
+    padding: 12px 16px; /* aumentato il padding per dare più respiro al testo */
     border-radius: 8px;
     transition: background-color 0.3s, color 0.3s;
+    font-size: 1.05rem; /* aumentato leggermente la dimensione del testo */
+    line-height: 1.6; /* aumentato l'interlinea per migliorare la leggibilità */
     & > p {
       margin: 0;
     }
@@ -30,6 +33,8 @@
     background-color: var(--message-bg, #333333);
     color: var(--text-primary, #f0f0f0);
     word-break: break-word;
+    max-width: 100%; /* assicura che il testo non superi la larghezza disponibile */
+    width: 100%; /* prende tutta la larghezza disponibile */
   }
   .messageTextDark {
     .chunkText();
@@ -37,6 +42,8 @@
     background-color: var(--accent-color, #1668dc);
     color: var(--text-primary, #f0f0f0);
     word-break: break-word;
+    max-width: 100%; /* assicura che il testo non superi la larghezza disponibile */
+    width: 100%; /* prende tutta la larghezza disponibile */
     :global(section.think) {
       color: var(--text-secondary, #a0a0a0);
       border-left-color: var(--border-color, #555555);
@@ -50,6 +57,8 @@
     color: var(--text-primary, #f0f0f0);
     word-break: break-word;
     text-align: left;
+    max-width: 100%; /* assicura che il testo non superi la larghezza disponibile */
+    width: 100%; /* prende tutta la larghezza disponibile */
   }
   .messageEmpty {
     width: 300px;
@@ -66,4 +75,23 @@
 
 .messageItemRight {
   text-align: right;
+}
+
+/* Aggiungi media query per dispositivi mobili */
+@media (max-width: 768px) {
+  .messageItem {
+    .messageItemSection {
+      width: 100%; /* prende tutta la larghezza su mobile */
+    }
+    .messageItemSectionLeft {
+      width: 95%; /* ancora più largo su mobile */
+    }
+    .messageTextBase() {
+      padding: 10px 14px; /* leggermente meno padding su mobile */
+      font-size: 1rem; /* testo leggermente più piccolo su mobile */
+    }
+    .messageItemContent {
+      gap: 12px; /* riduce lo spazio tra avatar e testo su mobile */
+    }
+  }
 }
