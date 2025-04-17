@@ -42,6 +42,7 @@ const ChatContainer = ({ theme }) => {
   const messagesContainerRef = useRef(null);
   const isGeneratingRef = useRef(false);
   const inputRef = useRef(null);
+  const inputContainerRef = useRef(null);
 
   const useFetchAvatar = useMemo(() => {
     return from === SharedFrom.Agent
@@ -83,10 +84,26 @@ const ChatContainer = ({ theme }) => {
       // Fine generazione
       isGeneratingRef.current = false;
       
-      // Scroll finale
+      // Piccolo ritardo per permettere il rendering completo
       setTimeout(() => {
-        if (ref.current) {
-          ref.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        // Focus sull'input
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+        
+        // Scroll che mostra sia parte della generazione che l'input
+        if (inputContainerRef.current) {
+          // Calcola una posizione che mostra parte della generazione e l'input
+          const inputContainer = inputContainerRef.current;
+          const containerHeight = window.innerHeight;
+          const inputHeight = inputContainer.offsetHeight;
+          const scrollPosition = inputContainer.offsetTop - (containerHeight / 2) + (inputHeight / 2);
+          
+          // Scroll a quella posizione
+          window.scrollTo({
+            top: scrollPosition,
+            behavior: 'smooth'
+          });
         }
         
         // Notifica al parent che la generazione è terminata
@@ -98,7 +115,7 @@ const ChatContainer = ({ theme }) => {
         } catch (e) {
           console.warn("Errore nell'invio del messaggio al parent", e);
         }
-      }, 300);
+      }, 500);
     }
   }, [sendLoading, derivedMessages, ref]);
   
@@ -110,7 +127,9 @@ const ChatContainer = ({ theme }) => {
       
       if (inputRef.current && document.activeElement === inputRef.current) {
         // Impedisci focus durante digitazione
-        inputRef.current.blur();
+        if (isGeneratingRef.current) {
+          inputRef.current.blur();
+        }
         
         // Impedisci scrolling durante digitazione
         if (e.type === 'scroll') {
@@ -182,19 +201,21 @@ const ChatContainer = ({ theme }) => {
           <div ref={ref} />
         </Flex>
 
-        <MessageInput
-          isShared
-          value={value}
-          disabled={hasError}
-          sendDisabled={sendDisabled}
-          conversationId={conversationId}
-          onInputChange={handleInputChange}
-          onPressEnter={handlePressEnter}
-          sendLoading={sendLoading}
-          uploadMethod="external_upload_and_parse"
-          showUploadIcon={false}
-          ref={inputRef}
-        ></MessageInput>
+        <div ref={inputContainerRef}>
+          <MessageInput
+            isShared
+            value={value}
+            disabled={hasError}
+            sendDisabled={sendDisabled}
+            conversationId={conversationId}
+            onInputChange={handleInputChange}
+            onPressEnter={handlePressEnter}
+            sendLoading={sendLoading}
+            uploadMethod="external_upload_and_parse"
+            showUploadIcon={false}
+            ref={inputRef}
+          ></MessageInput>
+        </div>
       </Flex>
       {visible && (
         <PdfDrawer
