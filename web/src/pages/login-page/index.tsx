@@ -13,8 +13,11 @@ const PresentationPage: React.FC = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  // Nel componente della pagina login-page
   const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
+    const newTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme); // Opzionale: salva la preferenza
   };
 
   return (
