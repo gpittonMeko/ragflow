@@ -1,86 +1,88 @@
-import React, { memo, useRef, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-// Stili
-import styles from './index.less';
+// Importing styles
+// Note: We're assuming the styles will be imported from a different file
+// You'll need to create this file with the CSS provided below
 
-const PresentationPage: React.FC = () => {
-  const controllerRef = useRef(new AbortController());
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark'); // Stato per il tema (inizialmente scuro)
+const PresentationPage = () => {
+  const [theme, setTheme] = useState('dark');
+  
+  // Apply theme on initial load and when theme changes
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    // Store user preference in local storage
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((prevTheme) => (prevTheme === 'dark' ? 'light' : 'dark'));
-    // Qui potresti aggiungere la logica per cambiare dinamicamente i fogli di stile
-    // o utilizzare un sistema di gestione dei temi più complesso.
-    // Per ora, cambieremo semplicemente il colore di sfondo del body.
-    document.body.classList.toggle('light-theme');
+    setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
   };
 
   return (
-    <div className={`${styles.pageContainer} ${theme === 'light' ? 'light-theme' : ''}`}>
-      <button onClick={toggleTheme} className={styles.themeToggleButton}>
-        {theme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
+    <div className="page-container">
+      <button 
+        onClick={toggleTheme} 
+        className="theme-toggle"
+        aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+      >
+        {theme === 'dark' 
+          ? <span className="theme-icon">☀️</span> 
+          : <span className="theme-icon">🌙</span>}
       </button>
-      <div className={styles.heroSection}>
-        <h1 className={styles.heroTitle}>SGAI: La tua Intelligenza Artificiale per la Commercialistica Tributaria</h1>
-        <p className={styles.heroSubtitle}>Semplifichiamo l'analisi e la gestione delle controversie tributarie con la potenza dell'IA.</p>
+
+      <div className="hero-section">
+        <h1 className="hero-title">SGAI: La tua Intelligenza Artificiale per la Commercialistica Tributaria</h1>
+        <p className="hero-subtitle">Semplifichiamo l'analisi e la gestione delle controversie tributarie con la potenza dell'IA.</p>
       </div>
 
-      <div className={styles.featuresSection}>
-        <div className={styles.featureCard}>
-          <img src="https://via.placeholder.com/80/cccccc/ffffff?Text=Analisi" alt="Analisi Intelligente" className={styles.featureImage} />
+      <div className="features-section">
+        <div className="feature-card">
+          <div className="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
           <h3>Analisi Intelligente</h3>
           <p>Sfrutta l'IA per analizzare rapidamente accertamenti, normative e giurisprudenza.</p>
         </div>
-        <div className={styles.featureCard}>
-          <img src="https://via.placeholder.com/80/cccccc/ffffff?Text=Gestione" alt="Gestione Efficiente" className={styles.featureImage} />
+
+        <div className="feature-card">
+          <div className="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
+          </div>
           <h3>Gestione Efficiente</h3>
           <p>Ottimizza il tuo flusso di lavoro e prendi decisioni più informate.</p>
         </div>
-        <div className={styles.featureCard}>
-          <img src="https://via.placeholder.com/80/cccccc/ffffff?Text=Indipendenza" alt="Indipendenza e Imparzialità" className={styles.featureImage} />
+
+        <div className="feature-card">
+          <div className="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8h1a4 4 0 010 8h-1" />
+              <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
+              <line x1="6" y1="1" x2="6" y2="4" />
+              <line x1="10" y1="1" x2="10" y2="4" />
+              <line x1="14" y1="1" x2="14" y2="4" />
+            </svg>
+          </div>
           <h3>Indipendenza e Imparzialità</h3>
           <p>Lavoriamo senza legami istituzionali per garantire la massima trasparenza.</p>
         </div>
       </div>
 
-      {/* ... (resto del contenuto della pagina) ... */}
-
-      <div className={styles.aboutUsSection}>
-        <h2>Chi Siamo</h2>
-        <p className={styles.aboutUsIntro}>Un team di professionisti dedicati all'innovazione nel settore della commercialistica tributaria.</p>
-        <div className={styles.teamCards}>
-          <div className={styles.teamCard}>
-            <img src="https://via.placeholder.com/100/bbbbbb/ffffff?Text=Marco" alt="Marco Spadotto" className={styles.teamImage} />
-            <h3>Marco Spadotto</h3>
-            <p className={styles.teamRole}>Commercialista Tributario</p>
-            <p className={styles.teamDescription}>Lunga esperienza nella consulenza fiscale e nella gestione delle pratiche contabili.</p>
-          </div>
-          <div className={styles.teamCard}>
-            <img src="https://via.placeholder.com/100/bbbbbb/ffffff?Text=Giovanni" alt="Giovanni Pitton" className={styles.teamImage} />
-            <h3>Giovanni Pitton</h3>
-            <p className={styles.teamRole}>CTO</p>
-            <p className={styles.teamDescription}>Esperto nello sviluppo di soluzioni software innovative e nell'applicazione dell'intelligenza artificiale.</p>
-          </div>
-          <div className={styles.teamCard}>
-            <img src="https://via.placeholder.com/100/bbbbbb/ffffff?Text=Davide" alt="Davide Cal" className={styles.teamImage} />
-            <h3>Davide Cal</h3>
-            <p className={styles.teamRole}>Amministratore</p>
-            <p className={styles.teamDescription}>Solida esperienza nella gestione aziendale e nella definizione di strategie di crescita.</p>
-          </div>
-        </div>
-        <h3>La Nostra Missione</h3>
-        <p className={styles.missionStatement}>Rendere più efficienti e accessibili le attività della commercialistica tributaria attraverso l'intelligenza artificiale, fornendo strumenti innovativi che semplifichino il lavoro dei professionisti e migliorino la gestione per i clienti.</p>
-      </div>
-
-      <div className={styles.iframeSection}>
+      <div className="iframe-section">
         <iframe
           src="https://sgailegal.it/chat/share?shared_id=a871ecb2eaba11efb3a10242ac120006&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm"
-          style={{ width: '100%', height: '100%', minHeight: '600px' }}
-          frameBorder="0"
+          title="SGAI Chat Interface"
         />
       </div>
 
-      <div className={styles.disclaimerSection}>
+      <div className="disclaimer-section">
         <p><strong>Disclaimer:</strong></p>
         <p>Si prega di notare che SGAI è un sistema basato sull'intelligenza artificiale. Sebbene ci impegniamo a fornire informazioni accurate e utili, il modello può occasionalmente commettere errori o produrre informazioni non corrette. È fondamentale verificare sempre le informazioni fornite con fonti affidabili e consultare professionisti qualificati per decisioni importanti.</p>
       </div>

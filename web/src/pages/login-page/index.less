@@ -1,166 +1,247 @@
-@import '../../theme/vars';
+:root {
+  /* Dark theme (default) */
+  --bg-color: #0a0a0a;
+  --card-bg: #1c1c1e;
+  --text-primary: #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --accent-color: #0070f3;
+  --border-radius: 16px;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  --card-transition: transform 0.3s ease, box-shadow 0.3s ease;
+  --button-bg: rgba(255, 255, 255, 0.1);
+  --button-hover: rgba(255, 255, 255, 0.2);
+  --nav-blur: blur(10px);
+  --disclaimer-bg: rgba(100, 100, 100, 0.15);
+}
 
-body {
-  font-family: 'Titillium Web', sans-serif;
+/* Light theme variables */
+[data-theme="light"] {
+  --bg-color: #f5f5f7;
+  --card-bg: #ffffff;
+  --text-primary: #1d1d1f;
+  --text-secondary: #515154;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  --button-bg: rgba(0, 0, 0, 0.05);
+  --button-hover: rgba(0, 0, 0, 0.1);
+  --disclaimer-bg: rgba(200, 200, 200, 0.3);
+}
+
+/* Base styles */
+* {
   margin: 0;
   padding: 0;
-  background-color: #282c34; /* Sfondo grigio scuro (come la chat) */
-  color: #fff; /* Testo chiaro per sfondo scuro */
-  overflow-y: auto;
-  min-height: 100vh;
+  box-sizing: border-box;
 }
 
-.pageContainer {
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Container */
+.page-container {
   max-width: 1200px;
-  margin: 40px auto;
-  padding: 20px;
-  min-height: calc(100vh - 80px);
+  margin: 0 auto;
+  padding: 1.5rem;
+  position: relative;
 }
 
-.heroSection {
-  text-align: center;
-  padding: 80px 20px;
-  margin-bottom: 40px;
-}
-
-.heroTitle {
-  font-size: 2.5em;
-  font-weight: 600;
-  margin-bottom: 20px;
-  color: #fff; /* Titolo chiaro */
-}
-
-.heroSubtitle {
-  font-size: 1.2em;
-  color: #ccc; /* Sottotitolo leggermente più chiaro */
-}
-
-.featuresSection {
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 40px;
-  padding: 0 20px;
-  flex-wrap: wrap;
-}
-
-.featureCard {
-  background-color: #333; /* Sfondo leggermente più chiaro per le card */
-  padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  text-align: center;
-  width: calc(33% - 20px);
-  margin-bottom: 20px;
-  color: #fff; /* Testo chiaro nelle card */
-}
-
-.featureImage {
-  width: 80px;
-  height: 80px;
-  margin-bottom: 20px;
-  object-fit: contain;
-}
-
-.featuresSection h3 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 1.5em;
-  color: #fff; /* Titolo delle feature chiaro */
-}
-
-.aboutUsSection {
-  background-color: #333; /* Sfondo leggermente più chiaro per la sezione Chi Siamo */
-  padding: 40px;
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  margin-bottom: 40px;
-  color: #fff; /* Testo chiaro nella sezione Chi Siamo */
-}
-
-.aboutUsIntro {
-  font-size: 1.1em;
-  color: #ccc;
-  margin-bottom: 20px;
-}
-
-.teamCards {
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 30px;
-  flex-wrap: wrap;
-}
-
-.teamCard {
-  text-align: center;
-  width: calc(33% - 20px);
-  margin-bottom: 20px;
-}
-
-.teamImage {
-  width: 100px;
-  height: 100px;
+/* Theme toggle button */
+.theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  object-fit: cover;
-  margin-bottom: 15px;
+  background-color: var(--button-bg);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  backdrop-filter: var(--nav-blur);
+  -webkit-backdrop-filter: var(--nav-blur);
+  transition: background-color 0.2s ease;
 }
 
-.teamCard h3 {
-  margin-top: 0;
-  margin-bottom: 5px;
-  font-size: 1.3em;
-  color: #fff; /* Nomi del team chiari */
+.theme-toggle:hover {
+  background-color: var(--button-hover);
 }
 
-.teamRole {
-  color: #777;
-  font-size: 0.9em;
-  margin-bottom: 10px;
+.theme-icon {
+  font-size: 20px;
 }
 
-.teamDescription {
-  color: #999;
-  font-size: 1em;
-}
-
-.aboutUsSection h3 {
-  font-size: 1.5em;
-  margin-top: 30px;
-  margin-bottom: 10px;
+/* Hero section */
+.hero-section {
   text-align: center;
-  color: #fff; /* Titolo "La Nostra Missione" chiaro */
+  padding: 4rem 1rem 3rem;
+  margin-bottom: 3rem;
+  animation: fadeIn 0.8s ease-out;
 }
 
-.missionStatement {
-  line-height: 1.8;
-  color: #ccc;
+.hero-title {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+  background: linear-gradient(120deg, var(--accent-color), #64b5f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+  font-size: clamp(1rem, 3vw, 1.3rem);
+  color: var(--text-secondary);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Features section */
+.features-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.feature-card {
+  background-color: var(--card-bg);
+  padding: 2rem;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  transition: var(--card-transition);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  padding: 0 50px;
 }
 
-.iframeSection {
-  width: 100%;
-  border-radius: 10px;
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+}
+
+.feature-icon {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 1.5rem;
+  color: var(--accent-color);
+}
+
+.feature-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.feature-card p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* iframe section */
+.iframe-section {
+  margin: 3rem 0;
+  border-radius: var(--border-radius);
   overflow: hidden;
-  margin-bottom: 40px;
+  box-shadow: var(--shadow);
+  background-color: var(--card-bg);
+  height: 600px;
 }
 
 iframe {
-  display: block;
   width: 100%;
   height: 100%;
-  min-height: 600px;
   border: none;
 }
 
-.disclaimerSection {
-  text-align: center;
-  color: #ccc;
-  font-size: 0.9em;
-  padding: 20px;
-  background-color: #444; /* Sfondo leggermente più chiaro per il disclaimer */
-  border-radius: 8px;
+/* Disclaimer section */
+.disclaimer-section {
+  padding: 1.5rem;
+  border-radius: var(--border-radius);
+  background-color: var(--disclaimer-bg);
+  margin-top: 3rem;
+  backdrop-filter: var(--nav-blur);
+  -webkit-backdrop-filter: var(--nav-blur);
 }
 
-.disclaimerSection strong {
-  color: #d32f2f;
+.disclaimer-section strong {
+  color: #ff453a;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.disclaimer-section p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Media queries for responsiveness */
+@media (max-width: 768px) {
+  .page-container {
+    padding: 1rem;
+  }
+  
+  .hero-section {
+    padding: 3rem 0.5rem 2rem;
+  }
+  
+  .feature-card {
+    padding: 1.5rem;
+  }
+  
+  .iframe-section {
+    height: 450px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 1.8rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1rem;
+  }
+  
+  .feature-icon {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .feature-card h3 {
+    font-size: 1.2rem;
+  }
+  
+  .iframe-section {
+    height: 350px;
+  }
+  
+  .theme-toggle {
+    top: 10px;
+    right: 10px;
+  }
 }
