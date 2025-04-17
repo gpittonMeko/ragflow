@@ -18,7 +18,7 @@ import i18n from '@/locales/config';
 import { buildMessageUuidWithRole } from '@/utils/chat';
 import styles from './index.less';
 
-const ChatContainer = () => {
+const ChatContainer = ({ theme }) => {
   const {
     sharedId: conversationId,
     from,
@@ -58,7 +58,7 @@ const ChatContainer = () => {
 
   return (
     <>
-      <Flex flex={1} className={styles.chatContainer} vertical>
+      <Flex flex={1} className={`${styles.chatContainer} ${styles[theme]}`} vertical>
         <Flex flex={1} vertical className={styles.messageContainer}>
           <div>
             <Spin spinning={loading}>
@@ -119,4 +119,5 @@ const ChatContainer = () => {
   );
 };
 
-export default forwardRef(ChatContainer);
+// Utilizzare forwardRef per passare correttamente il ref e le props
+export default forwardRef((props, ref) => <ChatContainer {...props} ref={ref} />);
