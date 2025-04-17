@@ -8,6 +8,7 @@ const PresentationPage: React.FC = () => {
     return localStorage.getItem('sgai-theme') as 'light' | 'dark' || 'dark';
   });
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   
   // Applica il tema quando cambia
   useEffect(() => {
@@ -26,12 +27,69 @@ const PresentationPage: React.FC = () => {
     }
   }, [theme]);
 
-  // Adatta altezza iframe ai contenuti
+  // Gestisci dimensioni e comportamento dell'iframe
   useEffect(() => {
-    const handleIframeResize = () => {
-      if (iframeRef.current && iframeRef.current.contentWindow) {
+    // Adatta l'altezza dell'iframe quando richiesto
+    const handleIframeMessage = (event: MessageEvent) => {
+      // Gestione altezza iframe
+      if (event.data && event.data.type === 'iframe-height') {
+        const iframeHeight = event.data.height;
+        if (iframeRef.current && iframeHeight && !isGenerating) {
+          // Imposta l'altezza dell'iframe solo se non in modalità generazione
+          iframeRef.current.style.height = `${iframeHeight}px`;
+        }
+      }
+      
+      // Gestione espansione iframe durante generazione
+      if (event.data && event.data.type === 'expand-iframe') {
+        setIsGenerating(event.data.expanding);
+        
+        if (event.data.expanding && iframeRef.current) {
+          // Espandi l'iframe a dimensione viewport
+          const viewportHeight = window.innerHeight;
+          iframeRef.current.style.height = `${viewportHeight}px`;
+          iframeRef.current.style.position = 'fixed';
+          iframeRef.current.style.top = '0';
+          iframeRef.current.style.left = '0';
+          iframeRef.current.style.width = '100%';
+          iframeRef.current.style.zIndex = '1000';
+          
+          // Blocca lo scroll della pagina
+          document.body.style.overflow = 'hidden';
+        } else if (!event.data.expanding && iframeRef.current) {
+          // Ripristina dimensioni iframe
+          iframeRef.current.style.position = 'relative';
+          iframeRef.current.style.top = 'auto';
+          iframeRef.current.style.left = 'auto';
+          iframeRef.current.style.width = '100%';
+          iframeRef.current.style.zIndex = 'auto';
+          
+          // Sblocca lo scroll della pagina
+          document.body.style.overflow = 'auto';
+          
+          // Richiedi altezza corretta
+          if (iframeRef.current.contentWindow) {
+            try {
+              iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
+            } catch (e) {
+              console.warn("Errore nel richiedere l'altezza dall'iframe", e);
+            }
+          }
+        }
+      }
+    };
+
+    window.addEventListener('message', handleIframeMessage);
+    
+    // Gestisci il ridimensionamento della finestra
+    const handleResize = () => {
+      if (isGenerating && iframeRef.current) {
+        // Se in modalità generazione, mantieni dimensione viewport
+        const viewportHeight = window.innerHeight;
+        iframeRef.current.style.height = `${viewportHeight}px`;
+      } else if (iframeRef.current && iframeRef.current.contentWindow) {
+        // Altrimenti richiedi altezza corretta
         try {
-          // Invia un messaggio per richiedere l'altezza
           iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
         } catch (e) {
           console.warn("Errore nel richiedere l'altezza dall'iframe", e);
@@ -39,41 +97,15 @@ const PresentationPage: React.FC = () => {
       }
     };
 
-    // Ascolta i messaggi dall'iframe
-    const handleIframeMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'iframe-height') {
-        const iframeHeight = event.data.height;
-        if (iframeRef.current && iframeHeight) {
-          // Imposta l'altezza dell'iframe
-          iframeRef.current.style.height = `${iframeHeight}px`;
-        }
-      }
-    };
-
-    window.addEventListener('message', handleIframeMessage);
+    window.addEventListener('resize', handleResize);
     
-    // Monitora dimensioni
-    const resizeObserver = new ResizeObserver(() => {
-      handleIframeResize();
-    });
-    
-    if (iframeRef.current) {
-      resizeObserver.observe(iframeRef.current);
-      
-      // Chiedi periodicamente l'altezza in caso di nuovi contenuti
-      const heightInterval = setInterval(handleIframeResize, 2000);
-      
-      return () => {
-        window.removeEventListener('message', handleIframeMessage);
-        resizeObserver.disconnect();
-        clearInterval(heightInterval);
-      };
-    }
-    
+    // Cleanup
     return () => {
       window.removeEventListener('message', handleIframeMessage);
+      window.removeEventListener('resize', handleResize);
+      document.body.style.overflow = 'auto'; // Ripristina scroll al dismount
     };
-  }, []);
+  }, [isGenerating]);
 
   const toggleTheme = () => {
     setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
@@ -84,6 +116,7 @@ const PresentationPage: React.FC = () => {
       <button 
         onClick={toggleTheme} 
         className={styles.themeToggle}
+        style={{ zIndex: isGenerating ? '1001' : '100' }}
       >
         {theme === 'dark' 
           ? <span className={styles.themeIcon}>☀️</span> 
@@ -135,11 +168,18 @@ const PresentationPage: React.FC = () => {
         </div>
       </div>
 
-      <div className={styles.iframeSection}>
+      <div className={styles.iframeSection} style={{ 
+        overflow: isGenerating ? 'visible' : 'hidden',
+        maxWidth: '100%'
+      }}>
         <iframe
           ref={iframeRef}
           src="https://sgailegal.it/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm&visible_avatar=1"
           title="SGAI Chat Interface"
+          style={{ 
+            borderRadius: isGenerating ? '0' : 'var(--border-radius)',
+            maxWidth: '100%'
+          }}
         />
       </div>
 
