@@ -34,32 +34,6 @@
   position: relative;
 }
 
-.themeToggle {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.1);
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 100;
-  box-shadow: var(--shadow);
-  transition: background-color 0.2s ease;
-  
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-  }
-}
-
-.themeIcon {
-  font-size: 20px;
-}
-
 .chatContainer {
   padding: 10px;
   box-sizing: border-box;
@@ -139,32 +113,12 @@
 
 // Media queries per la responsività
 @media (max-width: 768px) {
-  .themeToggle {
-    top: 10px;
-    right: 10px;
-    width: 36px;
-    height: 36px;
-  }
-  
-  .themeIcon {
-    font-size: 16px;
-  }
-
   .chatContainer {
     padding: 8px;
   }
 }
 
 @media (max-width: 480px) {
-  .themeToggle {
-    width: 32px;
-    height: 32px;
-  }
-  
-  .themeIcon {
-    font-size: 14px;
-  }
-
   .chatContainer {
     padding: 5px;
   }

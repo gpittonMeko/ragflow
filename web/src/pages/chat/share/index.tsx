@@ -3,34 +3,39 @@ import ChatContainer from './large';
 import styles from './index.less';
 
 const SharedChat = () => {
-  const [theme, setTheme] = useState(() => {
-    // Ottieni il tema salvato in localStorage o usa il tema predefinito 'dark'
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme || 'dark';
-  });
+  const [theme, setTheme] = useState('dark');
   
+  // Monitora il tema del documento padre
   useEffect(() => {
-    // Applica il tema all'elemento HTML, così il CSS può reagire
-    document.documentElement.setAttribute('data-theme', theme);
-    // Salva la preferenza dell'utente
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-  
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
-  };
+    // Funzione per leggere il tema dal documento padre
+    const checkTheme = () => {
+      const parentTheme = document.documentElement.getAttribute('data-theme');
+      if (parentTheme && (parentTheme === 'light' || parentTheme === 'dark')) {
+        setTheme(parentTheme);
+      }
+    };
+    
+    // Esegui subito e poi imposta l'osservatore delle mutazioni
+    checkTheme();
+    
+    // Crea un osservatore di attributi per il document element
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'data-theme') {
+          checkTheme();
+        }
+      });
+    });
+    
+    // Inizia ad osservare le modifiche all'attributo data-theme
+    observer.observe(document.documentElement, { attributes: true });
+    
+    // Cleanup quando il componente si smonta
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className={`${styles.chatWrapper} ${styles[theme]}`}>
-      <button 
-        onClick={toggleTheme} 
-        className={styles.themeToggle}
-        aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-      >
-        {theme === 'dark' 
-          ? <span className={styles.themeIcon}>☀️</span> 
-          : <span className={styles.themeIcon}>🌙</span>}
-      </button>
       <ChatContainer theme={theme}></ChatContainer>
     </div>
   );
