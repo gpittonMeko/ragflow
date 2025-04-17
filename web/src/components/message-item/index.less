@@ -17,6 +17,7 @@
   .messageTextBase() {
     padding: 8px 12px; // Increased padding for better readability
     border-radius: 8px;
+    transition: background-color 0.3s, color 0.3s;
     & > p {
       margin: 0;
     }
@@ -24,29 +25,29 @@
   .messageText {
     .chunkText();
     .messageTextBase();
-    background-color: #333333; // Dark background for assistant messages
-    color: #f0f0f0; // Light text color
+    background-color: var(--message-bg, #333333);
+    color: var(--text-primary, #f0f0f0);
     word-break: break-word;
   }
   .messageTextDark {
     .chunkText();
     .messageTextBase();
-    background-color: #1668dc; // Keeping the original color for emphasis, adjust if needed
-    color: #f0f0f0;
+    background-color: var(--accent-color, #1668dc);
+    color: var(--text-primary, #f0f0f0);
     word-break: break-word;
     :global(section.think) {
-      color: #a0a0a0; // Slightly lighter gray for better visibility
-      border-left-color: #555555; // Darker border
+      color: var(--text-secondary, #a0a0a0);
+      border-left-color: var(--border-color, #555555);
     }
   }
 
   .messageUserText {
     .chunkText();
     .messageTextBase();
-    background-color: #444444; // Dark background for user messages
-    color: #f0f0f0; // Light text color
+    background-color: var(--message-user-bg, #444444);
+    color: var(--text-primary, #f0f0f0);
     word-break: break-word;
-    text-align: left; // Changed to left for consistency in a dark theme
+    text-align: left;
   }
   .messageEmpty {
     width: 300px;
@@ -63,4 +64,25 @@
 
 .messageItemRight {
   text-align: right;
+}
+
+/* Adding CSS variables for both themes */
+:root {
+  /* Dark theme (default) */
+  --message-bg: #333333;
+  --message-user-bg: #444444;
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --accent-color: #1668dc;
+  --border-color: #555555;
+}
+
+/* Light theme variables */
+[data-theme="light"] {
+  --message-bg: #f0f0f0;
+  --message-user-bg: #e6f7ff;
+  --text-primary: #1d1d1f;
+  --text-secondary: #515154;
+  --accent-color: #1890ff;
+  --border-color: #d9d9d9;
 }

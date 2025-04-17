@@ -89,6 +89,17 @@ const MessageItem = ({
     }
   }, [item.doc_ids, setDocumentIds, setIds, documentThumbnails]);
 
+  // Determine message style based on theme and role
+  const getMessageStyle = () => {
+    if (isAssistant) {
+      // For assistant messages, we want to check if it's dark theme
+      return theme === 'dark' ? styles.messageTextDark : styles.messageText;
+    } else {
+      // For user messages, always use the messageUserText style (which is now theme-aware)
+      return styles.messageUserText;
+    }
+  };
+
   return (
     <div
       className={classNames(styles.messageItem, {
@@ -143,15 +154,7 @@ const MessageItem = ({
 
               {/* <b>{isAssistant ? '' : nickname}</b> */}
             </Space>
-            <div
-              className={
-                isAssistant
-                  ? theme === 'dark'
-                    ? styles.messageTextDark
-                    : styles.messageText
-                  : styles.messageUserText
-              }
-            >
+            <div className={getMessageStyle()}>
               <MarkdownContent
                 loading={loading}
                 content={item.content}
@@ -191,9 +194,6 @@ const MessageItem = ({
                 bordered
                 dataSource={documentList}
                 renderItem={(item) => {
-                  // TODO:
-                  // const fileThumbnail =
-                  //   documentThumbnails[item.id] || documentThumbnails[item.id];
                   const fileExtension = getExtension(item.name);
                   return (
                     <List.Item>
