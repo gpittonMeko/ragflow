@@ -40,6 +40,8 @@ const ChatContainer = ({ theme }) => {
   } = useSendSharedMessage();
   const sendDisabled = useSendButtonDisabled(value);
   const messagesContainerRef = useRef(null);
+  const isGeneratingRef = useRef(false);
+  const inputRef = useRef(null);
 
   const useFetchAvatar = useMemo(() => {
     return from === SharedFrom.Agent
@@ -53,44 +55,83 @@ const ChatContainer = ({ theme }) => {
     }
   }, [locale, visibleAvatar]);
   
-  // Migliora lo scrolling automatico per seguire il testo generato
+  // Gestione focus e scroll
   useEffect(() => {
-    if (messagesContainerRef.current) {
-      const scrollToBottom = () => {
-        if (ref.current) {
-          ref.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        }
-      };
+    if (!messagesContainerRef.current) return;
+
+    // Gestione inizio e fine generazione
+    if (!isGeneratingRef.current && sendLoading) {
+      // Inizio generazione
+      isGeneratingRef.current = true;
       
-      // Scroll quando ci sono cambiamenti nei messaggi
-      scrollToBottom();
-      
-      // Setup un timer per lo scroll continuo durante la generazione se sendLoading è true
-      if (sendLoading) {
-        const scrollInterval = setInterval(scrollToBottom, 1000);
-        return () => clearInterval(scrollInterval);
+      // Notifica al parent di espandere l'iframe
+      try {
+        window.parent.postMessage({
+          type: 'expand-iframe',
+          expanding: true
+        }, '*');
+      } catch (e) {
+        console.warn("Errore nell'invio del messaggio al parent", e);
       }
-    }
-  }, [sendLoading, derivedMessages, ref]);
-  
-  // Observer per rilevare nuovi contenuti aggiunti e fare scroll automatico
-  useEffect(() => {
-    if (!messagesContainerRef.current || !ref.current) return;
-    
-    const observer = new MutationObserver(() => {
+      
+      // Scroll iniziale
       if (ref.current) {
         ref.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
-    });
+    } 
+    else if (isGeneratingRef.current && !sendLoading) {
+      // Fine generazione
+      isGeneratingRef.current = false;
+      
+      // Scroll finale
+      setTimeout(() => {
+        if (ref.current) {
+          ref.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+        
+        // Notifica al parent che la generazione è terminata
+        try {
+          window.parent.postMessage({
+            type: 'expand-iframe',
+            expanding: false
+          }, '*');
+        } catch (e) {
+          console.warn("Errore nell'invio del messaggio al parent", e);
+        }
+      }, 300);
+    }
+  }, [sendLoading, derivedMessages, ref]);
+  
+  // Prevenzione focus durante digitazione
+  useEffect(() => {
+    // Impedisce il focus automatico e lo scrolling durante la digitazione
+    const preventAutofocusScroll = (e) => {
+      if (sendLoading) return; // Permetti lo scrolling durante la generazione
+      
+      if (inputRef.current && document.activeElement === inputRef.current) {
+        // Impedisci focus durante digitazione
+        inputRef.current.blur();
+        
+        // Impedisci scrolling durante digitazione
+        if (e.type === 'scroll') {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      }
+    };
     
-    observer.observe(messagesContainerRef.current, {
-      childList: true,
-      subtree: true,
-      characterData: true
-    });
+    // Aggiungi multipli eventi per massima compatibilità
+    document.addEventListener('scroll', preventAutofocusScroll, { passive: false });
+    document.addEventListener('focus', preventAutofocusScroll, true);
+    window.addEventListener('scroll', preventAutofocusScroll, { passive: false });
     
-    return () => observer.disconnect();
-  }, [ref]);
+    return () => {
+      document.removeEventListener('scroll', preventAutofocusScroll);
+      document.removeEventListener('focus', preventAutofocusScroll);
+      window.removeEventListener('scroll', preventAutofocusScroll);
+    };
+  }, [sendLoading]);
   
   const { data: avatarData } = useFetchAvatar();
 
@@ -152,6 +193,7 @@ const ChatContainer = ({ theme }) => {
           sendLoading={sendLoading}
           uploadMethod="external_upload_and_parse"
           showUploadIcon={false}
+          ref={inputRef}
         ></MessageInput>
       </Flex>
       {visible && (
