@@ -1,57 +1,175 @@
+:root {
+  --bg-primary: #181818;
+  --bg-secondary: #222222;
+  --bg-message: #333333;
+  --bg-user-message: #444444;
+  --bg-input: #333333;
+  --bg-button: #555555;
+  --text-primary: #f0f0f0;
+  --text-secondary: #aaaaaa;
+  --border-color: #555555;
+  --accent-color: #0070f3;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --transition-time: 0.3s;
+}
+
+[data-theme="light"] {
+  --bg-primary: #f5f5f7;
+  --bg-secondary: #ffffff;
+  --bg-message: #f0f0f0;
+  --bg-user-message: #e6e6e6;
+  --bg-input: #ffffff;
+  --bg-button: #0070f3;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --border-color: #e0e0e0;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 .chatWrapper {
   height: 100%;
-  background-color: #181818; /* Sfondo scuro simile a ChatGPT */
-  color: #f0f0f0; /* Testo chiaro */
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color var(--transition-time), color var(--transition-time);
+  position: relative;
+}
+
+.themeToggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  box-shadow: var(--shadow);
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.themeIcon {
+  font-size: 20px;
 }
 
 .chatContainer {
   padding: 10px;
   box-sizing: border-box;
   height: 100%;
-  background-color: #222222; /* Sfondo leggermente più scuro per il contenitore */
+  background-color: var(--bg-secondary);
+  transition: background-color var(--transition-time);
 
   .messageContainer {
     overflow-y: auto;
     padding-right: 6px;
 
-    // Stili per i messaggi (potrebbe essere necessario adattare in base alla struttura HTML dei tuoi messaggi)
-    .messageItem {
-      background-color: #333333; /* Sfondo dei messaggi */
-      color: #f0f0f0;
-      border-radius: 8px;
-      padding: 8px 12px;
-      margin-bottom: 8px;
+    // Stili globali per i messaggi
+    :global(.messageItem___OK1Zd) {
+      background-color: var(--bg-message);
+      color: var(--text-primary);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      transition: background-color var(--transition-time), color var(--transition-time);
+    }
 
-      &.user {
-        background-color: #444444; /* Sfondo dei messaggi dell'utente */
-      }
+    :global(.messageItemLeft___L270A) {
+      background-color: var(--bg-message);
+    }
 
-      // Potrebbe essere necessario stilizzare ulteriormente avatar, timestamp, ecc.
+    :global(.messageItemRight___HA1z_) {
+      background-color: var(--bg-user-message);
+    }
+
+    :global(.messageItemSection___a_W_M) {
+      padding: 12px;
+    }
+
+    :global(.messageItemContent___j99sG) {
+      color: var(--text-primary);
+    }
+
+    :global(.ant-spin-nested-loading) {
+      transition: background-color var(--transition-time);
     }
   }
 
-  // Stili per l'input del messaggio (potrebbe essere in un altro componente)
-  .messageInputWrapper {
-    background-color: #181818;
-    border-top: 1px solid #555555;
+  // Stili globali per l'input dei messaggi
+  :global(.messageInputWrapper___nie1o) {
+    background-color: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+    transition: background-color var(--transition-time), border-color var(--transition-time);
 
-    input {
-      background-color: #333333;
-      color: #f0f0f0;
-      border: none;
-      border-radius: 8px;
-      padding: 10px;
+    :global(.ant-input) {
+      background-color: var(--bg-input);
+      color: var(--text-primary);
+      border-radius: 12px;
+      transition: background-color var(--transition-time), color var(--transition-time);
     }
 
-    button {
-      background-color: #555555;
-      color: #f0f0f0;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 15px;
-      cursor: pointer;
+    :global(.ant-btn-primary) {
+      background-color: var(--accent-color);
+      border-color: var(--accent-color);
+      color: white;
+      transition: background-color var(--transition-time);
+    }
+
+    :global(.ant-btn-primary:disabled) {
+      background-color: rgba(0, 0, 0, 0.1);
+      border-color: var(--border-color);
+      color: var(--text-secondary);
+    }
+
+    :global(.ant-input-clear-icon) {
+      color: var(--text-secondary);
+    }
+
+    :global(.ant-divider) {
+      border-color: var(--border-color);
     }
   }
+}
 
-  // Altri stili specifici della tua chat potrebbero essere necessari
+// Media queries per la responsività
+@media (max-width: 768px) {
+  .themeToggle {
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+  }
+  
+  .themeIcon {
+    font-size: 16px;
+  }
+
+  .chatContainer {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .themeToggle {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .themeIcon {
+    font-size: 14px;
+  }
+
+  .chatContainer {
+    padding: 5px;
+  }
+
+  :global(.messageItemSection___a_W_M) {
+    padding: 8px !important;
+  }
 }
