@@ -18,7 +18,10 @@ services:
       - ./nginx/proxy.conf:/etc/nginx/proxy.conf
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ../web:/ragflow/web
-      - /etc/letsencrypt:/etc/letsencrypt:ro  # Aggiungi questa linea
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./entrypoint.sh:/ragflow/entrypoint.sh  # Aggiungi questa riga
+
+  # Aggiungi questa linea
 
     env_file: .env
     environment:
