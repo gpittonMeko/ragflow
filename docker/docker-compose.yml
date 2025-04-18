@@ -47,7 +47,7 @@ services:
       - TZ=${TIMEZONE}
       - HF_ENDPOINT=${HF_ENDPOINT}
       - MACOS=${MACOS}
-    command: "python -m rag.task.executor --num-threads 8"
+    command: "python -m rag.task.executor --num-threads 5"
     networks:
       - ragflow
     restart: on-failure
