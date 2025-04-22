@@ -1,27 +1,253 @@
 import os
 import json
 import PyPDF2
-import openai  # Assicurati che questa riga sia presente all'inizio del tuo script
-from openai import OpenAI  # Importa specificamente la classe OpenAI
-from typing import List, Dict, Optional
+# import openai # Non necessario per la categorizzazione basata su keyword
+import re
+# from openai import OpenAI # Non necessario per la categorizzazione basata su keyword
+from typing import List, Dict, Optional, Tuple
 import time
-from tqdm import tqdm  # Importa la libreria tqdm per la barra di progresso
-import concurrent.futures
-import threading
+# from tqdm import tqdm # Puoi aggiungerlo per visualizzare l'avanzamento
+import concurrent.futures # Import per la gestione dei thread/processi
+# import threading # Mantenuto per la struttura originale, ma non usato direttamente nel Executor
 
 # =======================================================
-# CONFIGURAZIONE: API e modello
+# CONFIGURAZIONE: API e modello (Non necessari per la categorizzazione basata su keyword)
 # =======================================================
 # La chiave API viene letta dalla variabile d'ambiente OPEN_AI_API
-openai.api_key = os.environ.get("OPEN_AI_API")
-MODEL_NAME = "gpt-4o-mini-2024-07-18"
+# openai.api_key = os.environ.get("OPEN_AI_API")
+# MODEL_NAME = "gpt-4o-mini-2024-07-18"
 
 # Variabile globale per memorizzare i metadati dell'ultima sentenza elaborata (thread-safe)
-last_processed_metadata = None
-metadata_lock = threading.Lock()
+# last_processed_metadata = None
+# metadata_lock = threading.Lock()
 
 # Variabile per controllare se l'elaborazione è in corso
-processing_active = True
+# processing_active = True
+
+# =======================================================
+# DEFINIZIONE DELLE CATEGORIE FISCALI (Provided by the user)
+# =======================================================
+
+# Gruppi di categorie fiscali organizzati in modo gerarchico
+taxCategoryGroups = {
+  "IMPOSTE DIRETTE": {
+    "A010": {
+      "name": "Irpef",
+      "primaryKeywords": ["irpef", "imposta sul reddito delle persone fisiche"],
+      "keywords": ["reddito persone fisiche", "dichiarazione redditi", "730", "modello unico", "detrazioni", "deduzioni"]
+    },
+    "A020": {
+      "name": "Ires (ex Irpeg)",
+      "primaryKeywords": ["ires", "irpeg", "imposta sul reddito delle società"],
+      "keywords": ["reddito societario", "tassazione società", "utili aziendali"]
+    },
+    "A030": {
+      "name": "Ilor",
+      "primaryKeywords": ["ilor", "imposta locale sui redditi"],
+      "keywords": ["imposta locale"]
+    },
+    "C010": {
+      "name": "Irap",
+      "primaryKeywords": ["irap", "imposta regionale sulle attività produttive"],
+      "keywords": ["attività produttive", "valore della produzione", "produzione netta"]
+    }
+  },
+  "IMPOSTE INDIRETTE": {
+    "B010": {
+      "name": "Iva",
+      "primaryKeywords": ["iva", "imposta sul valore aggiunto"],
+      "keywords": ["detrazione iva", "credito iva", "rimborso iva", "operazioni imponibili", "fatturazione"]
+    },
+    "B020": {
+      "name": "Registro",
+      "primaryKeywords": ["imposta di registro", "registro"],
+      "keywords": ["atto di registro", "registrazione", "tassazione atti"]
+    },
+    "B030": {
+      "name": "Ipotecarie e catastali",
+      "primaryKeywords": ["ipotecarie e catastali", "ipotecaria", "imposta ipotecaria", "catastale"],
+      "keywords": ["catasto", "ipoteca", "trascrizione"]
+    },
+    "B040": {
+      "name": "Successioni e donazioni",
+      "primaryKeywords": ["successioni", "donazioni", "imposta sulle successioni"],
+      "keywords": ["eredità", "lascito", "testamento", "asse ereditario"]
+    },
+    "B050": {
+      "name": "Bollo",
+      "primaryKeywords": ["bollo", "imposta di bollo"],
+      "keywords": ["marca da bollo", "contrassegno", "carta bollata"]
+    }
+  },
+  "TRIBUTI LOCALI": {
+    "C020": {
+      "name": "Imu ex Ici",
+      "primaryKeywords": ["imu", "ici", "imposta municipale", "imposta comunale sugli immobili"],
+      "keywords": ["tributo comunale", "immobili", "fabbricati", "rendita catastale"]
+    },
+    "C030": {
+      "name": "Pubblicità e pubbliche affissioni",
+      "primaryKeywords": ["imposta sulla pubblicità", "pubbliche affissioni"],
+      "keywords": ["affissioni", "manifesti", "insegne"]
+    },
+    "C040": {
+      "name": "Tarsu",
+      "primaryKeywords": ["tarsu", "tassa per lo smaltimento dei rifiuti solidi urbani", "tari"],
+      "keywords": ["tassa rifiuti", "smaltimento", "rifiuti urbani"]
+    },
+    "C050": {
+      "name": "Cosap",
+      "primaryKeywords": ["cosap", "canone occupazione spazi"],
+      "keywords": ["occupazione suolo pubblico", "spazi pubblici"]
+    },
+    "C060": {
+      "name": "Tosap",
+      "primaryKeywords": ["tosap", "tassa per l'occupazione di spazi ed aree pubbliche"],
+      "keywords": ["occupazione", "suolo pubblico", "aree pubbliche"]
+    }
+  },
+  "CONTENZIOSO E RISCOSSIONE": {
+    "D010": {
+      "name": "Agevolazioni",
+      "primaryKeywords": ["agevolazioni", "agevolazione fiscale", "agevolazioni tributarie"],
+      "keywords": ["benefici fiscali", "esenzioni", "detassazione", "credito d'imposta"]
+    },
+    "D020": {
+      "name": "Riscossione",
+      "primaryKeywords": ["riscossione", "cartella di pagamento", "ingiunzione di pagamento", "cartelle", "iscrizione ipotecaria"],
+      "keywords": ["ruolo", "esattoria", "agente della riscossione", "agenzia entrate riscossione", "dilazione", "intimazione"]
+    },
+    "D030": {
+      "name": "Rimborsi",
+      "primaryKeywords": ["rimborso", "rimborsi"],
+      "keywords": ["restituzione", "credito", "indebito", "somme non dovute"]
+    },
+    "D040": {
+      "name": "Accertamento imposte",
+      "primaryKeywords": ["accertamento", "avviso di accertamento"],
+      "keywords": ["controllo", "rettifica", "verifica", "indagini", "presunzioni"]
+    },
+    "D050": {
+      "name": "Violazioni e sanzioni",
+      "primaryKeywords": ["sanzioni", "sanzione tributaria", "violazione"],
+      "keywords": ["penalità", "illecito", "infrazione", "irregolarità", "tardivo"]
+    },
+    "D060": {
+      "name": "Contenzioso",
+      "primaryKeywords": ["contenzioso tributario", "contenzioso fiscale", "ricorso tributario", "commissione tributaria"],
+      "keywords": ["impugnazione", "giudizio", "processo", "sentenza", "appello"]
+    },
+    "D070": {
+      "name": "Condono",
+      "primaryKeywords": ["condono", "condono fiscale", "sanatoria"],
+      "keywords": ["definizione agevolata", "pace fiscale", "rottamazione"]
+    },
+    "D080": {
+      "name": "Rapporti con l'AF",
+      "primaryKeywords": ["rapporti con l'amministrazione finanziaria", "agenzia delle entrate"],
+      "keywords": ["amministrazione finanziaria", "ufficio imposte", "rapporti con il fisco"]
+    }
+  },
+  "IMPOSTE SPECIALI": {
+    "E010": {
+      "name": "Accise armonizzate - Prodotti energetici ed elettricità",
+      "primaryKeywords": ["accise", "prodotti energetici", "elettricità", "accisa sui prodotti energetici"],
+      "keywords": ["energia", "carburanti", "combustibili"]
+    },
+    "E020": {
+      "name": "Accise armonizzate - Alcole",
+      "primaryKeywords": ["accise alcole", "alcole", "alcolici", "accisa sugli alcolici"],
+      "keywords": ["bevande alcoliche", "spiriti", "liquori"]
+    },
+    "E030": {
+      "name": "Accise non armonizzate",
+      "primaryKeywords": ["accise non armonizzate"],
+      "keywords": ["accise", "non armonizzate"]
+    },
+    "F010": {
+      "name": "Dogane",
+      "primaryKeywords": ["dogane", "doganale", "dazio", "dazi doganali"],
+      "keywords": ["importazione", "esportazione", "tassazione doganale", "frontiera"]
+    },
+    "B060": {
+      "name": "Concessioni governative",
+      "primaryKeywords": ["concessioni governative", "tassa sulle concessioni governative"],
+      "keywords": ["concessioni", "governo", "licenze"]
+    },
+    "B070": {
+      "name": "Imposta sulle assicurazioni",
+      "primaryKeywords": ["imposta sulle assicurazioni"],
+      "keywords": ["polizze", "assicurazione", "premi"]
+    },
+    "B080": {
+      "name": "Tassa sui contratti di borsa",
+      "primaryKeywords": ["contratti di borsa", "tassa sui contratti di borsa"],
+      "keywords": ["borsa", "contratti", "mercato azionario"]
+    },
+    "B090": {
+      "name": "Intrattenimenti",
+      "primaryKeywords": ["intrattenimenti", "imposta sugli intrattenimenti"],
+      "keywords": ["spettacoli", "eventi", "divertimento"]
+    },
+    "B100": {
+      "name": "Tasse automobilistiche",
+      "primaryKeywords": ["tasse automobilistiche", "bollo auto", "tassa automobilistica"],
+      "keywords": ["automobili", "veicoli", "bollo"]
+    },
+    "B110": {
+      "name": "Radiodiffusioni",
+      "primaryKeywords": ["radiodiffusioni", "canone rai"],
+      "keywords": ["radio", "televisione", "canone"]
+    },
+    "B130": {
+      "name": "Imposta erariale di trascrizione",
+      "primaryKeywords": ["erariale di trascrizione", "imposta erariale"],
+      "keywords": ["trascrizione", "registro", "veicoli"]
+    },
+    "B140": {
+      "name": "Diritti e tributi indiretti vari",
+      "primaryKeywords": ["tributi indiretti", "diritti indiretti"],
+      "keywords": ["tributi", "diritti", "imposte indirette"]
+    }
+  },
+  "CATASTO E ALTRI TRIBUTI": {
+    "G010": {
+      "name": "Demanio",
+      "primaryKeywords": ["demanio", "demaniale"],
+      "keywords": ["beni demaniali", "patrimonio pubblico"]
+    },
+    "H010": {
+      "name": "Catasto",
+      "primaryKeywords": ["catasto", "catastale"],
+      "keywords": ["rendita", "accertamento catastale", "visura", "mappale", "particella"]
+    },
+    "H020": {
+      "name": "Servizi estimativi (OMI)",
+      "primaryKeywords": ["servizi estimativi", "omi", "osservatorio mercato immobiliare"],
+      "keywords": ["stima", "valutazione", "immobili"]
+    },
+    "H030": {
+      "name": "Pubblicità immobiliare",
+      "primaryKeywords": ["pubblicità immobiliare"],
+      "keywords": ["immobili", "pubblicazione", "trascrizione"]
+    },
+    "C070": {
+      "name": "Invim",
+      "primaryKeywords": ["invim", "imposta sull'incremento di valore degli immobili"],
+      "keywords": ["incremento valore", "immobili", "valore"]
+    },
+    "C080": {
+      "name": "Iciap",
+      "primaryKeywords": ["iciap", "imposta comunale per l'esercizio di imprese"],
+      "keywords": ["comunale", "esercizio imprese"]
+    },
+    "C090": {
+      "name": "Tributi locali vari",
+      "primaryKeywords": ["tributi locali", "tributo locale"],
+      "keywords": ["locale", "comune", "provincia", "regione"]
+    }
+  }
+}
 
 # =======================================================
 # FUNZIONI DI BASE PER L'ESTRAZIONE DEL TESTO
@@ -33,33 +259,38 @@ def estrai_testo_parziale_da_pdf(percorso_pdf: str, pagine_iniziali: int = 2, pa
     per ridurre il numero di token inviati al modello.
     Se il PDF ha meno pagine, prende tutte quelle disponibili.
     """
-    print(f"[LOG] [{threading.current_thread().name}] Estrazione testo parziale da: {percorso_pdf}")
-    with open(percorso_pdf, 'rb') as f:
-        reader = PyPDF2.PdfReader(f)
-        num_pages = len(reader.pages)
+    # print(f"[LOG] Estrazione testo parziale da: {percorso_pdf}") # Evita stampe eccessive per molti file
+    try:
+        with open(percorso_pdf, 'rb') as f:
+            reader = PyPDF2.PdfReader(f)
+            num_pages = len(reader.pages)
 
-        testo_estratto = []
+            testo_estratto = []
 
-        # Estrae le pagine iniziali
-        fine_iniziali = min(pagine_iniziali, num_pages)
-        for i in range(fine_iniziali):
-            txt = reader.pages[i].extract_text() or ""
-            testo_estratto.append(txt)
-
-        # Estrae le pagine finali (evitando duplicati)
-        start_finali = max(0, num_pages - pagine_finali)
-        for i in range(start_finali, num_pages):
-            if i >= fine_iniziali:
+            # Estrae le pagine iniziali
+            fine_iniziali = min(pagine_iniziali, num_pages)
+            for i in range(fine_iniziali):
                 txt = reader.pages[i].extract_text() or ""
                 testo_estratto.append(txt)
 
-    return "\n".join(testo_estratto)
+            # Estrae le pagine finali (evitando duplicati)
+            start_finali = max(0, num_pages - pagine_finali)
+            for i in range(start_finali, num_pages):
+                if i >= fine_iniziali:
+                    txt = reader.pages[i].extract_text() or ""
+                    testo_estratto.append(txt)
+
+        return "\n".join(testo_estratto)
+    except Exception as e:
+        print(f"[LOG] Errore nell'estrazione del testo parziale da {percorso_pdf}: {e}")
+        return ""
+
 
 def estrai_testo_completo_da_pdf(percorso_pdf: str) -> str:
     """
     Estrae tutto il testo da un file PDF.
     """
-    print(f"[LOG] [{threading.current_thread().name}] Estrazione testo completo da: {percorso_pdf}")
+    # print(f"[LOG] Estrazione testo completo da: {percorso_pdf}") # Evita stampe eccessive per molti file
     testo_completo = ""
     try:
         with open(percorso_pdf, 'rb') as f:
@@ -67,13 +298,13 @@ def estrai_testo_completo_da_pdf(percorso_pdf: str) -> str:
             for page in reader.pages:
                 testo_completo += page.extract_text() + "\n"
     except Exception as e:
-        print(f"[LOG] [{threading.current_thread().name}] Errore nell'estrazione del testo completo da {percorso_pdf}: {e}")
+        print(f"[LOG] Errore nell'estrazione del testo completo da {percorso_pdf}: {e}")
     return testo_completo
 
 def suddividi_testo_in_chunk(testo: str, max_caratteri: int = 1500) -> List[str]:
     """
     Suddivide il testo in blocchi (chunk) di dimensione massima 'max_caratteri',
-    per evitare di superare il limite di token per ogni chiamata.
+    per evitare di superare il limite di token per ogni chiamata (non usato con categorizzazione keyword).
     """
     parole = testo.split()
     chunks = []
@@ -96,315 +327,454 @@ def suddividi_testo_in_chunk(testo: str, max_caratteri: int = 1500) -> List[str]
     return chunks
 
 # =======================================================
-# FUNZIONI DI ESTRAZIONE METADATI CON GPT
+# FUNZIONI PER LA CATEGORIZZAZIONE TRIBUTARIA
 # =======================================================
 
-def chiama_gpt_4o_mini(testo: str, filename: str) -> dict:
+def preprocessText(text: str) -> str:
     """
-    Chiama il modello 'gpt-4o-mini' con un prompt che richiede di estrarre i metadati dettagliati
-    di una sentenza o atto (tributario) e di categorizzarlo secondo il massimario, utilizzando i filtri forniti.
-    La risposta deve essere un JSON valido e conciso.
+    Preprocessa il testo della sentenza per l'analisi
     """
-    prompt_utente = f"""
-Sei un sistema esperto nell'analisi di sentenze e atti (tributari) italiani.
-Il tuo obiettivo è estrarre metadati precisi e categorizzare il documento secondo il massimario,
-utilizzando i seguenti campi e le loro possibili opzioni come riferimento per l'estrazione.
-Rispondi con un JSON valido e LACONICO con i seguenti campi (se pertinenti, altrimenti lascia il campo vuoto o usa null):
-- "filename": "{filename}"
-- "tipo_documento": "sentenza" o "prassi"
-  se "sentenza":
-    - "localizzazione_corte": <string>
-    - "composizione_corte": <string> (indicare solo presidente e relatore se disponibili)
-    - "grado_di_giudizio": <string> (opzioni: "primo grado", "secondo grado")
-    - "esito_controversia": <string> (usa una frase breve e chiara)
-    - "anno_numero_sentenza": <string> (formato "AAAA_NNNNN")
-    - "numero_sentenza": <string> (solo il numero)
-    - "anno_sentenza": <number> (solo l'anno)
-    - "grado_autorita_emittente": <string> (opzioni: "CGT primo grado/Provinciale", "CGT secondo grado/Regionale")
-    - "autorita_emittente": <string>
-    - "sentenza_impugnata": <string> (opzioni: "SI", "NO")
-    - "data_deposito": <string> (formato "AAAA-MM-GG" se una singola data è chiaramente indicata)
-    - "valore_controversia": <string> (opzioni: "Fino a 5.000 euro", "Da 5.000,01 a 20.000 euro", "Da 20.000,01 a 1.000.000 euro", "Oltre 1.000.000 euro")
-    - "tipo_giudizio": <string> (opzioni: "Monocratico", "Collegiale")
-    - "esito_giudizio": <string> (opzioni: "Conciliazione", "Condono ed altri esiti", "Esito non definitorio su pronunciam. definitorio", "Favorevole al contribuente", "Favorevole all'ufficio", "Giudizio intermedio", "Reclamo respinto")
-    - "materia": <string> (opzioni: "Accertamento imposte", "Accise armonizzate - Alcole", "Accise armonizzate - Prodotti energetici ed elettricità", "Accise non armonizzate", "Agevolazioni", "Bollo", "Catasto", "Concessioni governative", "Condono", "Contenzioso", "Cosap", "Demanio", "Diritti e tributi indiretti vari", "Dogane", "Iciap", "Ilor", "Imposta erariale di trascrizione", "Imposta sulle assicurazioni", "Imu ex Ici", "Intrattenimenti", "Invim", "Ipotecarie e catastali", "Irap", "Ires (ex Irpeg)", "Irpef", "Iva", "Pubblicità e pubbliche affissioni", "Pubblicità immobiliare", "Radiodiffusioni", "Rapporti con l'AF", "Registro", "Rimborsi", "Riscossione", "Servizi estimativi (OMI)", "Successioni e donazioni", "Tarsu", "Tassa sui contratti di borsa", "Tasse automobilistiche", "Tosap", "Tributi locali vari", "Violazioni e sanzioni")
-    - "spese_giudizio": <string> (opzioni: "Compensate", "A carico del contribuente", "A carico dell'ufficio")
-  se "prassi":
-    - "tipologia_prassi": <string>
-    - "anno_prassi": <number>
-    - "numero_prassi": <string>
-- "massimario": [elenco di massimo 3 etichette o capitoli del massimario più pertinenti al contenuto principale del documento. Sii molto conciso e usa termini standard.]
-- "riferimenti_normativi": [elenco di massimo 3 riferimenti normativi principali (articoli di legge, decreti, ecc.). Riporta solo i riferimenti espliciti.]
+    # Converti in minuscolo
+    processed_text = text.lower()
 
-Testo:
-\"\"\"{testo}\"\"\"
-"""
-    try:
-        client = OpenAI() # Inizializza il client OpenAI
-        print(f"[LOG] [{threading.current_thread().name}] Chiamata API per: {filename}")
-        start_time = time.time()
-        completion = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": "Sei un assistente specializzato in testi giuridici. Fornisci solo output in JSON valido e sii molto conciso."},
-                {"role": "user", "content": prompt_utente}
-            ],
-            temperature=0.1, # Abbasso la temperatura per risposte più deterministiche
-            max_tokens=700 # Regolo i token massimi
-        )
-        end_time = time.time()
-        print(f"[LOG] [{threading.current_thread().name}] Risposta API ricevuta per: {filename} in {end_time - start_time:.2f} secondi.")
-        output = completion.choices[0].message.content
-        try:
-            parsed = json.loads(output)
-        except json.JSONDecodeError:
-            parsed = {
-                "filename": filename,
-                "raw_output": output,
-                "errore": "JSONDecodeError: output non valido"
-            }
-            print(f"[LOG] [{threading.current_thread().name}] Errore JSONDecode per: {filename} - Output: {output}")
-        return parsed
-    except Exception as e:
-        print(f"[LOG] [{threading.current_thread().name}] Errore nella chiamata API per {filename}: {e}")
-        return {"filename": filename, "errore": f"Errore nella chiamata API: {e}"}
+    # Rimuovi caratteri speciali ma mantieni spazi e punteggiatura essenziale
+    processed_text = re.sub(r'[^\w\s.,;:()"]', ' ', processed_text)
+
+    # Normalizza gli spazi multipli
+    processed_text = re.sub(r'\s+', ' ', processed_text)
+
+    return processed_text
+
+def isRiscossioneDocument(text: str) -> bool:
+    """
+    Verifica se una sentenza riguarda principalmente la riscossione
+    """
+    riscossione_terms = [
+        "riscossione",
+        "cartella di pagamento",
+        "cartelle di pagamento",
+        "iscrizione ipotecaria",
+        "intimazione di pagamento",
+        "ruolo esattoriale",
+        "agente della riscossione"
+    ]
+
+    # Controlla se almeno 2 termini relativi alla riscossione sono presenti
+    count = 0
+    for term in riscossione_terms:
+        if term in text:
+            count += 1
+            if count >= 2:
+                return True
+
+    # Oppure se "riscossione" appare più di 3 volte
+    riscossione_matches = re.findall(r'riscossione', text)
+    if riscossione_matches and len(riscossione_matches) > 3:
+        return True
+
+    return False
+
+def countKeywordMatches(text: str, keywords: List[str]) -> int:
+    """
+    Conta le occorrenze di una lista di parole chiave nel testo
+    """
+    count = 0
+
+    for keyword in keywords:
+        # Utilizza un'espressione regolare con word boundary per trovare corrispondenze esatte
+        regex = re.compile(r'\b' + re.escape(keyword) + r'\b', re.IGNORECASE)
+        matches = regex.findall(text)
+        count += len(matches)
+
+    return count
+
+def adjustScoreForPosition(text: str, keywords: List[str], baseScore: int) -> int:
+    """
+    Aumenta il punteggio se le parole chiave appaiono nelle parti importanti della sentenza
+    """
+    adjusted_score = baseScore
+
+    # Estrai l'inizio della sentenza (circa 20% del testo)
+    introduction_threshold = int(len(text) * 0.2)
+    introduction = text[:introduction_threshold]
+
+    # Cerca di estrarre il dispositivo/conclusioni della sentenza
+    dispositive_match = re.search(r'(?:PQM|P\.Q\.M\.|per questi motivi|il collegio|la commissione).*?(?:decide|stabilisce|accoglie|rigetta|dichiara)', text, re.IGNORECASE | re.DOTALL)
+    dispositive = dispositive_match.group(0) if dispositive_match else text[int(len(text) * 0.8):]
+
+    # Controlla se le parole chiave sono presenti nell'introduzione (peso maggiore)
+    for keyword in keywords:
+        regex = re.compile(r'\b' + re.escape(keyword) + r'\b', re.IGNORECASE)
+
+        if regex.search(introduction):
+            adjusted_score += 2  # Bonus per parole chiave nell'introduzione
+
+        if regex.search(dispositive):
+            adjusted_score += 3  # Bonus maggiore per parole chiave nel dispositivo
+
+    return adjusted_score
+
+def analyzeKeywordContext(text: str, keyword: str, contextSize: int = 100) -> float:
+    """
+    Analizza il contesto in cui appaiono le parole chiave.
+    Ritorna un punteggio basato sulla rilevanza del contesto.
+    """
+    score = 0.0
+    regex = re.compile(r'\b' + re.escape(keyword) + r'\b', re.IGNORECASE)
+
+    for match in regex.finditer(text):
+        start = max(0, match.start() - contextSize)
+        end = min(len(text), match.end() + contextSize)
+        context = text[start:end]
+
+        # Esempi di pattern contestuali rilevanti (possono essere affinati)
+        if re.search(r'ricorso\s.*?contro\s.*?' + re.escape(keyword), context, re.IGNORECASE):
+            score += 1.5 # Trovato nel contesto di un ricorso contro quella materia
+        if re.search(re.escape(keyword) + r'.*?(?:oggetto|materia|relativo)', context, re.IGNORECASE):
+             score += 1.0 # Trovato vicino a "oggetto", "materia", "relativo"
+        if re.search(r'(?:applicazione|disciplina|versamento|liquidazione)\s.*?' + re.escape(keyword), context, re.IGNORECASE):
+             score += 0.8 # Trovato nel contesto di applicazione/disciplina/versamento/liquidazione
+        if re.search(re.escape(keyword) + r'.*?(?:legge|articolo|comma|decreto)', context, re.IGNORECASE):
+             score += 0.7 # Trovato vicino a riferimenti normativi
+
+
+    return score * 0.5 # Riduci l'impatto del punteggio di contesto rispetto alle occorrenze dirette
+
+
+def analyzeDispositive(text: str) -> Optional[Dict]:
+    """
+    Estrae informazioni dal dispositivo (PQM) della sentenza, se presente.
+    """
+    # Cerca il dispositivo - pattern comune PQM o simili fino alla decisione
+    dispositive_match = re.search(r'(?:PQM|P\.Q\.M\.|per questi motivi|il collegio|la commissione).*?(?:decide|stabilisce|accoglie|rigetta|dichiara)', text, re.IGNORECASE | re.DOTALL)
+
+    if not dispositive_match:
+        return None
+
+    dispositive_text = dispositive_match.group(0)
+    result = {
+        "text": dispositive_text,
+        "outcome": None,
+        "taxReferences": []
+    }
+
+    # Determina l'esito
+    if re.search(r'accoglie', dispositive_text, re.IGNORECASE):
+        result["outcome"] = "accolto"
+    elif re.search(r'rigetta', dispositive_text, re.IGNORECASE):
+        result["outcome"] = "rigettato"
+    elif re.search(r'parzialmente', dispositive_text, re.IGNORECASE):
+        result["outcome"] = "parzialmente accolto"
+    else:
+        result["outcome"] = "altro"
+
+    # Individua riferimenti a imposte nel dispositivo
+    for group_name, categories in taxCategoryGroups.items():
+        for code, category in categories.items():
+            for keyword in category.get("primaryKeywords", []) + category.get("keywords", []):
+                if re.search(r'\b' + re.escape(keyword) + r'\b', dispositive_text, re.IGNORECASE):
+                    result["taxReferences"].append({
+                        "code": code,
+                        "name": category["name"],
+                        "keyword": keyword
+                    })
+
+    return result
+
+
+def applySpecialCaseRules(text: str, scores: Dict) -> Dict:
+    """
+    Implementa regole speciali per casi particolari di categorizzazione
+    """
+    enhanced_scores = scores.copy()
+
+    # Regola speciale per IMU/ICI
+    imu_ici_matches = re.findall(r'\b(imu|ici)\b', text, re.IGNORECASE)
+    if imu_ici_matches and len(imu_ici_matches) > 3:
+        enhanced_scores["C020"] = enhanced_scores.get("C020", {"code": "C020", "name": "Imu ex Ici", "score": 0})
+        enhanced_scores["C020"]["score"] = max(enhanced_scores["C020"].get("score", 0), 8)
+
+    # Regola speciale per IRPEF
+    irpef_matches = re.findall(r'\birpef\b', text, re.IGNORECASE)
+    if irpef_matches and len(irpef_matches) > 3:
+        enhanced_scores["A010"] = enhanced_scores.get("A010", {"code": "A010", "name": "Irpef", "score": 0})
+        enhanced_scores["A010"]["score"] = max(enhanced_scores["A010"].get("score", 0), 7)
+
+    # Regola speciale per IVA
+    iva_matches = re.findall(r'\biva\b', text, re.IGNORECASE)
+    if iva_matches and len(iva_matches) > 5:
+        enhanced_scores["B010"] = enhanced_scores.get("B010", {"code": "B010", "name": "Iva", "score": 0})
+        enhanced_scores["B010"]["score"] = max(enhanced_scores["B010"].get("score", 0), 7)
+
+    # Verifica se è un accertamento
+    accertamento_matches = re.findall(r'avviso di accertamento|atto di accertamento|rettifica|controllo formale', text, re.IGNORECASE)
+    if accertamento_matches and len(re.findall(r'avviso di accertamento|atto di accertamento', text, re.IGNORECASE)) > 2:
+        enhanced_scores["D040"] = enhanced_scores.get("D040", {"code": "D040", "name": "Accertamento imposte", "score": 0})
+        enhanced_scores["D040"]["score"] = max(enhanced_scores["D040"].get("score", 0), 6)
+
+    # Verifica per sanzioni
+    sanzioni_matches = re.findall(r'sanzioni|sanzione amministrativa|penalit|violazione|irregolarità|illecito', text, re.IGNORECASE)
+    if sanzioni_matches and len(sanzioni_matches) > 5:
+        enhanced_scores["D050"] = enhanced_scores.get("D050", {"code": "D050", "name": "Violazioni e sanzioni", "score": 0})
+        enhanced_scores["D050"]["score"] = max(enhanced_scores["D050"].get("score", 0), 6)
+
+    # Verifica per riscossione (applicazione più sfumata rispetto all'override iniziale)
+    riscossione_matches = re.findall(r'riscossione|cartella di pagamento|ruolo esattoriale', text, re.IGNORECASE)
+    if riscossione_matches and len(riscossione_matches) > 3:
+        enhanced_scores["D020"] = enhanced_scores.get("D020", {"code": "D020", "name": "Riscossione", "score": 0})
+        enhanced_scores["D020"]["score"] = max(enhanced_scores["D020"].get("score", 0), 6)
+
+    return enhanced_scores
+
+def removeRedundantCategories(categories: List[Dict]) -> List[Dict]:
+    """
+    Rimuove categorie ridondanti o in conflitto tra loro
+    """
+    if len(categories) <= 1:
+        return categories
+
+    result = [categories[0]]  # Inizia con la categoria principale
+
+    # Gruppi di categorie che sono spesso correlate e potrebbero essere ridondanti
+    related_groups = [
+        # Imposte dirette correlate
+        ["A010", "A020", "A030"],  # IRPEF, IRES, ILOR
+        # Tributi locali correlati
+        ["C020", "C030", "C040", "C050", "C060", "C070", "C080", "C090"],  # IMU/ICI e altri tributi locali
+        # Procedure correlate
+        ["D020", "D040", "D050"]  # Riscossione, Accertamento, Sanzioni
+    ]
+
+    # Verifica per ogni categoria rimanente
+    for i in range(1, len(categories)):
+        current = categories[i]
+        is_redundant = False
+
+        # Controlla se è ridondante rispetto a categorie già incluse
+        for included in result:
+            # Verifica se appartengono allo stesso gruppo di categorie correlate
+            for group in related_groups:
+                if current["code"] in group and included["code"] in group:
+                    # Se la categoria attuale ha un punteggio molto inferiore, considerala ridondante
+                    if current["score"] < included["score"] * 0.7:
+                        is_redundant = True
+                        break
+
+            if is_redundant:
+                break
+
+        # Aggiungi solo se non è ridondante
+        if not is_redundant:
+            result.append(current)
+
+    return result
+
+
+def categorizeText(text: str, options: Dict = None) -> Dict:
+    """
+    Funzione principale per categorizzare una sentenza tributaria
+    Supporta l'assegnazione di multiple categorie con limitazioni ragionevoli
+    """
+    # Configurazione predefinita
+    if options is None:
+        options = {}
+
+    config = {
+        "maxCategories": options.get("maxCategories", 3),  # Massimo numero di categorie da assegnare
+        "scoreThreshold": options.get("scoreThreshold", 3),  # Punteggio minimo per considerare una categoria
+        "minScoreRatio": options.get("minScoreRatio", 0.4)  # Rapporto minimo rispetto al punteggio massimo
+    }
+
+    # Prepara il testo per l'analisi
+    processed_text = preprocessText(text)
+
+    # Override immediati basati su pattern specifici
+    if isRiscossioneDocument(processed_text):
+        return {
+            "primaryCategory": {
+                "code": "D020",
+                "name": "Riscossione",
+                "score": 10,
+                "confidence": 0.9
+            },
+            "categories": [
+                {
+                    "code": "D020",
+                    "name": "Riscossione",
+                    "score": 10,
+                    "confidence": 0.9
+                }
+            ]
+        }
+
+    # Struttura per memorizzare i punteggi
+    scores = {}
+
+    # Estrai informazioni dal dispositivo
+    dispositive_info = analyzeDispositive(processed_text)
+
+    # Calcola i punteggi per ciascuna categoria
+    for group_name, categories in taxCategoryGroups.items():
+        for code, category in categories.items():
+            score = 0
+
+            # Parole chiave primarie (più peso)
+            primary_keywords = category.get("primaryKeywords", [])
+            primary_matches = countKeywordMatches(processed_text, primary_keywords)
+            score += primary_matches * 2
+
+            # Parole chiave secondarie
+            secondary_keywords = category.get("keywords", [])
+            secondary_matches = countKeywordMatches(processed_text, secondary_keywords)
+            score += secondary_matches
+
+            # Analisi contestuale per le parole chiave primarie
+            for keyword in primary_keywords:
+                 score += analyzeKeywordContext(processed_text, keyword)
+
+            # Aggiusta per la posizione (parole chiave all'inizio hanno più peso)
+            if score > 0:
+                all_keywords = primary_keywords + secondary_keywords
+                score = adjustScoreForPosition(processed_text, all_keywords, score)
+
+            # Considera i riferimenti nel dispositivo
+            if dispositive_info and "taxReferences" in dispositive_info:
+                for ref in dispositive_info["taxReferences"]:
+                    if ref["code"] == code:
+                        score += 2  # Bonus significativo per menzioni nel dispositivo
+
+
+            if score > 0:
+                scores[code] = {
+                    "code": code,
+                    "name": category["name"],
+                    "score": score
+                }
+
+    # Applica regole speciali per casi particolari
+    enhanced_scores = applySpecialCaseRules(processed_text, scores)
+
+
+    # Ordina le categorie per punteggio
+    sorted_categories = sorted(enhanced_scores.values(), key=lambda x: x["score"], reverse=True)
+
+    # Se non ci sono categorie, ritorna quella di default (Contenzioso)
+    if not sorted_categories:
+        default_category = {
+            "code": "D060",
+            "name": "Contenzioso",
+            "score": 1,
+            "confidence": 0.3,
+            "isDefault": True
+        }
+
+        return {
+            "primaryCategory": default_category,
+            "categories": [default_category]
+        }
+
+    # Identifica la categoria principale
+    primary_category = sorted_categories[0].copy()
+    highest_score = primary_category["score"]
+
+    # Calcola confidenza per la categoria principale
+    # La confidenza è basata sul punteggio più alto e sulla presenza nel dispositivo
+    confidence = 0.3 # Confidenza base
+    if highest_score >= config["scoreThreshold"]:
+        confidence = min(0.9, confidence + (highest_score / 20.0)) # Aumenta la confidenza con il punteggio
+
+    if dispositive_info and any(ref["code"] == primary_category["code"] for ref in dispositive_info.get("taxReferences", [])):
+        confidence = min(0.95, confidence + 0.2) # Bonus se la categoria principale è nel dispositivo
+
+
+    primary_category["confidence"] = confidence
+
+    # Filtra le categorie basate sulla soglia e il rapporto con il punteggio massimo
+    filtered_categories = [
+        cat for cat in sorted_categories
+        if cat["score"] >= config["scoreThreshold"] or (highest_score > 0 and cat["score"] / highest_score >= config["minScoreRatio"])
+    ]
+
+    # Rimuovi categorie ridondanti o in conflitto
+    final_categories = removeRedundantCategories(filtered_categories)
+
+    # Limita il numero di categorie
+    final_categories = final_categories[:config["maxCategories"]]
+
+    # Aggiungi confidenza per le categorie aggiuntive (inferiore alla principale)
+    for cat in final_categories:
+        if cat["code"] != primary_category["code"]:
+             cat["confidence"] = min(0.6, cat["score"] / highest_score * 0.5) # Confidenza ridotta per categorie secondarie
+
+
+    return {
+        "primaryCategory": primary_category,
+        "categories": final_categories
+    }
 
 # =======================================================
-# FUNZIONI PER PROCESSARE I PDF E GESTIRE IL PROGRESSO
+# FUNZIONE PER ELABORARE UN SINGOLO FILE
 # =======================================================
 
-def processa_pdf_singolo(percorso_pdf: str, cartella_output: str = "output_json", forza_riprocessa: bool = False, filters: Optional[Dict] = None) -> dict:
+def process_single_file(file_path: str) -> Dict:
     """
-    Elabora un singolo PDF:
-      - Estrae il testo parziale (prime 2 pagine + ultima 1)
-      - Applica filtri sul testo parziale (se presenti)
-      - Se il filtro 'contains_text' fallisce, salta l'elaborazione.
-      - Suddivide il testo in chunk
-      - Per ogni chunk, chiama il modello per ottenere i metadati
-      - Salva i metadati in un file JSON (un array di risultati) in cartella_output
-    Se il file di output esiste e forza_riprocessa è False, salta l'elaborazione.
-    Ritorna un dict con lo "status" (processed/skipped/error/filtered) e "details".
-    Aggiorna la variabile globale con i metadati dell'ultima sentenza elaborata.
+    Elabora un singolo file PDF: estrae il testo e lo categorizza.
     """
-    global last_processed_metadata
-    nome_file = os.path.basename(percorso_pdf)
-    thread_name = threading.current_thread().name
-    print(f"[LOG] [{thread_name}] Inizio elaborazione PDF: {nome_file}")
-    if not os.path.exists(cartella_output):
-        print(f"[LOG] [{thread_name}] Creazione cartella output: {cartella_output}")
-        os.makedirs(cartella_output)
+    print(f"Elaborazione file: {file_path}") # Stampa il nome del file in elaborazione
+    pdf_text = estrai_testo_completo_da_pdf(file_path)
+    if not pdf_text:
+        return {"file": os.path.basename(file_path), "errore": "Impossibile estrarre testo dal PDF"}
 
-    path_output = os.path.join(cartella_output, f"{nome_file}_metadata.json")
-
-    # Salta se già processato e non forziamo il riprocessamento
-    if not forza_riprocessa and os.path.exists(path_output):
-        print(f"[LOG] [{thread_name}] File già processato, skip: {nome_file}")
-        return {"status": "skipped", "details": f"File '{nome_file}' già processato, skip.", "output_json": path_output}
-
-    try:
-        testo_parziale = estrai_testo_parziale_da_pdf(percorso_pdf, 2, 1)
-
-        # Applica il filtro 'contains_text' sul testo parziale
-        if filters and "contains_text" in filters:
-            text_to_find = filters["contains_text"]
-            if text_to_find not in testo_parziale:
-                print(f"[LOG] [{thread_name}] File '{nome_file}' filtrato perché non contiene '{text_to_find}' nel testo parziale.")
-                return {"status": "filtered", "details": f"Non contiene '{text_to_find}' nel testo parziale."}
-
-        chunks = suddividi_testo_in_chunk(testo_parziale, max_caratteri=1500)
-        num_chunks = len(chunks)
-        print(f"[LOG] [{thread_name}] {nome_file} suddiviso in {num_chunks} chunks.")
-
-        risultati_chunk = []
-        for i, ch in enumerate(chunks):
-            print(f"[LOG] [{thread_name}] Elaborazione chunk {i+1}/{num_chunks} per {nome_file}")
-            ris = chiama_gpt_4o_mini(ch, nome_file)
-            risultati_chunk.append(ris)
-
-        with open(path_output, "w", encoding="utf-8") as f:
-            json.dump(risultati_chunk, f, ensure_ascii=False, indent=2)
-        print(f"[LOG] [{thread_name}] Metadati salvati in: {path_output}")
-
-        # Aggiorna la variabile globale con i metadati (prendendo l'ultimo blocco se è una sentenza)
-        if risultati_chunk and risultati_chunk[-1].get("tipo_documento") == "sentenza":
-            with metadata_lock:
-                last_processed_metadata = risultati_chunk[-1]
-                print(f"[LOG] [{thread_name}] Ultimo metadato elaborato aggiornato per: {nome_file}")
-
-        print(f"[LOG] [{thread_name}] Fine elaborazione PDF: {nome_file} - Status: processed")
-        return {"status": "processed", "details": f"OK, salvato in '{path_output}'", "output_json": path_output}
-    except Exception as exc:
-        print(f"[LOG] [{thread_name}] Errore durante l'elaborazione di {nome_file}: {exc}")
-        return {"status": "error", "details": f"Errore: {exc}"}
-
-def carica_progresso(nome_file: str = "progresso.json") -> Dict[str, Dict[str, str]]:
-    """
-    Carica il file di progresso (progresso.json) che tiene traccia dello stato dei PDF processati.
-    Se il file non esiste, restituisce un dizionario vuoto.
-    """
-    if not os.path.exists(nome_file):
-        return {}
-    try:
-        with open(nome_file, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return {}
-
-def salva_progresso(progress_dict: dict, nome_file: str = "progresso.json"):
-    """
-    Salva il dizionario di progresso in un file JSON.
-    """
-    with open(nome_file, "w", encoding="utf-8") as f:
-        json.dump(progress_dict, f, ensure_ascii=False, indent=2)
-
-def processa_cartella(cartella_pdf: str, cartella_output: str = "output_json", forza_riprocessa: bool = False, prefisso: str = "", file_progresso: str = "progresso.json", num_workers: int = 4, filters: Optional[Dict] = None):
-    """
-    Processa tutti i file PDF in 'cartella_pdf' in parallelo con filtri opzionali.
-    Se 'prefisso' non è vuoto, elabora solo i PDF il cui nome inizia con quel prefisso.
-    Utilizza (o crea) il file 'progresso.json' per tenere traccia dell'avanzamento.
-    Se forza_riprocessa è True, ignora i file già elaborati.
-    num_workers: numero di processi paralleli da utilizzare.
-    filters: un dizionario opzionale con criteri di filtro.
-             Esempio: {"date_range": ("2022-08-10", "2023-10-10"), "contains_text": "parola chiave"}
-    """
-    global last_processed_metadata, processing_active
-    print(f"[LOG] Inizio processa_cartella con cartella: {cartella_pdf}, num_workers: {num_workers}, filters: {filters}")
-    if not os.path.isdir(cartella_pdf):
-        print(f"[ERRORE] La cartella '{cartella_pdf}' non esiste o non è una directory.")
-        return
-
-    progresso = carica_progresso(file_progresso)
-    pdf_files = sorted([f for f in os.listdir(cartella_pdf) if f.lower().endswith(".pdf")])
-    if prefisso:
-        pdf_files = [f for f in pdf_files if f.startswith(prefisso)]
-
-    filtered_pdf_files_by_name = []
-    if filters and "date_range" in filters:
-        start_date_str, end_date_str = filters["date_range"]
-        print(f"[LOG] Applicazione filtro per intervallo di date: {filters['date_range']}")
-        for pdf_name in pdf_files:
-            try:
-                anno = int(pdf_name.split('_')[-1].split('.')[0][:4])
-                if start_date_str[:4] <= str(anno) <= end_date_str[:4]:
-                    filtered_pdf_files_by_name.append(pdf_name)
-            except:
-                print(f"[LOG] Impossibile analizzare la data dal nome del file: {pdf_name} per il filtro data.")
-        pdf_files = filtered_pdf_files_by_name
-        print(f"[LOG] File dopo applicazione filtro data: {pdf_files}")
-    elif filters and "date_range" in filters:
-        print(f"[LOG] Applicazione filtro per intervallo di date: {filters['date_range']}")
-        # Se non ci sono altri filtri, ma c'è un filtro data, lo applichiamo qui
-        filtered_pdf_files_by_name = []
-        start_date_str, end_date_str = filters["date_range"]
-        for pdf_name in pdf_files:
-            try:
-                anno = int(pdf_name.split('_')[-1].split('.')[0][:4])
-                if start_date_str[:4] <= str(anno) <= end_date_str[:4]:
-                    filtered_pdf_files_by_name.append(pdf_name)
-            except:
-                print(f"[LOG] Impossibile analizzare la data dal nome del file: {pdf_name} per il filtro data.")
-        pdf_files = filtered_pdf_files_by_name
-        print(f"[LOG] File dopo applicazione filtro data: {pdf_files}")
-
-
-    tot = len(pdf_files)
-    processed_count = 0
-    start_time = time.time()
-
-    print(f"[LOG] Inizio elaborazione parallela di {tot} file PDF con {num_workers} workers.")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-        futures = {}
-        for pdf_name in pdf_files:
-            future = executor.submit(processa_pdf_singolo, os.path.join(cartella_pdf, pdf_name), cartella_output, forza_riprocessa, filters) # Passa i filtri
-            futures[future] = pdf_name
-            print(f"[LOG] Sottomessa elaborazione per: {pdf_name}")
-
-        for future in tqdm(concurrent.futures.as_completed(futures), total=tot, desc="Elaborazione PDF"):
-            pdf_name = futures[future]
-            try:
-                esito = future.result()
-                progresso[pdf_name] = esito
-                salva_progresso(progresso, file_progresso)
-                if esito["status"] == "processed":
-                    processed_count += 1
-            except Exception as exc:
-                print(f'[ERRORE] {pdf_name} ha generato un\'eccezione: {exc}')
-
-    processing_active = False
-    print(f"[LOG] Elaborazione parallela completata.")
-    end_time = time.time()
-    total_time = end_time - start_time
-    print(f"\nFinito. PDF totali: {tot}, elaborati: {processed_count}.")
-    print(f"Tempo totale impiegato: {total_time:.2f} secondi.")
-
-def monitor_and_display_metadata():
-    """
-    Funzione per monitorare l'input dell'utente e mostrare l'ultimo metadato elaborato.
-    Questa funzione ora gira in un thread separato per non bloccare l'elaborazione principale.
-    """
-    global last_processed_metadata, processing_active
-    print("[LOG] Avvio thread monitoraggio metadati.")
-    while processing_active:
-        command = input("Digita 'm' e premi Invio per mostrare l'ultimo metadato, 'q' per uscire: ").lower()
-        if command == 'm':
-            with metadata_lock:
-                if last_processed_metadata:
-                    print("\nUltimo Metadato Elaborato:")
-                    print(json.dumps(last_processed_metadata, indent=2, ensure_ascii=False))
-                else:
-                    print("\nNessuna sentenza è stata ancora elaborata.")
-        elif command == 'q':
-            print("[LOG] Uscita dal monitoraggio metadati.")
-            break
-        else:
-            print("Comando non valido. Digita 'm' o 'q'.")
-    print("[LOG] Thread monitoraggio metadati terminato.")
+    categorization_result = categorizeText(pdf_text)
+    categorization_result["file"] = os.path.basename(file_path) # Aggiunge il nome del file al risultato
+    return categorization_result
 
 # =======================================================
-# MAIN: ESEMPIO DI USO
+# ESECUZIONE PER MULTIPLI FILE
 # =======================================================
 
 if __name__ == "__main__":
-    # Imposta il percorso della cartella contenente i PDF da elaborare
-    CARTELLA_SENTENZE = "/home/ubuntu/LLM_14/LLM_14/data/sentenze"
-    NUMERO_WORKERS = 1  # Imposta il numero di processi paralleli desiderato
+    # Directory contenente i file PDF
+    # Assicurati che questa directory esista e contenga i tuoi file PDF
+    pdf_directory = "./your_pdf_directory"  # <--- Modifica questo con il percorso della tua directory
 
-    # Definisci i filtri se necessario
-    filters = {
-        # "date_range": ("2022-08-10", "2023-10-10"),
-        #"contains_text": "IMU" # Esempio di filtro per testo
-    }
+    # Crea la directory se non esiste (utile per test)
+    if not os.path.exists(pdf_directory):
+        os.makedirs(pdf_directory)
+        print(f"Creata directory: {pdf_directory}")
 
-    print("[LOG] Avvio programma principale.")
+    # Ottieni la lista di tutti i file PDF nella directory
+    pdf_files = [os.path.join(pdf_directory, f) for f in os.listdir(pdf_directory) if f.endswith('.pdf')]
 
-    # Avvia il processing della cartella in parallelo con filtri
-    processing_thread = threading.Thread(target=processa_cartella, args=(
-        CARTELLA_SENTENZE,
-        "output_json",
-        False,
-        "",
-        "progresso.json",
-        NUMERO_WORKERS,
-        filters  # Passa il dizionario dei filtri
-    ))
-    processing_thread.start()
-    print("[LOG] Thread di processing avviato.")
+    if not pdf_files:
+        print(f"Nessun file PDF trovato nella directory: {pdf_directory}")
+    else:
+        print(f"Trovati {len(pdf_files)} file PDF da elaborare.")
+        results = []
 
-    # Avvia il monitoraggio dei metadati in un thread separato
-    monitor_thread = threading.Thread(target=monitor_and_display_metadata)
-    monitor_thread.daemon = True # Permette di uscire dal programma anche se questo thread è attivo
-    monitor_thread.start()
-    print("[LOG] Thread di monitoraggio avviato.")
+        # Usa ThreadPoolExecutor per elaborare i file in parallelo
+        # Il numero di worker può essere regolato in base alle risorse del tuo sistema
+        # Un buon punto di partenza è il numero di core della tua CPU.
+        max_workers = os.cpu_count() * 2 if os.cpu_count() else 4 # Esempio: 2x core CPU o default a 4
 
-    # Mantieni il thread principale in esecuzione per permettere ai thread di background di lavorare
-    try:
-        while processing_active:
-            time.sleep(1) # Breve pausa per non consumare troppa CPU
-    except KeyboardInterrupt:
-        print("[LOG] Interruzione da tastiera rilevata. In attesa del completamento dei thread...")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Sottmetti le tasks di elaborazione per ogni file
+            future_to_file = {executor.submit(process_single_file, file_path): file_path for file_path in pdf_files}
 
-    # Attendi che il thread di processing finisca
-    processing_thread.join()
-    print("[LOG] Thread di processing terminato.")
+            # Itera sui risultati man mano che sono pronti
+            for future in concurrent.futures.as_completed(future_to_file):
+                file_path = future_to_file[future]
+                try:
+                    result = future.result()
+                    results.append(result)
+                    # print(f"Elaborato: {os.path.basename(file_path)}") # Puoi abilitarlo per vedere l'avanzamento
+                except Exception as exc:
+                    print(f'{file_path} ha generato un\'eccezione: {exc}')
+                    results.append({"file": os.path.basename(file_path), "errore": f"Eccezione durante l'elaborazione: {exc}"})
 
-    print("[LOG] Programma terminato.")
+        # Salva i risultati su un file JSON
+        output_file = "categorization_results.json"
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(results, f, indent=2, ensure_ascii=False)
+
+        print(f"\nElaborazione completata. Risultati salvati in: {output_file}")
