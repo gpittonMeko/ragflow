@@ -745,7 +745,7 @@ if __name__ == "__main__":
     # Directory contenente i file PDF
     # *** PERCORSO SPECIFICATO DALL'UTENTE ***
     # Usa il percorso assoluto confermato dai tuoi test nel terminale
-    pdf_directory = "/LLM_14/LLM_14/data/sentenze"
+    pdf_directory = "../../../LLM_14/LLM_14/data/sentenze"
 
     # Controlla se la directory esiste
     if not os.path.isdir(pdf_directory):
