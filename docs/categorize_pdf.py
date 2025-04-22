@@ -743,8 +743,8 @@ def process_single_file(file_path: str) -> Dict:
 
 if __name__ == "__main__":
     # Directory contenente i file PDF
-    # *** MODIFICA QUESTO PERCORSO CON IL PERCORSO REALE DELLA TUA DIRECTORY ***
-    pdf_directory = "PERCORSO/ALLA/TUA/DIRECTORY/DI/SENTENZE"  # <--- MODIFICA QUI
+    # *** PERCORSO SPECIFICATO DALL'UTENTE ***
+    pdf_directory = "/LLM_14/LLM_14/data/sentenze"  # <--- PERCORSO DELLA TUA DIRECTORY
 
     # Controlla se la directory esiste
     if not os.path.isdir(pdf_directory):
@@ -769,35 +769,40 @@ if __name__ == "__main__":
 
             start_time = time.time() # Avvia il cronometro
 
+            # Usa tqdm se installato per mostrare l'avanzamento
+            try:
+                from tqdm import tqdm
+                use_tqdm = True
+            except ImportError:
+                use_tqdm = False
+                print("Suggerimento: installa 'tqdm' (pip install tqdm) per visualizzare la barra di avanzamento.")
+
+
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
                 # Sottmetti le tasks di elaborazione per ogni file
                 future_to_file = {executor.submit(process_single_file, file_path): file_path for file_path in pdf_files}
 
-                # Puoi usare tqdm qui per visualizzare l'avanzamento
-                # from tqdm import tqdm
-                # for future in tqdm(concurrent.futures.as_completed(future_to_file), total=len(pdf_files), desc="Elaborazione file"):
-                #     file_path = future_to_file[future]
-                #     try:
-                #         result = future.result()
-                #         results.append(result)
-                #     except Exception as exc:
-                #         # Gli errori specifici del file sono già loggati nella funzione process_single_file
-                #         # Qui gestiamo eventuali errori a livello di executor o futuri
-                #         results.append({"file": os.path.basename(file_path), "errore": f"Errore nell'executor: {exc}"})
-
-
-                # Itera sui risultati man mano che sono pronti (senza tqdm)
-                for future in concurrent.futures.as_completed(future_to_file):
-                    file_path = future_to_file[future]
-                    try:
-                        result = future.result()
-                        results.append(result)
-                        # print(f"Completato: {os.path.basename(file_path)}") # Abilita per vedere completamento singoli file
-                    except Exception as exc:
-                         # Gli errori specifici del file sono già loggati nella funzione process_single_file
-                         # Qui gestiamo eventuali errori a livello di executor o futuri
-                         print(f'Errore nella gestione del risultato per {os.path.basename(file_path)}: {exc}')
-                         results.append({"file": os.path.basename(file_path), "errore": f"Errore nella gestione del risultato: {exc}"})
+                if use_tqdm:
+                     for future in tqdm(concurrent.futures.as_completed(future_to_file), total=len(pdf_files), desc="Elaborazione file"):
+                        file_path = future_to_file[future]
+                        try:
+                            result = future.result()
+                            results.append(result)
+                        except Exception as exc:
+                            # Gli errori specifici del file sono già loggati nella funzione process_single_file
+                            results.append({"file": os.path.basename(file_path), "errore": f"Errore nell'executor: {exc}"})
+                else:
+                    # Itera sui risultati man mano che sono pronti (senza tqdm)
+                    for future in concurrent.futures.as_completed(future_to_file):
+                        file_path = future_to_file[future]
+                        try:
+                            result = future.result()
+                            results.append(result)
+                            # print(f"Completato: {os.path.basename(file_path)}") # Abilita per vedere completamento singoli file
+                        except Exception as exc:
+                             # Gli errori specifici del file sono già loggati nella funzione process_single_file
+                             print(f'Errore nella gestione del risultato per {os.path.basename(file_path)}: {exc}')
+                             results.append({"file": os.path.basename(file_path), "errore": f"Errore nella gestione del risultato: {exc}"})
 
 
             end_time = time.time() # Ferma il cronometro
