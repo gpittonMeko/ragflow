@@ -6,14 +6,15 @@ import re
 # from openai import OpenAI # Non necessario per la categorizzazione basata su keyword
 from typing import List, Dict, Optional, Tuple
 import time
-# from tqdm import tqdm # Puoi aggiungerlo per visualizzare l'avanzamento
+# from tqdm import tqdm # Puoi aggiungerlo per visualizzare l'avanzamento (richiede installazione: pip install tqdm)
 import concurrent.futures # Import per la gestione dei thread/processi
 # import threading # Mantenuto per la struttura originale, ma non usato direttamente nel Executor
 
 # =======================================================
 # CONFIGURAZIONE: API e modello (Non necessari per la categorizzazione basata su keyword)
 # =======================================================
-# La chiave API viene letta dalla variabile d'ambiente OPEN_AI_API
+# Le seguenti righe non sono necessarie per la categorizzazione basata solo su keyword.
+# Se in futuro volessi integrare un modello OpenAI, dovresti riattivarle e configurare la chiave API.
 # openai.api_key = os.environ.get("OPEN_AI_API")
 # MODEL_NAME = "gpt-4o-mini-2024-07-18"
 
@@ -719,15 +720,22 @@ def categorizeText(text: str, options: Dict = None) -> Dict:
 def process_single_file(file_path: str) -> Dict:
     """
     Elabora un singolo file PDF: estrae il testo e lo categorizza.
+    Include il nome del file nel risultato.
     """
-    print(f"Elaborazione file: {file_path}") # Stampa il nome del file in elaborazione
-    pdf_text = estrai_testo_completo_da_pdf(file_path)
-    if not pdf_text:
-        return {"file": os.path.basename(file_path), "errore": "Impossibile estrarre testo dal PDF"}
+    try:
+        # print(f"Elaborazione file: {os.path.basename(file_path)}") # Abilita per vedere l'avanzamento in tempo reale
+        pdf_text = estrai_testo_completo_da_pdf(file_path)
+        if not pdf_text:
+            return {"file": os.path.basename(file_path), "errore": "Impossibile estrarre testo dal PDF"}
 
-    categorization_result = categorizeText(pdf_text)
-    categorization_result["file"] = os.path.basename(file_path) # Aggiunge il nome del file al risultato
-    return categorization_result
+        categorization_result = categorizeText(pdf_text)
+        categorization_result["file"] = os.path.basename(file_path) # Aggiunge il nome del file al risultato
+        return categorization_result
+    except Exception as e:
+        # Cattura e logga qualsiasi eccezione durante l'elaborazione di un singolo file
+        print(f"Errore critico durante l'elaborazione di {os.path.basename(file_path)}: {e}")
+        return {"file": os.path.basename(file_path), "errore": f"Eccezione critica durante l'elaborazione: {e}"}
+
 
 # =======================================================
 # ESECUZIONE PER MULTIPLI FILE
@@ -735,46 +743,76 @@ def process_single_file(file_path: str) -> Dict:
 
 if __name__ == "__main__":
     # Directory contenente i file PDF
-    # Assicurati che questa directory esista e contenga i tuoi file PDF
-    pdf_directory = "./your_pdf_directory"  # <--- Modifica questo con il percorso della tua directory
+    # *** MODIFICA QUESTO PERCORSO CON IL PERCORSO REALE DELLA TUA DIRECTORY ***
+    pdf_directory = "PERCORSO/ALLA/TUA/DIRECTORY/DI/SENTENZE"  # <--- MODIFICA QUI
 
-    # Crea la directory se non esiste (utile per test)
-    if not os.path.exists(pdf_directory):
-        os.makedirs(pdf_directory)
-        print(f"Creata directory: {pdf_directory}")
-
-    # Ottieni la lista di tutti i file PDF nella directory
-    pdf_files = [os.path.join(pdf_directory, f) for f in os.listdir(pdf_directory) if f.endswith('.pdf')]
-
-    if not pdf_files:
-        print(f"Nessun file PDF trovato nella directory: {pdf_directory}")
+    # Controlla se la directory esiste
+    if not os.path.isdir(pdf_directory):
+        print(f"Errore: La directory '{pdf_directory}' non esiste o non è una directory valida.")
     else:
-        print(f"Trovati {len(pdf_files)} file PDF da elaborare.")
-        results = []
+        # Ottieni la lista di tutti i file PDF nella directory
+        pdf_files = [os.path.join(pdf_directory, f) for f in os.listdir(pdf_directory) if f.lower().endswith('.pdf')]
 
-        # Usa ThreadPoolExecutor per elaborare i file in parallelo
-        # Il numero di worker può essere regolato in base alle risorse del tuo sistema
-        # Un buon punto di partenza è il numero di core della tua CPU.
-        max_workers = os.cpu_count() * 2 if os.cpu_count() else 4 # Esempio: 2x core CPU o default a 4
+        if not pdf_files:
+            print(f"Nessun file PDF trovato nella directory: {pdf_directory}")
+        else:
+            print(f"Trovati {len(pdf_files)} file PDF da elaborare nella directory: {pdf_directory}")
+            results = []
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Sottmetti le tasks di elaborazione per ogni file
-            future_to_file = {executor.submit(process_single_file, file_path): file_path for file_path in pdf_files}
+            # Usa ThreadPoolExecutor per elaborare i file in parallelo
+            # Il numero di worker (thread) può essere regolato in base alle risorse del tuo sistema.
+            # Generalmente, per task con un mix di I/O e CPU, un numero di thread
+            # leggermente superiore al numero di core della CPU può essere efficiente.
+            max_workers = os.cpu_count() * 2 if os.cpu_count() else 8 # Usa 2x core CPU o default a 8
 
-            # Itera sui risultati man mano che sono pronti
-            for future in concurrent.futures.as_completed(future_to_file):
-                file_path = future_to_file[future]
-                try:
-                    result = future.result()
-                    results.append(result)
-                    # print(f"Elaborato: {os.path.basename(file_path)}") # Puoi abilitarlo per vedere l'avanzamento
-                except Exception as exc:
-                    print(f'{file_path} ha generato un\'eccezione: {exc}')
-                    results.append({"file": os.path.basename(file_path), "errore": f"Eccezione durante l'elaborazione: {exc}"})
+            print(f"Utilizzo {max_workers} thread per l'elaborazione parallela.")
 
-        # Salva i risultati su un file JSON
-        output_file = "categorization_results.json"
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
+            start_time = time.time() # Avvia il cronometro
 
-        print(f"\nElaborazione completata. Risultati salvati in: {output_file}")
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Sottmetti le tasks di elaborazione per ogni file
+                future_to_file = {executor.submit(process_single_file, file_path): file_path for file_path in pdf_files}
+
+                # Puoi usare tqdm qui per visualizzare l'avanzamento
+                # from tqdm import tqdm
+                # for future in tqdm(concurrent.futures.as_completed(future_to_file), total=len(pdf_files), desc="Elaborazione file"):
+                #     file_path = future_to_file[future]
+                #     try:
+                #         result = future.result()
+                #         results.append(result)
+                #     except Exception as exc:
+                #         # Gli errori specifici del file sono già loggati nella funzione process_single_file
+                #         # Qui gestiamo eventuali errori a livello di executor o futuri
+                #         results.append({"file": os.path.basename(file_path), "errore": f"Errore nell'executor: {exc}"})
+
+
+                # Itera sui risultati man mano che sono pronti (senza tqdm)
+                for future in concurrent.futures.as_completed(future_to_file):
+                    file_path = future_to_file[future]
+                    try:
+                        result = future.result()
+                        results.append(result)
+                        # print(f"Completato: {os.path.basename(file_path)}") # Abilita per vedere completamento singoli file
+                    except Exception as exc:
+                         # Gli errori specifici del file sono già loggati nella funzione process_single_file
+                         # Qui gestiamo eventuali errori a livello di executor o futuri
+                         print(f'Errore nella gestione del risultato per {os.path.basename(file_path)}: {exc}')
+                         results.append({"file": os.path.basename(file_path), "errore": f"Errore nella gestione del risultato: {exc}"})
+
+
+            end_time = time.time() # Ferma il cronometro
+            elapsed_time = end_time - start_time
+            print(f"\nTempo totale di elaborazione: {elapsed_time:.2f} secondi")
+
+
+            # Salva i risultati su un file JSON
+            output_file = "categorization_results.json"
+            try:
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    json.dump(results, f, indent=2, ensure_ascii=False)
+                print(f"Elaborazione completata. Risultati salvati in: {output_file}")
+            except Exception as e:
+                print(f"Errore nel salvataggio del file di output {output_file}: {e}")
+                # Stampa i risultati a console se non è possibile salvarli su file
+                print("\nRisultati (impossibile salvare su file):")
+                print(json.dumps(results, indent=2, ensure_ascii=False))
