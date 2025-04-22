@@ -744,7 +744,7 @@ def process_single_file(file_path: str) -> Dict:
 if __name__ == "__main__":
     # Directory contenente i file PDF
     # *** PERCORSO SPECIFICATO DALL'UTENTE ***
-    pdf_directory = "/LLM_14/LLM_14/data/sentenze"  # <--- PERCORSO DELLA TUA DIRECTORY
+    pdf_directory = "../../../LLM_14/LLM_14/data/sentenze"  # <--- PERCORSO DELLA TUA DIRECTORY
 
     # Controlla se la directory esiste
     if not os.path.isdir(pdf_directory):
