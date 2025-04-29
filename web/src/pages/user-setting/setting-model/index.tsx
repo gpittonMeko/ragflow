@@ -4,6 +4,7 @@ import { useTheme } from '@/components/theme-provider';
 import { LLMFactory } from '@/constants/llm';
 import { useSetModalState, useTranslate } from '@/hooks/common-hooks';
 import { LlmItem, useSelectLlmList } from '@/hooks/llm-hooks';
+import { getRealModelName } from '@/utils/llm-util';
 import { CloseCircleOutlined, SettingOutlined } from '@ant-design/icons';
 import {
   Button,
@@ -21,6 +22,7 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
+import { CircleHelp } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import SettingTitle from '../components/setting-title';
 import { isLocalLlmFactory } from '../utils';
@@ -130,7 +132,8 @@ const ModelCard = ({ item, clickApiKey }: IModelCardProps) => {
             renderItem={(item) => (
               <List.Item>
                 <Space>
-                  {item.name} <Tag color="#b8b8b8">{item.type}</Tag>
+                  {getRealModelName(item.name)}
+                  <Tag color="#b8b8b8">{item.type}</Tag>
                   <Tooltip title={t('delete', { keyPrefix: 'common' })}>
                     <Button type={'text'} onClick={handleDeleteLlm(item.name)}>
                       <CloseCircleOutlined style={{ color: '#D92D20' }} />
@@ -301,7 +304,14 @@ const UserSettingModel = () => {
     },
     {
       key: '2',
-      label: t('modelsToBeAdded'),
+      label: (
+        <div className="flex items-center gap-2">
+          {t('modelsToBeAdded')}
+          <Tooltip title={t('modelsToBeAddedTooltip')}>
+            <CircleHelp className="size-4" />
+          </Tooltip>
+        </div>
+      ),
       children: (
         <List
           grid={{
@@ -356,7 +366,7 @@ const UserSettingModel = () => {
   ];
 
   return (
-    <section id="xx" className={styles.modelWrapper}>
+    <section id="xx" className="w-full space-y-6">
       <Spin spinning={loading}>
         <section className={styles.modelContainer}>
           <SettingTitle

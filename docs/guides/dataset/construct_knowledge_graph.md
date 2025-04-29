@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 8
 slug: /construct_knowledge_graph
 ---
 
@@ -13,7 +13,7 @@ To enhance multi-hop question-answering, RAGFlow adds a knowledge graph construc
 
 ![Image](https://github.com/user-attachments/assets/1ec21d8e-f255-4d65-9918-69b72dfa142b)
 
-As of v0.17.0, RAGFlow supports constructing a knowledge graph on a knowledge base, allowing you to construct a *unified* graph across multiple files within your knowledge base. When a newly uploaded file starts parsing, the generated graph will automatically update.
+From v0.16.0 onward, RAGFlow supports constructing a knowledge graph on a knowledge base, allowing you to construct a *unified* graph across multiple files within your knowledge base. When a newly uploaded file starts parsing, the generated graph will automatically update.
 
 :::danger WARNING
 Constructing a knowledge graph requires significant memory, computational resources, and tokens.
@@ -22,6 +22,10 @@ Constructing a knowledge graph requires significant memory, computational resour
 ## Scenarios
 
 Knowledge graphs are especially useful for multi-hop question-answering involving *nested* logic. They outperform traditional extraction approaches when you are performing question answering on books or works with complex entities and relationships.
+
+:::tip NOTE
+RAPTOR (Recursive Abstractive Processing for Tree Organized Retrieval) can also be used for multi-hop question-answering tasks. See [Enable RAPTOR](./enable_raptor.md) for details. You may use either approach or both, but ensure you understand the memory, computational, and token costs involved.
+:::
 
 ## Prerequisites
 
@@ -68,6 +72,10 @@ In a knowledge graph, a community is a cluster of entities linked by relationshi
    _A **Knowledge graph** entry appears under **Configuration** once a knowledge graph is created._
 
 3. Click **Knowledge graph** to view the details of the generated graph.
+4. To use the created knowledge graph, do either of the following:
+   
+   - In your **Chat Configuration** dialogue, click the **Assistant settings** tab to add the corresponding knowledge base(s) and click the **Prompt engine** tab to switch on the **Use knowledge graph** toggle.
+   - If you are using an agent, click the **Retrieval** agent component to specify the knowledge base(s) and switch on the **Use knowledge graph** toggle.
 
 ## Frequently asked questions
 
