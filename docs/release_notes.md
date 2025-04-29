@@ -7,6 +7,133 @@ slug: /release_notes
 
 Key features, improvements and bug fixes in the latest releases.
 
+## v0.18.0
+
+Released on April 23, 2025.
+
+### New features
+
+- MCP server: enables access to RAGFlow's knowledge bases via MCP.
+- DeepDoc supports adopting VLM model as a processing pipeline during document layout recognition, enabling in-depth analysis of images in PDFs.
+- Agent version control: all updates are continuously logged and can be rolled back to a previous version via export.
+- Team collaboration: Agents can be shared with team members.
+- OpenAI-compatible APIs: Agents can be called via OpenAI-compatible APIs.
+- User registration control: administrators can enable or disable user registration through an environment variable.
+
+### Improvements
+
+- Enhanced answer referencing: Citation accuracy in generated responses is improved.
+- Enhanced question-answering experience: users can now manually stop streaming output during a conversation.
+
+### Documentation
+
+#### Added documents
+
+- [Set page rank](./guides/dataset/set_page_rank.md)
+- [Enable RAPTOR](./guides/dataset/enable_raptor.md)
+- [RAGFlow MCP server overview](./develop/mcp.md)
+
+## v0.17.2
+
+Released on March 13, 2025.
+
+### Compatibility changes
+
+- Removes the **Max_tokens** setting from **Chat configuration**.
+- Removes the **Max_tokens** setting from **Generate**, **Rewrite**, **Categorize**, **Keyword** agent components.
+
+From this release onwards, if you still see RAGFlow's responses being cut short or truncated, check the **Max_tokens** setting of your model provider.
+
+### Improvements
+
+- Adds OpenAI-compatible APIs.
+- Introduces a German user interface.
+- Accelerates knowledge graph extraction.
+- Enables Tavily-based web search in the **Retrieval** agent component.
+- Adds Tongyi-Qianwen QwQ models (OpenAI-compatible).
+- Supports CSV files in the **General** chunk method.
+
+### Fixed issues
+
+- Unable to add models via Ollama/Xinference, an issue introduced in v0.17.1.
+
+### Related APIs
+
+#### HTTP APIs
+
+- [Create chat completion](./references/http_api_reference.md#openai-compatible-api)
+
+#### Python APIs
+
+- [Create chat completion](./references/python_api_reference.md#openai-compatible-api)
+
+## v0.17.1
+
+Released on March 11, 2025.
+
+### Improvements
+
+- Improves English tokenization quality.
+- Improves the table extraction logic in Markdown document parsing.
+- Updates SiliconFlow's model list.
+- Supports parsing XLS files (Excel97~2003) with improved corresponding error handling.
+- Supports Huggingface rerank models.
+- Enables relative time expressions ("now", "yesterday", "last week", "next year", and more) in the **Rewrite** agent component.
+
+### Fixed issues
+
+- A repetitive knowledge graph extraction issue.
+- Issues with API calling.
+- Options in the **PDF parser**, aka **Document parser**, dropdown are missing.
+- A Tavily web search issue.
+- Unable to preview diagrams or images in an AI chat.
+
+### Documentation
+
+#### Added documents
+
+- [Use tag set](./guides/dataset/use_tag_sets.md)
+
+## v0.17.0
+
+Released on March 3, 2025.
+
+### New features
+
+- AI chat: Implements Deep Research for agentic reasoning. To activate this, enable the **Reasoning** toggle under the **Prompt engine** tab of your chat assistant dialogue.
+- AI chat: Leverages Tavily-based web search to enhance contexts in agentic reasoning. To activate this, enter the correct Tavily API key under the **Assistant settings** tab of your chat assistant dialogue.
+- AI chat: Supports starting a chat without specifying knowledge bases.
+- AI chat: HTML files can also be previewed and referenced, in addition to PDF files.
+- Dataset: Adds a **PDF parser**, aka **Document parser**, dropdown menu to dataset configurations. This includes a DeepDoc model option, which is time-consuming, a much faster **naive** option (plain text), which skips DLA (Document Layout Analysis), OCR (Optical Character Recognition), and TSR (Table Structure Recognition) tasks, and several currently *experimental* large model options.
+- Agent component: **(x)** or a forward slash `/` can be used to insert available keys (variables) in the system prompt field of the **Generate** or **Template** component.
+- Object storage: Supports using Aliyun OSS (Object Storage Service) as a file storage option.
+- Models: Updates the supported model list for Tongyi-Qianwen (Qwen), adding DeepSeek-specific models; adds ModelScope as a model provider.
+- APIs: Document metadata can be updated through an API.
+
+The following diagram illustrates the workflow of RAGFlow's Deep Research:
+
+![Image](https://github.com/user-attachments/assets/f65d4759-4f09-4d9d-9549-c0e1fe907525)
+
+The following is a screenshot of a conversation that integrates Deep Research:
+
+![Image](https://github.com/user-attachments/assets/165b88ff-1f5d-4fb8-90e2-c836b25e32e9)
+
+### Related APIs
+
+#### HTTP APIs
+
+Adds a body parameter `"meta_fields"` to the [Update document](./references/http_api_reference.md#update-document) method.
+
+#### Python APIs
+
+Adds a key option `"meta_fields"` to the [Update document](./references/python_api_reference.md#update-document) method.
+
+### Documentation
+
+#### Added documents
+
+- [Run retrieval test](./guides/dataset/run_retrieval_test.md)
+
 ## v0.16.0
 
 Released on February 6, 2025.
@@ -176,7 +303,7 @@ Ensure that you [upgrade **both** your code **and** Docker image to this release
 #### Added documents
 
 - [Configurations](https://ragflow.io/docs/dev/configurations)
-- [Manage team members](https://ragflow.io/docs/dev/manage_team_members)
+- [Manage team members](./guides/team/manage_team_members.md)
 - [Run health check on RAGFlow's dependencies](https://ragflow.io/docs/dev/run_health_check)
 
 ## v0.13.0

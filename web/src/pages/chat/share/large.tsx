@@ -37,6 +37,7 @@ const ChatContainer = ({ theme }) => {
     ref,
     derivedMessages,
     hasError,
+    stopOutputMessage,
   } = useSendSharedMessage();
   const sendDisabled = useSendButtonDisabled(value);
   const messagesContainerRef = useRef(null);
@@ -204,21 +205,19 @@ const ChatContainer = ({ theme }) => {
           <div ref={ref} />
         </Flex>
 
-        <div ref={inputContainerRef} className="message-input-container">
-          <MessageInput
-            isShared
-            value={value}
-            disabled={hasError}
-            sendDisabled={sendDisabled}
-            conversationId={conversationId}
-            onInputChange={handleInputChange}
-            onPressEnter={handlePressEnter}
-            sendLoading={sendLoading}
-            uploadMethod="external_upload_and_parse"
-            showUploadIcon={false}
-            ref={inputRef}
-          ></MessageInput>
-        </div>
+        <MessageInput
+          isShared
+          value={value}
+          disabled={hasError}
+          sendDisabled={sendDisabled}
+          conversationId={conversationId}
+          onInputChange={handleInputChange}
+          onPressEnter={handlePressEnter}
+          sendLoading={sendLoading}
+          uploadMethod="external_upload_and_parse"
+          showUploadIcon={false}
+          stopOutputMessage={stopOutputMessage}
+        ></MessageInput>
       </Flex>
       {visible && (
         <PdfDrawer

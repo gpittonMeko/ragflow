@@ -1,7 +1,8 @@
 import { LlmModelType } from '@/constants/knowledge';
 import { useTranslate } from '@/hooks/common-hooks';
 import { useSelectLlmOptionsByModelType } from '@/hooks/llm-hooks';
-import { Select as AntSelect, Form, Slider } from 'antd';
+import { Select as AntSelect, Form, message, Slider } from 'antd';
+import { useCallback } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { SingleFormSlider } from './ui/dual-range-slider';
 import {
@@ -29,19 +30,36 @@ type FieldType = {
 export const RerankItem = () => {
   const { t } = useTranslate('knowledgeDetails');
   const allOptions = useSelectLlmOptionsByModelType();
+  const [messageApi, contextHolder] = message.useMessage();
+
+  const handleChange = useCallback(
+    (val: string) => {
+      if (val) {
+        messageApi.open({
+          type: 'warning',
+          content: t('reRankModelWaring'),
+        });
+      }
+    },
+    [messageApi, t],
+  );
 
   return (
-    <Form.Item
-      label={t('rerankModel')}
-      name={'rerank_id'}
-      tooltip={t('rerankTip')}
-    >
-      <AntSelect
-        options={allOptions[LlmModelType.Rerank]}
-        allowClear
-        placeholder={t('rerankPlaceholder')}
-      />
-    </Form.Item>
+    <>
+      {contextHolder}
+      <Form.Item
+        label={t('rerankModel')}
+        name={'rerank_id'}
+        tooltip={t('rerankTip')}
+      >
+        <AntSelect
+          options={allOptions[LlmModelType.Rerank]}
+          allowClear
+          placeholder={t('rerankPlaceholder')}
+          onChange={handleChange}
+        />
+      </Form.Item>
+    </>
   );
 };
 
@@ -88,7 +106,7 @@ function RerankFormField() {
       name={RerankId}
       render={({ field }) => (
         <FormItem>
-          <FormLabel>{t('rerankModel')}</FormLabel>
+          <FormLabel tooltip={t('rerankTip')}>{t('rerankModel')}</FormLabel>
           <FormControl>
             <Select onValueChange={field.onChange} {...field}>
               <SelectTrigger
@@ -138,7 +156,7 @@ export function RerankFormFields() {
           name={'top_k'}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('topK')}</FormLabel>
+              <FormLabel tooltip={t('topKTip')}>{t('topK')}</FormLabel>
               <FormControl>
                 <SingleFormSlider
                   {...field}

@@ -1,4 +1,5 @@
 import { useLogin, useRegister } from '@/hooks/login-hooks';
+import { useSystemConfig } from '@/hooks/system-hooks';
 import { rsaPsw } from '@/utils';
 import { Button, Checkbox, Form, Input, message } from 'antd'; // Importa il componente message da Ant Design
 import { useEffect, useState } from 'react';
@@ -22,9 +23,14 @@ const Login = () => {
   const { t } = useTranslation('translation', { keyPrefix: 'login' });
   // Stato per indicare se è in corso un'operazione di login o registrazione
   const loading = signLoading || registerLoading;
+  const { config } = useSystemConfig();
+  const registerEnabled = config?.registerEnabled !== 0;
 
   // Funzione per cambiare il titolo tra "login" e "register"
   const changeTitle = () => {
+    if (title === 'login' && !registerEnabled) {
+      return;
+    }
     setTitle((title) => (title === 'login' ? 'register' : 'login'));
   };
   // Hook per la gestione del form di Ant Design
@@ -149,7 +155,7 @@ const Login = () => {
               </Form.Item>
             )}
             <div>
-              {title === 'login' ? (
+              {title === 'login' && registerEnabled && (
                 <div>
                   {t('signInTip')}
                   <Button type="link" onClick={changeTitle}>
