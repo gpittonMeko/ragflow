@@ -17,7 +17,7 @@ services:
       - 443:443
       - 5678:5678
       - 5679:5679
-      - 9382:9382 # entry for MCP
+      - 9382:9382
     volumes:
       - ./ragflow-logs:/ragflow/logs
       - ./nginx/ragflow.conf:/etc/nginx/conf.d/ragflow.conf
