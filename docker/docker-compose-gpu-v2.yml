@@ -32,7 +32,6 @@ services:
       - ../history_data_agent:/ragflow/history_data_agent
       - ./service_conf.yaml.template:/ragflow/conf/service_conf.yaml.template
       - ../web:/ragflow/web
-      - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./entrypoint.sh:/ragflow/entrypoint.sh
     env_file: .env
     environment:
