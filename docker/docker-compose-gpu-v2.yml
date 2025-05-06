@@ -23,7 +23,7 @@ services:
       - 443:443
       - 5678:5678
       - 5679:5679
-      - 9382:9382 # entry for MCP (host_port:docker_port). The docker_port should match with the value you set for `mcp-port` above
+      - 9382:9382 # entry for MCP (host_port:docker_port)
     volumes:
       - ./ragflow-logs:/ragflow/logs
       - ./nginx/ragflow.conf:/etc/nginx/conf.d/ragflow.conf
@@ -44,18 +44,10 @@ services:
     networks:
       - ragflow
     restart: on-failure
-    # https://docs.docker.com/engine/daemon/prometheus/#create-a-prometheus-configuration
-    # If you're using Docker Desktop, the --add-host flag is optional. This flag makes sure that the host's internal IP gets exposed to the Prometheus container.
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-  
+    runtime: nvidia  # ✅ Abilita il supporto GPU in ambienti non-Swarm
+
   executor:
     depends_on:
       mysql:
@@ -72,17 +64,14 @@ services:
       - MACOS=${MACOS}
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    command: "python -m rag.task.executor --num-threads 16"  # Aumentato da 5 a 16
-
+    command: "python -m rag.task.executor --num-threads 16"
     networks:
       - ragflow
     restart: on-failure
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    runtime: nvidia  # ✅ Anche qui per usare la GPU
+
+networks:
+  ragflow:
+    driver: bridge
