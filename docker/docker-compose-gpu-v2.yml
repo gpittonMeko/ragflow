@@ -32,6 +32,7 @@ services:
       - ../history_data_agent:/ragflow/history_data_agent
       - ./service_conf.yaml.template:/ragflow/conf/service_conf.yaml.template
       - ../web:/ragflow/web
+      - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./entrypoint.sh:/ragflow/entrypoint.sh
     env_file: .env
     environment:
@@ -63,7 +64,7 @@ services:
     container_name: ragflow-executor
     volumes:
       - ./ragflow-logs:/ragflow/logs
-      - ./service_conf.yaml.template:/ragflow/conf/service_conf.yaml.template
+      - ./nginx/ragflow.conf:/etc/nginx/conf.d/ragflow.conf
     env_file: .env
     environment:
       - TZ=${TIMEZONE}
@@ -71,67 +72,7 @@ services:
       - MACOS=${MACOS}
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    command: "python -m rag.task.executor --num-threads 15"
-    networks:
-      - ragflow
-    restart: on-failure
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
-  executor-1:
-    depends_on:
-      mysql:
-        condition: service_healthy
-    image: ${RAGFLOW_IMAGE}
-    container_name: ragflow-executor-1
-    volumes:
-      - ./ragflow-logs:/ragflow/logs
-      - ./service_conf.yaml.template:/ragflow/conf/service_conf.yaml.template
-    env_file: .env
-    environment:
-      - TZ=${TIMEZONE}
-      - HF_ENDPOINT=${HF_ENDPOINT}
-      - MACOS=${MACOS}
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    command: "python -m rag.task.executor --num-threads 15"
-    networks:
-      - ragflow
-    restart: on-failure
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-            
-  executor-2:
-    depends_on:
-      mysql:
-        condition: service_healthy
-    image: ${RAGFLOW_IMAGE}
-    container_name: ragflow-executor-2
-    volumes:
-      - ./ragflow-logs:/ragflow/logs
-      - ./service_conf.yaml.template:/ragflow/conf/service_conf.yaml.template
-    env_file: .env
-    environment:
-      - TZ=${TIMEZONE}
-      - HF_ENDPOINT=${HF_ENDPOINT}
-      - MACOS=${MACOS}
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    command: "python -m rag.task.executor --num-threads 15"
+    command: "python -m rag.task.executor --num-threads 5"
     networks:
       - ragflow
     restart: on-failure
