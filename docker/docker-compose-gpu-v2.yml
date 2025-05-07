@@ -49,29 +49,32 @@ services:
     runtime: nvidia  # ✅ Abilita il supporto GPU in ambienti non-Swarm
 
   executor:
-    depends_on:
-      mysql:
-        condition: service_healthy
-    image: ${RAGFLOW_IMAGE}
-    container_name: ragflow-executor
-    volumes:
-      - ./ragflow-logs:/ragflow/logs
-      - ./nginx/ragflow.conf:/etc/nginx/conf.d/ragflow.conf
-    env_file: .env
-    environment:
-      - TZ=${TIMEZONE}
-      - HF_ENDPOINT=${HF_ENDPOINT}
-      - MACOS=${MACOS}
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    command: "python -m rag.task.executor --num-threads 16"
-    networks:
-      - ragflow
-    restart: on-failure
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    runtime: nvidia  # ✅ Anche qui per usare la GPU
-
-networks:
-  ragflow:
-    driver: bridge
+  depends_on:
+    mysql:
+      condition: service_healthy
+  image: ${RAGFLOW_IMAGE}
+  container_name: ragflow-executor
+  volumes:
+    - ./ragflow-logs:/ragflow/logs
+    - ./nginx/ragflow.conf:/etc/nginx/conf.d/ragflow.conf
+  env_file: .env
+  environment:
+    - TZ=${TIMEZONE}
+    - HF_ENDPOINT=${HF_ENDPOINT}
+    - MACOS=${MACOS}
+    - NVIDIA_VISIBLE_DEVICES=all
+    - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+  command: "./entrypoint.sh --disable-webserver --workers=32"  # ⬅️ QUESTA è la sintassi corretta
+  networks:
+    - ragflow
+  restart: on-failure
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  runtime: nvidia
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
