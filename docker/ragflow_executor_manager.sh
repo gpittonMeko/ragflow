@@ -36,9 +36,12 @@ check_resources() {
     GPU_MEM_TOTAL=15360
     GPU_MEM_PERCENT=$((GPU_MEM_USED * 100 / GPU_MEM_TOTAL))
     
-    # CPU e RAM
-    CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | awk -F'.' '{print $1}')
-    RAM_USAGE=$(free | grep Mem | awk '{print $3/$2 * 100.0}' | awk -F'.' '{print $1}')
+    # CPU - Versione corretta che misura l'uso effettivo
+    CPU_IDLE=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print int($1)}')
+    CPU_USAGE=$((100 - CPU_IDLE))
+    
+    # RAM
+    RAM_USAGE=$(free | grep Mem | awk '{print int($3/$2 * 100)}')
     
     print_color $YELLOW "GPU: ${GPU_UTIL}% util, ${GPU_MEM_PERCENT}% mem"
     print_color $YELLOW "CPU: ${CPU_USAGE}% used"
@@ -150,7 +153,10 @@ monitor_live() {
         nvidia-smi | grep -E "MiB.*C" | head -10
         echo
         echo -e "\033[0;32m=== SYSTEM RESOURCES ===\033[0m"
-        echo -n "CPU: "; top -bn1 | grep "Cpu(s)" | awk "{print \$2}"
+        # CPU misurazione corretta
+        CPU_IDLE=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk "{print int(\$1)}")
+        CPU_USAGE=$((100 - CPU_IDLE))
+        echo "CPU: ${CPU_USAGE}% used"
         echo -n "RAM: "; free -h | grep Mem | awk "{print \$3\" / \"\$2}"
     '
 }
