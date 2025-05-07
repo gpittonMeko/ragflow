@@ -1,13 +1,12 @@
 #!/bin/bash
-# ragflow_executor_manager.sh - Gestore completo per RagFlow executors
+# ragflow_executor_manager.sh - Gestore completo per RagFlow executors (CPU-only version)
 
 # Configurazione (modifica questi valori secondo le tue necessità)
-MAX_EXECUTORS=30          # Limite massimo di executor totali
-BATCH_SIZE=3              # Aggiungi executor in batch di 3
-WAIT_TIME=60              # Attendi 60 secondi tra batch
-TARGET_GPU_UTIL=85        # Target utilizzo GPU (%)
-TARGET_GPU_MEM=80         # Target memoria GPU (%)
-MIN_CPU_FREE=20           # Minimo CPU libera richiesta (%)
+MAX_EXECUTORS=50          # Limite massimo di executor totali (aumentato per sfruttare più CPU)
+BATCH_SIZE=5              # Aggiungi executor in batch di 5
+WAIT_TIME=30              # Attendi 30 secondi tra batch (ridotto)
+TARGET_CPU_UTIL=85        # Target utilizzo CPU (%)
+MIN_CPU_FREE=15           # Minimo CPU libera richiesta (%)
 MIN_RAM_FREE=20           # Minimo RAM libera richiesta (%)
 
 # Colori per output
@@ -30,12 +29,6 @@ get_current_executors() {
 
 # Funzione per controllare le risorse
 check_resources() {
-    # GPU stats
-    GPU_UTIL=$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits | head -1)
-    GPU_MEM_USED=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)
-    GPU_MEM_TOTAL=15360
-    GPU_MEM_PERCENT=$((GPU_MEM_USED * 100 / GPU_MEM_TOTAL))
-    
     # CPU - Versione corretta che misura l'uso effettivo
     CPU_IDLE=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print int($1)}')
     CPU_USAGE=$((100 - CPU_IDLE))
@@ -43,12 +36,11 @@ check_resources() {
     # RAM
     RAM_USAGE=$(free | grep Mem | awk '{print int($3/$2 * 100)}')
     
-    print_color $YELLOW "GPU: ${GPU_UTIL}% util, ${GPU_MEM_PERCENT}% mem"
     print_color $YELLOW "CPU: ${CPU_USAGE}% used"
     print_color $YELLOW "RAM: ${RAM_USAGE}% used"
     
     # Controlla se è sicuro continuare
-    if [ "$GPU_UTIL" -ge "$TARGET_GPU_UTIL" ] || [ "$GPU_MEM_PERCENT" -ge "$TARGET_GPU_MEM" ]; then
+    if [ "$CPU_USAGE" -gt "$TARGET_CPU_UTIL" ]; then
         return 1
     fi
     
@@ -69,11 +61,12 @@ show_status() {
     docker exec ragflow-server ps aux | grep task_executor | grep -v grep | awk '{print $2, $11, $12, $13}'
     print_color $YELLOW "Totale executor: $(get_current_executors)"
     
-    print_color $GREEN "\n=== GPU STATUS ==="
-    nvidia-smi | grep -E "MiB.*C" | head -10
-    
     print_color $GREEN "\n=== SYSTEM RESOURCES ==="
     check_resources
+    
+    # Mostra info CPU dettagliate
+    print_color $GREEN "\n=== CPU DETAILS ==="
+    lscpu | grep -E 'CPU\(s\)|Thread|Core|Socket'
 }
 
 # Funzione per scale up sicuro
@@ -105,7 +98,7 @@ scale_up() {
             
             if docker exec -d ragflow-server python /ragflow/rag/svr/task_executor.py $CURRENT_EXECUTORS; then
                 added=$((added + 1))
-                sleep 5
+                sleep 3
             else
                 print_color $RED "Errore nell'avvio dell'executor $CURRENT_EXECUTORS"
                 CURRENT_EXECUTORS=$((CURRENT_EXECUTORS - 1))
@@ -146,11 +139,8 @@ kill_all_executors() {
 # Funzione per monitoraggio live
 monitor_live() {
     watch -n 2 '
-        echo -e "\033[0;32m=== RAGFLOW EXECUTOR MONITOR ===\033[0m"
+        echo -e "\033[0;32m=== RAGFLOW EXECUTOR MONITOR (CPU-Only) ===\033[0m"
         echo -e "\033[1;33mTotal executors: $(docker exec ragflow-server ps aux | grep task_executor | grep -v grep | wc -l)\033[0m"
-        echo
-        echo -e "\033[0;32m=== GPU USAGE ===\033[0m"
-        nvidia-smi | grep -E "MiB.*C" | head -10
         echo
         echo -e "\033[0;32m=== SYSTEM RESOURCES ===\033[0m"
         # CPU misurazione corretta
@@ -158,6 +148,9 @@ monitor_live() {
         CPU_USAGE=$((100 - CPU_IDLE))
         echo "CPU: ${CPU_USAGE}% used"
         echo -n "RAM: "; free -h | grep Mem | awk "{print \$3\" / \"\$2}"
+        echo
+        echo -e "\033[0;32m=== TOP PROCESSES ===\033[0m"
+        docker exec ragflow-server ps aux --sort=-%cpu | head -5
     '
 }
 
@@ -167,11 +160,12 @@ main_menu() {
         clear
         print_color $GREEN "
 ╔════════════════════════════════════════════╗
-║     RAGFLOW EXECUTOR MANAGER v1.0          ║
+║     RAGFLOW EXECUTOR MANAGER v2.0          ║
+║            (CPU-Only Edition)              ║
 ╚════════════════════════════════════════════╝
 
 1) Mostra stato attuale
-2) Avvia scaling automatico (target $TARGET_GPU_UTIL% GPU)
+2) Avvia scaling automatico (target $TARGET_CPU_UTIL% CPU)
 3) Termina tutti gli executor extra
 4) Monitor live
 5) Configurazione
@@ -206,8 +200,7 @@ main_menu() {
                 echo "MAX_EXECUTORS=$MAX_EXECUTORS"
                 echo "BATCH_SIZE=$BATCH_SIZE"
                 echo "WAIT_TIME=$WAIT_TIME"
-                echo "TARGET_GPU_UTIL=$TARGET_GPU_UTIL%"
-                echo "TARGET_GPU_MEM=$TARGET_GPU_MEM%"
+                echo "TARGET_CPU_UTIL=$TARGET_CPU_UTIL%"
                 echo "MIN_CPU_FREE=$MIN_CPU_FREE%"
                 echo "MIN_RAM_FREE=$MIN_RAM_FREE%"
                 print_color $YELLOW "\nModifica direttamente lo script per cambiare questi valori."
@@ -230,12 +223,6 @@ check_prerequisites() {
     # Controlla se Docker è installato
     if ! command -v docker &> /dev/null; then
         print_color $RED "Docker non trovato! Installa Docker prima di continuare."
-        exit 1
-    fi
-    
-    # Controlla se nvidia-smi è disponibile
-    if ! command -v nvidia-smi &> /dev/null; then
-        print_color $RED "nvidia-smi non trovato! Assicurati di avere i driver NVIDIA installati."
         exit 1
     fi
     
