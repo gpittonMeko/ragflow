@@ -72,6 +72,16 @@ services:
       - "host.docker.internal:host-gateway"
     runtime: nvidia  # ✅ Anche qui per usare la GPU
 
+executor2:
+  extends:
+    service: executor
+  container_name: ragflow-executor-2
+
+executor3:
+  extends:
+    service: executor
+  container_name: ragflow-executor-3
+
 networks:
   ragflow:
     driver: bridge
