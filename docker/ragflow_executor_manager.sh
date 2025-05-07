@@ -1,0 +1,269 @@
+#!/bin/bash
+# ragflow_executor_manager.sh - Gestore completo per RagFlow executors
+
+# Configurazione (modifica questi valori secondo le tue necessità)
+MAX_EXECUTORS=30          # Limite massimo di executor totali
+BATCH_SIZE=3              # Aggiungi executor in batch di 3
+WAIT_TIME=60              # Attendi 60 secondi tra batch
+TARGET_GPU_UTIL=85        # Target utilizzo GPU (%)
+TARGET_GPU_MEM=80         # Target memoria GPU (%)
+MIN_CPU_FREE=20           # Minimo CPU libera richiesta (%)
+MIN_RAM_FREE=20           # Minimo RAM libera richiesta (%)
+
+# Colori per output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Funzione per stampare con colori
+print_color() {
+    color=$1
+    shift
+    echo -e "${color}$@${NC}"
+}
+
+# Funzione per ottenere numero di executor correnti
+get_current_executors() {
+    docker exec ragflow-server ps aux | grep task_executor | grep -v grep | wc -l
+}
+
+# Funzione per controllare le risorse
+check_resources() {
+    # GPU stats
+    GPU_UTIL=$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits | head -1)
+    GPU_MEM_USED=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)
+    GPU_MEM_TOTAL=15360
+    GPU_MEM_PERCENT=$((GPU_MEM_USED * 100 / GPU_MEM_TOTAL))
+    
+    # CPU e RAM
+    CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | awk -F'.' '{print $1}')
+    RAM_USAGE=$(free | grep Mem | awk '{print $3/$2 * 100.0}' | awk -F'.' '{print $1}')
+    
+    print_color $YELLOW "GPU: ${GPU_UTIL}% util, ${GPU_MEM_PERCENT}% mem"
+    print_color $YELLOW "CPU: ${CPU_USAGE}% used"
+    print_color $YELLOW "RAM: ${RAM_USAGE}% used"
+    
+    # Controlla se è sicuro continuare
+    if [ "$GPU_UTIL" -ge "$TARGET_GPU_UTIL" ] || [ "$GPU_MEM_PERCENT" -ge "$TARGET_GPU_MEM" ]; then
+        return 1
+    fi
+    
+    if [ "$CPU_USAGE" -gt $((100 - MIN_CPU_FREE)) ]; then
+        return 1
+    fi
+    
+    if [ "$RAM_USAGE" -gt $((100 - MIN_RAM_FREE)) ]; then
+        return 1
+    fi
+    
+    return 0
+}
+
+# Funzione per mostrare lo status
+show_status() {
+    print_color $GREEN "\n=== EXECUTOR STATUS ==="
+    docker exec ragflow-server ps aux | grep task_executor | grep -v grep | awk '{print $2, $11, $12, $13}'
+    print_color $YELLOW "Totale executor: $(get_current_executors)"
+    
+    print_color $GREEN "\n=== GPU STATUS ==="
+    nvidia-smi | grep -E "MiB.*C" | head -10
+    
+    print_color $GREEN "\n=== SYSTEM RESOURCES ==="
+    check_resources
+}
+
+# Funzione per scale up sicuro
+scale_up() {
+    print_color $GREEN "Starting safe executor scaling..."
+    CURRENT_EXECUTORS=$(get_current_executors)
+    print_color $YELLOW "Executor iniziali: $CURRENT_EXECUTORS"
+    
+    while [ "$CURRENT_EXECUTORS" -lt "$MAX_EXECUTORS" ]; do
+        echo "----------------------------------------"
+        print_color $YELLOW "Controllo risorse..."
+        
+        if ! check_resources; then
+            print_color $RED "Limiti risorse raggiunti. Stop."
+            break
+        fi
+        
+        # Aggiungi executor in batch
+        print_color $GREEN "Aggiunta batch di $BATCH_SIZE executor..."
+        added=0
+        
+        for i in $(seq 1 $BATCH_SIZE); do
+            if [ "$CURRENT_EXECUTORS" -ge "$MAX_EXECUTORS" ]; then
+                break
+            fi
+            
+            CURRENT_EXECUTORS=$((CURRENT_EXECUTORS + 1))
+            print_color $YELLOW "Avvio executor $CURRENT_EXECUTORS"
+            
+            if docker exec -d ragflow-server python /ragflow/rag/svr/task_executor.py $CURRENT_EXECUTORS; then
+                added=$((added + 1))
+                sleep 5
+            else
+                print_color $RED "Errore nell'avvio dell'executor $CURRENT_EXECUTORS"
+                CURRENT_EXECUTORS=$((CURRENT_EXECUTORS - 1))
+                break
+            fi
+        done
+        
+        if [ "$added" -eq 0 ]; then
+            print_color $RED "Nessun executor aggiunto. Stop."
+            break
+        fi
+        
+        print_color $GREEN "Aggiunti $added executor. Totale: $CURRENT_EXECUTORS"
+        print_color $YELLOW "Attesa di $WAIT_TIME secondi per stabilizzazione..."
+        sleep $WAIT_TIME
+        
+        # Verifica che gli executor siano ancora attivi
+        actual_executors=$(get_current_executors)
+        if [ "$actual_executors" -lt "$CURRENT_EXECUTORS" ]; then
+            print_color $RED "ATTENZIONE: Alcuni executor sono crashati!"
+            print_color $RED "Previsti: $CURRENT_EXECUTORS, Attivi: $actual_executors"
+            CURRENT_EXECUTORS=$actual_executors
+        fi
+    done
+    
+    print_color $GREEN "\n=== SCALING COMPLETATO ==="
+    show_status
+}
+
+# Funzione per rimuovere tutti gli executor extra
+kill_all_executors() {
+    print_color $YELLOW "Terminazione di tutti gli executor extra..."
+    docker exec ragflow-server pkill -f "task_executor.py [0-9]"
+    sleep 5
+    print_color $GREEN "Executor rimanenti: $(get_current_executors)"
+}
+
+# Funzione per monitoraggio live
+monitor_live() {
+    watch -n 2 '
+        echo -e "\033[0;32m=== RAGFLOW EXECUTOR MONITOR ===\033[0m"
+        echo -e "\033[1;33mTotal executors: $(docker exec ragflow-server ps aux | grep task_executor | grep -v grep | wc -l)\033[0m"
+        echo
+        echo -e "\033[0;32m=== GPU USAGE ===\033[0m"
+        nvidia-smi | grep -E "MiB.*C" | head -10
+        echo
+        echo -e "\033[0;32m=== SYSTEM RESOURCES ===\033[0m"
+        echo -n "CPU: "; top -bn1 | grep "Cpu(s)" | awk "{print \$2}"
+        echo -n "RAM: "; free -h | grep Mem | awk "{print \$3\" / \"\$2}"
+    '
+}
+
+# Menu principale
+main_menu() {
+    while true; do
+        clear
+        print_color $GREEN "
+╔════════════════════════════════════════════╗
+║     RAGFLOW EXECUTOR MANAGER v1.0          ║
+╚════════════════════════════════════════════╝
+
+1) Mostra stato attuale
+2) Avvia scaling automatico (target $TARGET_GPU_UTIL% GPU)
+3) Termina tutti gli executor extra
+4) Monitor live
+5) Configurazione
+6) Esci
+
+"
+        read -p "Seleziona opzione [1-6]: " choice
+        
+        case $choice in
+            1) 
+                clear
+                show_status
+                read -p "Premi ENTER per continuare..."
+                ;;
+            2)
+                clear
+                scale_up
+                read -p "Premi ENTER per continuare..."
+                ;;
+            3)
+                clear
+                kill_all_executors
+                read -p "Premi ENTER per continuare..."
+                ;;
+            4)
+                clear
+                monitor_live
+                ;;
+            5)
+                clear
+                print_color $GREEN "=== CONFIGURAZIONE ATTUALE ==="
+                echo "MAX_EXECUTORS=$MAX_EXECUTORS"
+                echo "BATCH_SIZE=$BATCH_SIZE"
+                echo "WAIT_TIME=$WAIT_TIME"
+                echo "TARGET_GPU_UTIL=$TARGET_GPU_UTIL%"
+                echo "TARGET_GPU_MEM=$TARGET_GPU_MEM%"
+                echo "MIN_CPU_FREE=$MIN_CPU_FREE%"
+                echo "MIN_RAM_FREE=$MIN_RAM_FREE%"
+                print_color $YELLOW "\nModifica direttamente lo script per cambiare questi valori."
+                read -p "Premi ENTER per continuare..."
+                ;;
+            6)
+                print_color $GREEN "Arrivederci!"
+                exit 0
+                ;;
+            *)
+                print_color $RED "Opzione non valida!"
+                sleep 1
+                ;;
+        esac
+    done
+}
+
+# Controlla prerequisiti
+check_prerequisites() {
+    # Controlla se Docker è installato
+    if ! command -v docker &> /dev/null; then
+        print_color $RED "Docker non trovato! Installa Docker prima di continuare."
+        exit 1
+    fi
+    
+    # Controlla se nvidia-smi è disponibile
+    if ! command -v nvidia-smi &> /dev/null; then
+        print_color $RED "nvidia-smi non trovato! Assicurati di avere i driver NVIDIA installati."
+        exit 1
+    fi
+    
+    # Controlla se il container ragflow-server è in esecuzione
+    if ! docker ps | grep -q ragflow-server; then
+        print_color $RED "Container ragflow-server non trovato! Assicurati che sia in esecuzione."
+        exit 1
+    fi
+}
+
+# Main
+main() {
+    check_prerequisites
+    
+    # Se viene passato un parametro, esegui direttamente l'azione
+    case "$1" in
+        status)
+            show_status
+            ;;
+        scale)
+            scale_up
+            ;;
+        kill)
+            kill_all_executors
+            ;;
+        monitor)
+            monitor_live
+            ;;
+        *)
+            # Nessun parametro, mostra il menu
+            main_menu
+            ;;
+    esac
+}
+
+# Avvia lo script
+main $1
