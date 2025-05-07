@@ -2,9 +2,9 @@
 # ragflow_executor_manager.sh - Gestore completo per RagFlow executors (CPU-only version)
 
 # Configurazione (modifica questi valori secondo le tue necessità)
-MAX_EXECUTORS=50          # Limite massimo di executor totali (aumentato per sfruttare più CPU)
-BATCH_SIZE=5              # Aggiungi executor in batch di 5
-WAIT_TIME=30              # Attendi 30 secondi tra batch (ridotto)
+MAX_EXECUTORS=50          # Limite massimo di executor totali
+BATCH_SIZE=1              # Aggiungi executor uno alla volta (MODIFICATO)
+WAIT_TIME=60              # Attendi 60 secondi tra executor (MODIFICATO)
 TARGET_CPU_UTIL=85        # Target utilizzo CPU (%)
 MIN_CPU_FREE=15           # Minimo CPU libera richiesta (%)
 MIN_RAM_FREE=20           # Minimo RAM libera richiesta (%)
@@ -71,7 +71,7 @@ show_status() {
 
 # Funzione per scale up sicuro
 scale_up() {
-    print_color $GREEN "Starting safe executor scaling..."
+    print_color $GREEN "Starting safe executor scaling (one at a time)..."
     CURRENT_EXECUTORS=$(get_current_executors)
     print_color $YELLOW "Executor iniziali: $CURRENT_EXECUTORS"
     
@@ -84,44 +84,45 @@ scale_up() {
             break
         fi
         
-        # Aggiungi executor in batch
-        print_color $GREEN "Aggiunta batch di $BATCH_SIZE executor..."
-        added=0
+        # Aggiungi UN executor alla volta
+        CURRENT_EXECUTORS=$((CURRENT_EXECUTORS + 1))
+        print_color $GREEN "Avvio executor $CURRENT_EXECUTORS..."
         
-        for i in $(seq 1 $BATCH_SIZE); do
-            if [ "$CURRENT_EXECUTORS" -ge "$MAX_EXECUTORS" ]; then
+        if docker exec -d ragflow-server python /ragflow/rag/svr/task_executor.py $CURRENT_EXECUTORS; then
+            print_color $GREEN "✓ Executor $CURRENT_EXECUTORS avviato con successo"
+            print_color $YELLOW "Attesa di $WAIT_TIME secondi per test stabilità..."
+            
+            # Conta alla rovescia visuale
+            for i in $(seq $WAIT_TIME -1 1); do
+                printf "\rAttesa: %2d secondi rimanenti..." $i
+                sleep 1
+            done
+            printf "\n"
+            
+            # Verifica che l'executor sia ancora attivo
+            actual_executors=$(get_current_executors)
+            if [ "$actual_executors" -lt "$CURRENT_EXECUTORS" ]; then
+                print_color $RED "ATTENZIONE: L'executor appena avviato è crashato!"
+                print_color $RED "Previsti: $CURRENT_EXECUTORS, Attivi: $actual_executors"
+                CURRENT_EXECUTORS=$actual_executors
+                
+                print_color $RED "Possibile instabilità del sistema. Interruzione scaling."
                 break
-            fi
-            
-            CURRENT_EXECUTORS=$((CURRENT_EXECUTORS + 1))
-            print_color $YELLOW "Avvio executor $CURRENT_EXECUTORS"
-            
-            if docker exec -d ragflow-server python /ragflow/rag/svr/task_executor.py $CURRENT_EXECUTORS; then
-                added=$((added + 1))
-                sleep 3
             else
-                print_color $RED "Errore nell'avvio dell'executor $CURRENT_EXECUTORS"
-                CURRENT_EXECUTORS=$((CURRENT_EXECUTORS - 1))
-                break
+                print_color $GREEN "✓ Executor $CURRENT_EXECUTORS verificato e stabile"
+                print_color $YELLOW "Executor attivi: $CURRENT_EXECUTORS/$MAX_EXECUTORS"
             fi
-        done
-        
-        if [ "$added" -eq 0 ]; then
-            print_color $RED "Nessun executor aggiunto. Stop."
+        else
+            print_color $RED "Errore nell'avvio dell'executor $CURRENT_EXECUTORS"
+            CURRENT_EXECUTORS=$((CURRENT_EXECUTORS - 1))
+            print_color $RED "Interruzione scaling a causa di errore."
             break
         fi
         
-        print_color $GREEN "Aggiunti $added executor. Totale: $CURRENT_EXECUTORS"
-        print_color $YELLOW "Attesa di $WAIT_TIME secondi per stabilizzazione..."
-        sleep $WAIT_TIME
-        
-        # Verifica che gli executor siano ancora attivi
-        actual_executors=$(get_current_executors)
-        if [ "$actual_executors" -lt "$CURRENT_EXECUTORS" ]; then
-            print_color $RED "ATTENZIONE: Alcuni executor sono crashati!"
-            print_color $RED "Previsti: $CURRENT_EXECUTORS, Attivi: $actual_executors"
-            CURRENT_EXECUTORS=$actual_executors
-        fi
+        # Mostra risorse dopo ogni executor
+        echo
+        check_resources
+        echo
     done
     
     print_color $GREEN "\n=== SCALING COMPLETATO ==="
@@ -160,12 +161,12 @@ main_menu() {
         clear
         print_color $GREEN "
 ╔════════════════════════════════════════════╗
-║     RAGFLOW EXECUTOR MANAGER v2.0          ║
+║     RAGFLOW EXECUTOR MANAGER v2.1          ║
 ║            (CPU-Only Edition)              ║
 ╚════════════════════════════════════════════╝
 
 1) Mostra stato attuale
-2) Avvia scaling automatico (target $TARGET_CPU_UTIL% CPU)
+2) Avvia scaling automatico (1 executor/minuto)
 3) Termina tutti gli executor extra
 4) Monitor live
 5) Configurazione
@@ -198,8 +199,8 @@ main_menu() {
                 clear
                 print_color $GREEN "=== CONFIGURAZIONE ATTUALE ==="
                 echo "MAX_EXECUTORS=$MAX_EXECUTORS"
-                echo "BATCH_SIZE=$BATCH_SIZE"
-                echo "WAIT_TIME=$WAIT_TIME"
+                echo "BATCH_SIZE=$BATCH_SIZE (executors per ciclo)"
+                echo "WAIT_TIME=$WAIT_TIME secondi"
                 echo "TARGET_CPU_UTIL=$TARGET_CPU_UTIL%"
                 echo "MIN_CPU_FREE=$MIN_CPU_FREE%"
                 echo "MIN_RAM_FREE=$MIN_RAM_FREE%"
