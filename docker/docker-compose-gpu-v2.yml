@@ -64,7 +64,7 @@ services:
       - MACOS=${MACOS}
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    command: "python -m rag.task.executor --num-threads 16"
+    command: "python -m rag.task.executor --num-threads 32"
     networks:
       - ragflow
     restart: on-failure
