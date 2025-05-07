@@ -30,7 +30,7 @@ services:
       - TZ=${TIMEZONE}
       - HF_ENDPOINT=${HF_ENDPOINT}
       - MACOS=${MACOS}
-      - NVIDIA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all      # ⬅️ Cambiato da 0 a all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     networks:
       - ragflow
@@ -38,6 +38,13 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     runtime: nvidia
+    deploy:                            # ⬅️ Aggiunto
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   executor:
     depends_on:
@@ -53,7 +60,7 @@ services:
       - TZ=${TIMEZONE}
       - HF_ENDPOINT=${HF_ENDPOINT}
       - MACOS=${MACOS}
-      - NVIDIA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all      # ⬅️ Cambiato da 0 a all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     command: "python -m rag.task.executor --num-threads 32"
     networks:
@@ -62,8 +69,18 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     runtime: nvidia
+    deploy:                            # ⬅️ Aggiunto
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   executor2:
+    depends_on:                        # ⬅️ Aggiunto
+      mysql:
+        condition: service_healthy
     image: ${RAGFLOW_IMAGE}
     container_name: ragflow-executor-2
     volumes:
@@ -74,7 +91,7 @@ services:
       - TZ=${TIMEZONE}
       - HF_ENDPOINT=${HF_ENDPOINT}
       - MACOS=${MACOS}
-      - NVIDIA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     command: "python -m rag.task.executor --num-threads 32"
     networks:
@@ -83,8 +100,18 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   executor3:
+    depends_on:                        # ⬅️ Aggiunto
+      mysql:
+        condition: service_healthy
     image: ${RAGFLOW_IMAGE}
     container_name: ragflow-executor-3
     volumes:
@@ -95,7 +122,7 @@ services:
       - TZ=${TIMEZONE}
       - HF_ENDPOINT=${HF_ENDPOINT}
       - MACOS=${MACOS}
-      - NVIDIA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     command: "python -m rag.task.executor --num-threads 32"
     networks:
@@ -104,6 +131,13 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
 networks:
   ragflow:
