@@ -21,7 +21,7 @@
         "store": "true"
       }
     },
-    "date_detection": "true",
+    "date_detection": true,
     "dynamic_templates": [
       {
         "int": {
@@ -162,7 +162,12 @@
             "type": "dense_vector",
             "index": true,
             "similarity": "cosine",
-            "dims": 512
+            "dims": 512,
+            "index_options": {
+              "type": "hnsw",
+              "m": 16,
+              "ef_construction": 200
+            }
           }
         }
       },
@@ -173,7 +178,12 @@
             "type": "dense_vector",
             "index": true,
             "similarity": "cosine",
-            "dims": 768
+            "dims": 768,
+            "index_options": {
+              "type": "hnsw",
+              "m": 16,
+              "ef_construction": 200
+            }
           }
         }
       },
@@ -184,7 +194,12 @@
             "type": "dense_vector",
             "index": true,
             "similarity": "cosine",
-            "dims": 1024
+            "dims": 1024,
+            "index_options": {
+              "type": "hnsw",
+              "m": 16,
+              "ef_construction": 200
+            }
           }
         }
       },
@@ -195,7 +210,12 @@
             "type": "dense_vector",
             "index": true,
             "similarity": "cosine",
-            "dims": 1536
+            "dims": 1536,
+            "index_options": {
+              "type": "hnsw",
+              "m": 16,
+              "ef_construction": 200
+            }
           }
         }
       },
