@@ -4,7 +4,8 @@ services:
   # ---------------------------
   es01:
     container_name: ragflow-es-01
-    profiles: [elasticsearch]
+    profiles:
+      - elasticsearch
     image: elasticsearch:${STACK_VERSION}
     env_file: .env
     volumes:
@@ -29,7 +30,9 @@ services:
     healthcheck:
       test:
         - "CMD-SHELL"
-        - curl -fsSL http://localhost:9200/_cluster/health?pretty | grep '"status" *: *"green"'
+        - >
+          curl -fsSL localhost:9200/_cluster/health?pretty |
+          grep '"status"\s*:\s*"green"'
       interval: 10s
       timeout: 5s
       retries: 20
@@ -39,7 +42,8 @@ services:
 
   es02:
     container_name: ragflow-es-02
-    profiles: [elasticsearch]
+    profiles:
+      - elasticsearch
     image: elasticsearch:${STACK_VERSION}
     env_file: .env
     volumes:
