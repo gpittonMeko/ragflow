@@ -1,7 +1,7 @@
 services:
-  # ----------------------------------------
-  # Elasticsearch single‐node “pompato”
-  # ----------------------------------------
+    # ---------------------------
+  # Elasticsearch 2-nodi
+  # ---------------------------
   es01:
     container_name: ragflow-es-01
     profiles: [elasticsearch]
@@ -13,26 +13,52 @@ services:
       - "${ES_PORT}:9200"
     environment:
       - node.name=es01
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - cluster.name=ragflow-cluster
+      - network.host=0.0.0.0
+      - discovery.seed_hosts=es01,es02
+      - cluster.initial_master_nodes=es01,es02
       - bootstrap.memory_lock=true
-      - ES_JAVA_OPTS=-Xms8g -Xmx8g                  # heap 8 GiB
-      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms8g -Xmx8g
       - xpack.security.enabled=false
       - TZ=${TIMEZONE}
-    mem_limit: ${MEM_LIMIT}                         # ora 20 GiB
     ulimits:
       memlock:
         soft: -1
         hard: -1
+    mem_limit: ${MEM_LIMIT}
     healthcheck:
       test:
         - "CMD-SHELL"
-        - >
-          curl -fsSL localhost:9200/_cluster/health?pretty |
-          grep '"status"\s*:\s*"green"'
+        - curl -fsSL http://localhost:9200/_cluster/health?pretty | grep '"status" *: *"green"'
       interval: 10s
       timeout: 5s
       retries: 20
+    networks:
+      - ragflow
+    restart: on-failure
+
+  es02:
+    container_name: ragflow-es-02
+    profiles: [elasticsearch]
+    image: elasticsearch:${STACK_VERSION}
+    env_file: .env
+    volumes:
+      - esdata02:/usr/share/elasticsearch/data
+    environment:
+      - node.name=es02
+      - cluster.name=ragflow-cluster
+      - network.host=0.0.0.0
+      - discovery.seed_hosts=es01,es02
+      - cluster.initial_master_nodes=es01,es02
+      - bootstrap.memory_lock=true
+      - ES_JAVA_OPTS=-Xms8g -Xmx8g
+      - xpack.security.enabled=false
+      - TZ=${TIMEZONE}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    mem_limit: ${MEM_LIMIT}
     networks:
       - ragflow
     restart: on-failure
@@ -132,8 +158,11 @@ services:
 
 
 
+
 volumes:
   esdata01:
+    driver: local
+  esdata02:
     driver: local
   infinity_data:
     driver: local
