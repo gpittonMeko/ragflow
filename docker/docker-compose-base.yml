@@ -12,9 +12,10 @@ services:
     environment:
       - node.name=es01
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-      - bootstrap.memory_lock=false
+      - bootstrap.memory_lock=true           # MEMORY_LOCK ON
+      - ES_JAVA_OPTS=-Xms8g -Xmx8g           # HEAP 8 GiB
       - discovery.type=single-node
-      - xpack.security.enabled=true
+      - xpack.security.enabled=false         # DISABLE SECURITY
       - xpack.security.http.ssl.enabled=false
       - xpack.security.transport.ssl.enabled=false
       - cluster.routing.allocation.disk.watermark.low=5gb
