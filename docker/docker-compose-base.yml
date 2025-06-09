@@ -1,37 +1,38 @@
 services:
+  # ----------------------------------------
+  # Elasticsearch single‐node “pompato”
+  # ----------------------------------------
   es01:
     container_name: ragflow-es-01
-    profiles:
-      - elasticsearch
+    profiles: [elasticsearch]
     image: elasticsearch:${STACK_VERSION}
+    env_file: .env
     volumes:
       - esdata01:/usr/share/elasticsearch/data
     ports:
-      - ${ES_PORT}:9200
-    env_file: .env
+      - "${ES_PORT}:9200"
     environment:
       - node.name=es01
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-      - bootstrap.memory_lock=true           # MEMORY_LOCK ON
-      - ES_JAVA_OPTS=-Xms8g -Xmx8g           # HEAP 8 GiB
+      - bootstrap.memory_lock=true
+      - ES_JAVA_OPTS=-Xms8g -Xmx8g                  # heap 8 GiB
       - discovery.type=single-node
-      - xpack.security.enabled=false         # DISABLE SECURITY
-      - xpack.security.http.ssl.enabled=false
-      - xpack.security.transport.ssl.enabled=false
-      - cluster.routing.allocation.disk.watermark.low=5gb
-      - cluster.routing.allocation.disk.watermark.high=3gb
-      - cluster.routing.allocation.disk.watermark.flood_stage=2gb
+      - xpack.security.enabled=false
       - TZ=${TIMEZONE}
-    mem_limit: ${MEM_LIMIT}
+    mem_limit: ${MEM_LIMIT}                         # ora 20 GiB
     ulimits:
       memlock:
         soft: -1
         hard: -1
     healthcheck:
-      test: ["CMD-SHELL", "curl http://localhost:9200"]
+      test:
+        - "CMD-SHELL"
+        - >
+          curl -fsSL localhost:9200/_cluster/health?pretty |
+          grep '"status"\s*:\s*"green"'
       interval: 10s
-      timeout: 10s
-      retries: 120
+      timeout: 5s
+      retries: 20
     networks:
       - ragflow
     restart: on-failure
