@@ -21,11 +21,13 @@ export enum Routes {
   ParsedResult = `${Chunk}${Parsed}`,
   Result = '/result',
   ResultView = `${Chunk}${Result}`,
+  SgaiAccessLogin = '/sgai-access-login',
+  SearchHome = '/search'
 }
 
 const routes = [
   {
-    path: '/login',
+    path: Routes.SgaiAccessLogin,
     component: '@/pages/login',
     layout: false,
   },
@@ -35,7 +37,7 @@ const routes = [
     layout: false,
   },
   {
-    path: '/login-page',
+    path: Routes.SearchHome,
     component: '@/pages/login-page',
     layout: false,
   },
