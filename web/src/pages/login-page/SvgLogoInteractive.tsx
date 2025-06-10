@@ -8,9 +8,12 @@ const VIEWBOX_H = 8500;
 
 
 
+
 export const SvgLogoInteractive: React.FC <{ flipped?: boolean }> = ({ flipped }) =>  {
   const svgRef = useRef<SVGSVGElement>(null);
   const gradientRef = useRef<SVGLinearGradientElement>(null);
+  const [gradientTheme, setGradientTheme] = useState<'soft' | 'vivid'>('soft');
+
 
   // Stato gradiente animato + target
   const [gradient, setGradient] = useState({ x1: 50, y1: 30, x2: 60, y2: 90 });
@@ -83,19 +86,11 @@ export const SvgLogoInteractive: React.FC <{ flipped?: boolean }> = ({ flipped }
         userSelect: 'none',
         transition: 'box-shadow 0.6s'
       }}
-      onMouseMove={handleMove}
-      onMouseLeave={handleLeave}
-      onTouchMove={e => {
-        setAuto(false);
-        if (e.touches?.[0]) {
-          const rect = svgRef.current?.getBoundingClientRect();
-          if (!rect) return;
-          const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
-          const y = ((e.touches[0].clientY - rect.top) / rect.height) * 100;
-          setTarget({ x1: x, y1: y, x2: 100 - x, y2: 100 - y });
-        }
-      }}
-      onTouchEnd={handleLeave}
+      // NEL COMPONENTE SVG
+        onMouseEnter={() => setGradientTheme('vivid')}
+        onMouseLeave={() => setGradientTheme('soft')}
+        onTouchStart={() => setGradientTheme('vivid')}
+        onTouchEnd={() => setGradientTheme('soft')}
     >
       <defs>
         <linearGradient
@@ -107,16 +102,13 @@ export const SvgLogoInteractive: React.FC <{ flipped?: boolean }> = ({ flipped }
             x2={gradient.x2 * VIEWBOX_W / 100}
             y2={gradient.y2 * VIEWBOX_H / 100}
             >
-            <stop offset="0%"   stopColor="#36C4F2" />
-            <stop offset="22%"  stopColor="#ab73e6" />
-            <stop offset="39%"  stopColor="#fa7eea" />
-            <stop offset="57%"  stopColor="#82F2EE" />
-            <stop offset="85%"  stopColor="#486FFD" />
-            <stop offset="100%" stopColor="#36C4F2" />
+            {(gradientTheme === 'soft' ? SOFT_GRADIENT_STOPS : VIVID_GRADIENT_STOPS).map(s =>
+                <stop key={s.offset} offset={s.offset} stopColor={s.color} />
+            )}
             </linearGradient>
       </defs>
       <filter id="logo-glow" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="70" result="glow" />
+        <feGaussianBlur stdDeviation={gradientTheme === "vivid" ? 120 : 70} result="glow" />
         <feMerge>
             <feMergeNode in="glow" />
             <feMergeNode in="SourceGraphic" />
