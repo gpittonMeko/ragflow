@@ -2,12 +2,12 @@ import React, { useRef } from 'react';
 
 
 
-const VIEWBOX_H = 11000;
+const VIEWBOX_W = 11000;
 const VIEWBOX_H = 8500;
 
 // --- Sostituisci il path d'esempio qui sotto col tuo SVG! ---
 const LOGO_PATHS = (
-   <g fill="url(#gradient-hover)" transform="scale(1,-1) translate(0,-8500)">
+   <g fill="url(#gradient-hover)">
 
     <path d="M2900 8409 c-117 -8 -234 -25 -260 -39 -10 -5 -28 -10 -39 -10 -11 0
 -37 -7 -58 -16 -37 -16 -55 -24 -138 -60 -164 -72 -346 -246 -419 -399 -10
