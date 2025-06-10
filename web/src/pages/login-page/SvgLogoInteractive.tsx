@@ -93,7 +93,7 @@ const LOGO_PATHS = (
 -7 1024 -7 1444 l0 762 -290 0 -290 0 2 -1467z"/>}
 
   </g>
-  </>
+
 );
 
 export const SvgLogoInteractive: React.FC = () => {
