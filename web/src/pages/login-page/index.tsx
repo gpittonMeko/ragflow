@@ -100,9 +100,16 @@ const PresentationPage: React.FC = () => {
       </button>
 
       {/* LOGO SGAI AL POSTO DEL TITOLO */}
-    <div className={styles.heroSection} style={{ display: 'flex', gap: 40, alignItems: 'center', justifyContent: 'center' }}>
+    <div className={styles.heroSection}
+    style={{
+    minHeight: '35vh', // per dare aria sopra e sotto
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center'
+  }}>
       <SvgLogoInteractive flipped={false} />
-      <SvgLogoInteractive flipped={true} />
+      
     </div>
 
       {/* CHAT SUBITO SOTTO IL LOGO */}

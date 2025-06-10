@@ -75,7 +75,7 @@ export const SvgLogoInteractive: React.FC <{ flipped?: boolean }> = ({ flipped }
       role="img"
       aria-label="Logo SGAI"
       style={{
-        maxWidth: 600,
+        maxWidth: "min(95vw, 680px)",
         height: 'auto',
         display: 'block',
         margin: '0 auto 28px auto',
@@ -99,17 +99,20 @@ export const SvgLogoInteractive: React.FC <{ flipped?: boolean }> = ({ flipped }
     >
       <defs>
         <linearGradient
-          id="gradient-hover"
-          ref={gradientRef}
-          x1={`${gradient.x1}%`}
-          y1={`${gradient.y1}%`}
-          x2={`${gradient.x2}%`}
-          y2={`${gradient.y2}%`}
-        >
-          <stop offset="0%" stopColor="#FFD700" />
-          <stop offset="50%" stopColor="#FF0099" />
-          <stop offset="100%" stopColor="#00CFFF" />
-        </linearGradient>
+            id="gradient-hover"
+            ref={gradientRef}
+            x1={`${gradient.x1}%`}
+            y1={`${gradient.y1}%`}
+            x2={`${gradient.x2}%`}
+            y2={`${gradient.y2}%`}
+            >
+            <stop offset="5%"  stopColor="#FFD700" />
+            <stop offset="20%" stopColor="#FF70D0" />
+            <stop offset="50%" stopColor="#9147FF" />
+            <stop offset="70%" stopColor="#30E9FF" />
+            <stop offset="90%" stopColor="#45FFBF" />
+            <stop offset="100%" stopColor="#FFD700" />
+            </linearGradient>
       </defs>
 
        <g
