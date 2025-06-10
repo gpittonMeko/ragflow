@@ -39,17 +39,16 @@ const VIVID_GRADIENT_STOPS = [
 
   // Animazione automatica del gradiente
   useEffect(() => {
-    if (!auto) return;
-    const interval = setInterval(() => {
-      setTarget(t => ({
-        x1: (t.x1 + 0.25) % 100,
-        y1:  25 + 20 * Math.sin(Date.now() / 1300),
-        x2: (t.x2 + 0.12) % 100,
-        y2:  80 + 10 * Math.cos(Date.now() / 2200),
-      }));
-    }, 50);
-    return () => clearInterval(interval);
-  }, [auto]);
+  const interval = setInterval(() => {
+    setTarget(t => ({
+      x1: (t.x1 + 0.25) % 100,
+      y1:  25 + 20 * Math.sin(Date.now() / 1300),
+      x2: (t.x2 + 0.12) % 100,
+      y2:  80 + 10 * Math.cos(Date.now() / 2200),
+    }));
+  }, 50);
+  return () => clearInterval(interval);
+}, []); // <-- DA LASCIARE COSI': nessuna dipendenza a auto!
 
   // Interpolazione smooth (lerp)
   useEffect(() => {
@@ -80,10 +79,6 @@ const VIVID_GRADIENT_STOPS = [
       y2: 100 - y,
     });
   }
-  // Quando l’utente se ne va dal logo, riparte l’auto-animazione
-  function handleLeave() {
-  setTimeout(() => setAuto(true), 300); // torni auto dopo 300ms per robustezza
-}
 
 function lerpColor(a: string, b: string, t: number) {
   // a, b es: "#aabbcc"
