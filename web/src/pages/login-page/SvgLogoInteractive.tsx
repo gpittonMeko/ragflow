@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect } from 'react';
 
 
 
-const VIEWBOX_W = 11000;
+const VIEWBOX_W = 13500;
 const VIEWBOX_H = 8500;
 
 
@@ -101,16 +101,18 @@ export const SvgLogoInteractive: React.FC <{ flipped?: boolean }> = ({ flipped }
         <linearGradient
             id="gradient-hover"
             ref={gradientRef}
-            x1={`${gradient.x1}%`}
-            y1={`${gradient.y1}%`}
-            x2={`${gradient.x2}%`}
-            y2={`${gradient.y2}%`}
+            gradientUnits="userSpaceOnUse" // QUESTO È FONDAMENTALE!
+            x1={gradient.x1 * VIEWBOX_W / 100}
+            y1={gradient.y1 * VIEWBOX_H / 100}
+            x2={gradient.x2 * VIEWBOX_W / 100}
+            y2={gradient.y2 * VIEWBOX_H / 100}
             >
-            <stop offset="5%"  stopColor="#FFD700" />
-            <stop offset="20%" stopColor="#FF70D0" />
-            <stop offset="50%" stopColor="#9147FF" />
-            <stop offset="70%" stopColor="#30E9FF" />
-            <stop offset="90%" stopColor="#45FFBF" />
+            <stop offset="2%" stopColor="#FFD700" />
+            <stop offset="15%" stopColor="#FF70D0" />
+            <stop offset="38%" stopColor="#F35A36" />
+            <stop offset="56%" stopColor="#9147FF" />
+            <stop offset="78%" stopColor="#30E9FF" />
+            <stop offset="92%" stopColor="#45FFBF" />
             <stop offset="100%" stopColor="#FFD700" />
             </linearGradient>
       </defs>

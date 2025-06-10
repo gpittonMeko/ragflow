@@ -108,7 +108,7 @@ const PresentationPage: React.FC = () => {
     alignItems: 'center',
     justifyContent: 'center'
   }}>
-      <SvgLogoInteractive flipped={false} />
+      <SvgLogoInteractive flipped={true} />
       
     </div>
 
