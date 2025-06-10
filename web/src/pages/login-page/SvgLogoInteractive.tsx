@@ -33,22 +33,22 @@ const VIVID_GRADIENT_STOPS = [
 ];
 
   // Stato gradiente animato + target
-  const [gradient, setGradient] = useState({ x1: 50, y1: 30, x2: 60, y2: 90 });
-  const [target, setTarget] = useState(gradient);
-  const [auto, setAuto] = useState(true);
+const [gradient, setGradient] = useState({ x1: 50, y1: 30, x2: 60, y2: 90 });
 
-  // Animazione automatica del gradiente
-  useEffect(() => {
+useEffect(() => {
+  let start = Date.now();
   const interval = setInterval(() => {
-    setTarget(t => ({
-      x1: (t.x1 + 0.25) % 100,
-      y1:  25 + 20 * Math.sin(Date.now() / 1300),
-      x2: (t.x2 + 0.12) % 100,
-      y2:  80 + 10 * Math.cos(Date.now() / 2200),
-    }));
-  }, 50);
+    const now = Date.now();
+    const t = (now - start) / 1000;
+    setGradient({
+      x1: (50 + 25 * Math.sin(t * 0.25)) % 100,
+      y1: (30 + 20 * Math.cos(t * 0.27)) % 100,
+      x2: (80 + 18 * Math.sin(t * 0.16)) % 100,
+      y2: (60 + 22 * Math.cos(t * 0.22)) % 100
+    });
+  }, 40);
   return () => clearInterval(interval);
-}, []); // <-- DA LASCIARE COSI': nessuna dipendenza a auto!
+}, []);
 
   // Interpolazione smooth (lerp)
   useEffect(() => {
@@ -65,20 +65,7 @@ const VIVID_GRADIENT_STOPS = [
   return () => cancelAnimationFrame(anim);
 }, [gradientTheme]);
 
-  // Mouse interaction per effetto smooth/auto
-  function handleMove(e: React.MouseEvent<SVGSVGElement, MouseEvent>) {
-    
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setTarget({
-      x1: x,
-      y1: y,
-      x2: 100 - x,
-      y2: 100 - y,
-    });
-  }
+
 
 function lerpColor(a: string, b: string, t: number) {
   // a, b es: "#aabbcc"
