@@ -13,6 +13,7 @@ export const SvgLogoInteractive: React.FC <{ flipped?: boolean }> = ({ flipped }
   const svgRef = useRef<SVGSVGElement>(null);
   const gradientRef = useRef<SVGLinearGradientElement>(null);
   const [gradientTheme, setGradientTheme] = useState<'soft' | 'vivid'>('soft');
+  const [transition, setTransition] = useState(0); // 0: solo soft, 1: solo vivid
 
 const SOFT_GRADIENT_STOPS = [
   { offset: "0%",   color: "#34aaff" },
@@ -52,19 +53,18 @@ const VIVID_GRADIENT_STOPS = [
 
   // Interpolazione smooth (lerp)
   useEffect(() => {
-    let af: any;
-    function lerp() {
-      setGradient(old => ({
-        x1: old.x1 + (target.x1 - old.x1) * 0.05,
-        y1: old.y1 + (target.y1 - old.y1) * 0.05,
-        x2: old.x2 + (target.x2 - old.x2) * 0.05,
-        y2: old.y2 + (target.y2 - old.y2) * 0.05,
-      }));
-      af = requestAnimationFrame(lerp);
-    }
-    lerp();
-    return () => cancelAnimationFrame(af);
-  }, [target]);
+  let anim: any;
+  function animate() {
+    setTransition(tran =>
+      Math.abs(tran - (gradientTheme === 'vivid' ? 1 : 0)) < 0.03
+        ? (gradientTheme === 'vivid' ? 1 : 0)
+        : tran + ((gradientTheme === 'vivid' ? 1 : 0) - tran) * 0.11
+    );
+    anim = requestAnimationFrame(animate);
+  }
+  animate();
+  return () => cancelAnimationFrame(anim);
+}, [gradientTheme]);
 
   // Mouse interaction per effetto smooth/auto
   function handleMove(e: React.MouseEvent<SVGSVGElement, MouseEvent>) {
@@ -84,6 +84,21 @@ const VIVID_GRADIENT_STOPS = [
   function handleLeave() {
   setTimeout(() => setAuto(true), 300); // torni auto dopo 300ms per robustezza
 }
+
+function lerpColor(a: string, b: string, t: number) {
+  // a, b es: "#aabbcc"
+  let A = parseInt(a.substring(1),16);
+  let B = parseInt(b.substring(1),16);
+  let r = ((A >> 16) + (( (B >> 16) - (A >> 16) ) * t))|0;
+  let g = ((A >> 8 & 0xff) + (((B >> 8 & 0xff) - (A >> 8 & 0xff)) * t))|0;
+  let b2 = ((A & 0xff) + (((B & 0xff) - (A & 0xff)) * t))|0;
+  return `#${(1<<24|(r<<16)|(g<<8)|b2).toString(16).slice(1)}`;
+}
+
+const currentStops = SOFT_GRADIENT_STOPS.map((s, i) => ({
+  offset: s.offset,
+  color: lerpColor(s.color, VIVID_GRADIENT_STOPS[i].color, transition)
+}));
 
   // Render responsive
   return (
@@ -118,7 +133,7 @@ const VIVID_GRADIENT_STOPS = [
             x2={gradient.x2 * VIEWBOX_W / 100}
             y2={gradient.y2 * VIEWBOX_H / 100}
             >
-            {(gradientTheme === 'soft' ? SOFT_GRADIENT_STOPS : VIVID_GRADIENT_STOPS).map(s =>
+            {currentStops.map(s =>
                 <stop key={s.offset} offset={s.offset} stopColor={s.color} />
             )}
             </linearGradient>
