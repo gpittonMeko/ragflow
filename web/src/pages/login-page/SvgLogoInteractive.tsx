@@ -36,10 +36,10 @@ export const SvgLogoInteractive: React.FC <{ flipped?: boolean }> = ({ flipped }
     let af: any;
     function lerp() {
       setGradient(old => ({
-        x1: old.x1 + (target.x1 - old.x1) * 0.07,
-        y1: old.y1 + (target.y1 - old.y1) * 0.07,
-        x2: old.x2 + (target.x2 - old.x2) * 0.07,
-        y2: old.y2 + (target.y2 - old.y2) * 0.07,
+        x1: old.x1 + (target.x1 - old.x1) * 0.05,
+        y1: old.y1 + (target.y1 - old.y1) * 0.05,
+        x2: old.x2 + (target.x2 - old.x2) * 0.05,
+        y2: old.y2 + (target.y2 - old.y2) * 0.05,
       }));
       af = requestAnimationFrame(lerp);
     }
@@ -101,26 +101,33 @@ export const SvgLogoInteractive: React.FC <{ flipped?: boolean }> = ({ flipped }
         <linearGradient
             id="gradient-hover"
             ref={gradientRef}
-            gradientUnits="userSpaceOnUse" // QUESTO È FONDAMENTALE!
+            gradientUnits="userSpaceOnUse"
             x1={gradient.x1 * VIEWBOX_W / 100}
             y1={gradient.y1 * VIEWBOX_H / 100}
             x2={gradient.x2 * VIEWBOX_W / 100}
             y2={gradient.y2 * VIEWBOX_H / 100}
             >
-            <stop offset="2%" stopColor="#FFD700" />
-            <stop offset="15%" stopColor="#FF70D0" />
-            <stop offset="38%" stopColor="#F35A36" />
-            <stop offset="56%" stopColor="#9147FF" />
-            <stop offset="78%" stopColor="#30E9FF" />
-            <stop offset="92%" stopColor="#45FFBF" />
-            <stop offset="100%" stopColor="#FFD700" />
+            <stop offset="0%"   stopColor="#36C4F2" />
+            <stop offset="22%"  stopColor="#ab73e6" />
+            <stop offset="39%"  stopColor="#fa7eea" />
+            <stop offset="57%"  stopColor="#82F2EE" />
+            <stop offset="85%"  stopColor="#486FFD" />
+            <stop offset="100%" stopColor="#36C4F2" />
             </linearGradient>
       </defs>
+      <filter id="logo-glow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="70" result="glow" />
+        <feMerge>
+            <feMergeNode in="glow" />
+            <feMergeNode in="SourceGraphic" />
+        </feMerge>
+        </filter>
 
        <g
-        fill="url(#gradient-hover)"
-        transform={flipped ? `scale(1,-1) translate(0,-${VIEWBOX_H})` : undefined}
-      >
+  fill="url(#gradient-hover)"
+  filter="url(#logo-glow)"
+  transform={flipped ? `scale(1,-1) translate(0,-${VIEWBOX_H})` : undefined}
+>
     <path d="M2900 8409 c-117 -8 -234 -25 -260 -39 -10 -5 -28 -10 -39 -10 -11 0
         -37 -7 -58 -16 -37 -16 -55 -24 -138 -60 -164 -72 -346 -246 -419 -399 -10
         -22 -24 -49 -29 -60 -6 -11 -14 -36 -18 -55 -4 -19 -12 -53 -18 -75 -14 -52
