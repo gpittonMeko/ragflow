@@ -14,6 +14,22 @@ export const SvgLogoInteractive: React.FC <{ flipped?: boolean }> = ({ flipped }
   const gradientRef = useRef<SVGLinearGradientElement>(null);
   const [gradientTheme, setGradientTheme] = useState<'soft' | 'vivid'>('soft');
 
+const SOFT_GRADIENT_STOPS = [
+  { offset: "0%",   color: "#34aaff" },
+  { offset: "22%",  color: "#7ca6f7" },
+  { offset: "43%",  color: "#b38ffa" },
+  { offset: "67%",  color: "#e7a4ff" },
+  { offset: "85%",  color: "#a4ffe7" },
+  { offset: "100%", color: "#34aaff" }
+];
+const VIVID_GRADIENT_STOPS = [
+  { offset: "0%",   color: "#22caff" },
+  { offset: "22%",  color: "#6b8afd" },
+  { offset: "43%",  color: "#fa2d91" },
+  { offset: "67%",  color: "#faff86" },
+  { offset: "85%",  color: "#0ffcdf" },
+  { offset: "100%", color: "#22caff" }
+];
 
   // Stato gradiente animato + target
   const [gradient, setGradient] = useState({ x1: 50, y1: 30, x2: 60, y2: 90 });
