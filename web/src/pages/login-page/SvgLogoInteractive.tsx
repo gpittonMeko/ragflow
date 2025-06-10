@@ -8,7 +8,7 @@ const VIEWBOX_H = 8500;
 
 // --- Sostituisci il path d'esempio qui sotto col tuo SVG! ---
 const LOGO_PATHS = (
-   <g fill="url(#gradient-hover)"  transform={flipped ? "scale(1,-1) translate(0,-8500)" : undefined}>
+   <g fill="url(#gradient-hover)"  transform={flipped ? `scale(1,-1) translate(0,-${VIEWBOX_H})` : undefined}>
 
 
     <path d="M2900 8409 c-117 -8 -234 -25 -260 -39 -10 -5 -28 -10 -39 -10 -11 0
@@ -101,7 +101,7 @@ const LOGO_PATHS = (
 
 );
 
-export const SvgLogoInteractive: React.FC = () => {
+export const SvgLogoInteractive: React.FC <{ flipped?: boolean }> = ({ flipped }) =>  {
   const svgRef = useRef<SVGSVGElement>(null);
   const gradientRef = useRef<SVGLinearGradientElement>(null);
 
