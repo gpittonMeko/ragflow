@@ -8,7 +8,7 @@ const VIEWBOX_H = 8500;
 
 // --- Sostituisci il path d'esempio qui sotto col tuo SVG! ---
 const LOGO_PATHS = (
-   <g fill="url(#gradient-hover)">
+   <g fill="url(#gradient-hover)"  transform={flipped ? "scale(1,-1) translate(0,-8500)" : undefined}>
 
 
     <path d="M2900 8409 c-117 -8 -234 -25 -260 -39 -10 -5 -28 -10 -39 -10 -11 0
@@ -155,14 +155,16 @@ export const SvgLogoInteractive: React.FC = () => {
     });
   }
   // Quando l’utente se ne va dal logo, riparte l’auto-animazione
-  function handleLeave() { setAuto(true); }
+  function handleLeave() {
+  setTimeout(() => setAuto(true), 300); // torni auto dopo 300ms per robustezza
+}
 
   // Render responsive
   return (
     <svg
       ref={svgRef}
       viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`}
-      width="100%"
+      width="90%"
       role="img"
       aria-label="Logo SGAI"
       style={{
