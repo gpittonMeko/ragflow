@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import styles from './index.less';
+import { SvgLogoInteractive } from './SvgLogoInteractive';
 
 const PresentationPage: React.FC = () => {
   const controllerRef = useRef(new AbortController());
