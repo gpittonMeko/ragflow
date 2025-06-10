@@ -8,7 +8,7 @@ const VIEWBOX_H = 8500;
 
 // --- Sostituisci il path d'esempio qui sotto col tuo SVG! ---
 const LOGO_PATHS = (
-   + <g fill="url(#gradient-hover)">
+   <g fill="url(#gradient-hover)">
 
 
     <path d="M2900 8409 c-117 -8 -234 -25 -260 -39 -10 -5 -28 -10 -39 -10 -11 0
