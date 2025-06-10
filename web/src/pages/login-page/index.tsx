@@ -98,45 +98,9 @@ const PresentationPage: React.FC = () => {
           : <span className={styles.themeIcon}>🌙</span>}
       </button>
 
+      {/* LOGO SGAI AL POSTO DEL TITOLO */}
       <div className={styles.heroSection}>
-        {/* LOGO PIU' GRANDE */}
-        <img
-          src="https://sgai-production-bucket.s3.eu-north-1.amazonaws.com/logo-sgai.svg"
-          alt="SGAI Logo"
-          style={{ maxWidth: 280, height: 160, display: 'block', margin: '0 auto' }}
-          className={styles.sgaiLogoLarge}
-        />
-
-        {/* SVG MODERNO con gradiente animato */}
-        <svg
-          width="340"
-          height="80"
-          viewBox="0 0 340 80"
-          style={{ display: 'block', margin: '0 auto' }}
-        >
-          <defs>
-            <linearGradient id="animated-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#FFD700">
-                <animate attributeName="stop-color" values="#FFD700;#FF0099;#00CFFF;#FFD700" dur="5s" repeatCount="indefinite" />
-              </stop>
-              <stop offset="50%" stopColor="#FF0099">
-                <animate attributeName="stop-color" values="#FF0099;#00CFFF;#FFD700;#FF0099" dur="5s" repeatCount="indefinite" />
-              </stop>
-              <stop offset="100%" stopColor="#00CFFF">
-                <animate attributeName="stop-color" values="#00CFFF;#FFD700;#FF0099;#00CFFF" dur="5s" repeatCount="indefinite" />
-              </stop>
-            </linearGradient>
-          </defs>
-          <rect
-            x="10"
-            y="10"
-            width="320"
-            height="60"
-            rx="30"
-            fill="url(#animated-gradient)"
-            opacity="0.85"
-          />
-        </svg>
+        <SvgLogoInteractive />
       </div>
 
       {/* CHAT SUBITO SOTTO IL LOGO */}
