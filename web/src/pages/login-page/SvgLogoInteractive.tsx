@@ -1,11 +1,14 @@
 import React, { useRef } from 'react';
 
-const LOGO_WIDTH = 340;
-const LOGO_HEIGHT = 80;
+
+
+const VIEWBOX_H = 11000;
+const VIEWBOX_H = 8500;
 
 // --- Sostituisci il path d'esempio qui sotto col tuo SVG! ---
 const LOGO_PATHS = (
-   <g fill="url(#gradient-hover)">
+   <g fill="url(#gradient-hover)" transform="scale(1,-1) translate(0,-8500)">
+
     <path d="M2900 8409 c-117 -8 -234 -25 -260 -39 -10 -5 -28 -10 -39 -10 -11 0
 -37 -7 -58 -16 -37 -16 -55 -24 -138 -60 -164 -72 -346 -246 -419 -399 -10
 -22 -24 -49 -29 -60 -6 -11 -14 -36 -18 -55 -4 -19 -12 -53 -18 -75 -14 -52
@@ -97,50 +100,106 @@ const LOGO_PATHS = (
 );
 
 export const SvgLogoInteractive: React.FC = () => {
-  const gradientRef = useRef<SVGLinearGradientElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const gradientRef = useRef<SVGLinearGradientElement>(null);
 
-  // Mouse move: aggiorna il gradiente
+  // Stato gradiente animato + target
+  const [gradient, setGradient] = useState({ x1: 50, y1: 30, x2: 60, y2: 90 });
+  const [target, setTarget] = useState(gradient);
+  const [auto, setAuto] = useState(true);
+
+  // Animazione automatica del gradiente
+  useEffect(() => {
+    if (!auto) return;
+    const interval = setInterval(() => {
+      setTarget(t => ({
+        x1: (t.x1 + 0.25) % 100,
+        y1:  25 + 20 * Math.sin(Date.now() / 1300),
+        x2: (t.x2 + 0.12) % 100,
+        y2:  80 + 10 * Math.cos(Date.now() / 2200),
+      }));
+    }, 50);
+    return () => clearInterval(interval);
+  }, [auto]);
+
+  // Interpolazione smooth (lerp)
+  useEffect(() => {
+    let af: any;
+    function lerp() {
+      setGradient(old => ({
+        x1: old.x1 + (target.x1 - old.x1) * 0.07,
+        y1: old.y1 + (target.y1 - old.y1) * 0.07,
+        x2: old.x2 + (target.x2 - old.x2) * 0.07,
+        y2: old.y2 + (target.y2 - old.y2) * 0.07,
+      }));
+      af = requestAnimationFrame(lerp);
+    }
+    lerp();
+    return () => cancelAnimationFrame(af);
+  }, [target]);
+
+  // Mouse interaction per effetto smooth/auto
   function handleMove(e: React.MouseEvent<SVGSVGElement, MouseEvent>) {
+    setAuto(false);
     const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect || !gradientRef.current) return;
-    // Calcola posizione percentuale del mouse nell'SVG
+    if (!rect) return;
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    gradientRef.current.setAttribute('x1', `${x}%`);
-    gradientRef.current.setAttribute('y1', `${y}%`);
-    gradientRef.current.setAttribute('x2', `${100-x}%`);
-    gradientRef.current.setAttribute('y2', `${100-y}%`);
+    setTarget({
+      x1: x,
+      y1: y,
+      x2: 100 - x,
+      y2: 100 - y,
+    });
   }
+  // Quando l’utente se ne va dal logo, riparte l’auto-animazione
+  function handleLeave() { setAuto(true); }
 
+  // Render responsive
   return (
     <svg
       ref={svgRef}
-      width={LOGO_WIDTH}
-      height={LOGO_HEIGHT}
-      viewBox="0 0 11000 8500"
-      style={{ display: 'block', margin: '0 auto', cursor: 'pointer', userSelect: 'none' }}
+      viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`}
+      width="100%"
+      role="img"
+      aria-label="Logo SGAI"
+      style={{
+        maxWidth: 600,
+        height: 'auto',
+        display: 'block',
+        margin: '0 auto 28px auto',
+        cursor: 'pointer',
+        userSelect: 'none',
+        transition: 'box-shadow 0.6s'
+      }}
       onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
       onTouchMove={e => {
+        setAuto(false);
         if (e.touches?.[0]) {
-          // per tablet/mobile
-          const evt = { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY } as any;
-          handleMove({ ...e, ...evt } as any);
+          const rect = svgRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+          const y = ((e.touches[0].clientY - rect.top) / rect.height) * 100;
+          setTarget({ x1: x, y1: y, x2: 100 - x, y2: 100 - y });
         }
       }}
+      onTouchEnd={handleLeave}
     >
       <defs>
         <linearGradient
           id="gradient-hover"
           ref={gradientRef}
-          x1="0%" y1="50%" x2="100%" y2="50%"
+          x1={`${gradient.x1}%`}
+          y1={`${gradient.y1}%`}
+          x2={`${gradient.x2}%`}
+          y2={`${gradient.y2}%`}
         >
           <stop offset="0%" stopColor="#FFD700" />
           <stop offset="50%" stopColor="#FF0099" />
           <stop offset="100%" stopColor="#00CFFF" />
         </linearGradient>
       </defs>
-      {/* Il logo prende il gradiente */}
       {LOGO_PATHS}
     </svg>
   );
