@@ -118,7 +118,7 @@ export const SvgLogoInteractive: React.FC = () => {
       ref={svgRef}
       width={LOGO_WIDTH}
       height={LOGO_HEIGHT}
-      viewBox={`0 0 ${LOGO_WIDTH} ${LOGO_HEIGHT}`}
+      viewBox="0 0 11000 8500"
       style={{ display: 'block', margin: '0 auto', cursor: 'pointer', userSelect: 'none' }}
       onMouseMove={handleMove}
       onTouchMove={e => {
