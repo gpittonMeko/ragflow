@@ -131,7 +131,9 @@ const currentStops = SOFT_GRADIENT_STOPS.map((s, i) => ({
        <g
   fill="url(#gradient-hover)"
   filter="url(#logo-glow)"
-  transform={flipped ? `scale(1,-1) translate(0,-${VIEWBOX_H})` : undefined}
+  transform={`
+    scale(1,-1) translate(0,-${VIEWBOX_H}) 
+    translate(0,800)`} // Sposta su di 800 "punti SVG" (aggiusta a piacere)
 >
     <path d="M2900 8409 c-117 -8 -234 -25 -260 -39 -10 -5 -28 -10 -39 -10 -11 0
         -37 -7 -58 -16 -37 -16 -55 -24 -138 -60 -164 -72 -346 -246 -419 -399 -10

@@ -103,8 +103,8 @@ const PresentationPage: React.FC = () => {
     <div className={styles.heroSection}
     style={{
     minHeight: '0', // per dare aria sopra e sotto
-    paddingTop: 16,
-    paddingBottom: 8,  // aria minima
+    paddingTop: 64,
+    paddingBottom: 0,  // aria minima
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
