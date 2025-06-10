@@ -68,7 +68,7 @@ const VIVID_GRADIENT_STOPS = [
 
   // Mouse interaction per effetto smooth/auto
   function handleMove(e: React.MouseEvent<SVGSVGElement, MouseEvent>) {
-    setAuto(false);
+    
     const rect = svgRef.current?.getBoundingClientRect();
     if (!rect) return;
     const x = ((e.clientX - rect.left) / rect.width) * 100;
