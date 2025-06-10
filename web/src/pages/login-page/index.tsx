@@ -102,7 +102,7 @@ const PresentationPage: React.FC = () => {
       {/* LOGO SGAI AL POSTO DEL TITOLO */}
     <div className={styles.heroSection}
     style={{
-    minHeight: '35vh', // per dare aria sopra e sotto
+    minHeight: '5vh', // per dare aria sopra e sotto
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
