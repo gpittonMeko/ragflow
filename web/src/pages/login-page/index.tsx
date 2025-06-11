@@ -106,19 +106,9 @@ const PresentationPage: React.FC = () => {
         }}
       >
         <SvgLogoInteractive flipped={true} />
-        <div
-          style={{
-            color: "#fff",
-            marginTop: '-80px',       // meno spazio tra logo e scritta
-            marginBottom: '30px',   // PIÙ spazio sotto la scritta!
-            fontSize: '1.15rem',
-            fontWeight: 400,
-            textAlign: 'center',
-            lineHeight: 1.2,
-          }}
-        >
-          L'intelligenza artificiale per il contenzioso tributario: L'assistente legale che hai sempre desiderato
-        </div>
+        <div className={styles.heroSubtitle}>
+    L'intelligenza artificiale per il contenzioso tributario: L'assistente legale che hai sempre desiderato
+  </div>
       </div>
 
       {/* CHAT SOTTO IL LOGO */}
