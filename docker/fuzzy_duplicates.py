@@ -1,0 +1,266 @@
+import os
+import json
+import re
+from elasticsearch import Elasticsearch
+from elasticsearch.helpers import scan
+from rich.console import Console
+from rich.prompt import Confirm, Prompt
+from rich.progress import track
+
+# =========== CONFIG PRINCIPALE =============
+INDICE = "ragflow_20006_6shard"
+ES_HOST = "http://localhost:1200"
+ES_USER = "elastic"
+ES_PASS = "infini_rag_flow"
+FIELD = "docnm_kwd"
+CHECKPOINT_FILE_DEFAULT = "log_duplicati.jsonl"
+STEP_CHECKPOINT = 10000
+
+console = Console()
+
+def stem_filename(name):
+    name = name.strip()
+    name = re.sub(r' - .+(?=\.[pP][dD][fF]$)', '', name)
+    name = re.sub(r' \(\d+\)(?=\.[pP][dD][fF]$)', '', name)
+    name = re.sub(r'\.[pP][dD][fF]$', '', name)
+    return name.lower()
+
+def base_filename(name):
+    return stem_filename(name) + ".pdf"
+
+def analizza_duplicati(docs_by_stem):
+    riassunto = []
+    for stem, docs in docs_by_stem.items():
+        if len(docs) > 1:
+            candidati = [d for d in docs if re.match(r'^[^.() ]+\.pdf$', d[1], re.IGNORECASE)]
+            if candidati:
+                keep = candidati[0]
+            else:
+                keep = docs[0]
+            canc = [d for d in docs if d != keep]
+            gruppo = {
+                'stem': stem,
+                'conservato': keep[1],
+                'conservato_id': keep[0],
+                'cancellati': [cc[1] for cc in canc],
+                'cancellati_id': [cc[0] for cc in canc]
+            }
+            riassunto.append(gruppo)
+    return riassunto
+
+def salva_checkpoint(riassunto, filename):
+    with open(filename, "w", encoding="utf8") as f:
+        for line in riassunto:
+            f.write(json.dumps(line, ensure_ascii=False) + "\n")
+    console.print(f"[green]Checkpoint salvato ({len(riassunto)} gruppi) su {filename}[/green]")
+
+def carica_checkpoint(filename):
+    if not os.path.exists(filename):
+        return []
+    dati = []
+    with open(filename, encoding="utf8") as f:
+        for r in f:
+            if r.strip():
+                dati.append(json.loads(r))
+    return dati
+
+def mostra_riassunto(riassunto, max_per_view=10):
+    numgr = len(riassunto)
+    num_dup = sum(len(g['cancellati']) for g in riassunto)
+    num_tot_in_gruppi = sum(1 + len(g['cancellati']) for g in riassunto)
+    console.print(f'[yellow]Trovati {numgr} gruppi di duplicati[/yellow]')
+    console.print(f'[red]Totale file duplicati da cancellare: {num_dup}[/red]')
+    console.print(f'[blue]Totale file coinvolti nei gruppi (da cancellare + buoni): {num_tot_in_gruppi}[/blue]')
+    if numgr == 0:
+        return
+    for i, g in enumerate(riassunto):
+        console.print(f"\n[b]{i + 1} - Gruppo:[/b] [cyan]{g['stem']}[/cyan]")
+        console.print(f"   [bold green]TENUTO:[/bold green]     {g['conservato']}")
+        for c in g['cancellati']:
+            console.print(f"   [red]CANCELLA:[/red]   {c}")
+        if (i + 1) >= max_per_view:
+            if Confirm.ask(f"Mostrati {max_per_view} su {numgr}, continua a mostrare?"):
+                continue
+            else:
+                break
+
+def cancella_duplicati(es, riassunto):
+    tot_del = 0
+    for g in track(riassunto, description="Cancellazione gruppi doc"):
+        for del_id in g['cancellati_id']:
+            es.delete(index=INDICE, id=del_id, ignore=[404])
+            tot_del += 1
+    console.print(f"[bold red]Cancellati {tot_del} documenti duplicati![/bold red]")
+
+def rinomina_keep(es, riassunto):
+    for g in track(riassunto, description="Aggiorno nomi dei documenti buoni"):
+        wanted_name = base_filename(g['conservato'])
+        doc_id = g['conservato_id']
+        current_name = g['conservato']
+        if current_name.lower() != wanted_name:
+            try:
+                es.update(index=INDICE, id=doc_id, doc={FIELD: wanted_name})
+            except Exception as ex:
+                console.print(f"[red]Errore aggiornamento nome {doc_id}: {ex}[/red]")
+
+def cerca_duplicati(es, step_checkpoint, checkpoint_file):
+    console.print("[cyan]→ Cerco e raggruppo i documenti per nome base...[/cyan]")
+    size_query = es.count(index=INDICE)
+    totali = size_query['count']
+    docs_by_stem = {}
+    checked = 0
+
+    for doc in track(
+        scan(es, index=INDICE, _source_includes=[FIELD, "doc_id"], scroll='5m'),
+        description="Scansione...",
+        total=totali
+    ):
+        fn = doc['_source'].get(FIELD)
+        docid = doc['_source'].get('doc_id', doc['_id'])
+        if not fn:
+            continue
+        stem = stem_filename(fn)
+        docs_by_stem.setdefault(stem, []).append((docid, fn))
+        checked += 1
+
+        if checked % step_checkpoint == 0:
+            riassunto = analizza_duplicati(docs_by_stem)
+            salva_checkpoint(riassunto, checkpoint_file)
+            console.print(f"[yellow]Checkpoint dopo {checked} file[/yellow]")
+
+    riassunto = analizza_duplicati(docs_by_stem)
+    salva_checkpoint(riassunto, checkpoint_file)
+    console.print("[green]Checkpoint finale completato[/green]")
+    return docs_by_stem
+
+def mostra_report_duplicati(filename):
+    riassunto = carica_checkpoint(filename)
+    numgr = len(riassunto)
+    num_dup = sum(len(g['cancellati']) for g in riassunto)
+    num_tot_in_gruppi = sum(1 + len(g['cancellati']) for g in riassunto)
+    console.print(f"\n[bold magenta]=== REPORT DUPLICATI ===[/bold magenta]")
+    console.print(f'[yellow]Gruppi di duplicati trovati: {numgr}[/yellow]')
+    console.print(f'[red]File duplicati da cancellare: {num_dup}[/red]')
+    console.print(f'[blue]File coinvolti totali (da cancellare + buoni): {num_tot_in_gruppi}[/blue]')
+    if numgr > 0:
+        console.print(f'[green]File buoni totali (da mantenere): {numgr}[/green]')
+    console.print(f"[magenta]Log checkpoint: {filename}[/magenta]\n")
+
+def trova_indice_chunk(es):
+    """Restituisce il nome dell’indice chunk (che contiene campo 'doc_id')"""
+    res = es.cat.indices(format="json")
+    candidati = []
+    for idx in res:
+        name = idx['index']
+        try:
+            mapping = es.indices.get_mapping(index=name)
+            props = mapping[name]['mappings'].get('properties', {})
+            if 'doc_id' in props:
+                candidati.append(name)
+        except Exception:
+            continue
+    if not candidati:
+        console.print("[red]Nessun indice chunk trovato automaticamente! Inserisci tu il nome?[/red]")
+        idx = Prompt.ask("Nome indice chunk")
+        return idx
+    elif len(candidati) == 1:
+        return candidati[0]
+    else:
+        console.print(f"[yellow]Trovati più indici che potrebbero essere chunk: {candidati}")
+        idx = Prompt.ask(f"Quale vuoi usare?", choices=candidati)
+        return idx
+
+def cancella_chunk_doppi(es, riassunto, indice_chunk):
+    """
+    Per ogni gruppo di documenti duplicati:
+    - Tieni il doc_id buono
+    - Cancella TUTTI i chunk associati ai doc_id duplicati non buoni
+    - Cancella anche quei doc duplicati dall’indice principale
+    """
+    n_chunks_cancellati = 0
+    n_docs_cancellati = 0
+    for g in track(riassunto, description="Deduplica chunk e doc"):
+        keep_id = g['conservato_id']
+        del_doc_ids = [delid for delid in g['cancellati_id']]
+        for doc_id in del_doc_ids:
+            query = { "query": { "term": { "doc_id": doc_id } } }
+            try:
+                res = es.delete_by_query(index=indice_chunk, body=query, ignore=[404, 409], refresh=True, conflicts="proceed")
+                deleted = res.get('deleted', 0)
+                n_chunks_cancellati += deleted
+                console.print(f"[dim]Canc chunk doc_id={doc_id}: {deleted} chunk[/dim]")
+            except Exception as ex:
+                console.print(f"[red]Errore delete chunk per doc_id {doc_id}: {ex}[/red]")
+            try:
+                es.delete(index=INDICE, id=doc_id, ignore=[404])
+                n_docs_cancellati += 1
+            except Exception as ex:
+                console.print(f"[red]Errore delete doc duplicato id {doc_id}: {ex}[/red]")
+    console.print(f"[green]Cancellati {n_chunks_cancellati} chunk duplicati e {n_docs_cancellati} documenti duplicati![/green]")
+
+def scegli_checkpoint():
+    res = Prompt.ask("Nome file di log/checkpoint? (default: log_duplicati.jsonl)", default=CHECKPOINT_FILE_DEFAULT)
+    return res if res.strip() else CHECKPOINT_FILE_DEFAULT
+
+def main():
+    es = Elasticsearch(ES_HOST, basic_auth=(ES_USER, ES_PASS), verify_certs=False)
+    checkpoint_file = scegli_checkpoint()
+    indice_chunk = trova_indice_chunk(es)
+    console.print(f"[green]Userò l’indice chunk: {indice_chunk}[/green]")
+    while True:
+        console.print("\n[bold blue]--- MENÙ DUPLICATI ELASTIC ---[/bold blue]")
+        opzioni = [
+            "1. Analizza e salva duplicati",
+            "2. Mostra duplicati trovati su file",
+            "3. Rinomina documento 'buono' (base .pdf)",
+            "4. Cancella duplicati trovati su file",
+            "5. Esci",
+            "6. Mostra solo il report numerico dei duplicati",
+            "7. Cancella chunk+doc duplicati"
+        ]
+        for op in opzioni: console.print(op)
+        scelta = Prompt.ask("\nScegli un'opzione", choices=["1", "2", "3", "4", "5", "6", "7"])
+        if scelta == "1":
+            docs_by_stem = cerca_duplicati(es, STEP_CHECKPOINT, checkpoint_file)
+            riassunto = analizza_duplicati(docs_by_stem)
+            mostra_riassunto(riassunto)
+        elif scelta == "2":
+            riassunto = carica_checkpoint(filename=checkpoint_file)
+            mostra_riassunto(riassunto)
+        elif scelta == "3":
+            riassunto = carica_checkpoint(filename=checkpoint_file)
+            if not riassunto:
+                console.print("[red]Nessun log valido. Esegui prima analisi.[/red]")
+                continue
+            mostra_riassunto(riassunto, max_per_view=5)
+            if Confirm.ask("\nVuoi aggiornare i nomi dei documenti 'buoni' con il nome base senza timestamp né (n)?"):
+                rinomina_keep(es, riassunto)
+                console.print("[green]Rinominati i doc conservati[/green]")
+            else:
+                console.print("[yellow]Rinominare annullato[/yellow]")
+        elif scelta == "4":
+            riassunto = carica_checkpoint(filename=checkpoint_file)
+            if not riassunto:
+                console.print("[red]Nessun log valido. Esegui prima analisi.[/red]")
+                continue
+            mostra_riassunto(riassunto, max_per_view=5)
+            if Confirm.ask("\nVuoi DAVVERO cancellare questi duplicati?"):
+                cancella_duplicati(es, riassunto)
+            else:
+                console.print("[yellow]Cancellazione annullata![/yellow]")
+        elif scelta == "5":
+            break
+        elif scelta == "6":
+            mostra_report_duplicati(filename=checkpoint_file)
+        elif scelta == "7":
+            riassunto = carica_checkpoint(filename=checkpoint_file)
+            if not riassunto:
+                console.print("[red]Nessun checkpoint valido. Lancia prima analisi duplicati.[/red]")
+                continue
+            mostra_report_duplicati(filename=checkpoint_file)
+            if Confirm.ask("\nVuoi procedere con deduplica chunk e documenti? (ATTENZIONE: elimina documenti e tutti i loro chunk duplicati!)"):
+                cancella_chunk_doppi(es, riassunto, indice_chunk=indice_chunk)
+                console.print("[green]Deduplica eseguita.[/green]")
+
+if __name__ == "__main__":
+    main()
