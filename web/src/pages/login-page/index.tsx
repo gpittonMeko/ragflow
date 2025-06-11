@@ -109,7 +109,7 @@ const PresentationPage: React.FC = () => {
         <div
           style={{
             color: "#fff",
-            marginTop: '-30px',       // meno spazio tra logo e scritta
+            marginTop: '-80px',       // meno spazio tra logo e scritta
             marginBottom: '30px',   // PIÙ spazio sotto la scritta!
             fontSize: '1.15rem',
             fontWeight: 400,
