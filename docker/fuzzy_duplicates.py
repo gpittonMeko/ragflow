@@ -198,6 +198,53 @@ def cancella_chunk_doppi(es, riassunto, indice_chunk):
                 console.print(f"[red]Errore delete doc duplicato id {doc_id}: {ex}[/red]")
     console.print(f"[green]Cancellati {n_chunks_cancellati} chunk duplicati e {n_docs_cancellati} documenti duplicati![/green]")
 
+def cancella_solo_docs_duplicati(es, riassunto):
+    """
+    Cancella SOLO i documenti duplicati dall'indice principale, NON tocca chunk!
+    """
+    n_docs_cancellati = 0
+    for g in track(riassunto, description="Cancella SOLTANTO documenti duplicati"):
+        del_doc_ids = [delid for delid in g['cancellati_id']]
+        for doc_id in del_doc_ids:
+            try:
+                es.delete(index=INDICE, id=doc_id, ignore=[404])
+                n_docs_cancellati += 1
+            except Exception as ex:
+                console.print(f"[red]Errore delete doc duplicato id {doc_id}: {ex}[/red]")
+    console.print(f"[bold yellow]Cancellati {n_docs_cancellati} documenti duplicati dall'indice principale![/bold yellow]")
+
+def cancella_chunk_orfani(es, indice_chunk, indice_doc=INDICE, show_sample=5):
+    """
+    Cancella tutti i chunk il cui doc_id NON esiste più come id documento nell'indice principale.
+    """
+    # Trova tutti i doc_id presenti nell'indice dei documenti:
+    console.print("[blue]→ Ricavo elenco doc_id esistenti nell'indice documenti...[/blue]")
+    doc_ids = set()
+    for doc in track(scan(es, index=indice_doc, _source_includes=["doc_id"], scroll='10m'), description="Scan doc id"):
+        doc_ids.add(str(doc['_source'].get('doc_id', doc['_id'])))
+    console.print(f"[green]Trovati {len(doc_ids)} doc_id nell'indice documenti.[/green]")
+
+    # Cancella i chunk orfani
+    n_orfani = 0
+    n_cancellati = 0
+    samples = []
+    for chunk in track(scan(es, index=indice_chunk, _source_includes=["doc_id"], scroll='10m'), description="Cerca chunk orfani"):
+        chunk_doc_id = str(chunk['_source'].get('doc_id'))
+        if chunk_doc_id and chunk_doc_id not in doc_ids:
+            if len(samples) < show_sample:
+                samples.append((chunk['_id'], chunk_doc_id))
+            try:
+                es.delete(index=indice_chunk, id=chunk['_id'], ignore=[404])
+                n_cancellati += 1
+            except Exception as ex:
+                console.print(f"[red]Errore delete chunk orfano id {chunk['_id']} (doc_id={chunk_doc_id}): {ex}[/red]")
+            n_orfani += 1
+    if samples:
+        console.print("[dim]Esempi chunk orfani cancellati:[/dim]")
+        for _id, doc_id in samples:
+            console.print(f" - chunk_id: {_id}, doc_id: {doc_id}")
+    console.print(f"[bold yellow]Cancellati {n_cancellati} chunk orfani![/bold yellow]")
+
 def scegli_checkpoint():
     res = Prompt.ask("Nome file di log/checkpoint? (default: log_duplicati.jsonl)", default=CHECKPOINT_FILE_DEFAULT)
     return res if res.strip() else CHECKPOINT_FILE_DEFAULT
@@ -216,10 +263,12 @@ def main():
             "4. Cancella duplicati trovati su file",
             "5. Esci",
             "6. Mostra solo il report numerico dei duplicati",
-            "7. Cancella chunk+doc duplicati"
+            "7. Cancella chunk+doc duplicati",
+            "8. SOLO cancella doc duplicati (index principale, NON chunk)",
+            "9. SOLO cancella tutti i chunk orfani (chunk senza doc_id 'vivo')"
         ]
         for op in opzioni: console.print(op)
-        scelta = Prompt.ask("\nScegli un'opzione", choices=["1", "2", "3", "4", "5", "6", "7"])
+        scelta = Prompt.ask("\nScegli un'opzione", choices=[str(i) for i in range(1,10)])
         if scelta == "1":
             docs_by_stem = cerca_duplicati(es, STEP_CHECKPOINT, checkpoint_file)
             riassunto = analizza_duplicati(docs_by_stem)
@@ -261,6 +310,19 @@ def main():
             if Confirm.ask("\nVuoi procedere con deduplica chunk e documenti? (ATTENZIONE: elimina documenti e tutti i loro chunk duplicati!)"):
                 cancella_chunk_doppi(es, riassunto, indice_chunk=indice_chunk)
                 console.print("[green]Deduplica eseguita.[/green]")
+        elif scelta == "8":
+            riassunto = carica_checkpoint(filename=checkpoint_file)
+            if not riassunto:
+                console.print("[red]Nessun checkpoint valido. Lancia prima analisi duplicati.[/red]")
+                continue
+            mostra_report_duplicati(filename=checkpoint_file)
+            if Confirm.ask("\nVuoi procedere SOLO con cancellazione dei documenti duplicati (NON chunk)?"):
+                cancella_solo_docs_duplicati(es, riassunto)
+                console.print("[green]Solo doc duplicati cancellati.[/green]")
+        elif scelta == "9":
+            if Confirm.ask("Vuoi DAVVERO procedere a cancellare tutti i chunk orfani (chunk senza doc id esistente)?"):
+                cancella_chunk_orfani(es, indice_chunk=indice_chunk, indice_doc=INDICE)
+                console.print("[green]Chunk orfani cancellati.[/green]")
 
 if __name__ == "__main__":
     main()
