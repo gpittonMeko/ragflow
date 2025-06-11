@@ -94,7 +94,8 @@ const currentStops = SOFT_GRADIENT_STOPS.map((s, i) => ({
         maxWidth: "min(95vw, 680px)",
         height: 'auto',
         display: 'block',
-        margin: '0 auto 28px auto',
+        margin: "0px auto -120px", // negativo qui!
+
         cursor: 'pointer',
         userSelect: 'none',
         transition: 'box-shadow 0.6s'
