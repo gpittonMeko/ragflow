@@ -102,21 +102,30 @@ const PresentationPage: React.FC = () => {
       </button>
 
       {/* LOGO SGAI */}
-      <div className={styles.heroSection}
+      <div
+        className={styles.heroSection}
         style={{
-          minHeight: '0',
+          minHeight: 'unset',
           paddingTop: 64,
-          paddingBottom: 0,
+          paddingBottom: 8, // pochissimo spazio sotto
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center'
-        }}>
+          justifyContent: 'flex-start',
+        }}
+      >
         <SvgLogoInteractive flipped={true} />
-        <div style={{
-          color: "#fff",
-          marginTop: '12px', fontSize: '1.22rem', fontWeight: 400, textAlign: 'center'
-        }}>
+        <div
+          style={{
+            color: "#fff",
+            marginTop: '12px',
+            fontSize: '1.15rem',
+            fontWeight: 400,
+            textAlign: 'center',
+            lineHeight: 1.2,
+            marginBottom: 0 // niente spazio ulteriore dopo la scritta!
+          }}
+        >
           L'intelligenza artificiale per il contenzioso tributario: L'assistente legale che hai sempre desiderato
         </div>
       </div>
@@ -139,7 +148,6 @@ const PresentationPage: React.FC = () => {
 
       {/* FEATURE */}
       <div className={styles.featuresSection}>
-        
         <div className={styles.featureCard}>
           <div className={styles.featureIcon}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -154,7 +162,6 @@ const PresentationPage: React.FC = () => {
             Quel che viene discusso con SGAI è accessibile solo all'utente.
           </p>
         </div>
-        
         <div className={styles.featureCard}>
           <div className={styles.featureIcon}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -169,7 +176,6 @@ const PresentationPage: React.FC = () => {
             addestralo con i tuoi atti e i tuoi documenti.
           </p>
         </div>
-        
         <div className={styles.featureCard}>
           <div className={styles.featureIcon}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -191,7 +197,7 @@ const PresentationPage: React.FC = () => {
       <div className={styles.disclaimerSection}>
         <p><strong>Disclaimer:</strong></p>
         <p>
-          Si prega di notare che SGAI è un sistema basato sull'intelligenza artificiale. 
+          Si prega di notare che SGAI è un sistema basato sull'intelligenza artificiale.
           Sebbene ci impegniamo a fornire informazioni accurate e utili, il modello può occasionalmente commettere errori o produrre informazioni non corrette. È fondamentale verificare sempre le informazioni fornite con fonti affidabili e consultare professionisti qualificati per decisioni importanti.
         </p>
       </div>
