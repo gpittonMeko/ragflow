@@ -701,7 +701,8 @@ def recover_pending_tasks():
 
             stop_event.wait(60)
         except Exception:
-            logging.warning("recover_pending_tasks got exception")
+            logging.exception("recover_pending_tasks got exception")
+            time.sleep(5)
 
 
 async def main():
