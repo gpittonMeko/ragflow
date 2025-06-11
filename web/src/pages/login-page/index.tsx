@@ -97,7 +97,7 @@ const PresentationPage: React.FC = () => {
         className={styles.heroSection}
         style={{
           paddingTop: 64,
-          marginBottom: '0px',
+          marginBottom: '-50px',
           paddingBottom: 0,
           display: 'flex',
           flexDirection: 'column',
