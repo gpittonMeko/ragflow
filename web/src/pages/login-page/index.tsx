@@ -123,7 +123,7 @@ const PresentationPage: React.FC = () => {
             fontWeight: 400,
             textAlign: 'center',
             lineHeight: 1.2,
-            marginBottom: 0 // niente spazio ulteriore dopo la scritta!
+            marginBottom: '-30px' // niente spazio ulteriore dopo la scritta!
           }}
         >
           L'intelligenza artificiale per il contenzioso tributario: L'assistente legale che hai sempre desiderato
