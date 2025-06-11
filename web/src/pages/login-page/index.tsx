@@ -2,6 +2,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import styles from './index.less';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
 
+const featureHighlight = { color: "#ffe066", fontWeight: 600 };
+
 const PresentationPage: React.FC = () => {
   const controllerRef = useRef(new AbortController());
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -99,22 +101,27 @@ const PresentationPage: React.FC = () => {
           : <span className={styles.themeIcon}>🌙</span>}
       </button>
 
-      {/* LOGO SGAI AL POSTO DEL TITOLO */}
-    <div className={styles.heroSection}
-    style={{
-    minHeight: '0', // per dare aria sopra e sotto
-    paddingTop: 64,
-    paddingBottom: 0,  // aria minima
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center'
-  }}>
-      <SvgLogoInteractive flipped={true} />
-      
-    </div>
+      {/* LOGO SGAI */}
+      <div className={styles.heroSection}
+        style={{
+          minHeight: '0',
+          paddingTop: 64,
+          paddingBottom: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+        <SvgLogoInteractive flipped={true} />
+        <div style={{
+          color: "#fff",
+          marginTop: '12px', fontSize: '1.22rem', fontWeight: 400, textAlign: 'center'
+        }}>
+          L'intelligenza artificiale per il contenzioso tributario: L'assistente legale che hai sempre desiderato
+        </div>
+      </div>
 
-      {/* CHAT SUBITO SOTTO IL LOGO */}
+      {/* CHAT SOTTO IL LOGO */}
       <div className={styles.iframeSection} style={{
         overflow: isGenerating ? 'visible' : 'hidden',
         maxWidth: '100%'
@@ -130,8 +137,9 @@ const PresentationPage: React.FC = () => {
         />
       </div>
 
-      {/* FEATURES DOPO LA CHAT */}
+      {/* FEATURE */}
       <div className={styles.featuresSection}>
+        
         <div className={styles.featureCard}>
           <div className={styles.featureIcon}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -140,10 +148,13 @@ const PresentationPage: React.FC = () => {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
-          <h3>Analisi Intelligente</h3>
-          <p>Sfrutta l'IA per analizzare rapidamente accertamenti, normative e giurisprudenza.</p>
+          <h3 style={featureHighlight}>Tutela del Knowhow</h3>
+          <p style={featureHighlight}>
+            Nessun dato viene acquisito.<br />
+            Quel che viene discusso con SGAI è accessibile solo all'utente.
+          </p>
         </div>
-
+        
         <div className={styles.featureCard}>
           <div className={styles.featureIcon}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -152,10 +163,13 @@ const PresentationPage: React.FC = () => {
               <path d="M2 12l10 5 10-5" />
             </svg>
           </div>
-          <h3>Gestione Efficiente</h3>
-          <p>Ottimizza il tuo flusso di lavoro e prendi decisioni più informate.</p>
+          <h3 style={featureHighlight}>Personalizzazione</h3>
+          <p style={featureHighlight}>
+            SGAI può essere potenziato per il singolo Studio professionale:<br />
+            addestralo con i tuoi atti e i tuoi documenti.
+          </p>
         </div>
-
+        
         <div className={styles.featureCard}>
           <div className={styles.featureIcon}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -166,8 +180,10 @@ const PresentationPage: React.FC = () => {
               <line x1="14" y1="1" x2="14" y2="4" />
             </svg>
           </div>
-          <h3>Indipendenza e Imparzialità</h3>
-          <p>Lavoriamo senza legami istituzionali per garantire la massima trasparenza.</p>
+          <h3 style={featureHighlight}>Indipendenza e Imparzialità</h3>
+          <p style={featureHighlight}>
+            Lavoriamo senza legami istituzionali per garantire la massima trasparenza.
+          </p>
         </div>
       </div>
 
