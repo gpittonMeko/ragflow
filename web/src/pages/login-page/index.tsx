@@ -19,9 +19,7 @@ const PresentationPage: React.FC = () => {
       if (iframeRef.current && iframeRef.current.contentWindow) {
         iframeRef.current.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
       }
-    } catch (e) {
-      console.warn("Non è stato possibile inviare un messaggio all'iframe", e);
-    }
+    } catch (e) {}
   }, [theme]);
 
   useEffect(() => {
@@ -53,16 +51,13 @@ const PresentationPage: React.FC = () => {
           if (iframeRef.current.contentWindow) {
             try {
               iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
-            } catch (e) {
-              console.warn("Errore nel richiedere l'altezza dall'iframe", e);
-            }
+            } catch (e) {}
           }
         }
       }
     };
 
     window.addEventListener('message', handleIframeMessage);
-
     const handleResize = () => {
       if (isGenerating && iframeRef.current) {
         const viewportHeight = window.innerHeight;
@@ -70,14 +65,10 @@ const PresentationPage: React.FC = () => {
       } else if (iframeRef.current && iframeRef.current.contentWindow) {
         try {
           iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
-        } catch (e) {
-          console.warn("Errore nel richiedere l'altezza dall'iframe", e);
-        }
+        } catch (e) {}
       }
     };
-
     window.addEventListener('resize', handleResize);
-
     return () => {
       window.removeEventListener('message', handleIframeMessage);
       window.removeEventListener('resize', handleResize);
@@ -105,25 +96,26 @@ const PresentationPage: React.FC = () => {
       <div
         className={styles.heroSection}
         style={{
-          minHeight: 'unset',
           paddingTop: 64,
-          paddingBottom: 8, // pochissimo spazio sotto
+          paddingBottom: 0,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'flex-start',
+          border: "2px solid red",              // DEBUG: vedi il box!
+          background: "rgba(255,255,255,0.07)", // DEBUG: fondo leggero, puoi toglierlo dopo
         }}
       >
         <SvgLogoInteractive flipped={true} />
         <div
           style={{
             color: "#fff",
-            marginTop: '12px',
+            marginTop: '8px',       // meno spazio tra logo e scritta
+            marginBottom: '24px',   // PIÙ spazio sotto la scritta!
             fontSize: '1.15rem',
             fontWeight: 400,
             textAlign: 'center',
             lineHeight: 1.2,
-            marginBottom: '-30px' // niente spazio ulteriore dopo la scritta!
           }}
         >
           L'intelligenza artificiale per il contenzioso tributario: L'assistente legale che hai sempre desiderato
