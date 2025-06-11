@@ -97,6 +97,7 @@ const PresentationPage: React.FC = () => {
         className={styles.heroSection}
         style={{
           paddingTop: 64,
+          marginBottom: '-30px',
           paddingBottom: 0,
           display: 'flex',
           flexDirection: 'column',
@@ -108,8 +109,8 @@ const PresentationPage: React.FC = () => {
         <div
           style={{
             color: "#fff",
-            marginTop: '8px',       // meno spazio tra logo e scritta
-            marginBottom: '24px',   // PIÙ spazio sotto la scritta!
+            marginTop: '-30px',       // meno spazio tra logo e scritta
+            marginBottom: '30px',   // PIÙ spazio sotto la scritta!
             fontSize: '1.15rem',
             fontWeight: 400,
             textAlign: 'center',
