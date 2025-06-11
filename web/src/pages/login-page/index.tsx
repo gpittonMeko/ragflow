@@ -102,8 +102,6 @@ const PresentationPage: React.FC = () => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'flex-start',
-          border: "2px solid red",              // DEBUG: vedi il box!
-          background: "rgba(255,255,255,0.07)", // DEBUG: fondo leggero, puoi toglierlo dopo
         }}
       >
         <SvgLogoInteractive flipped={true} />
