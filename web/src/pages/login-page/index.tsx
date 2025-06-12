@@ -105,9 +105,9 @@ const PresentationPage: React.FC = () => {
           justifyContent: 'flex-start',
         }}
       >
-        <div style={{ marginBottom: '1.5rem', width: '100%', maxWidth: '220px' }}>
-          <SvgLogoInteractive flipped={true} />
-        </div>
+        <div style={{ marginBottom: '2rem', width: '100%', maxWidth: '320px' }}>
+        <SvgLogoInteractive flipped={true} />
+      </div>
         <div className={styles.heroSubtitle} style={{ maxWidth: '600px', textAlign: 'center' }}>
           L'intelligenza artificiale per il contenzioso tributario: L'assistente legale che hai sempre desiderato
         </div>
