@@ -92,17 +92,24 @@ def cancella_duplicati(es, riassunto, indice):
             tot_del += 1
     console.print(f"[bold red]Cancellati {tot_del} documenti duplicati![/bold red]")
 
-def cancella_duplicati_per_docid(es, riassunto, indice):
+def cancella_duplicati_per_docid_batch(es, riassunto, indice, batch_size=200):
     tot_del = 0
-    for g in track(riassunto, description="Cancellazione per campo doc_id"):
-        for del_doc_id in g['cancellati_id']:
-            query = { "query": { "term": { "doc_id": del_doc_id } } }
-            res = es.delete_by_query(index=indice, body=query, ignore=[404, 409], refresh=True, conflicts="proceed")
-            n_del = res.get('deleted', 0)
-            tot_del += n_del
-            if n_del > 0:
-                console.print(f"[dim]Cancellato doc_id={del_doc_id}: {n_del} doc[/dim]")
-    console.print(f"[bold yellow]Cancellati {tot_del} documenti duplicati in base al campo doc_id![/bold yellow]")
+    from itertools import islice
+
+    # Estrai tutti i doc_id da cancellare
+    doc_ids = []
+    for g in riassunto:
+        doc_ids.extend(g['cancellati_id'])
+
+    it = iter(doc_ids)
+    for batch in iter(lambda: list(islice(it, batch_size)), []):
+        query = {"terms": {"doc_id": batch}}
+        res = es.delete_by_query(index=indice, query=query, ignore=[404, 409], refresh=True, conflicts="proceed")
+        n_del = res.get('deleted', 0)
+        tot_del += n_del
+        console.print(f"[dim]Batch cancellati: {n_del} documenti[/dim]")
+
+    console.print(f"[bold yellow]Cancellati in totale {tot_del} documenti duplicati via doc_id (batch)![/bold yellow]")
 
 def rinomina_keep(es, riassunto, indice):
     for g in track(riassunto, description="Aggiorno nomi dei documenti buoni"):
