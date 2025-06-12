@@ -120,31 +120,27 @@ body {
   -webkit-text-fill-color: transparent;
 }
 
-.heroSubtitle {
-  color: #d1d1d6;                     // Grigio Apple
-  font-size: 1.30rem;                 // Normale desktop
-  font-weight: 400;
-  text-align: center;
-  line-height: 1.38;
-  margin: -48px auto 48px auto;         // Spazio sotto
-  letter-spacing: 0.01em;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  max-width: 800px;
-  transition: font-size 0.2s;
-}
+
 
 @media (max-width: 600px) {
   .heroSubtitle {
-    font-size: 0.98rem;
+    font-size: 0.9rem;
     margin-bottom: 50px;
     margin-top: 10px;   
   }
+
+.heroSubtitle {
+
+  max-width: 600px;
+
+}
+
 }
 
 @media (max-width: 400px) {
   .heroSubtitle {
     font-size: 0.7rem;
-    margin-bottom: 30px;
+    margin-bottom: 50px;
     margin-top: 10px;
   }
 }
