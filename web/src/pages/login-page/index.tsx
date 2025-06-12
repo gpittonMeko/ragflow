@@ -97,7 +97,8 @@ const PresentationPage: React.FC = () => {
         className={styles.heroSection}
         style={{
           paddingTop: 64,
-          marginBottom: '-1rem',    // margine positivo per separare dal blocco sotto, evita sovrapposizioni
+          marginBottom: '-1rem', 
+          marginTop = '2rem',   // margine positivo per separare dal blocco sotto, evita sovrapposizioni
           paddingBottom: 0,
           display: 'flex',
           flexDirection: 'column',
