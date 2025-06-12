@@ -13,7 +13,7 @@ DEFAULT_ES_HOST = "http://localhost:1200"
 DEFAULT_ES_USER = "elastic"
 DEFAULT_ES_PASS = "infini_rag_flow"
 FIELD = "docnm_kwd"
-CHECKPOINT_FILE_DEFAULT = "log_duplicati.jsonl"
+CHECKPOINT_FILE_DEFAULT = "log_duplicati_final.jsonl"   # <-- qui il nome checkpoint "giusto"
 STEP_CHECKPOINT = 10000
 
 console = Console()
@@ -147,7 +147,6 @@ def mostra_report_duplicati(filename):
     console.print(f"[magenta]Log checkpoint: {filename}[/magenta]\n")
 
 def trova_indice_chunk(es):
-    """Restituisce il nome dell’indice chunk (che contiene campo 'doc_id')"""
     res = es.cat.indices(format="json")
     candidati = []
     for idx in res:
@@ -192,9 +191,6 @@ def cancella_chunk_doppi(es, riassunto, indice, indice_chunk):
     console.print(f"[green]Cancellati {n_chunks_cancellati} chunk duplicati e {n_docs_cancellati} documenti duplicati![/green]")
 
 def cancella_solo_docs_duplicati(es, riassunto, indice, batch_size=1000):
-    """
-    Cancella SOLO i documenti duplicati dall'indice principale, NON tocca chunk! Velocissimo con bulk API.
-    """
     from elasticsearch.helpers import bulk
     doc_ids = []
     for g in riassunto:
@@ -238,8 +234,8 @@ def cancella_chunk_orfani(es, indice_chunk, indice_doc, show_sample=5):
     console.print(f"[bold yellow]Cancellati {n_cancellati} chunk orfani![/bold yellow]")
 
 def scegli_checkpoint():
-    res = Prompt.ask("Nome file di log/checkpoint? (default: log_duplicati.jsonl)", default=CHECKPOINT_FILE_DEFAULT)
-    return res if res.strip() else CHECKPOINT_FILE_DEFAULT
+    # Solo default, non chiede mai
+    return CHECKPOINT_FILE_DEFAULT
 
 def main():
     es_host = Prompt.ask("Elasticsearch host?", default=DEFAULT_ES_HOST)
