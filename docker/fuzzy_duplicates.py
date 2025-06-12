@@ -2,16 +2,16 @@ import os
 import json
 import re
 from elasticsearch import Elasticsearch
-from elasticsearch.helpers import scan
+from elasticsearch.helpers import scan, bulk
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
 from rich.progress import track
 
 # =========== CONFIG PRINCIPALE =============
-INDICE = "ragflow_20006_6shard"
-ES_HOST = "http://localhost:1200"
-ES_USER = "elastic"
-ES_PASS = "infini_rag_flow"
+DEFAULT_INDICE = "ragflow_20006_6shard"
+DEFAULT_ES_HOST = "http://localhost:1200"
+DEFAULT_ES_USER = "elastic"
+DEFAULT_ES_PASS = "infini_rag_flow"
 FIELD = "docnm_kwd"
 CHECKPOINT_FILE_DEFAULT = "log_duplicati.jsonl"
 STEP_CHECKPOINT = 10000
@@ -84,34 +84,34 @@ def mostra_riassunto(riassunto, max_per_view=10):
             else:
                 break
 
-def cancella_duplicati(es, riassunto):
+def cancella_duplicati(es, riassunto, indice):
     tot_del = 0
     for g in track(riassunto, description="Cancellazione gruppi doc"):
         for del_id in g['cancellati_id']:
-            es.delete(index=INDICE, id=del_id, ignore=[404])
+            es.delete(index=indice, id=del_id, ignore=[404])
             tot_del += 1
     console.print(f"[bold red]Cancellati {tot_del} documenti duplicati![/bold red]")
 
-def rinomina_keep(es, riassunto):
+def rinomina_keep(es, riassunto, indice):
     for g in track(riassunto, description="Aggiorno nomi dei documenti buoni"):
         wanted_name = base_filename(g['conservato'])
         doc_id = g['conservato_id']
         current_name = g['conservato']
         if current_name.lower() != wanted_name:
             try:
-                es.update(index=INDICE, id=doc_id, doc={FIELD: wanted_name})
+                es.update(index=indice, id=doc_id, doc={FIELD: wanted_name})
             except Exception as ex:
                 console.print(f"[red]Errore aggiornamento nome {doc_id}: {ex}[/red]")
 
-def cerca_duplicati(es, step_checkpoint, checkpoint_file):
+def cerca_duplicati(es, indice, step_checkpoint, checkpoint_file):
     console.print("[cyan]→ Cerco e raggruppo i documenti per nome base...[/cyan]")
-    size_query = es.count(index=INDICE)
+    size_query = es.count(index=indice)
     totali = size_query['count']
     docs_by_stem = {}
     checked = 0
 
     for doc in track(
-        scan(es, index=INDICE, _source_includes=[FIELD, "doc_id"], scroll='5m'),
+        scan(es, index=indice, _source_includes=[FIELD, "doc_id"], scroll='5m'),
         description="Scansione...",
         total=totali
     ):
@@ -170,18 +170,11 @@ def trova_indice_chunk(es):
         idx = Prompt.ask(f"Quale vuoi usare?", choices=candidati)
         return idx
 
-def cancella_chunk_doppi(es, riassunto, indice_chunk):
-    """
-    Per ogni gruppo di documenti duplicati:
-    - Tieni il doc_id buono
-    - Cancella TUTTI i chunk associati ai doc_id duplicati non buoni
-    - Cancella anche quei doc duplicati dall’indice principale
-    """
+def cancella_chunk_doppi(es, riassunto, indice, indice_chunk):
     n_chunks_cancellati = 0
     n_docs_cancellati = 0
     for g in track(riassunto, description="Deduplica chunk e doc"):
-        keep_id = g['conservato_id']
-        del_doc_ids = [delid for delid in g['cancellati_id']]
+        del_doc_ids = g['cancellati_id']
         for doc_id in del_doc_ids:
             query = { "query": { "term": { "doc_id": doc_id } } }
             try:
@@ -192,39 +185,38 @@ def cancella_chunk_doppi(es, riassunto, indice_chunk):
             except Exception as ex:
                 console.print(f"[red]Errore delete chunk per doc_id {doc_id}: {ex}[/red]")
             try:
-                es.delete(index=INDICE, id=doc_id, ignore=[404])
+                es.delete(index=indice, id=doc_id, ignore=[404])
                 n_docs_cancellati += 1
             except Exception as ex:
                 console.print(f"[red]Errore delete doc duplicato id {doc_id}: {ex}[/red]")
     console.print(f"[green]Cancellati {n_chunks_cancellati} chunk duplicati e {n_docs_cancellati} documenti duplicati![/green]")
 
-def cancella_solo_docs_duplicati(es, riassunto):
+def cancella_solo_docs_duplicati(es, riassunto, indice, batch_size=1000):
     """
-    Cancella SOLO i documenti duplicati dall'indice principale, NON tocca chunk!
+    Cancella SOLO i documenti duplicati dall'indice principale, NON tocca chunk! Velocissimo con bulk API.
     """
-    n_docs_cancellati = 0
-    for g in track(riassunto, description="Cancella SOLTANTO documenti duplicati"):
-        del_doc_ids = [delid for delid in g['cancellati_id']]
-        for doc_id in del_doc_ids:
-            try:
-                es.delete(index=INDICE, id=doc_id, ignore=[404])
-                n_docs_cancellati += 1
-            except Exception as ex:
-                console.print(f"[red]Errore delete doc duplicato id {doc_id}: {ex}[/red]")
-    console.print(f"[bold yellow]Cancellati {n_docs_cancellati} documenti duplicati dall'indice principale![/bold yellow]")
+    from elasticsearch.helpers import bulk
+    doc_ids = []
+    for g in riassunto:
+        doc_ids.extend(g['cancellati_id'])
+    n_tot = len(doc_ids)
+    n_cancellati = 0
 
-def cancella_chunk_orfani(es, indice_chunk, indice_doc=INDICE, show_sample=5):
-    """
-    Cancella tutti i chunk il cui doc_id NON esiste più come id documento nell'indice principale.
-    """
-    # Trova tutti i doc_id presenti nell'indice dei documenti:
+    for i in range(0, n_tot, batch_size):
+        batch = doc_ids[i:i+batch_size]
+        azioni = [{'_op_type': 'delete', '_index': indice, '_id': doc_id} for doc_id in batch]
+        success, _ = bulk(es, azioni, raise_on_error=False, request_timeout=300)
+        n_cancellati += success
+        console.print(f"[cyan]Progress: eliminati {n_cancellati}/{n_tot} doc ({100.0*n_cancellati/n_tot:.2f}%)...[/cyan]")
+    console.print(f"[bold yellow]Cancellati TUTTI {n_cancellati} documenti duplicati dall'indice principale![/bold yellow]")
+
+def cancella_chunk_orfani(es, indice_chunk, indice_doc, show_sample=5):
     console.print("[blue]→ Ricavo elenco doc_id esistenti nell'indice documenti...[/blue]")
     doc_ids = set()
     for doc in track(scan(es, index=indice_doc, _source_includes=["doc_id"], scroll='10m'), description="Scan doc id"):
         doc_ids.add(str(doc['_source'].get('doc_id', doc['_id'])))
     console.print(f"[green]Trovati {len(doc_ids)} doc_id nell'indice documenti.[/green]")
 
-    # Cancella i chunk orfani
     n_orfani = 0
     n_cancellati = 0
     samples = []
@@ -250,8 +242,12 @@ def scegli_checkpoint():
     return res if res.strip() else CHECKPOINT_FILE_DEFAULT
 
 def main():
-    es = Elasticsearch(ES_HOST, basic_auth=(ES_USER, ES_PASS), verify_certs=False)
+    es_host = Prompt.ask("Elasticsearch host?", default=DEFAULT_ES_HOST)
+    es_user = Prompt.ask("Elasticsearch username?", default=DEFAULT_ES_USER)
+    es_pass = Prompt.ask("Elasticsearch password?", default=DEFAULT_ES_PASS)
+    indice = Prompt.ask("Indice principale?", default=DEFAULT_INDICE)
     checkpoint_file = scegli_checkpoint()
+    es = Elasticsearch(es_host, basic_auth=(es_user, es_pass), verify_certs=False)
     indice_chunk = trova_indice_chunk(es)
     console.print(f"[green]Userò l’indice chunk: {indice_chunk}[/green]")
     while True:
@@ -267,10 +263,11 @@ def main():
             "8. SOLO cancella doc duplicati (index principale, NON chunk)",
             "9. SOLO cancella tutti i chunk orfani (chunk senza doc_id 'vivo')"
         ]
-        for op in opzioni: console.print(op)
-        scelta = Prompt.ask("\nScegli un'opzione", choices=[str(i) for i in range(1,10)])
+        for op in opzioni:
+            console.print(op)
+        scelta = Prompt.ask("\nScegli un'opzione", choices=[str(i) for i in range(1, 10)])
         if scelta == "1":
-            docs_by_stem = cerca_duplicati(es, STEP_CHECKPOINT, checkpoint_file)
+            docs_by_stem = cerca_duplicati(es, indice, STEP_CHECKPOINT, checkpoint_file)
             riassunto = analizza_duplicati(docs_by_stem)
             mostra_riassunto(riassunto)
         elif scelta == "2":
@@ -283,7 +280,7 @@ def main():
                 continue
             mostra_riassunto(riassunto, max_per_view=5)
             if Confirm.ask("\nVuoi aggiornare i nomi dei documenti 'buoni' con il nome base senza timestamp né (n)?"):
-                rinomina_keep(es, riassunto)
+                rinomina_keep(es, riassunto, indice)
                 console.print("[green]Rinominati i doc conservati[/green]")
             else:
                 console.print("[yellow]Rinominare annullato[/yellow]")
@@ -294,7 +291,7 @@ def main():
                 continue
             mostra_riassunto(riassunto, max_per_view=5)
             if Confirm.ask("\nVuoi DAVVERO cancellare questi duplicati?"):
-                cancella_duplicati(es, riassunto)
+                cancella_duplicati(es, riassunto, indice)
             else:
                 console.print("[yellow]Cancellazione annullata![/yellow]")
         elif scelta == "5":
@@ -308,7 +305,7 @@ def main():
                 continue
             mostra_report_duplicati(filename=checkpoint_file)
             if Confirm.ask("\nVuoi procedere con deduplica chunk e documenti? (ATTENZIONE: elimina documenti e tutti i loro chunk duplicati!)"):
-                cancella_chunk_doppi(es, riassunto, indice_chunk=indice_chunk)
+                cancella_chunk_doppi(es, riassunto, indice, indice_chunk)
                 console.print("[green]Deduplica eseguita.[/green]")
         elif scelta == "8":
             riassunto = carica_checkpoint(filename=checkpoint_file)
@@ -317,11 +314,11 @@ def main():
                 continue
             mostra_report_duplicati(filename=checkpoint_file)
             if Confirm.ask("\nVuoi procedere SOLO con cancellazione dei documenti duplicati (NON chunk)?"):
-                cancella_solo_docs_duplicati(es, riassunto)
+                cancella_solo_docs_duplicati(es, riassunto, indice, batch_size=2000)
                 console.print("[green]Solo doc duplicati cancellati.[/green]")
         elif scelta == "9":
             if Confirm.ask("Vuoi DAVVERO procedere a cancellare tutti i chunk orfani (chunk senza doc id esistente)?"):
-                cancella_chunk_orfani(es, indice_chunk=indice_chunk, indice_doc=INDICE)
+                cancella_chunk_orfani(es, indice_chunk=indice_chunk, indice_doc=indice)
                 console.print("[green]Chunk orfani cancellati.[/green]")
 
 if __name__ == "__main__":
