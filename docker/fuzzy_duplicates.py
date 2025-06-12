@@ -342,7 +342,7 @@ def main():
                 continue
             mostra_report_duplicati(filename=checkpoint_file)
             if Confirm.ask("\nVuoi procedere ALLA CANCELLAZIONE DEI DUPLICATI VERE VIA doc_id con delete_by_query?"):
-                cancella_duplicati_per_docid(es, riassunto, indice)
+                cancella_duplicati_per_docid_batch(es, riassunto, indice)
                 console.print("[green]DUPLICATI (doc_id) CANCELLATI.[/green]")
 
 if __name__ == "__main__":
