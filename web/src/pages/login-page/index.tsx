@@ -98,7 +98,7 @@ const PresentationPage: React.FC = () => {
         style={{
           paddingTop: 64,
           marginBottom: '-1rem', 
-          marginTop = '2rem',   // margine positivo per separare dal blocco sotto, evita sovrapposizioni
+          marginTop: '2rem',   // margine positivo per separare dal blocco sotto, evita sovrapposizioni
           paddingBottom: 0,
           display: 'flex',
           flexDirection: 'column',
