@@ -97,7 +97,7 @@ const PresentationPage: React.FC = () => {
         className={styles.heroSection}
         style={{
           paddingTop: 64,
-          marginBottom: '-50px',
+          marginBottom: '2rem',    // margine positivo per separare dal blocco sotto, evita sovrapposizioni
           paddingBottom: 0,
           display: 'flex',
           flexDirection: 'column',
@@ -105,10 +105,12 @@ const PresentationPage: React.FC = () => {
           justifyContent: 'flex-start',
         }}
       >
-        <SvgLogoInteractive flipped={true} />
-        <div className={styles.heroSubtitle}>
-    L'intelligenza artificiale per il contenzioso tributario: L'assistente legale che hai sempre desiderato
-  </div>
+        <div style={{ marginBottom: '1.5rem', width: '100%', maxWidth: '220px' }}>
+          <SvgLogoInteractive flipped={true} />
+        </div>
+        <div className={styles.heroSubtitle} style={{ maxWidth: '600px', textAlign: 'center' }}>
+          L'intelligenza artificiale per il contenzioso tributario: L'assistente legale che hai sempre desiderato
+        </div>
       </div>
 
       {/* CHAT SOTTO IL LOGO */}
