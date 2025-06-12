@@ -220,7 +220,7 @@ def cancella_solo_docs_duplicati(es, riassunto, indice, batch_size=1000):
     for i in range(0, n_tot, batch_size):
         batch = doc_ids[i:i+batch_size]
         azioni = [{'_op_type': 'delete', '_index': indice, '_id': doc_id} for doc_id in batch]
-        success, _ = bulk(es, azioni, raise_on_error=False, request_timeout=300)
+        success, _ = bulk(es, azioni, raise_on_error=False, request_timeout=30000)
         n_cancellati += success
         console.print(f"[cyan]Progress: eliminati {n_cancellati}/{n_tot} doc ({100.0*n_cancellati/n_tot:.2f}%)...[/cyan]")
     console.print(f"[bold yellow]Cancellati TUTTI {n_cancellati} documenti duplicati dall'indice principale![/bold yellow]")
