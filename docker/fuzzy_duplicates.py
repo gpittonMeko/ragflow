@@ -13,7 +13,7 @@ DEFAULT_ES_HOST = "http://localhost:1200"
 DEFAULT_ES_USER = "elastic"
 DEFAULT_ES_PASS = "infini_rag_flow"
 FIELD = "docnm_kwd"
-CHECKPOINT_FILE_DEFAULT = "log_duplicati_final.jsonl"   # <-- qui il nome checkpoint "giusto"
+CHECKPOINT_FILE_DEFAULT = "log_duplicati_final.jsonl"
 STEP_CHECKPOINT = 10000
 
 console = Console()
@@ -91,6 +91,18 @@ def cancella_duplicati(es, riassunto, indice):
             es.delete(index=indice, id=del_id, ignore=[404])
             tot_del += 1
     console.print(f"[bold red]Cancellati {tot_del} documenti duplicati![/bold red]")
+
+def cancella_duplicati_per_docid(es, riassunto, indice):
+    tot_del = 0
+    for g in track(riassunto, description="Cancellazione per campo doc_id"):
+        for del_doc_id in g['cancellati_id']:
+            query = { "query": { "term": { "doc_id": del_doc_id } } }
+            res = es.delete_by_query(index=indice, body=query, ignore=[404, 409], refresh=True, conflicts="proceed")
+            n_del = res.get('deleted', 0)
+            tot_del += n_del
+            if n_del > 0:
+                console.print(f"[dim]Cancellato doc_id={del_doc_id}: {n_del} doc[/dim]")
+    console.print(f"[bold yellow]Cancellati {tot_del} documenti duplicati in base al campo doc_id![/bold yellow]")
 
 def rinomina_keep(es, riassunto, indice):
     for g in track(riassunto, description="Aggiorno nomi dei documenti buoni"):
@@ -234,7 +246,6 @@ def cancella_chunk_orfani(es, indice_chunk, indice_doc, show_sample=5):
     console.print(f"[bold yellow]Cancellati {n_cancellati} chunk orfani![/bold yellow]")
 
 def scegli_checkpoint():
-    # Solo default, non chiede mai
     return CHECKPOINT_FILE_DEFAULT
 
 def main():
@@ -257,11 +268,12 @@ def main():
             "6. Mostra solo il report numerico dei duplicati",
             "7. Cancella chunk+doc duplicati",
             "8. SOLO cancella doc duplicati (index principale, NON chunk)",
-            "9. SOLO cancella tutti i chunk orfani (chunk senza doc_id 'vivo')"
+            "9. SOLO cancella tutti i chunk orfani (chunk senza doc_id 'vivo')",
+            "10. --- CANCELLALI DAVVERO via campo doc_id (LENTO, sicuro) ---"
         ]
         for op in opzioni:
             console.print(op)
-        scelta = Prompt.ask("\nScegli un'opzione", choices=[str(i) for i in range(1, 10)])
+        scelta = Prompt.ask("\nScegli un'opzione", choices=[str(i) for i in range(1, 11)])
         if scelta == "1":
             docs_by_stem = cerca_duplicati(es, indice, STEP_CHECKPOINT, checkpoint_file)
             riassunto = analizza_duplicati(docs_by_stem)
@@ -316,6 +328,15 @@ def main():
             if Confirm.ask("Vuoi DAVVERO procedere a cancellare tutti i chunk orfani (chunk senza doc id esistente)?"):
                 cancella_chunk_orfani(es, indice_chunk=indice_chunk, indice_doc=indice)
                 console.print("[green]Chunk orfani cancellati.[/green]")
+        elif scelta == "10":
+            riassunto = carica_checkpoint(filename=checkpoint_file)
+            if not riassunto:
+                console.print("[red]Nessun checkpoint valido. Lancia prima analisi duplicati.[/red]")
+                continue
+            mostra_report_duplicati(filename=checkpoint_file)
+            if Confirm.ask("\nVuoi procedere ALLA CANCELLAZIONE DEI DUPLICATI VERE VIA doc_id con delete_by_query?"):
+                cancella_duplicati_per_docid(es, riassunto, indice)
+                console.print("[green]DUPLICATI (doc_id) CANCELLATI.[/green]")
 
 if __name__ == "__main__":
     main()
