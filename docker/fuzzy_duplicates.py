@@ -238,11 +238,11 @@ def scegli_checkpoint():
     return CHECKPOINT_FILE_DEFAULT
 
 def main():
-    es_host = Prompt.ask("Elasticsearch host?", default=DEFAULT_ES_HOST)
-    es_user = Prompt.ask("Elasticsearch username?", default=DEFAULT_ES_USER)
-    es_pass = Prompt.ask("Elasticsearch password?", default=DEFAULT_ES_PASS)
-    indice = Prompt.ask("Indice principale?", default=DEFAULT_INDICE)
-    checkpoint_file = scegli_checkpoint()
+    es_host = DEFAULT_ES_HOST
+    es_user = DEFAULT_ES_USER
+    es_pass = DEFAULT_ES_PASS
+    indice = DEFAULT_INDICE
+    checkpoint_file = CHECKPOINT_FILE_DEFAULT
     es = Elasticsearch(es_host, basic_auth=(es_user, es_pass), verify_certs=False)
     indice_chunk = trova_indice_chunk(es)
     console.print(f"[green]Userò l’indice chunk: {indice_chunk}[/green]")
