@@ -4,7 +4,7 @@ import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import { MessageType, SharedFrom } from '@/constants/chat';
 import { useSendButtonDisabled } from '@/pages/chat/hooks';
 import { Flex, Spin } from 'antd';
-import React, { forwardRef, useMemo, useRef, useEffect } from 'react';
+import React, { forwardRef, useMemo, useRef, useEffect, useState } from 'react';
 import {
   useGetSharedChatSearchParams,
   useSendSharedMessage,
@@ -51,23 +51,51 @@ const ChatContainer = ({ theme }) => {
       ? useFetchFlowSSE
       : useFetchNextConversationSSE;
   }, [from]);
-  
+
   React.useEffect(() => {
     if (locale && i18n.language !== locale) {
       i18n.changeLanguage(locale);
     }
   }, [locale, visibleAvatar]);
-  
+
+  // --------------- PROGRESS BAR SIMULATA ---------------
+  // Durata del caricamento simulato (ms)
+  const SIMULATED_TOTAL_MS = 180000; // 3 minuti
+  const BAR_MAX = 97; // la barra si ferma qui finché l'output non arriva
+  const [progress, setProgress] = useState(0);
+  const [barVisible, setBarVisible] = useState(false);
+
+  useEffect(() => {
+    let interval = null;
+    if (sendLoading) {
+      setBarVisible(true);
+      setProgress(0);
+      const startedAt = Date.now();
+
+      interval = setInterval(() => {
+        const elapsed = Date.now() - startedAt;
+        let pc = Math.min(BAR_MAX, (elapsed / SIMULATED_TOTAL_MS) * 100);
+        if (pc >= BAR_MAX - 2) pc = BAR_MAX - Math.random() * 2;
+        setProgress(pc);
+      }, 300);
+    } else {
+      // Finale: completa la barra e nascondila dopo poco
+      setProgress(100);
+      setTimeout(() => setBarVisible(false), 650);
+      setTimeout(() => setProgress(0), 1200);
+    }
+    return () => clearInterval(interval);
+  }, [sendLoading]);
+  // -----------------------------------------------------
+
   // Gestione focus e scroll
   useEffect(() => {
     if (!messagesContainerRef.current) return;
 
     // Gestione inizio e fine generazione
     if (!isGeneratingRef.current && sendLoading) {
-      // Inizio generazione
       isGeneratingRef.current = true;
-      
-      // Notifica al parent di espandere l'iframe
+
       try {
         window.parent.postMessage({
           type: 'expand-iframe',
@@ -76,19 +104,15 @@ const ChatContainer = ({ theme }) => {
       } catch (e) {
         console.warn("Errore nell'invio del messaggio al parent", e);
       }
-      
-      // Scroll iniziale
+
       if (ref.current) {
         ref.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
     } 
     else if (isGeneratingRef.current && !sendLoading) {
-      // Fine generazione
       isGeneratingRef.current = false;
-      
-      // Piccolo ritardo per permettere il rendering completo
+
       setTimeout(() => {
-        // Prima notifica al parent che la generazione è terminata
         try {
           window.parent.postMessage({
             type: 'expand-iframe',
@@ -97,21 +121,15 @@ const ChatContainer = ({ theme }) => {
         } catch (e) {
           console.warn("Errore nell'invio del messaggio al parent", e);
         }
-        
-        // Attendi che l'iframe sia ridimensionato
+
         setTimeout(() => {
-          // Focus sull'input
           if (inputRef.current) {
             try {
-              // Esegui focus e scroll allo stesso tempo
               inputRef.current.focus();
-              
-              // Scroll direttamente all'input
               if (inputContainerRef.current) {
-                // Assicurati che l'input sia completamente visibile
                 inputContainerRef.current.scrollIntoView({ 
                   behavior: 'smooth', 
-                  block: 'center' // Posiziona l'input al centro della viewport
+                  block: 'center'
                 });
               }
             } catch (error) {
@@ -122,15 +140,12 @@ const ChatContainer = ({ theme }) => {
       }, 300);
     }
   }, [sendLoading, derivedMessages, ref]);
-  
+
   // Prevenzione focus durante digitazione
   useEffect(() => {
-    // Impedisce il focus automatico e lo scrolling durante la digitazione
     const preventAutofocusScroll = (e) => {
-      if (sendLoading || isGeneratingRef.current) return; // Permetti lo scrolling durante la generazione
-      
+      if (sendLoading || isGeneratingRef.current) return;
       if (inputRef.current && document.activeElement === inputRef.current) {
-        // Impedisci scrolling durante digitazione
         if (e.type === 'scroll') {
           e.preventDefault();
           e.stopPropagation();
@@ -138,10 +153,7 @@ const ChatContainer = ({ theme }) => {
         }
       }
     };
-    
-    // Aggiungi multipli eventi per massima compatibilità
     document.addEventListener('scroll', preventAutofocusScroll, { passive: false });
-    
     return () => {
       document.removeEventListener('scroll', preventAutofocusScroll);
     };
@@ -153,11 +165,26 @@ const ChatContainer = ({ theme }) => {
     return <div>empty</div>;
   }
 
-  // Determina l'ultimo messaggio per il riferimento
+  // Ultimo messaggio
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
 
   return (
     <>
+      {/* BARRA DI CARICAMENTO SIMULATA */}
+      {barVisible && (
+        <div className={styles.loaderBarWrapper}>
+          <div className={styles.loaderBar}>
+            <div
+              className={styles.loaderBarProgress}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <span className={styles.loaderBarPerc}>
+            {progress < 99 ? `${Math.round(progress)}%` : "Quasi pronto..."}
+          </span>
+        </div>
+      )}
+
       <Flex flex={1} className={`${styles.chatContainer} ${styles[theme]}`} vertical>
         <Flex 
           flex={1} 
@@ -169,7 +196,6 @@ const ChatContainer = ({ theme }) => {
             <Spin spinning={loading}>
               {derivedMessages?.map((message, i) => {
                 const isLastMessage = i === lastMessageIndex;
-                
                 return (
                   <div 
                     ref={isLastMessage ? lastMessageRef : null}
