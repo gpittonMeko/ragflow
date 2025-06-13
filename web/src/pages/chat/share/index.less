@@ -193,3 +193,39 @@
     min-width: 28px !important;
   }
 }
+
+.loaderBarWrapper {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--bg-secondary);
+  padding: 8px 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loaderBar {
+  flex: 1;
+  height: 8px;
+  border-radius: 5px;
+  background: #e5e5e6;
+  overflow: hidden;
+  margin-right: 8px;
+  min-width: 100px;
+  box-shadow: var(--shadow);
+}
+
+.loaderBarProgress {
+  height: 100%;
+  background: linear-gradient(to right, #1890ff, #38c0fc);
+  transition: width 0.18s linear;
+}
+
+.loaderBarPerc {
+  font-size: 0.90em;
+  min-width: 36px;
+  color: #1890ff;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
