@@ -87,7 +87,7 @@ const currentStops = SOFT_GRADIENT_STOPS.map((s, i) => ({
     <svg
       ref={svgRef}
       viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`}
-      width="100%"
+      width="90%"
       role="img"
       aria-label="Logo SGAI"
       style={{
