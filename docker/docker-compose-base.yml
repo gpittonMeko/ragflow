@@ -160,7 +160,18 @@ services:
       - ragflow
     restart: on-failure
 
-
+  backendoauth:
+    container_name: ragflow-backend-oauth
+    build:
+      context: ./login-page
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - TZ=${TIMEZONE}
+    networks:
+      - ragflow
+    restart: on-failure  
 
 
 volumes:

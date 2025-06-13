@@ -1,191 +1,142 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './index.less';
-import { SvgLogoInteractive } from './SvgLogoInteractive';
+import { GoogleOAuthProvider, GoogleLogin, CredentialResponse } from '@react-oauth/google';
 
-const featureHighlight = { color: "#ffe066", fontWeight: 600 };
+// Usa il tuo client ID Google dal tuo screenshot
+const GOOGLE_CLIENT_ID = "872236618020-3len9toeui389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com";
+
+// Tipizzazione piano prezzi
+type Plan = 'free' | 'standard' | 'premium';
+
+interface User {
+  email: string;
+  plan: Plan;
+  usedGenerations: number;
+  generationLimit: number;
+  token: string; // token id di google
+}
 
 const PresentationPage: React.FC = () => {
-  const controllerRef = useRef(new AbortController());
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return localStorage.getItem('sgai-theme') as 'light' | 'dark' || 'dark';
-  });
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('sgai-theme', theme);
+  const [user, setUser] = useState<User | null>(null);
+  const [remainingGenerations, setRemainingGenerations] = useState<number>(5); // default free limit
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  
+  // Gestisce login con Google OAuth
+  const onGoogleLoginSuccess = async (credentialResponse: CredentialResponse) => {
+    if (!credentialResponse.credential) {
+      alert('Autenticazione fallita');
+      return;
+    }
     try {
-      if (iframeRef.current && iframeRef.current.contentWindow) {
-        iframeRef.current.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
-      }
-    } catch (e) {}
-  }, [theme]);
+      // Invia token ID al backend per validazione e logica piano
+      const res = await fetch('http://localhost:5000/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: credentialResponse.credential }),
+      });
+      if (!res.ok) throw new Error("Errore autenticazione backend");
+      const data = await res.json();
+      // data contiene user.email, user.plan, usedGenerations, generationLimit, token
+      const loggedUser: User = {
+        email: data.email,
+        plan: data.plan,
+        usedGenerations: data.usedGenerations,
+        generationLimit: data.generationLimit,
+        token: credentialResponse.credential,
+      };
+      setUser(loggedUser);
+      setRemainingGenerations(loggedUser.generationLimit - loggedUser.usedGenerations);
+      setIsAuthorized(true);
+    } catch (e) {
+      alert('Errore autenticazione ' + e);
+    }
+  };
 
-  useEffect(() => {
-    const handleIframeMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'iframe-height') {
-        const iframeHeight = event.data.height;
-        if (iframeRef.current && iframeHeight && !isGenerating) {
-          iframeRef.current.style.height = `${iframeHeight}px`;
-        }
-      }
-      if (event.data && event.data.type === 'expand-iframe') {
-        setIsGenerating(event.data.expanding);
-        if (event.data.expanding && iframeRef.current) {
-          const viewportHeight = window.innerHeight;
-          iframeRef.current.style.height = `${viewportHeight}px`;
-          iframeRef.current.style.position = 'fixed';
-          iframeRef.current.style.top = '0';
-          iframeRef.current.style.left = '0';
-          iframeRef.current.style.width = '100%';
-          iframeRef.current.style.zIndex = '1000';
-          document.body.style.overflow = 'hidden';
-        } else if (!event.data.expanding && iframeRef.current) {
-          iframeRef.current.style.position = 'relative';
-          iframeRef.current.style.top = 'auto';
-          iframeRef.current.style.left = 'auto';
-          iframeRef.current.style.width = '100%';
-          iframeRef.current.style.zIndex = 'auto';
-          document.body.style.overflow = 'auto';
-          if (iframeRef.current.contentWindow) {
-            try {
-              iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
-            } catch (e) {}
-          }
-        }
-      }
-    };
+  const onGoogleLoginError = () => {
+    alert('Login fallito');
+    setIsAuthorized(false);
+    setUser(null);
+  };
 
-    window.addEventListener('message', handleIframeMessage);
-    const handleResize = () => {
-      if (isGenerating && iframeRef.current) {
-        const viewportHeight = window.innerHeight;
-        iframeRef.current.style.height = `${viewportHeight}px`;
-      } else if (iframeRef.current && iframeRef.current.contentWindow) {
-        try {
-          iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
-        } catch (e) {}
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('message', handleIframeMessage);
-      window.removeEventListener('resize', handleResize);
-      document.body.style.overflow = 'auto';
-    };
-  }, [isGenerating]);
+  // Funzione simulata che tenta di generare, controlla limiti
+  const handleGenerate = async () => {
+    if (!user) {
+      alert('Devi autenticarti');
+      return;
+    }
+    if (user.plan !== 'premium' && remainingGenerations <= 0) {
+      alert('Hai raggiunto il limite di generazioni per il tuo piano. Effettua un upgrade.');
+      return;
+    }
+    // Simula chiamata backend per registrare generazione
+    const res = await fetch('http://localhost:5000/api/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${user.token}`,
+      },
+      body: JSON.stringify({ }),
+    });
+    if (!res.ok) {
+      alert('Errore durante la generazione');
+      return;
+    }
+    const data = await res.json();
+    setRemainingGenerations(data.remainingGenerations);
+    alert('Generazione completata, rimangono ' + data.remainingGenerations);
+  };
 
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
+  // Funzione simulata upgrade piano pagamento
+  const handleUpgrade = async (amount: number) => {
+    if (!user) {
+      alert('Devi autenticarti per aggiornare il piano');
+      return;
+    }
+    const res = await fetch('http://localhost:5000/api/upgrade', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${user.token}`
+      },
+      body: JSON.stringify({ amount })
+    });
+    if (!res.ok) {
+      alert('Errore aggiornamento piano');
+      return;
+    }
+    const data = await res.json();
+    setUser(u => u ? {...u, plan: data.plan, generationLimit: data.generationLimit} : null);
+    setRemainingGenerations(data.generationLimit - (user?.usedGenerations || 0));
+    alert(`Upgrade effettuato! Piano: ${data.plan}`);
   };
 
   return (
-    <div className={styles.pageContainer}>
-      <button
-        onClick={toggleTheme}
-        className={styles.themeToggle}
-        style={{ zIndex: isGenerating ? '1001' : '100' }}
-      >
-        {theme === 'dark'
-          ? <span className={styles.themeIcon}>☀️</span>
-          : <span className={styles.themeIcon}>🌙</span>}
-      </button>
-
-      {/* LOGO SGAI */}
-      <div
-        className={styles.heroSection}
-        style={{
-          paddingTop: 0,
-          marginBottom: '-1rem', 
-          marginTop: '2rem',   // margine positivo per separare dal blocco sotto, evita sovrapposizioni
-          paddingBottom: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-        }}
-      >
-        <div style={{ marginBottom: '2rem', width: '100%', maxWidth: '320px' }}>
-        <SvgLogoInteractive flipped={true} />
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <div className={styles.pageContainer} style={{textAlign:'center'}}>
+        {!isAuthorized ? (
+          <>
+            <h2>Accedi per usare SGAI</h2>
+            <GoogleLogin
+              onSuccess={onGoogleLoginSuccess}
+              onError={onGoogleLoginError}
+              useOneTap
+            />
+          </>
+        ) : (
+          <>
+            <h2>Benvenuto {user?.email}</h2>
+            <p>Piano attuale: <strong>{user?.plan}</strong></p>
+            <p>Generazioni rimanenti: <strong>{user?.plan === 'premium' ? '∞' : remainingGenerations}</strong></p>
+            <button onClick={handleGenerate}>Genera Risposta AI</button>
+            <div style={{marginTop:'20px'}}>
+              <h3>Aggiorna piano:</h3>
+              <button onClick={() => handleUpgrade(49.99)}>Upgrade a Standard (49,99€)</button>
+              <button onClick={() => handleUpgrade(69.99)} style={{marginLeft:'10px'}}>Upgrade a Premium (69,99€)</button>
+            </div>
+          </>
+        )}
       </div>
-        <div className={styles.heroSubtitle} style={{ maxWidth: '600px', textAlign: 'center' }}>
-          L'intelligenza artificiale per il contenzioso tributario: L'assistente legale che hai sempre desiderato
-        </div>
-      </div>
-
-      {/* CHAT SOTTO IL LOGO */}
-      <div className={styles.iframeSection} style={{
-        overflow: isGenerating ? 'visible' : 'hidden',
-        maxWidth: '100%'
-      }}>
-        <iframe
-          ref={iframeRef}
-          src="https://sgailegal.it/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm&visible_avatar=1"
-          title="SGAI Chat Interface"
-          style={{
-            borderRadius: isGenerating ? '0' : 'var(--border-radius)',
-            maxWidth: '100%'
-          }}
-        />
-      </div>
-
-      {/* FEATURE */}
-      <div className={styles.featuresSection}>
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-          </div>
-          <h3 style={featureHighlight}>Tutela del Knowhow</h3>
-          <p style={featureHighlight}>
-            Nessun dato viene acquisito.<br />
-            Quel che viene discusso con SGAI è accessibile solo all'utente.
-          </p>
-        </div>
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5z" />
-              <path d="M2 17l10 5 10-5" />
-              <path d="M2 12l10 5 10-5" />
-            </svg>
-          </div>
-          <h3 style={featureHighlight}>Personalizzazione</h3>
-          <p style={featureHighlight}>
-            SGAI può essere potenziato per il singolo Studio professionale:<br />
-            addestralo con i tuoi atti e i tuoi documenti.
-          </p>
-        </div>
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8h1a4 4 0 010 8h-1" />
-              <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
-              <line x1="6" y1="1" x2="6" y2="4" />
-              <line x1="10" y1="1" x2="10" y2="4" />
-              <line x1="14" y1="1" x2="14" y2="4" />
-            </svg>
-          </div>
-          <h3 style={featureHighlight}>Indipendenza e Imparzialità</h3>
-          <p style={featureHighlight}>
-            Lavoriamo senza legami istituzionali per garantire la massima trasparenza.
-          </p>
-        </div>
-      </div>
-
-      {/* DISCLAIMER */}
-      <div className={styles.disclaimerSection}>
-        <p><strong>Disclaimer:</strong></p>
-        <p>
-          Si prega di notare che SGAI è un sistema basato sull'intelligenza artificiale.
-          Sebbene ci impegniamo a fornire informazioni accurate e utili, il modello può occasionalmente commettere errori o produrre informazioni non corrette. È fondamentale verificare sempre le informazioni fornite con fonti affidabili e consultare professionisti qualificati per decisioni importanti.
-        </p>
-      </div>
-    </div>
+    </GoogleOAuthProvider>
   );
 };
 
