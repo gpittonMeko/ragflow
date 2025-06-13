@@ -163,7 +163,7 @@ services:
   backendoauth:
     container_name: ragflow-backend-oauth
     build:
-      context: ./login-page
+      context: ../web/src/pages/login-page
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
