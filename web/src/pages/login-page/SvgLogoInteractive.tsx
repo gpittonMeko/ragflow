@@ -133,7 +133,7 @@ const currentStops = SOFT_GRADIENT_STOPS.map((s, i) => ({
   fill="url(#gradient-hover)"
   filter="url(#logo-glow)"
   transform={`
-    scale(1.4,-1.4) translate(-1900,-${VIEWBOX_H}) 
+    scale(1.35,-1.35) translate(-1900,-${VIEWBOX_H}) 
     translate(0,-600)`} 
 >
     <path d="M2900 8409 c-117 -8 -234 -25 -260 -39 -10 -5 -28 -10 -39 -10 -11 0

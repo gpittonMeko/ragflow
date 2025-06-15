@@ -57,37 +57,50 @@
 .loaderBarWrapper {
   position: sticky;
   top: 0;
-  z-index: 30;
-  background: var(--bg-secondary);
-  padding: 8px 0 4px 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.loaderGlass {
+  backdrop-filter: blur(14px) brightness(1.14);
+  background: rgba(40,47,92,0.22);
+  border-radius: 22px;
+  box-shadow: 0 2px 24px 3px rgba(0, 160, 255, 0.18);
+  padding: 1.05em 2em;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 1.1em;
+  border: 1.2px solid rgba(120,255,255,0.10);
+  min-width: 220px;
 }
 
-.loaderBar {
-  flex: 1;
-  height: 8px;
-  border-radius: 5px;
-  background: #e5e5e6;
-  overflow: hidden;
-  margin-right: 8px;
+.loaderGlassText {
+  font-family: "Inter", "Titillium Web", sans-serif;
+  color: #e6ffff;
+  font-size: 1.01em;
+  letter-spacing: .02em;
+  font-weight: 500;
+  text-shadow: 0 2px 8px #00fff844,0 0px 1px #234191bb;
+  filter: blur(.3px);
+}
+
+.loaderBarLiquid {
   min-width: 100px;
-  box-shadow: var(--shadow);
+  height: 10px;
+  border-radius: 6px;
+  background:
+    linear-gradient(270deg, #12dbff99 0%, #22ffb877 60%, #0078f0 100%);
+  box-shadow: 0 0 16px #388ff755;
+  animation: waveGlass 1.3s infinite linear;
+  background-size: 200% 100%;
 }
 
-.loaderBarProgress {
-  height: 100%;
-  background: linear-gradient(to right, #1890ff, #38c0fc);
-  transition: width 0.18s linear;
-}
-
-.loaderBarPerc {
-  font-size: 0.90em;
-  min-width: 36px;
-  color: #1890ff;
-  font-variant-numeric: tabular-nums;
-  user-select: none;
+@keyframes waveGlass {
+  0%   { background-position: 0 0;   }
+  100% { background-position: 200% 0; }
 }
 
 .chatContainer {

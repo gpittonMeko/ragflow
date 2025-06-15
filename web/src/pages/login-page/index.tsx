@@ -219,7 +219,7 @@ const PresentationPage: React.FC = () => {
         className={styles.iframeSection}
         style={{
           overflow: isGenerating ? 'visible' : 'hidden',
-          maxWidth: '95%',
+          maxWidth: '100%',
         }}
       >
         <iframe
