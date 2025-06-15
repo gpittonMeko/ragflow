@@ -60,35 +60,67 @@ const ChatContainer = ({ theme }) => {
     }
   }, [locale, visibleAvatar]);
 
-  // --------------- PROGRESS BAR SIMULATA ---------------
-  // Durata del caricamento simulato (ms)
-  const SIMULATED_TOTAL_MS = 180000; // 3 minuti
-  const BAR_MAX = 97; // la barra si ferma qui finché l'output non arriva
-  const [progress, setProgress] = useState(0);
-  const [barVisible, setBarVisible] = useState(false);
+  // --------------- PROGRESS BAR SIMULATA CON EASING ---------------
+// Durata simulata fino al 90%
+const SIMULATED_TOTAL_MS = 180000; // 3 minuti
+const BAR_INF_START = 90; // % dopo cui va "all'infinito"
+const BAR_INF_SPEED = 0.09; // %/tick (più basso = più lenta)
+const BAR_WIDTH_LG = 370; // px, puoi cambiare la larghezza
 
-  useEffect(() => {
-    let interval = null;
-    if (sendLoading) {
-      setBarVisible(true);
-      setProgress(0);
-      const startedAt = Date.now();
+const [progress, setProgress] = useState(0);
+const [barVisible, setBarVisible] = useState(false);
 
-      interval = setInterval(() => {
-        const elapsed = Date.now() - startedAt;
-        let pc = Math.min(BAR_MAX, (elapsed / SIMULATED_TOTAL_MS) * 100);
-        if (pc >= BAR_MAX - 2) pc = BAR_MAX - Math.random() * 2;
-        setProgress(pc);
-      }, 300);
+useEffect(() => {
+  let animationFrame = null;
+  let fakeStart = null;
+  let goingInfinite = false;
+
+  function easeInOutQuad(x) {
+    // Easing (0...1)
+    return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+  }
+
+  function updateProgress() {
+    const now = Date.now();
+    let elapsed = now - fakeStart;
+    let perc = (elapsed / SIMULATED_TOTAL_MS);
+    let eased = easeInOutQuad(Math.min(1, perc));
+    let prog = eased * 100;
+
+    if (prog < BAR_INF_START) {
+      setProgress(prog);
+      animationFrame = requestAnimationFrame(updateProgress);
     } else {
-      // Finale: completa la barra e nascondila dopo poco
-      setProgress(100);
-      setTimeout(() => setBarVisible(false), 650);
-      setTimeout(() => setProgress(0), 1200);
+      // Dal 90% in poi sale lentamente e mai oltre il 99.7%
+      goingInfinite = true;
+      setProgress((prev) => {
+        // Arriva lentamente a 99.7 ma non tocca mai 100
+        let nxt = prev + BAR_INF_SPEED;
+        if (nxt > 99.7) nxt = 99.7 - Math.random()*0.05;
+        animationFrame = requestAnimationFrame(updateProgress);
+        return nxt;
+      });
     }
-    return () => clearInterval(interval);
-  }, [sendLoading]);
-  // -----------------------------------------------------
+  }
+
+  if (sendLoading || isGenerating) {
+    setBarVisible(true);
+    setProgress(0);
+    fakeStart = Date.now();
+    animationFrame = requestAnimationFrame(updateProgress);
+  } else {
+    // Finale: rapidissimo ease-out a 100%, delay, poi sparisce e resetta
+    setProgress((prev) => (prev > 97 ? prev : 100));
+    setTimeout(() => setProgress(100), 20);
+    setTimeout(() => setBarVisible(false), 650);
+    setTimeout(() => setProgress(0), 1200);
+  }
+
+  return () => {
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+  };
+}, [sendLoading, isGenerating]);
+// -----------------------------------------------------
 
   // Gestione focus e scroll
   useEffect(() => {
@@ -172,11 +204,40 @@ const ChatContainer = ({ theme }) => {
 
   return (
     <>
-      { (sendLoading || isGenerating) && (
+      {barVisible && (
       <div className={styles.loaderBarWrapper}>
         <div className={styles.loaderGlass}>
           <span className={styles.loaderGlassText}>Generazione in corso...</span>
-          <div className={styles.loaderBarLiquid} />
+          <div
+            className={styles.loaderBarLiquid}
+            style={{
+              width: BAR_WIDTH_LG,
+              height: 16,
+              // barra esterna per larghezza
+              background: 'rgba(155,255,255,0.07)',
+              borderRadius: 10,
+              padding: 2,
+              boxSizing: 'border-box',
+              boxShadow: '0 0 24px #12c7f333',
+              overflow: 'hidden',
+            }}>
+            <div
+              className={styles.loaderBarLiquidInner}
+              style={{
+                width: `${progress}%`,
+                height: '100%',
+                borderRadius: 7,
+                background:
+                  'linear-gradient(270deg, #12dbffBB 0%, #22ffb899 70%, #0078f0CC 100%)',
+                boxShadow: '0 0 16px #22cfff88',
+                transition: progress === 100
+                  ? 'width 0.42s cubic-bezier(.2,.9,.65,1.02)'
+                  : 'width 0.85s cubic-bezier(.48,.06,.23,.99)', // EASING in+out
+                // e se vuoi un piccolo effetto move, opzionale:
+                willChange: 'width'
+              }}
+            />
+          </div>
         </div>
       </div>
     )}
