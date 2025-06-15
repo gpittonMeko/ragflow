@@ -70,7 +70,6 @@ const BAR_WIDTH_LG = 370; // px, puoi cambiare la larghezza
 const [progress, setProgress] = useState(0);
 const [barVisible, setBarVisible] = useState(false);
 const fakeStartRef = useRef(null);
-
 useEffect(() => {
   let animationFrame = null;
 
