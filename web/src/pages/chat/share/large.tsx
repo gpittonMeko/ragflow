@@ -200,42 +200,40 @@ useEffect(() => {
   return (
     <>
       {barVisible && (
-      <div className={styles.loaderBarWrapper}>
-        <div className={styles.loaderGlass}>
-          <span className={styles.loaderGlassText}>Generazione in corso...</span>
-          <div
-            className={styles.loaderBarLiquid}
-            style={{
-              width: BAR_WIDTH_LG,
-              height: 16,
-              // barra esterna per larghezza
-              background: 'rgba(155,255,255,0.07)',
-              borderRadius: 10,
-              padding: 2,
-              boxSizing: 'border-box',
-              boxShadow: '0 0 24px #12c7f333',
-              overflow: 'hidden',
-            }}>
+        <div className={styles.loaderBarWrapper}>
+          <div className={styles.loaderGlass}>
+            <span className={styles.loaderGlassText}>Generazione in corso...</span>
             <div
-              className={styles.loaderBarLiquidInner}
+              className={styles.loaderBarLiquid}
               style={{
-                width: `${progress}%`,
-                height: '100%',
-                borderRadius: 7,
-                background:
-                  'linear-gradient(270deg, #12dbffBB 0%, #22ffb899 70%, #0078f0CC 100%)',
-                boxShadow: '0 0 16px #22cfff88',
-                transition: progress === 100
-                  ? 'width 0.42s cubic-bezier(.2,.9,.65,1.02)'
-                  : 'width 0.85s cubic-bezier(.48,.06,.23,.99)', // EASING in+out
-                // e se vuoi un piccolo effetto move, opzionale:
-                willChange: 'width'
-              }}
-            />
+                width: BAR_WIDTH_LG,
+                height: 16,
+                background: 'rgba(155,255,255,0.07)',
+                borderRadius: 10,
+                padding: 2,
+                boxSizing: 'border-box',
+                boxShadow: '0 0 24px #12c7f333',
+                overflow: 'hidden',
+              }}>
+              <div // <--- NON SELF-CLOSING!!
+                className={styles.loaderBarLiquidInner}
+                style={{
+                  width: `${progress}%`,
+                  height: '100%',
+                  borderRadius: 7,
+                  background:
+                    'linear-gradient(270deg, #12dbffBB 0%, #22ffb899 70%, #0078f0CC 100%)',
+                  boxShadow: '0 0 16px #22cfff88',
+                  transition: progress === 100
+                    ? 'width 0.42s cubic-bezier(.2,.9,.65,1.02)'
+                    : 'width 0.85s cubic-bezier(.48,.06,.23,.99)',
+                  willChange: 'width'
+                }}>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
       <Flex flex={1} className={`${styles.chatContainer} ${styles[theme]}`} vertical>
         <Flex 
