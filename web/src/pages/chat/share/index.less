@@ -63,7 +63,6 @@
   align-items: center;
   margin-bottom: 12px;
 }
-
 .loaderGlass {
   backdrop-filter: blur(13px) brightness(1.12);
   background: rgba(40,47,92,0.21);
@@ -76,7 +75,6 @@
   border: 1.2px solid rgba(120,255,255,0.11);
   min-width: 340px;
 }
-
 .loaderGlassText {
   font-family: "Inter","Titillium Web",sans-serif;
   color: #e6ffff;
@@ -86,13 +84,10 @@
   text-shadow: 0 2px 8px #00fff844,0 0px 1px #234191bb;
   filter: blur(.25px);
 }
-
 .loaderBarLiquid {
   display: flex;
   align-items: center;
-  width: 370px;
   transition: width 0.18s cubic-bezier(.68,-0.2,.21,1.04);
-  // background/boxShadow impostata inline da React style!
   overflow: hidden;
   min-height: 16px;
 }
@@ -100,7 +95,6 @@
   height: 100%;
   min-width: 3%;
   border-radius: 7px;
-  // background e transizioni gestiti via inline
   background-size: 200% 100%;
   animation: waveGlass 1.3s infinite linear alternate;
 }
