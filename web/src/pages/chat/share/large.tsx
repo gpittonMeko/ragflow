@@ -38,6 +38,8 @@ const ChatContainer = ({ theme }) => {
     derivedMessages,
     hasError,
     stopOutputMessage,
+    isGenerating   // <-- AGGIUNGI QUESTO!
+
   } = useSendSharedMessage();
   const sendDisabled = useSendButtonDisabled(value);
   const messagesContainerRef = useRef(null);

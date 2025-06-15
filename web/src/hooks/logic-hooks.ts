@@ -252,7 +252,7 @@ export const useSendMessageWithSse = (
     sseRef.current?.abort();
   }, []);
 
-  return { send, answer, done, setDone, resetAnswer, stopOutputMessage };
+  return { send, answer, done, setDone, resetAnswer, stopOutputMessage, isGenerating, };
 };
 
 export const useSpeechWithSse = (url: string = api.tts) => {
