@@ -170,20 +170,16 @@ const ChatContainer = ({ theme }) => {
 
   return (
     <>
-      {/* BARRA DI CARICAMENTO SIMULATA */}
-      {barVisible && (
-        <div className={styles.loaderBarWrapper}>
-          <div className={styles.loaderBar}>
-            <div
-              className={styles.loaderBarProgress}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <span className={styles.loaderBarPerc}>
-            {progress < 99 ? `${Math.round(progress)}%` : "Quasi pronto..."}
+      {isGenerating && (
+      <div className={styles.loaderBarWrapper}>
+        <div className={styles.loaderGlass}>
+          <span className={styles.loaderGlassText}>
+            Generazione in corso...
           </span>
+          <div className={styles.loaderBarLiquid} />
         </div>
-      )}
+      </div>
+    )}
 
       <Flex flex={1} className={`${styles.chatContainer} ${styles[theme]}`} vertical>
         <Flex 

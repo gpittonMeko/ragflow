@@ -159,6 +159,7 @@ export const useSendMessageWithSse = (
 ) => {
   const [answer, setAnswer] = useState<IAnswer>({} as IAnswer);
   const [done, setDone] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
   const timer = useRef<any>();
   const sseRef = useRef<AbortController>();
 
@@ -215,6 +216,14 @@ export const useSendMessageWithSse = (
               const d = val?.data;
               if (typeof d !== 'boolean') {
                 console.info('data:', d);
+
+                // PATCH: Gestisci il vero stato di generazione
+                if (d.running_status === true) {
+                  setIsGenerating(true);   // Mostra loader/barra
+                } else {
+                  setIsGenerating(false);  // Nascondi loader/barra
+                }
+
                 setAnswer({
                   ...d,
                   conversationId: body?.conversation_id,
