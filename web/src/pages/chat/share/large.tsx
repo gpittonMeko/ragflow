@@ -67,6 +67,8 @@ const ChatContainer = ({ theme }) => {
   const BAR_INF_START = 90;
   const BAR_MAX = 99.7;
   const BAR_INF_SPEED = 0.035; // più lento = più lento
+  const BAR_WIDTH_LG = 370; // (o altro valore, es. 400)
+
 
   const [progress, setProgress] = useState(0);
   const [barVisible, setBarVisible] = useState(false);
