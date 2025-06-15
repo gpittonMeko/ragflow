@@ -72,17 +72,20 @@ const [barVisible, setBarVisible] = useState(false);
 
 useEffect(() => {
   let animationFrame = null;
-  let fakeStart = null;
-  let goingInfinite = false;
+  const fakeStartRef = useRef(null);
+
+useEffect(() => {
+  let animationFrame = null;
 
   function easeInOutQuad(x) {
-    // Easing (0...1)
-    return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+    return x < 0.5
+      ? 2 * x * x
+      : 1 - Math.pow(-2 * x + 2, 2) / 2;
   }
 
   function updateProgress() {
     const now = Date.now();
-    let elapsed = now - fakeStart;
+    let elapsed = now - fakeStartRef.current;
     let perc = (elapsed / SIMULATED_TOTAL_MS);
     let eased = easeInOutQuad(Math.min(1, perc));
     let prog = eased * 100;
@@ -91,10 +94,7 @@ useEffect(() => {
       setProgress(prog);
       animationFrame = requestAnimationFrame(updateProgress);
     } else {
-      // Dal 90% in poi sale lentamente e mai oltre il 99.7%
-      goingInfinite = true;
-      setProgress((prev) => {
-        // Arriva lentamente a 99.7 ma non tocca mai 100
+      setProgress(prev => {
         let nxt = prev + BAR_INF_SPEED;
         if (nxt > 99.7) nxt = 99.7 - Math.random()*0.05;
         animationFrame = requestAnimationFrame(updateProgress);
@@ -106,10 +106,9 @@ useEffect(() => {
   if (sendLoading || isGenerating) {
     setBarVisible(true);
     setProgress(0);
-    fakeStart = Date.now();
+    fakeStartRef.current = Date.now(); // <-- qui
     animationFrame = requestAnimationFrame(updateProgress);
   } else {
-    // Finale: rapidissimo ease-out a 100%, delay, poi sparisce e resetta
     setProgress((prev) => (prev > 97 ? prev : 100));
     setTimeout(() => setProgress(100), 20);
     setTimeout(() => setBarVisible(false), 650);
