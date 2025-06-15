@@ -62,32 +62,62 @@ const ChatContainer = ({ theme }) => {
 
   // --------------- PROGRESS BAR SIMULATA CON EASING ---------------
 // Durata simulata fino al 90%
-const SIMULATED_TOTAL_MS = 180000; // 3 minuti
-const BAR_INF_START = 90; // % dopo cui va "all'infinito"
-const BAR_INF_SPEED = 0.09; // %/tick (più basso = più lenta)
-const BAR_WIDTH_LG = 370; // px, puoi cambiare la larghezza
 
-const [progress, setProgress] = useState(0);
-const [barVisible, setBarVisible] = useState(false);
-const fakeStartRef = useRef(null);
-useEffect(() => {
-  if (sendLoading) {
-    setBarVisible(true);
-    let start = Date.now();
+  const SIMULATED_TOTAL_MS = 180000; // 3 minuti
+  const BAR_INF_START = 90; // soglia %
+  const BAR_MAX = 99.7;
+  const BAR_INF_SPEED = 0.035; // % per tick
+
+  const [progress, setProgress] = useState(0);
+  const [barVisible, setBarVisible] = useState(false);
+  const fakeStartRef = useRef(null);
+  const infRef = useRef(false);
+
+  useEffect(() => {
     let raf = null;
-    function tick() {
-      let p = Math.min(99, (Date.now()-start)/5000*100);
-      setProgress(p);
-      if (p < 99) raf = requestAnimationFrame(tick);
+
+    function easeInOutQuad(x) {
+      return x < 0.5
+        ? 2 * x * x
+        : 1 - Math.pow(-2 * x + 2, 2) / 2;
     }
-    tick();
+
+    function tick() {
+      const now = Date.now();
+      const elapsed = now - fakeStartRef.current;
+      const perc = Math.min(1, elapsed / SIMULATED_TOTAL_MS);
+      const eased = easeInOutQuad(perc);
+      const prog = eased * 100;
+
+      if (prog < BAR_INF_START) {
+        setProgress(prog);
+        raf = requestAnimationFrame(tick);
+      } else {
+        // Dal 90% in poi (BAR_INF_START), avanza all’infinito lentamente fino a BAR_MAX
+        infRef.current = true;
+        setProgress(prev => {
+          let nxt = prev + BAR_INF_SPEED;
+          if (nxt > BAR_MAX) nxt = BAR_MAX - Math.random()*0.1;
+          raf = requestAnimationFrame(tick);
+          return nxt;
+        });
+      }
+    }
+
+    if (sendLoading) {
+      setBarVisible(true);
+      fakeStartRef.current = Date.now();
+      infRef.current = false;
+      setProgress(0);
+      raf = requestAnimationFrame(tick);
+    } else {
+      setProgress(100);
+      setTimeout(() => setBarVisible(false), 650);
+      setTimeout(() => setProgress(0), 1200);
+    }
+
     return () => raf && cancelAnimationFrame(raf);
-  } else {
-    setProgress(100);
-    setTimeout(() => setBarVisible(false), 700);
-    setTimeout(() => setProgress(0), 950);
-  }
-}, [sendLoading]);
+  }, [sendLoading]);
 // -----------------------------------------------------
 
   // Gestione focus e scroll
