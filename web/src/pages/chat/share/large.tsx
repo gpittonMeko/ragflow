@@ -172,12 +172,10 @@ const ChatContainer = ({ theme }) => {
 
   return (
     <>
-      {isGenerating && (
+      { (sendLoading || isGenerating) && (
       <div className={styles.loaderBarWrapper}>
         <div className={styles.loaderGlass}>
-          <span className={styles.loaderGlassText}>
-            Generazione in corso...
-          </span>
+          <span className={styles.loaderGlassText}>Generazione in corso...</span>
           <div className={styles.loaderBarLiquid} />
         </div>
       </div>
