@@ -71,50 +71,23 @@ const [progress, setProgress] = useState(0);
 const [barVisible, setBarVisible] = useState(false);
 const fakeStartRef = useRef(null);
 useEffect(() => {
-  let animationFrame = null;
-
-  function easeInOutQuad(x) {
-    return x < 0.5
-      ? 2 * x * x
-      : 1 - Math.pow(-2 * x + 2, 2) / 2;
-  }
-
-  function updateProgress() {
-    const now = Date.now();
-    let elapsed = now - fakeStartRef.current;
-    let perc = (elapsed / SIMULATED_TOTAL_MS);
-    let eased = easeInOutQuad(Math.min(1, perc));
-    let prog = eased * 100;
-
-    if (prog < BAR_INF_START) {
-      setProgress(prog);
-      animationFrame = requestAnimationFrame(updateProgress);
-    } else {
-      setProgress(prev => {
-        let nxt = prev + BAR_INF_SPEED;
-        if (nxt > 99.7) nxt = 99.7 - Math.random()*0.05;
-        animationFrame = requestAnimationFrame(updateProgress);
-        return nxt;
-      });
-    }
-  }
-
-  if (sendLoading || isGenerating) {
+  if (sendLoading) {
     setBarVisible(true);
-    setProgress(0);
-    fakeStartRef.current = Date.now(); // imposta il riferimento SOLO QUI!
-    animationFrame = requestAnimationFrame(updateProgress);
+    let start = Date.now();
+    let raf = null;
+    function tick() {
+      let p = Math.min(99, (Date.now()-start)/5000*100);
+      setProgress(p);
+      if (p < 99) raf = requestAnimationFrame(tick);
+    }
+    tick();
+    return () => raf && cancelAnimationFrame(raf);
   } else {
-    setProgress((prev) => (prev > 97 ? prev : 100));
-    setTimeout(() => setProgress(100), 20);
-    setTimeout(() => setBarVisible(false), 650);
-    setTimeout(() => setProgress(0), 1200);
+    setProgress(100);
+    setTimeout(() => setBarVisible(false), 700);
+    setTimeout(() => setProgress(0), 950);
   }
-
-  return () => {
-    if (animationFrame) cancelAnimationFrame(animationFrame);
-  };
-}, [sendLoading, isGenerating]);
+}, [sendLoading]);
 // -----------------------------------------------------
 
   // Gestione focus e scroll
