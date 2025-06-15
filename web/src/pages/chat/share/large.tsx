@@ -69,10 +69,7 @@ const BAR_WIDTH_LG = 370; // px, puoi cambiare la larghezza
 
 const [progress, setProgress] = useState(0);
 const [barVisible, setBarVisible] = useState(false);
-
-useEffect(() => {
-  let animationFrame = null;
-  const fakeStartRef = useRef(null);
+const fakeStartRef = useRef(null);
 
 useEffect(() => {
   let animationFrame = null;
@@ -106,7 +103,7 @@ useEffect(() => {
   if (sendLoading || isGenerating) {
     setBarVisible(true);
     setProgress(0);
-    fakeStartRef.current = Date.now(); // <-- qui
+    fakeStartRef.current = Date.now(); // imposta il riferimento SOLO QUI!
     animationFrame = requestAnimationFrame(updateProgress);
   } else {
     setProgress((prev) => (prev > 97 ? prev : 100));
