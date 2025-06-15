@@ -67,6 +67,7 @@ const ChatContainer = ({ theme }) => {
   const BAR_INF_START = 90; // soglia %
   const BAR_MAX = 99.7;
   const BAR_INF_SPEED = 0.035; // % per tick
+  const BAR_WIDTH_LG = 370; // oppure 400, come vuoi tu
 
   const [progress, setProgress] = useState(0);
   const [barVisible, setBarVisible] = useState(false);
