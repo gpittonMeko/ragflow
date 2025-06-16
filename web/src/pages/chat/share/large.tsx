@@ -41,6 +41,8 @@ const ChatContainer = ({ theme }) => {
     isGenerating   // <-- AGGIUNGI QUESTO!
 
   } = useSendSharedMessage();
+  const SIMULATED_TOTAL_MS = 180000; // 3 minuti
+  const BAR_WIDTH_LG = 370; // oppure la larghezza che vuoi per la barra
   const sendDisabled = useSendButtonDisabled(value);
   const messagesContainerRef = useRef(null);
   const isGeneratingRef = useRef(false);
