@@ -76,54 +76,54 @@ const ChatContainer = ({ theme }) => {
   const rafId = useRef(null);
 
   useEffect(() => {
-    // Quando loading PARTE...
-    if (sendLoading || isGenerating) {
-      setBarVisible(true);
-      setProgress(0);
-      fakeStartRef.current = Date.now();
+  let cancelled = false;
 
-      function easeInOutQuad(x) {
-        return x < 0.5
-          ? 2 * x * x
-          : 1 - Math.pow(-2 * x + 2, 2) / 2;
-      }
+  function easeInOutQuad(x) {
+    return x < 0.5
+      ? 2 * x * x
+      : 1 - Math.pow(-2 * x + 2, 2) / 2;
+  }
 
-      function tick() {
-        const now = Date.now();
-        const elapsed = now - fakeStartRef.current;
-        const perc = Math.min(1, elapsed / SIMULATED_TOTAL_MS);
-        const eased = easeInOutQuad(perc);
-        const prog = eased * 100;
+  function tick(start) {
+    const now = Date.now();
+    const elapsed = now - start;
+    const perc = Math.min(1, elapsed / SIMULATED_TOTAL_MS);
+    const eased = easeInOutQuad(perc);
+    const prog = eased * 100;
 
-        if (prog < BAR_INF_START) {
-          setProgress(prog);
-          rafId.current = requestAnimationFrame(tick);
-        } else {
-          setProgress(prev => {
-            let nxt = prev + BAR_INF_SPEED;
-            if (nxt > BAR_MAX) nxt = BAR_MAX - Math.random()*0.1;
-            rafId.current = requestAnimationFrame(tick);
-            return nxt;
-          });
-        }
-      }
+    if (cancelled) return;
 
-      rafId.current = requestAnimationFrame(tick);
+    if (prog < BAR_INF_START) {
+      setProgress(prog);
+      rafId.current = requestAnimationFrame(() => tick(start));
+    } else {
+      setProgress(prev => {
+        // Dal 90% in avanti, molto lentamente verso il 99,7%
+        let nxt = prev + BAR_INF_SPEED;
+        if (nxt > BAR_MAX) nxt = BAR_MAX - Math.random()*0.1;
+        rafId.current = requestAnimationFrame(() => tick(start));
+        return nxt;
+      });
     }
+  }
 
-    // Quando loading FINISCE...
-    if (!sendLoading && !isGenerating) {
-      setProgress(100);
-      setTimeout(() => setBarVisible(false), 650);
-      setTimeout(() => setProgress(0), 1200);
-      if (rafId.current) cancelAnimationFrame(rafId.current);
-    }
+  if (sendLoading || isGenerating) {
+    setBarVisible(true);
+    setProgress(0);
+    const start = Date.now();
+    rafId.current = requestAnimationFrame(() => tick(start));
+  } else {
+    setProgress(100);
+    setTimeout(() => setBarVisible(false), 650);
+    setTimeout(() => setProgress(0), 1200);
+    if (rafId.current) cancelAnimationFrame(rafId.current);
+  }
 
-    return () => {
-      if (rafId.current) cancelAnimationFrame(rafId.current);
-    };
-  }, [sendLoading, isGenerating]);
-// -----------------------------------------------------
+  return () => {
+    cancelled = true;
+    if (rafId.current) cancelAnimationFrame(rafId.current);
+  };
+}, [sendLoading, isGenerating]);
 
   // Gestione focus e scroll
   useEffect(() => {
