@@ -77,66 +77,34 @@ const [, setForceRender] = useState(0);
 const rafId = useRef(null);
 
 useEffect(() => {
-  let running = true;
-
-  function easeInOutQuad(x) {
-    return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
-  }
-
-  let start;
-  // FAI PARTIRE LA BARRA SEMPRE SUBITO
+  let interval = null;
+  let finished = false;
+  const START = Date.now();
+  
   if (sendLoading || isGenerating) {
     setBarVisible(true);
     setProgress(0);
-    start = Date.now();
-    function tick() {
-      if (!running) return;
-      const now = Date.now();
-      const elapsed = now - start;
-      const perc = Math.min(1, elapsed / SIMULATED_TOTAL_MS);
-      const eased = easeInOutQuad(perc);
-      const prog = eased * 100;
 
-      if (prog < BAR_INF_START) {
-        setProgress(prog);
-        setForceRender(f => f + 1); // <-- AGGIUNGI QUI
-
-        rafId.current = requestAnimationFrame(tick);
-      } else {
-        setProgress(prev => {
-          let nxt = prev + BAR_INF_SPEED;
-          if (nxt > BAR_MAX) nxt = BAR_MAX - Math.random()*0.1;
-          setForceRender(f => f + 1);    // <-- AGGIUNGI QUI
-
-          rafId.current = requestAnimationFrame(tick);
-          return nxt;
-        });
-      }
-    }
-    rafId.current = requestAnimationFrame(tick);
+    interval = setInterval(() => {
+      if (finished) return;
+      const elapsed = Date.now() - START;
+      const t = Math.min(elapsed / SIMULATED_TOTAL_MS, 1);
+      const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      let target = eased * 90;
+      if (t >= 1) target = 90;
+      setProgress(target);
+    }, 200);
   } else {
+    // QUANDO LA GENERAZIONE FINISCE
     setProgress(100);
+    finished = true;
     setTimeout(() => setBarVisible(false), 650);
     setTimeout(() => setProgress(0), 1200);
-    if (rafId.current) cancelAnimationFrame(rafId.current);
   }
-
-  // Cleanup se cambi percorso/pagina/react smonta
   return () => {
-    running = false;
-    if (rafId.current) cancelAnimationFrame(rafId.current);
+    finished = true;
+    if (interval) clearInterval(interval);
   };
-}, [sendLoading, isGenerating]);
-
-// Forza il render ogni 200ms mentre la barra è attiva!
-useEffect(() => {
-  let interval;
-  if (sendLoading || isGenerating) {
-    interval = setInterval(() => {
-      setForceRender(x => x + 1);
-    }, 200);
-  }
-  return () => { if (interval) clearInterval(interval); };
 }, [sendLoading, isGenerating]);
 
   // Gestione focus e scroll
