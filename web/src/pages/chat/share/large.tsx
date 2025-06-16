@@ -71,6 +71,8 @@ const BAR_WIDTH_LG = 370;
 
 const [progress, setProgress] = useState(0);
 const [barVisible, setBarVisible] = useState(false);
+const [, setForceRender] = useState(0);
+
 // useRef che sopravvive sempre tra i render per il ciclo
 const rafId = useRef(null);
 
@@ -120,6 +122,17 @@ useEffect(() => {
     running = false;
     if (rafId.current) cancelAnimationFrame(rafId.current);
   };
+}, [sendLoading, isGenerating]);
+
+// Forza il render ogni 200ms mentre la barra è attiva!
+useEffect(() => {
+  let interval;
+  if (sendLoading || isGenerating) {
+    interval = setInterval(() => {
+      setForceRender(x => x + 1);
+    }, 200);
+  }
+  return () => { if (interval) clearInterval(interval); };
 }, [sendLoading, isGenerating]);
 
   // Gestione focus e scroll
