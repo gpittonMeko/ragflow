@@ -60,27 +60,11 @@ const ChatContainer = ({ theme }) => {
     }
   }, [locale, visibleAvatar]);
 
-  // --------------- PROGRESS BAR SIMULATA CON EASING ---------------
-// Durata simulata fino al 90%
-
-const SIMULATED_TOTAL_MS = 180000; // 3 minuti
-const BAR_INF_START = 90;
-const BAR_MAX = 99.7;
-const BAR_INF_SPEED = 0.035; // lento dal 90 in poi
-const BAR_WIDTH_LG = 370;
-
-const [progress, setProgress] = useState(0);
-const [barVisible, setBarVisible] = useState(false);
-const [, setForceRender] = useState(0);
-
-// useRef che sopravvive sempre tra i render per il ciclo
-const rafId = useRef(null);
-
 useEffect(() => {
   let interval = null;
   let finished = false;
   const START = Date.now();
-  
+
   if (sendLoading || isGenerating) {
     setBarVisible(true);
     setProgress(0);
@@ -88,6 +72,7 @@ useEffect(() => {
     interval = setInterval(() => {
       if (finished) return;
       const elapsed = Date.now() - START;
+      // Easing quadratico (modifica qui: vai da 0 a 90% in 3 minuti)
       const t = Math.min(elapsed / SIMULATED_TOTAL_MS, 1);
       const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
       let target = eased * 90;
@@ -95,12 +80,12 @@ useEffect(() => {
       setProgress(target);
     }, 200);
   } else {
-    // QUANDO LA GENERAZIONE FINISCE
-    setProgress(100);
+    setProgress(100);                // Va a 100% a fine generazione
     finished = true;
-    setTimeout(() => setBarVisible(false), 650);
-    setTimeout(() => setProgress(0), 1200);
+    setTimeout(() => setBarVisible(false), 650);  // Nascondi con fade-out
+    setTimeout(() => setProgress(0), 1200);      // Resetta per dopo
   }
+
   return () => {
     finished = true;
     if (interval) clearInterval(interval);
