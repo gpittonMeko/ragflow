@@ -99,11 +99,15 @@ useEffect(() => {
 
       if (prog < BAR_INF_START) {
         setProgress(prog);
+        setForceRender(f => f + 1); // <-- AGGIUNGI QUI
+
         rafId.current = requestAnimationFrame(tick);
       } else {
         setProgress(prev => {
           let nxt = prev + BAR_INF_SPEED;
           if (nxt > BAR_MAX) nxt = BAR_MAX - Math.random()*0.1;
+          setForceRender(f => f + 1);    // <-- AGGIUNGI QUI
+
           rafId.current = requestAnimationFrame(tick);
           return nxt;
         });
