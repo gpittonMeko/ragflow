@@ -73,16 +73,11 @@ useEffect(() => {
     setBarVisible(true);
     setProgress(0);
 
-    interval = setInterval(() => {
-      if (finished) return;
-      const elapsed = Date.now() - START;
-      // Easing quadratico (modifica qui: vai da 0 a 90% in 3 minuti)
-      const t = Math.min(elapsed / SIMULATED_TOTAL_MS, 1);
-      const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-      let target = eased * 90;
-      if (t >= 1) target = 90;
-      setProgress(target);
-    }, 200);
+  interval = setInterval(() => {
+    const elapsed = Date.now() - START;
+    let target = Math.min(90, (elapsed / SIMULATED_TOTAL_MS) * 90);
+    setProgress(target);
+  }, 200);
   } else {
     setProgress(100);                // Va a 100% a fine generazione
     finished = true;
