@@ -63,55 +63,51 @@ const ChatContainer = ({ theme }) => {
   // --------------- PROGRESS BAR SIMULATA CON EASING ---------------
 // Durata simulata fino al 90%
 
-  const SIMULATED_TOTAL_MS = 180000; // 3 minuti
-  const BAR_INF_START = 90;
-  const BAR_MAX = 99.7;
-  const BAR_INF_SPEED = 0.035; // più lento = più lento
-  const BAR_WIDTH_LG = 370; // (o altro valore, es. 400)
+const SIMULATED_TOTAL_MS = 180000; // 3 minuti
+const BAR_INF_START = 90;
+const BAR_MAX = 99.7;
+const BAR_INF_SPEED = 0.035; // lento dal 90 in poi
+const BAR_WIDTH_LG = 370;
 
+const [progress, setProgress] = useState(0);
+const [barVisible, setBarVisible] = useState(false);
+// useRef che sopravvive sempre tra i render per il ciclo
+const rafId = useRef(null);
 
-  const [progress, setProgress] = useState(0);
-  const [barVisible, setBarVisible] = useState(false);
-  const fakeStartRef = useRef(null);
-  const rafId = useRef(null);
-
-  useEffect(() => {
-  let cancelled = false;
+useEffect(() => {
+  let running = true;
 
   function easeInOutQuad(x) {
-    return x < 0.5
-      ? 2 * x * x
-      : 1 - Math.pow(-2 * x + 2, 2) / 2;
+    return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
   }
 
-  function tick(start) {
-    const now = Date.now();
-    const elapsed = now - start;
-    const perc = Math.min(1, elapsed / SIMULATED_TOTAL_MS);
-    const eased = easeInOutQuad(perc);
-    const prog = eased * 100;
-
-    if (cancelled) return;
-
-    if (prog < BAR_INF_START) {
-      setProgress(prog);
-      rafId.current = requestAnimationFrame(() => tick(start));
-    } else {
-      setProgress(prev => {
-        // Dal 90% in avanti, molto lentamente verso il 99,7%
-        let nxt = prev + BAR_INF_SPEED;
-        if (nxt > BAR_MAX) nxt = BAR_MAX - Math.random()*0.1;
-        rafId.current = requestAnimationFrame(() => tick(start));
-        return nxt;
-      });
-    }
-  }
-
+  let start;
+  // FAI PARTIRE LA BARRA SEMPRE SUBITO
   if (sendLoading || isGenerating) {
     setBarVisible(true);
     setProgress(0);
-    const start = Date.now();
-    rafId.current = requestAnimationFrame(() => tick(start));
+    start = Date.now();
+    function tick() {
+      if (!running) return;
+      const now = Date.now();
+      const elapsed = now - start;
+      const perc = Math.min(1, elapsed / SIMULATED_TOTAL_MS);
+      const eased = easeInOutQuad(perc);
+      const prog = eased * 100;
+
+      if (prog < BAR_INF_START) {
+        setProgress(prog);
+        rafId.current = requestAnimationFrame(tick);
+      } else {
+        setProgress(prev => {
+          let nxt = prev + BAR_INF_SPEED;
+          if (nxt > BAR_MAX) nxt = BAR_MAX - Math.random()*0.1;
+          rafId.current = requestAnimationFrame(tick);
+          return nxt;
+        });
+      }
+    }
+    rafId.current = requestAnimationFrame(tick);
   } else {
     setProgress(100);
     setTimeout(() => setBarVisible(false), 650);
@@ -119,8 +115,9 @@ const ChatContainer = ({ theme }) => {
     if (rafId.current) cancelAnimationFrame(rafId.current);
   }
 
+  // Cleanup se cambi percorso/pagina/react smonta
   return () => {
-    cancelled = true;
+    running = false;
     if (rafId.current) cancelAnimationFrame(rafId.current);
   };
 }, [sendLoading, isGenerating]);
@@ -207,41 +204,48 @@ const ChatContainer = ({ theme }) => {
 
   return (
     <>
-      {barVisible && (
-        <div className={styles.loaderBarWrapper}>
-          <div className={styles.loaderGlass}>
-            <span className={styles.loaderGlassText}>Generazione in corso...</span>
-            <div
-              className={styles.loaderBarLiquid}
-              style={{
-                width: BAR_WIDTH_LG,
-                height: 16,
-                background: 'rgba(155,255,255,0.07)',
-                borderRadius: 10,
-                padding: 2,
-                boxSizing: 'border-box',
-                boxShadow: '0 0 24px #12c7f333',
-                overflow: 'hidden',
-              }}>
-              <div // <--- NON SELF-CLOSING!!
-                className={styles.loaderBarLiquidInner}
+        {barVisible && (
+          <div className={styles.loaderBarWrapper}>
+            <div className={styles.loaderGlass}>
+              <span className={styles.loaderGlassText}>Generazione in corso...</span>
+              <div
+                className={styles.loaderBarLiquid}
                 style={{
-                  width: `${progress}%`,
-                  height: '100%',
-                  borderRadius: 7,
-                  background:
-                    'linear-gradient(270deg, #12dbffBB 0%, #22ffb899 70%, #0078f0CC 100%)',
-                  boxShadow: '0 0 16px #22cfff88',
-                  transition: progress === 100
-                    ? 'width 0.42s cubic-bezier(.2,.9,.65,1.02)'
-                    : 'width 0.85s cubic-bezier(.48,.06,.23,.99)',
-                  willChange: 'width'
+                  width: BAR_WIDTH_LG,
+                  height: 16,
+                  background: 'rgba(155,255,255,0.07)',
+                  borderRadius: 10,
+                  padding: 2,
+                  boxSizing: 'border-box',
+                  boxShadow: '0 0 24px #12c7f333',
+                  overflow: 'hidden',
                 }}>
+                <div
+                  className={styles.loaderBarLiquidInner}
+                  style={{
+                    width: `${progress}%`,
+                    height: '100%',
+                    borderRadius: 7,
+                    background:
+                      'linear-gradient(270deg, #12dbffBB 0%, #22ffb899 70%, #0078f0CC 100%)',
+                    boxShadow: '0 0 16px #22cfff88',
+                    transition: 'width 0.3s cubic-bezier(.4,1.1,.3,.96)',
+                    willChange: 'width',
+                    backgroundSize: '200% 100%',
+                    animation: 'loader-wave-glass 1.3s infinite linear'
+                  }}>
+                </div>
               </div>
             </div>
+            {/* CSS animation direttamente qui */}
+            <style>
+              {`@keyframes loader-wave-glass {
+                  0% { background-position: 0 0; }
+                  100% { background-position: 200% 0; }
+              }`}
+            </style>
           </div>
-        </div>
-      )}
+        )}
 
       <Flex flex={1} className={`${styles.chatContainer} ${styles[theme]}`} vertical>
         <Flex 
