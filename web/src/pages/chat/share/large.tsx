@@ -47,6 +47,8 @@ const ChatContainer = ({ theme }) => {
   const inputRef = useRef(null);
   const inputContainerRef = useRef(null);
   const lastMessageRef = useRef(null);
+  const [progress, setProgress] = useState(0);      // <-- AGGIUNGI QUESTA RIGA
+  const [barVisible, setBarVisible] = useState(false); // <-- E QUESTA
 
   const useFetchAvatar = useMemo(() => {
     return from === SharedFrom.Agent
