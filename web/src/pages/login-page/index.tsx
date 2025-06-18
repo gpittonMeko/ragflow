@@ -55,7 +55,7 @@ const PresentationPage: React.FC = () => {
               width: '100%',
               zIndex: 'auto',
               height: 'auto',
-              minHeight: '600px',
+              minHeight: '60px',
             });
             document.body.style.overflow = 'auto';
             if (iframeRef.current.contentWindow) {
