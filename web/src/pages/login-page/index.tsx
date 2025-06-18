@@ -229,6 +229,8 @@ const PresentationPage: React.FC = () => {
           style={{
             borderRadius: isGenerating ? '0' : 'var(--border-radius)',
             maxWidth: '100%',
+            min-height: 400px;
+            max-height: 600px;
             position: 'absolute',
             top: 0,
             left: 0,
