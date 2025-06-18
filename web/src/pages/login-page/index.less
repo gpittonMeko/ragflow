@@ -327,3 +327,29 @@ body {
     padding: 1rem;
   }
 }
+
+@media (min-width: 900px) {
+  .chatContainer {
+    max-width: 480px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 18px;
+    box-shadow: 0 4px 40px 2px rgba(0,120,200,0.10);
+    max-height: 700px;
+    height: 700px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;  // Previene overflow nei bordi arrotondati
+  }
+  .messageContainer {
+    flex: 1 1 auto;
+    overflow-y: auto;
+  }
+  .chatWrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
