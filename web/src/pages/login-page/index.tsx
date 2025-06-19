@@ -35,51 +35,52 @@ const PresentationPage: React.FC = () => {
     const handleIframeMessage = (event: MessageEvent) => {
       const data = event.data || {};
       if (data.type === 'iframe-height' && iframeRef.current && !isGenerating) {
-          // PRIMA della generazione, imposta la max a 200
-          iframeRef.current.style.maxHeight = '350px';
-          let boundedHeight = Math.max(60, Math.min(data.height, 350));
-          iframeRef.current.style.height = `${boundedHeight}px`;
-        }
+        // Imposta maxHeight in base alla generazione avvenuta!
+        const maxH = hasEverGenerated ? 800 : 350;
+        iframeRef.current.style.maxHeight = `${maxH}px`;
+        let boundedHeight = Math.max(60, Math.min(data.height, maxH));
+        iframeRef.current.style.height = `${boundedHeight}px`;
+      }
 
-        if (data.type === 'expand-iframe') {
-          setIsGenerating(data.expanding);
-           
-          if (data.expanding && !hasEverGenerated) {
-            setHasEverGenerated(true);
-          }
-          if (iframeRef.current) {
-            if (data.expanding) {
-              // DURANTE la generazione, espandi a 800
-              Object.assign(iframeRef.current.style, {
-                maxHeight: '800px',
-                height: `${window.innerHeight}px`,
-                position: 'fixed',
-                top: '0',
-                left: '0',
-                width: '100%',
-                zIndex: '1000',
-              });
-              document.body.style.overflow = 'hidden';
-            } else {
-              Object.assign(iframeRef.current.style, {
-                position: 'relative',
-                top: 'auto',
-                left: 'auto',
-                width: '100%',
-                zIndex: 'auto',
-                height: 'auto',
-                minHeight: '200px',
-                maxHeight: '800px', // <-- DEVE RESTARE LARGO DOPO LA PRIMA GENERAZIONE!
-              });
-              document.body.style.overflow = 'auto';
-              if (iframeRef.current.contentWindow) {
-                try {
-                  iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
-                } catch {}
-              }
+      if (data.type === 'expand-iframe') {
+        setIsGenerating(data.expanding);
+
+        if (data.expanding && !hasEverGenerated) {
+          setHasEverGenerated(true);
+        }
+        if (iframeRef.current) {
+          if (data.expanding) {
+            // DURANTE generazione, espandi a 800
+            Object.assign(iframeRef.current.style, {
+              maxHeight: '800px',
+              height: `${window.innerHeight}px`,
+              position: 'fixed',
+              top: '0',
+              left: '0',
+              width: '100%',
+              zIndex: '1000',
+            });
+            document.body.style.overflow = 'hidden';
+          } else {
+            Object.assign(iframeRef.current.style, {
+              position: 'relative',
+              top: 'auto',
+              left: 'auto',
+              width: '100%',
+              zIndex: 'auto',
+              height: 'auto',
+              minHeight: '200px',
+              maxHeight: '800px', // <-- RESTA SEMPRE 800 DOPO LA PRIMA GENERAZIONE!
+            });
+            document.body.style.overflow = 'auto';
+            if (iframeRef.current.contentWindow) {
+              try {
+                iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
+              } catch {}
             }
           }
         }
+      }
     };
     window.addEventListener('message', handleIframeMessage);
     return () => {
