@@ -31,7 +31,9 @@ const PresentationPage: React.FC = () => {
     const handleIframeMessage = (event: MessageEvent) => {
       const data = event.data || {};
       if (data.type === 'iframe-height' && iframeRef.current && !isGenerating) {
-        iframeRef.current.style.height = `${data.height}px`;
+        // Limita tra min e max
+        let boundedHeight = Math.max(60, Math.min(data.height, 800));
+        iframeRef.current.style.height = `${boundedHeight}px`;
       }
       if (data.type === 'expand-iframe') {
         setIsGenerating(data.expanding);
