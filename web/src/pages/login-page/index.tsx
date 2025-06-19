@@ -6,6 +6,8 @@ const CLIENT_ID = '872236618020-3len9toeui389v3hkn4nbo198h7d5jk1c.apps.googleuse
 
 const featureHighlight = { color: '#ffe066', fontWeight: 600 };
 
+
+
 const PresentationPage: React.FC = () => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -15,6 +17,8 @@ const PresentationPage: React.FC = () => {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [googleToken, setGoogleToken] = useState<string | null>(null);
+  const [hasEverGenerated, setHasEverGenerated] = useState(false);
+
   const [userData, setUserData] = useState<{ email: string; plan: string; usedGenerations: number } | null>(null);
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement>(null);
@@ -39,6 +43,10 @@ const PresentationPage: React.FC = () => {
 
         if (data.type === 'expand-iframe') {
           setIsGenerating(data.expanding);
+           
+          if (data.expanding && !hasEverGenerated) {
+            setHasEverGenerated(true);
+          }
           if (iframeRef.current) {
             if (data.expanding) {
               // DURANTE la generazione, espandi a 800
@@ -236,8 +244,7 @@ const PresentationPage: React.FC = () => {
             borderRadius: isGenerating ? '0' : 'var(--border-radius)',
             maxWidth: '100%',
             minHeight: 200,
-            maxHeight: isGenerating ? 800 : 200, // <-- Cambia qui!
-            position: 'absolute',
+            maxHeight: hasEverGenerated ? 800 : 200,            position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
