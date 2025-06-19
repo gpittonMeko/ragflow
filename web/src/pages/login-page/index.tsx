@@ -36,10 +36,15 @@ const PresentationPage: React.FC = () => {
       const data = event.data || {};
       if (data.type === 'iframe-height' && iframeRef.current && !isGenerating) {
         // Imposta maxHeight in base alla generazione avvenuta!
-        const maxH = hasEverGenerated ? 800 : 350;
-        iframeRef.current.style.maxHeight = `${maxH}px`;
-        let boundedHeight = Math.max(60, Math.min(data.height, maxH));
-        iframeRef.current.style.height = `${boundedHeight}px`;
+        if (!hasEverGenerated) {
+          iframeRef.current.style.maxHeight = '350px';
+          let boundedHeight = Math.max(60, Math.min(data.height, 350));
+          iframeRef.current.style.height = `${boundedHeight}px`;
+        } else {
+          iframeRef.current.style.maxHeight = '800px';
+          let boundedHeight = Math.max(60, Math.min(data.height, 800));
+          iframeRef.current.style.height = `${boundedHeight}px`;
+        }
       }
 
       if (data.type === 'expand-iframe') {
@@ -245,7 +250,8 @@ const PresentationPage: React.FC = () => {
             borderRadius: isGenerating ? '0' : 'var(--border-radius)',
             maxWidth: '100%',
             minHeight: 200,
-            maxHeight: hasEverGenerated ? 800 : 350,            position: 'absolute',
+            maxHeight: 350,    
+            position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
