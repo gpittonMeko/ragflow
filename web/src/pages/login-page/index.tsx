@@ -31,43 +31,47 @@ const PresentationPage: React.FC = () => {
     const handleIframeMessage = (event: MessageEvent) => {
       const data = event.data || {};
       if (data.type === 'iframe-height' && iframeRef.current && !isGenerating) {
-        // Limita tra min e max
-        let boundedHeight = Math.max(60, Math.min(data.height, 800));
-        iframeRef.current.style.height = `${boundedHeight}px`;
-      }
-      if (data.type === 'expand-iframe') {
-        setIsGenerating(data.expanding);
-        if (iframeRef.current) {
-          if (data.expanding) {
-            const viewportHeight = window.innerHeight;
-            Object.assign(iframeRef.current.style, {
-              height: `${viewportHeight}px`,
-              position: 'fixed',
-              top: '0',
-              left: '0',
-              width: '100%',
-              zIndex: '1000',
-            });
-            document.body.style.overflow = 'hidden';
-          } else {
-            Object.assign(iframeRef.current.style, {
-              position: 'relative',
-              top: 'auto',
-              left: 'auto',
-              width: '100%',
-              zIndex: 'auto',
-              height: 'auto',
-              minHeight: '60px',
-            });
-            document.body.style.overflow = 'auto';
-            if (iframeRef.current.contentWindow) {
-              try {
-                iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
-              } catch {}
+          // PRIMA della generazione, imposta la max a 200
+          iframeRef.current.style.maxHeight = '200px';
+          let boundedHeight = Math.max(60, Math.min(data.height, 200));
+          iframeRef.current.style.height = `${boundedHeight}px`;
+        }
+
+        if (data.type === 'expand-iframe') {
+          setIsGenerating(data.expanding);
+          if (iframeRef.current) {
+            if (data.expanding) {
+              // DURANTE la generazione, espandi a 800
+              Object.assign(iframeRef.current.style, {
+                maxHeight: '800px',
+                height: `${window.innerHeight}px`,
+                position: 'fixed',
+                top: '0',
+                left: '0',
+                width: '100%',
+                zIndex: '1000',
+              });
+              document.body.style.overflow = 'hidden';
+            } else {
+              Object.assign(iframeRef.current.style, {
+                position: 'relative',
+                top: 'auto',
+                left: 'auto',
+                width: '100%',
+                zIndex: 'auto',
+                height: 'auto',
+                minHeight: '60px',
+                maxHeight: '200px', // TORNA a compatto!
+              });
+              document.body.style.overflow = 'auto';
+              if (iframeRef.current.contentWindow) {
+                try {
+                  iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
+                } catch {}
+              }
             }
           }
         }
-      }
     };
     window.addEventListener('message', handleIframeMessage);
     return () => {
@@ -231,8 +235,8 @@ const PresentationPage: React.FC = () => {
           style={{
             borderRadius: isGenerating ? '0' : 'var(--border-radius)',
             maxWidth: '100%',
-            minHeight: 300,
-            maxHeight: 800,
+            minHeight: 200,
+            maxHeight: isGenerating ? 800 : 200, // <-- Cambia qui!
             position: 'absolute',
             top: 0,
             left: 0,
