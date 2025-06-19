@@ -41,17 +41,10 @@
 .light {
   background-color: var(--bg-secondary);
 }
-
 .dark {
   background-color: var(--bg-secondary);
-  
-  :global(.messageInputWrapper___nie1o .ant-input) {
-    color: #ffffff !important;
-  }
-  
-  :global(.messageInputWrapper___nie1o .ant-input::placeholder) {
-    color: rgba(255, 255, 255, 0.6) !important;
-  }
+  :global(.messageInputWrapper___nie1o .ant-input) { color: #ffffff !important; }
+  :global(.messageInputWrapper___nie1o .ant-input::placeholder) { color: rgba(255,255,255,0.6) !important; }
 }
 
 .loaderBarWrapper {
@@ -103,26 +96,26 @@
   100% { background-position: 200% 0; }
 }
 
+/* --- CHAT - DESKTOP BASE --- */
 .chatContainer {
-  padding: 10px;
-  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  box-sizing: border-box;
   background-color: var(--bg-secondary);
   transition: background-color var(--transition-time);
 
   .messageContainer {
+    flex: 1 1 auto;
     overflow-y: auto;
-    padding-right: 6px;
+    min-height: 0;
+    padding: 0 6px 2px 0;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
     scroll-behavior: smooth;
-    
-    &::-webkit-scrollbar {
-      display: none; /* Chrome, Safari and Opera */
-    }
+    &::-webkit-scrollbar { display: none; }
 
-    // Stili globali per i messaggi
     :global(.messageItem___OK1Zd) {
       background-color: var(--bg-message);
       color: var(--text-primary);
@@ -130,33 +123,19 @@
       margin-bottom: 12px;
       transition: background-color var(--transition-time), color var(--transition-time);
     }
-
-    :global(.messageItemLeft___L270A) {
-      background-color: var(--bg-message);
-    }
-
-    :global(.messageItemRight___HA1z_) {
-      background-color: var(--bg-user-message);
-    }
-
-    :global(.messageItemSection___a_W_M) {
-      padding: 12px;
-    }
-
-    :global(.messageItemContent___j99sG) {
-      color: var(--text-primary);
-    }
-
-    :global(.ant-spin-nested-loading) {
-      transition: background-color var(--transition-time);
-    }
+    :global(.messageItemLeft___L270A) { background-color: var(--bg-message); }
+    :global(.messageItemRight___HA1z_) { background-color: var(--bg-user-message); }
+    :global(.messageItemSection___a_W_M) { padding: 12px; }
+    :global(.messageItemContent___j99sG) { color: var(--text-primary); }
+    :global(.ant-spin-nested-loading) { transition: background-color var(--transition-time); }
   }
 
-  // Stili globali per l'input dei messaggi
   :global(.messageInputWrapper___nie1o) {
     background-color: var(--bg-primary);
     border-top: 1px solid var(--border-color);
     transition: background-color var(--transition-time), border-color var(--transition-time);
+    margin-top: 4px;
+    margin-bottom: 0;
 
     :global(.ant-input) {
       background-color: var(--bg-input);
@@ -164,88 +143,69 @@
       border-radius: 12px;
       transition: background-color var(--transition-time), color var(--transition-time);
     }
-    
-    :global(.ant-input::placeholder) {
-      color: var(--input-placeholder-color) !important;
-    }
-
+    :global(.ant-input::placeholder) { color: var(--input-placeholder-color) !important; }
     :global(.ant-btn-primary) {
       background-color: var(--accent-color);
       border-color: var(--accent-color);
       color: white;
       transition: background-color var(--transition-time);
     }
-
     :global(.ant-btn-primary:disabled) {
       background-color: rgba(0, 0, 0, 0.1);
       border-color: var(--border-color);
       color: var(--text-secondary);
     }
-
-    :global(.ant-input-clear-icon) {
-      color: var(--text-secondary);
-    }
-
-    :global(.ant-divider) {
-      border-color: var(--border-color);
-    }
+    :global(.ant-input-clear-icon) { color: var(--text-secondary); }
+    :global(.ant-divider) { border-color: var(--border-color); }
   }
 }
 
-// Media queries per la responsività
+/* --- CHAT - TABLET/MOBILE --- */
 @media (max-width: 768px) {
   .chatContainer {
-    padding: 8px;
-    
+    padding: 4px !important;
+
     .messageContainer {
       padding-right: 2px;
-      
-      :global(.messageItemSection___a_W_M) {
-        padding: 10px;
-      }
-      
-      :global(.messageItem___OK1Zd) {
-        margin-bottom: 10px;
-        border-radius: 10px;
-      }
+      :global(.messageItemSection___a_W_M) { padding: 10px; }
+      :global(.messageItem___OK1Zd) { margin-bottom: 10px; border-radius: 10px; }
     }
   }
-  
-  :global(.ant-avatar) {
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-  }
+  :global(.ant-avatar) { width: 32px !important; height: 32px !important; min-width: 32px !important; }
 }
 
 @media (max-width: 480px) {
   .chatContainer {
-    padding: 5px;
-    
-    .messageContainer {
-      padding-right: 0;
-      
-      :global(.messageItemSection___a_W_M) {
-        padding: 8px !important;
-      }
-      
-      :global(.messageItem___OK1Zd) {
-        margin-bottom: 8px;
-        border-radius: 8px;
-      }
-    }
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh !important;
+    padding: 0 !important;
   }
-  
-  :global(.ant-avatar) {
-    width: 28px !important;
-    height: 28px !important;
-    min-width: 28px !important;
-  }
-
   .messageContainer {
-  height: auto !important;
-  min-height: 0 !important;
-  flex: unset !important;
-}
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    padding-bottom: 2px !important;
+  }
+  :global(.messageInputWrapper___nie1o) {
+    margin-top: 2px !important;
+    margin-bottom: 0 !important;
+  }
+  :global(.ant-avatar) { width: 28px !important; height: 28px !important; min-width: 28px !important; }
 }
 
+/* Vari stili di supporto */
+body {
+  font-family: 'Titillium Web', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-y: auto;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
