@@ -36,8 +36,8 @@ const PresentationPage: React.FC = () => {
       const data = event.data || {};
       if (data.type === 'iframe-height' && iframeRef.current && !isGenerating) {
           // PRIMA della generazione, imposta la max a 200
-          iframeRef.current.style.maxHeight = '200px';
-          let boundedHeight = Math.max(60, Math.min(data.height, 200));
+          iframeRef.current.style.maxHeight = '350px';
+          let boundedHeight = Math.max(60, Math.min(data.height, 350));
           iframeRef.current.style.height = `${boundedHeight}px`;
         }
 
@@ -68,8 +68,8 @@ const PresentationPage: React.FC = () => {
                 width: '100%',
                 zIndex: 'auto',
                 height: 'auto',
-                minHeight: '60px',
-                maxHeight: '200px', // TORNA a compatto!
+                minHeight: '200px',
+                maxHeight: '800px', // <-- DEVE RESTARE LARGO DOPO LA PRIMA GENERAZIONE!
               });
               document.body.style.overflow = 'auto';
               if (iframeRef.current.contentWindow) {
@@ -244,7 +244,7 @@ const PresentationPage: React.FC = () => {
             borderRadius: isGenerating ? '0' : 'var(--border-radius)',
             maxWidth: '100%',
             minHeight: 200,
-            maxHeight: hasEverGenerated ? 800 : 200,            position: 'absolute',
+            maxHeight: hasEverGenerated ? 800 : 350,            position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
