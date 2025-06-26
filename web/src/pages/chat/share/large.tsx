@@ -52,6 +52,7 @@ const ChatContainer = ({ theme }) => {
   const [progress, setProgress] = useState(0);      // <-- AGGIUNGI QUESTA RIGA
   const [barVisible, setBarVisible] = useState(false); // <-- E QUESTA
   const [hasMounted, setHasMounted] = useState(false);
+  const [hasFocusedOnce, setHasFocusedOnce] = useState(false);
 
   const useFetchAvatar = useMemo(() => {
     return from === SharedFrom.Agent
@@ -96,11 +97,10 @@ useEffect(() => {
   };
 }, [sendLoading, isGenerating]);
 
-  // Gestione focus e scroll
+    // Gestione focus e scroll
   useEffect(() => {
     if (!messagesContainerRef.current) return;
 
-    // Gestione inizio e fine generazione
     if (!isGeneratingRef.current && sendLoading) {
       isGeneratingRef.current = true;
 
@@ -116,8 +116,7 @@ useEffect(() => {
       if (ref.current) {
         ref.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
-    } 
-    else if (isGeneratingRef.current && !sendLoading) {
+    } else if (isGeneratingRef.current && !sendLoading) {
       isGeneratingRef.current = false;
 
       setTimeout(() => {
@@ -131,13 +130,21 @@ useEffect(() => {
         }
 
         setTimeout(() => {
-          if (hasMounted && inputRef.current) {
+          // Blocca il primo focus automatico con la flag
+          if (!hasFocusedOnce && !window.sessionStorage.getItem('chatFocusedOnce')) {
+            // Prima volta: non dare focus e registra la flag
+            window.sessionStorage.setItem('chatFocusedOnce', 'true');
+            setHasFocusedOnce(true);
+            return;
+          }
+
+          if (inputRef.current) {
             try {
               inputRef.current.focus();
               if (inputContainerRef.current) {
-                inputContainerRef.current.scrollIntoView({ 
-                  behavior: 'smooth', 
-                  block: 'center'
+                inputContainerRef.current.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center',
                 });
               }
             } catch (error) {
@@ -147,7 +154,7 @@ useEffect(() => {
         }, 200);
       }, 300);
     }
-  }, [sendLoading, derivedMessages, ref]);
+  }, [sendLoading, derivedMessages, ref, hasFocusedOnce]);
 
   // Prevenzione focus durante digitazione
   useEffect(() => {
