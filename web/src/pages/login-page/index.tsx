@@ -230,7 +230,7 @@ useEffect(() => {
         style={{
           paddingTop: 0,
           marginBottom: '-1rem',
-          marginTop: '2rem',
+          marginTop: '0rem',
           paddingBottom: 0,
           display: 'flex',
           flexDirection: 'column',
@@ -338,7 +338,7 @@ useEffect(() => {
           </div>
           <h3 className={styles.featureHighlight}>Indipendenza e Imparzialità</h3>
           <p className={styles.featureHighlight}>
-            Lavoriamo senza legami istituzionali per garantire la massima trasparenza.
+            SGAI non ha legami istituzionali per garantire la massima trasparenza
           </p>
         </div>
       </div>

@@ -37,7 +37,7 @@ const routes = [
     layout: false,
   },
   {
-    path: Routes.SearchHome,
+    path: '/',
     component: '@/pages/login-page',
     layout: false,
   },
@@ -52,7 +52,6 @@ const routes = [
     layout: false,
     wrappers: ['@/wrappers/auth'],
     routes: [
-      { path: '/', redirect: '/knowledge' },
       {
         path: '/knowledge',
         component: '@/pages/knowledge',
