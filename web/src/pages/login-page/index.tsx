@@ -3,7 +3,7 @@ import styles from './index.less';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
 import api from '@/utils/api'; // <-- sostituisci con il percorso reale del tuo file api
 
-const CLIENT_ID = '872236618020-3len9toeui389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
+const CLIENT_ID = '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
 
 const PresentationPage: React.FC = () => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -26,6 +26,8 @@ const PresentationPage: React.FC = () => {
       iframeRef.current.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
     }
   }, [theme]);
+
+
 
   useEffect(() => {
     const handleIframeMessage = (event: MessageEvent) => {
@@ -98,27 +100,42 @@ const PresentationPage: React.FC = () => {
     };
   }, [isGenerating, hasSkippedInitialExpand]);
 
+// Stato per indicare se SDK è pronto
+  const [gsiReady, setGsiReady] = useState(false);
+
   useEffect(() => {
-    if (showGoogleModal && googleButtonRef.current && !googleToken) {
-      // @ts-ignore
-      if (window.google) {
-        // @ts-ignore
-        window.google.accounts.id.initialize({
-          client_id: CLIENT_ID,
-          callback: handleGoogleResponse,
-          cancel_on_tap_outside: true,
-        });
-        // @ts-ignore
-        window.google.accounts.id.renderButton(googleButtonRef.current, {
-          theme: theme === 'dark' ? 'filled_black' : 'outline',
-          size: 'large',
-          type: 'standard',
-        });
-        // @ts-ignore
-        window.google.accounts.id.prompt();
-      }
+  if (!showGoogleModal || !googleButtonRef.current || googleToken || !gsiReady) return;
+
+  window.google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: handleGoogleResponse,
+    cancel_on_tap_outside: true,
+  });
+
+  window.google.accounts.id.renderButton(googleButtonRef.current, {
+    theme: theme === 'dark' ? 'filled_black' : 'outline',
+    size: 'large',
+    type: 'standard',
+  });
+
+  window.google.accounts.id.prompt();
+}, [showGoogleModal, gsiReady, googleToken, theme]);
+
+  useEffect(() => {
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      setGsiReady(true);
+      return;
     }
-  }, [showGoogleModal, googleButtonRef.current, googleToken, theme]);
+
+    const script = document.createElement('script');
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setGsiReady(true);
+    document.body.appendChild(script);
+
+    // NON rimuovere lo script al cleanup
+  }, []);
 
   const handleGoogleResponse = async (response: any) => {
     if (!response.credential) return;
