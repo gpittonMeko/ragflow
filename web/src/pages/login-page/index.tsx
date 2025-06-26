@@ -349,10 +349,11 @@ useEffect(() => {
           <strong>Disclaimer:</strong>
         </p>
         <p>
-          Si prega di notare che SGAI è un sistema basato sull&apos;intelligenza artificiale. Sebbene ci impegniamo a
-          fornire informazioni accurate e utili, il modello può occasionalmente commettere errori o produrre
-          informazioni non corrette. È fondamentale verificare sempre le informazioni fornite con fonti affidabili e
-          consultare professionisti qualificati per decisioni importanti.
+          SGAI è un sistema in fase di sviluppo, basato sull’intelligenza artificiale. Lo sappiamo: non è ancora completo, e talvolta può fornire risposte inesatte, parziali o incoerenti. Ma è proprio grazie all’uso quotidiano e al supporto degli utenti che il progetto può evolversi e migliorare.
+
+Il sistema viene aggiornato costantemente, con l’integrazione progressiva di nuove fonti, funzionalità e affinamenti della logica. Se oggi non trovi quello che cerchi, è possibile che domani ci sia.
+
+Pur puntando alla massima accuratezza, invitiamo a verificare sempre i contenuti con fonti ufficiali e a consultare professionisti qualificati per ogni decisione rilevante.
         </p>
       </div>
     </div>
