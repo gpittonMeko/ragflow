@@ -290,8 +290,8 @@ useEffect(() => {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
-          <h3 style={featureHighlight}>Tutela del Knowhow</h3>
-          <p style={featureHighlight}>
+          <h3 className={styles.featureHighlight}>Tutela del Knowhow</h3>
+          <p className={styles.featureHighlight}>
             Nessun dato viene acquisito.
             <br />
             Quel che viene discusso con SGAI è accessibile solo all&apos;utente.
@@ -312,8 +312,8 @@ useEffect(() => {
               <path d="M2 12l10 5 10-5" />
             </svg>
           </div>
-          <h3 style={featureHighlight}>Personalizzazione</h3>
-          <p style={featureHighlight}>
+          <h3 className={styles.featureHighlight}>Personalizzazione</h3>
+          <p className={styles.featureHighlight}>
             SGAI può essere potenziato per il singolo Studio professionale:
             <br />
             addestralo con i tuoi atti e i tuoi documenti.
@@ -336,8 +336,8 @@ useEffect(() => {
               <line x1="14" y1="1" x2="14" y2="4" />
             </svg>
           </div>
-          <h3 style={featureHighlight}>Indipendenza e Imparzialità</h3>
-          <p style={featureHighlight}>
+          <h3 className={styles.featureHighlight}>Indipendenza e Imparzialità</h3>
+          <p className={styles.featureHighlight}>
             Lavoriamo senza legami istituzionali per garantire la massima trasparenza.
           </p>
         </div>
