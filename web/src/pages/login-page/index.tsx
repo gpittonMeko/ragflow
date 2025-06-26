@@ -22,6 +22,8 @@ const PresentationPage: React.FC = () => {
   const [userData, setUserData] = useState<{ email: string; plan: string; usedGenerations: number } | null>(null);
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement>(null);
+  const [hasSkippedInitialExpand, setHasSkippedInitialExpand] = useState(false);
+
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -31,68 +33,79 @@ const PresentationPage: React.FC = () => {
     }
   }, [theme]);
 
-  useEffect(() => {
-    const handleIframeMessage = (event: MessageEvent) => {
-      const data = event.data || {};
-      if (data.type === 'iframe-height' && iframeRef.current && !isGenerating) {
-        // Imposta maxHeight in base alla generazione avvenuta!
-        if (!hasEverGenerated) {
-          iframeRef.current.style.maxHeight = '350px';
-          let boundedHeight = Math.max(60, Math.min(data.height, 350));
-          iframeRef.current.style.height = `${boundedHeight}px`;
-        } else {
-          iframeRef.current.style.maxHeight = '800px';
-          let boundedHeight = Math.max(60, Math.min(data.height, 800));
-          iframeRef.current.style.height = `${boundedHeight}px`;
+useEffect(() => {
+  const handleIframeMessage = (event: MessageEvent) => {
+    const data = event.data || {};
+
+    if (data.type === 'iframe-height' && iframeRef.current && !isGenerating) {
+      // La tua gestione altezza iframe rimane invariata
+      if (!hasEverGenerated) {
+        iframeRef.current.style.maxHeight = '350px';
+        let boundedHeight = Math.max(60, Math.min(data.height, 350));
+        iframeRef.current.style.height = `${boundedHeight}px`;
+      } else {
+        iframeRef.current.style.maxHeight = '800px';
+        let boundedHeight = Math.max(60, Math.min(data.height, 800));
+        iframeRef.current.style.height = `${boundedHeight}px`;
+      }
+    }
+
+    if (data.type === 'expand-iframe') {
+      // Qui blocchiamo la prima espansione fullscreen:
+      if (data.expanding) {
+        if (!hasSkippedInitialExpand) {
+          setHasSkippedInitialExpand(true);
+          return;  // Ignora questo primo messaggio di espansione
         }
       }
 
-      if (data.type === 'expand-iframe') {
-        setIsGenerating(data.expanding);
+      // Qui continua come prima per i messaggi successivi
+      setIsGenerating(data.expanding);
 
-        if (data.expanding && !hasEverGenerated) {
-          setHasEverGenerated(true);
-        }
-        if (iframeRef.current) {
-          if (data.expanding) {
-            // DURANTE generazione, espandi a 800
-            Object.assign(iframeRef.current.style, {
-              maxHeight: '800px',
-              height: `${window.innerHeight}px`,
-              position: 'fixed',
-              top: '0',
-              left: '0',
-              width: '100%',
-              zIndex: '1000',
-            });
-            document.body.style.overflow = 'hidden';
-          } else {
-            Object.assign(iframeRef.current.style, {
-              position: 'relative',
-              top: 'auto',
-              left: 'auto',
-              width: '100%',
-              zIndex: 'auto',
-              height: 'auto',
-              minHeight: '200px',
-              maxHeight: '800px', // <-- RESTA SEMPRE 800 DOPO LA PRIMA GENERAZIONE!
-            });
-            document.body.style.overflow = 'auto';
-            if (iframeRef.current.contentWindow) {
-              try {
-                iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
-              } catch {}
-            }
+      if (data.expanding && !hasEverGenerated) {
+        setHasEverGenerated(true);
+      }
+
+      if (iframeRef.current) {
+        if (data.expanding) {
+          Object.assign(iframeRef.current.style, {
+            maxHeight: '800px',
+            height: `${window.innerHeight}px`,
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '100%',
+            zIndex: '1000',
+          });
+          document.body.style.overflow = 'hidden';
+        } else {
+          Object.assign(iframeRef.current.style, {
+            position: 'relative',
+            top: 'auto',
+            left: 'auto',
+            width: '100%',
+            zIndex: 'auto',
+            height: 'auto',
+            minHeight: '200px',
+            maxHeight: '800px',
+          });
+          document.body.style.overflow = 'auto';
+          if (iframeRef.current.contentWindow) {
+            try {
+              iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
+            } catch {}
           }
         }
       }
-    };
-    window.addEventListener('message', handleIframeMessage);
-    return () => {
-      window.removeEventListener('message', handleIframeMessage);
-      document.body.style.overflow = 'auto';
-    };
-  }, [isGenerating]);
+    }
+  };
+
+  window.addEventListener('message', handleIframeMessage);
+  return () => {
+    window.removeEventListener('message', handleIframeMessage);
+    document.body.style.overflow = 'auto';
+  };
+}, [isGenerating, hasSkippedInitialExpand]);
 
   useEffect(() => {
     if (showGoogleModal && googleButtonRef.current && !googleToken) {
