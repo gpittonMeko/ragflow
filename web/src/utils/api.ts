@@ -11,6 +11,8 @@ export default {
   user_info: `${api_host}/user/info`,
   tenant_info: `${api_host}/user/tenant_info`,
   set_tenant_info: `${api_host}/user/set_tenant_info`,
+  
+  googleAuth: `/api/auth/google`,
 
   // team
   addTenantUser: (tenantId: string) => `${api_host}/tenant/${tenantId}/user`,

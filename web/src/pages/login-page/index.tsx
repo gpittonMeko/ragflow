@@ -125,27 +125,27 @@ useEffect(() => {
   }, [showGoogleModal, googleButtonRef.current]);
 
   const handleGoogleResponse = async (response: any) => {
-    if (!response.credential) return;
-    setGoogleToken(response.credential);
-    try {
-      const res = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: response.credential }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setUserData(data);
-        setShowGoogleModal(false);
-      } else {
-        alert(`Errore di autenticazione: ${data.error || 'sconosciuto'}`);
-        setGoogleToken(null);
-      }
-    } catch {
-      alert('Errore di rete durante autenticazione');
+  if (!response.credential) return;
+  setGoogleToken(response.credential);
+  try {
+    const res = await fetch(api.googleAuth, {      // <-- usa qui api.googleAuth
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: response.credential }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setUserData(data);
+      setShowGoogleModal(false);
+    } else {
+      alert(`Errore di autenticazione: ${data.error || 'sconosciuto'}`);
       setGoogleToken(null);
     }
-  };
+  } catch {
+    alert('Errore di rete durante autenticazione');
+    setGoogleToken(null);
+  }
+};
 
   const toggleTheme = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
 
@@ -165,24 +165,24 @@ useEffect(() => {
       {!userData ? (
         <button
           onClick={() => setShowGoogleModal(true)}
-          className={styles.themeToggle}
-          style={{ right: 80, top: 20, position: 'fixed', zIndex: 1100 }}
+          className={styles.loginButton}
           aria-label="Login con Google"
+          type="button"
         >
-          👤 Accedi
+          👤
         </button>
       ) : (
         <>
-          <div style={{ color: 'var(--text-primary)', position: 'fixed', right: 80, top: 24, zIndex: 1100, fontWeight: 600 }}>
+          <div className={styles.userInfo}>
             {userData.email} ({userData.plan})
           </div>
           <button
             onClick={logout}
-            className={styles.themeToggle}
-            style={{ right: 20, top: 20, position: 'fixed', zIndex: 1100 }}
+            className={styles.logoutButton}
             aria-label="Logout"
+            type="button"
           >
-            🚪
+            🚪 Esci
           </button>
         </>
       )}
