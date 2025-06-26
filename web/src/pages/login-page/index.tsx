@@ -188,41 +188,42 @@ useEffect(() => {
       )}
 
       {/* Google auth modal popup */}
-      {showGoogleModal && (
-        <div
-          onClick={() => setShowGoogleModal(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1200,
-          }}
-          aria-modal="true"
-          role="dialog"
-          tabIndex={-1}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              backgroundColor: 'var(--card-bg)',
-              padding: '2rem',
-              borderRadius: 'var(--border-radius)',
-              boxShadow: 'var(--shadow)',
-              width: '320px',
-              textAlign: 'center',
-            }}
-          >
-            <h2>Accedi con Google</h2>
-            <div ref={googleButtonRef} />
-            <button onClick={() => setShowGoogleModal(false)} style={{ marginTop: '1rem' }} aria-label="Chiudi">
-              Annulla
-            </button>
-          </div>
-        </div>
-      )}
+{showGoogleModal && (
+  <div
+    onClick={() => setShowGoogleModal(false)}
+    style={{
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(255, 255, 255, 0.85)',  // più chiaro
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1200,
+    }}
+    aria-modal="true"
+    role="dialog"
+    tabIndex={-1}
+  >
+    <div
+      onClick={e => e.stopPropagation()}
+      style={{
+        backgroundColor: 'var(--card-bg)',
+        padding: '2rem',
+        borderRadius: 'var(--border-radius)',
+        boxShadow: 'var(--shadow)',
+        width: '320px',
+        textAlign: 'center',
+        color: 'var(--text-primary)',  // testo leggibile
+      }}
+    >
+      <h2>Accedi con Google</h2>
+      <div ref={googleButtonRef} />
+      <button onClick={() => setShowGoogleModal(false)} style={{ marginTop: '1rem' }} aria-label="Chiudi">
+        Annulla
+      </button>
+    </div>
+  </div>
+)}
 
       {/* LOGO SGAI */}
       <div
