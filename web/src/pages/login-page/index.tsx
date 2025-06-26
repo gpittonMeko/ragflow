@@ -1,28 +1,23 @@
 import React, { useRef, useState, useEffect } from 'react';
 import styles from './index.less';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
+import api from '@/path/to/api'; // <-- sostituisci con il percorso reale del tuo file api
 
 const CLIENT_ID = '872236618020-3len9toeui389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
 
-
-
-
 const PresentationPage: React.FC = () => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const googleButtonRef = useRef<HTMLDivElement>(null);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('sgai-theme') as 'light' | 'dark') || 'dark';
   });
-
   const [isGenerating, setIsGenerating] = useState(false);
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   const [hasEverGenerated, setHasEverGenerated] = useState(false);
-
   const [userData, setUserData] = useState<{ email: string; plan: string; usedGenerations: number } | null>(null);
   const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const googleButtonRef = useRef<HTMLDivElement>(null);
   const [hasSkippedInitialExpand, setHasSkippedInitialExpand] = useState(false);
-
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -32,79 +27,76 @@ const PresentationPage: React.FC = () => {
     }
   }, [theme]);
 
-useEffect(() => {
-  const handleIframeMessage = (event: MessageEvent) => {
-    const data = event.data || {};
+  useEffect(() => {
+    const handleIframeMessage = (event: MessageEvent) => {
+      const data = event.data || {};
 
-    if (data.type === 'iframe-height' && iframeRef.current && !isGenerating) {
-      // La tua gestione altezza iframe rimane invariata
-      if (!hasEverGenerated) {
-        iframeRef.current.style.maxHeight = '350px';
-        let boundedHeight = Math.max(60, Math.min(data.height, 350));
-        iframeRef.current.style.height = `${boundedHeight}px`;
-      } else {
-        iframeRef.current.style.maxHeight = '800px';
-        let boundedHeight = Math.max(60, Math.min(data.height, 800));
-        iframeRef.current.style.height = `${boundedHeight}px`;
-      }
-    }
-
-    if (data.type === 'expand-iframe') {
-      // Qui blocchiamo la prima espansione fullscreen:
-      if (data.expanding) {
-        if (!hasSkippedInitialExpand) {
-          setHasSkippedInitialExpand(true);
-          return;  // Ignora questo primo messaggio di espansione
+      if (data.type === 'iframe-height' && iframeRef.current && !isGenerating) {
+        if (!hasEverGenerated) {
+          iframeRef.current.style.maxHeight = '350px';
+          let boundedHeight = Math.max(60, Math.min(data.height, 350));
+          iframeRef.current.style.height = `${boundedHeight}px`;
+        } else {
+          iframeRef.current.style.maxHeight = '800px';
+          let boundedHeight = Math.max(60, Math.min(data.height, 800));
+          iframeRef.current.style.height = `${boundedHeight}px`;
         }
       }
 
-      // Qui continua come prima per i messaggi successivi
-      setIsGenerating(data.expanding);
-
-      if (data.expanding && !hasEverGenerated) {
-        setHasEverGenerated(true);
-      }
-
-      if (iframeRef.current) {
+      if (data.type === 'expand-iframe') {
         if (data.expanding) {
-          Object.assign(iframeRef.current.style, {
-            maxHeight: '800px',
-            height: `${window.innerHeight}px`,
-            position: 'fixed',
-            top: '0',
-            left: '0',
-            width: '100%',
-            zIndex: '1000',
-          });
-          document.body.style.overflow = 'hidden';
-        } else {
-          Object.assign(iframeRef.current.style, {
-            position: 'relative',
-            top: 'auto',
-            left: 'auto',
-            width: '100%',
-            zIndex: 'auto',
-            height: 'auto',
-            minHeight: '200px',
-            maxHeight: '800px',
-          });
-          document.body.style.overflow = 'auto';
-          if (iframeRef.current.contentWindow) {
-            try {
-              iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
-            } catch {}
+          if (!hasSkippedInitialExpand) {
+            setHasSkippedInitialExpand(true);
+            return;
+          }
+        }
+
+        setIsGenerating(data.expanding);
+
+        if (data.expanding && !hasEverGenerated) {
+          setHasEverGenerated(true);
+        }
+
+        if (iframeRef.current) {
+          if (data.expanding) {
+            Object.assign(iframeRef.current.style, {
+              maxHeight: '800px',
+              height: `${window.innerHeight}px`,
+              position: 'fixed',
+              top: '0',
+              left: '0',
+              width: '100%',
+              zIndex: '1000',
+            });
+            document.body.style.overflow = 'hidden';
+          } else {
+            Object.assign(iframeRef.current.style, {
+              position: 'relative',
+              top: 'auto',
+              left: 'auto',
+              width: '100%',
+              zIndex: 'auto',
+              height: 'auto',
+              minHeight: '200px',
+              maxHeight: '800px',
+            });
+            document.body.style.overflow = 'auto';
+            if (iframeRef.current.contentWindow) {
+              try {
+                iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
+              } catch {}
+            }
           }
         }
       }
-    }
-  };
+    };
 
-  window.addEventListener('message', handleIframeMessage);
-  return () => {
-    window.removeEventListener('message', handleIframeMessage);
-    document.body.style.overflow = 'auto';
-  };
-}, [isGenerating, hasSkippedInitialExpand]);
+    window.addEventListener('message', handleIframeMessage);
+    return () => {
+      window.removeEventListener('message', handleIframeMessage);
+      document.body.style.overflow = 'auto';
+    };
+  }, [isGenerating, hasSkippedInitialExpand]);
 
   useEffect(() => {
     if (showGoogleModal && googleButtonRef.current && !googleToken) {
@@ -117,35 +109,39 @@ useEffect(() => {
           cancel_on_tap_outside: true,
         });
         // @ts-ignore
-        window.google.accounts.id.renderButton(googleButtonRef.current, { theme: theme === 'dark' ? 'filled_black' : 'outline', size: 'large' });
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: theme === 'dark' ? 'filled_black' : 'outline',
+          size: 'large',
+          type: 'standard',
+        });
         // @ts-ignore
         window.google.accounts.id.prompt();
       }
     }
-  }, [showGoogleModal, googleButtonRef.current]);
+  }, [showGoogleModal, googleButtonRef.current, googleToken, theme]);
 
   const handleGoogleResponse = async (response: any) => {
-  if (!response.credential) return;
-  setGoogleToken(response.credential);
-  try {
-    const res = await fetch(api.googleAuth, {      // <-- usa qui api.googleAuth
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: response.credential }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setUserData(data);
-      setShowGoogleModal(false);
-    } else {
-      alert(`Errore di autenticazione: ${data.error || 'sconosciuto'}`);
+    if (!response.credential) return;
+    setGoogleToken(response.credential);
+    try {
+      const res = await fetch(api.googleAuth, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: response.credential }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUserData(data);
+        setShowGoogleModal(false);
+      } else {
+        alert(`Errore di autenticazione: ${data.error || 'sconosciuto'}`);
+        setGoogleToken(null);
+      }
+    } catch {
+      alert('Errore di rete durante autenticazione');
       setGoogleToken(null);
     }
-  } catch {
-    alert('Errore di rete durante autenticazione');
-    setGoogleToken(null);
-  }
-};
+  };
 
   const toggleTheme = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
 
@@ -168,12 +164,36 @@ useEffect(() => {
           className={styles.loginButton}
           aria-label="Login con Google"
           type="button"
+          style={{
+            position: 'fixed',
+            right: 80,
+            top: 20,
+            zIndex: 1100,
+            backgroundColor: '#fff',
+            color: '#222',
+            borderRadius: '8px',
+            padding: '10px 16px',
+            fontWeight: 600,
+            border: '1px solid #ccc',
+            cursor: 'pointer',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+          }}
         >
-          👤
+          👤 Accedi con Google
         </button>
       ) : (
         <>
-          <div className={styles.userInfo}>
+          <div
+            className={styles.userInfo}
+            style={{
+              position: 'fixed',
+              right: 80,
+              top: 24,
+              zIndex: 1100,
+              color: 'var(--text-primary)',
+              fontWeight: 600,
+            }}
+          >
             {userData.email} ({userData.plan})
           </div>
           <button
@@ -181,6 +201,20 @@ useEffect(() => {
             className={styles.logoutButton}
             aria-label="Logout"
             type="button"
+            style={{
+              position: 'fixed',
+              right: 20,
+              top: 20,
+              zIndex: 1100,
+              backgroundColor: '#ff4d4f',
+              color: '#fff',
+              border: 'none',
+              padding: '10px 16px',
+              borderRadius: '8px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(255, 77, 79, 0.6)',
+            }}
           >
             🚪 Esci
           </button>
@@ -188,42 +222,43 @@ useEffect(() => {
       )}
 
       {/* Google auth modal popup */}
-{showGoogleModal && (
-  <div
-    onClick={() => setShowGoogleModal(false)}
-    style={{
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: 'rgba(255, 255, 255, 0.85)',  // più chiaro
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1200,
-    }}
-    aria-modal="true"
-    role="dialog"
-    tabIndex={-1}
-  >
-    <div
-      onClick={e => e.stopPropagation()}
-      style={{
-        backgroundColor: 'var(--card-bg)',
-        padding: '2rem',
-        borderRadius: 'var(--border-radius)',
-        boxShadow: 'var(--shadow)',
-        width: '320px',
-        textAlign: 'center',
-        color: 'var(--text-primary)',  // testo leggibile
-      }}
-    >
-      <h2>Accedi con Google</h2>
-      <div ref={googleButtonRef} />
-      <button onClick={() => setShowGoogleModal(false)} style={{ marginTop: '1rem' }} aria-label="Chiudi">
-        Annulla
-      </button>
-    </div>
-  </div>
-)}
+      {showGoogleModal && (
+        <div
+          onClick={() => setShowGoogleModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(255, 255, 255, 0.85)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1200,
+          }}
+          aria-modal="true"
+          role="dialog"
+          tabIndex={-1}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              backgroundColor: 'var(--card-bg)',
+              padding: '2rem',
+              borderRadius: 'var(--border-radius)',
+              boxShadow: 'var(--shadow)',
+              width: '320px',
+              textAlign: 'center',
+              color: 'var(--text-primary)',
+              userSelect: 'none',
+            }}
+          >
+            <h2>Accedi con Google</h2>
+            <div ref={googleButtonRef} />
+            <button onClick={() => setShowGoogleModal(false)} style={{ marginTop: '1rem' }} aria-label="Chiudi">
+              Annulla
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* LOGO SGAI */}
       <div
@@ -231,7 +266,7 @@ useEffect(() => {
         style={{
           paddingTop: 0,
           marginBottom: '-1rem',
-          marginTop: '0rem',
+          marginTop: 0,
           paddingBottom: 0,
           display: 'flex',
           flexDirection: 'column',
@@ -263,7 +298,7 @@ useEffect(() => {
             borderRadius: isGenerating ? '0' : 'var(--border-radius)',
             maxWidth: '100%',
             minHeight: 200,
-            maxHeight: 350,    
+            maxHeight: 350,
             position: 'absolute',
             top: 0,
             left: 0,
@@ -344,17 +379,17 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* DISCLAIMER */}
       <div className={styles.disclaimerSection}>
         <p>
           <strong>Disclaimer:</strong>
         </p>
         <p>
           SGAI è un sistema in fase di sviluppo, basato sull’intelligenza artificiale. Lo sappiamo: non è ancora completo, e talvolta può fornire risposte inesatte, parziali o incoerenti. Ma è proprio grazie all’uso quotidiano e al supporto degli utenti che il progetto può evolversi e migliorare.
-
-Il sistema viene aggiornato costantemente, con l’integrazione progressiva di nuove fonti, funzionalità e affinamenti della logica. Se oggi non trovi quello che cerchi, è possibile che domani ci sia.
-
-Pur puntando alla massima accuratezza, invitiamo a verificare sempre i contenuti con fonti ufficiali e a consultare professionisti qualificati per ogni decisione rilevante.
+          {' '}
+          Il sistema viene aggiornato costantemente, con l’integrazione progressiva di nuove fonti,
+          funzionalità e affinamenti della logica. Se oggi non trovi quello che cerchi, è possibile che domani ci sia.
+          {' '}
+          Pur puntando alla massima accuratezza, invitiamo a verificare sempre i contenuti con fonti ufficiali e a consultare professionisti qualificati per ogni decisione rilevante.
         </p>
       </div>
     </div>
