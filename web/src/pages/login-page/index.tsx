@@ -4,7 +4,6 @@ import { SvgLogoInteractive } from './SvgLogoInteractive';
 
 const CLIENT_ID = '872236618020-3len9toeui389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
 
-const featureHighlight = { color: '#ffe066', fontWeight: 600 };
 
 
 
