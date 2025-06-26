@@ -361,4 +361,57 @@ body {
     align-items: center;
     justify-content: center;
   }
+
+
+  .loginButton {
+  position: fixed;
+  top: 20px;
+  right: 80px;
+  z-index: 1100;
+  background-color: #ffffff;
+  color: #222222;
+  border: 1px solid #ccc;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.1);
+}
+
+.loginButton:hover {
+  background-color: #f5f5f5;
+  color: #000000;
+}
+
+.logoutButton {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  background-color: #ff4d4f;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.1);
+}
+
+.logoutButton:hover {
+  background-color: #d9363e;
+}
+
+.userInfo {
+  position: fixed;
+  top: 24px;
+  right: 120px;
+  z-index: 1100;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
 }
