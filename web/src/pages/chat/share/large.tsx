@@ -51,6 +51,7 @@ const ChatContainer = ({ theme }) => {
   const lastMessageRef = useRef(null);
   const [progress, setProgress] = useState(0);      // <-- AGGIUNGI QUESTA RIGA
   const [barVisible, setBarVisible] = useState(false); // <-- E QUESTA
+  const [hasMounted, setHasMounted] = useState(false);
 
   const useFetchAvatar = useMemo(() => {
     return from === SharedFrom.Agent
@@ -63,6 +64,10 @@ const ChatContainer = ({ theme }) => {
       i18n.changeLanguage(locale);
     }
   }, [locale, visibleAvatar]);
+
+  useEffect(() => {
+  setHasMounted(true);
+}, []);
 
 useEffect(() => {
   let interval = null;
@@ -126,7 +131,7 @@ useEffect(() => {
         }
 
         setTimeout(() => {
-          if (inputRef.current) {
+          if (hasMounted && inputRef.current) {
             try {
               inputRef.current.focus();
               if (inputContainerRef.current) {
