@@ -353,7 +353,10 @@ def chat(dialog, messages, stream=True, **kwargs):
                     kbinfos["doc_aggs"].append(
                         {
                             "doc_id": did,
-                            "doc_name": ck.get("doc_name") or ck.get("docnm_kwd", "")
+                            "doc_name": ck.get("doc_name")
+                                        or ck.get("docnm_kwd", "")
+                                        or ck.get("document_name", "")   # <-- aggiunta
+
                         }
                     )
                     existing_ids.add(did)
