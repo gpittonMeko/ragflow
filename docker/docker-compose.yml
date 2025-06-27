@@ -5,7 +5,10 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-    image: ${RAGFLOW_IMAGE}
+    build:
+      context: ../              # cartella radice progetto (dove c’è setup.py)
+      dockerfile: Dockerfile    # se il nome è “Dockerfile” puoi ometterlo
+    image: ragflow-patched:latest   # (facoltativo) tag locale
     # example to setup MCP server
     # command:
     #   - --enable-mcpserver
