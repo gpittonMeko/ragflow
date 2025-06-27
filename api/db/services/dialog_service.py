@@ -336,10 +336,13 @@ def chat(dialog, messages, stream=True, **kwargs):
                     answer = answer.replace(full_match, f"##{i}$$")
 
             idx = set([kbinfos["chunks"][int(i)]["doc_id"] for i in idx])
-            recall_docs = [d for d in kbinfos["doc_aggs"] if d["doc_id"] in idx]
-            if not recall_docs:
-                recall_docs = kbinfos["doc_aggs"]
-            kbinfos["doc_aggs"] = recall_docs
+         # ----> rimuovi o commenta queste 4 righe <----
+        #recall_docs = [d for d in kbinfos["doc_aggs"] if d["doc_id"] in idx]
+        #if not recall_docs:
+        #    recall_docs = kbinfos["doc_aggs"]
+        #kbinfos["doc_aggs"] = recall_docs
+        # non filtriamo: manteniamo tutti i documenti aggregati
+        # kbinfos["doc_aggs"] resta quello restituito da retriever.retrieval()
 
             refs = deepcopy(kbinfos)
             for c in refs["chunks"]:
