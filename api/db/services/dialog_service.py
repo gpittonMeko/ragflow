@@ -336,6 +336,28 @@ def chat(dialog, messages, stream=True, **kwargs):
                     answer = answer.replace(full_match, f"##{i}$$")
 
             idx = set([kbinfos["chunks"][int(i)]["doc_id"] for i in idx])
+
+
+            # ------------------------------------------------------------------
+            # Assicura che ogni documento presente nei chunks sia elencato
+            # anche in kbinfos["doc_aggs"] (usato dalla UI per mostrare i PDF)
+            # ------------------------------------------------------------------
+            if "doc_aggs" not in kbinfos or kbinfos["doc_aggs"] is None:
+                kbinfos["doc_aggs"] = []
+
+            existing_ids = {d["doc_id"] for d in kbinfos["doc_aggs"]}
+
+            for ck in kbinfos["chunks"]:
+                did = ck.get("doc_id")
+                if did and did not in existing_ids:
+                    kbinfos["doc_aggs"].append(
+                        {
+                            "doc_id": did,
+                            "doc_name": ck.get("doc_name") or ck.get("docnm_kwd", "")
+                        }
+                    )
+                    existing_ids.add(did)
+            # ------------------------------------------------------------------
          # ----> rimuovi o commenta queste 4 righe <----
         #recall_docs = [d for d in kbinfos["doc_aggs"] if d["doc_id"] in idx]
         #if not recall_docs:
