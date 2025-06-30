@@ -122,9 +122,10 @@ useEffect(() => {
   }
 
 
-  useEffect(() => {
+useEffect(() => {
   const container = messagesContainerRef.current;
   if (!container) return;
+  // Vai SEMPRE in fondo con scrollTop!
   setTimeout(() => {
     container.scrollTop = container.scrollHeight;
   }, 120);
