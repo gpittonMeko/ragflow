@@ -346,11 +346,15 @@ body {
     border-radius: 18px;
     box-shadow: 0 4px 40px 2px rgba(0,120,200,0.10);
 
-    height: 400px;
+    /* height: 400px;  <<<< VIA! */
+    min-height: 320px;    /* cambia a piacere */
+    height: auto;         /* questa la fa crescere */
+    max-height: 75vh;     /* limita l’espansione */
     display: flex;
     flex-direction: column;
-    overflow: hidden;  // Previene overflow nei bordi arrotondati
+    overflow: hidden;     // ok: previene overflow
   }
+}
   .messageContainer {
     flex: 1 1 auto;
     overflow-y: auto;
