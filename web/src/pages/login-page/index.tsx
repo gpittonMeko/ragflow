@@ -6,18 +6,18 @@ import api from '@/utils/api'; // <-- sostituisci con il percorso reale del tuo 
 const CLIENT_ID = '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
 
 const PresentationPage: React.FC = () => {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  //const iframeRef = useRef<HTMLIFrameElement>(null);
   const googleButtonRef = useRef<HTMLDivElement>(null);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('sgai-theme') as 'light' | 'dark') || 'dark';
   });
-  const [isGenerating, setIsGenerating] = useState(false);
+  //const [isGenerating, setIsGenerating] = useState(false);
   const [googleToken, setGoogleToken] = useState<string | null>(null);
-  const [hasEverGenerated, setHasEverGenerated] = useState(false);
+  //const [hasEverGenerated, setHasEverGenerated] = useState(false);
   const [userData, setUserData] = useState<{ email: string; plan: string; usedGenerations: number } | null>(null);
   const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const [hasSkippedInitialExpand, setHasSkippedInitialExpand] = useState(false);
+  //const [hasSkippedInitialExpand, setHasSkippedInitialExpand] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -26,80 +26,91 @@ const PresentationPage: React.FC = () => {
       iframeRef.current.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
     }
   }, [theme]);
+//
+//
+//
+//  useEffect(() => {
+//    const handleIframeMessage = (event: MessageEvent) => {
+//      const data = event.data || {};
+//
+//      if (data.type === 'iframe-height' && iframeRef.current) {
+//        let min = 200;
+//        let max = 1600;
+//        let boundedHeight = Math.max(min, Math.min(data.height, max));
+//        console.log("SGAI [parent]: data.height ricevuta:", data.height, "-> usata:", boundedHeight);
+//        iframeRef.current.style.height = `${boundedHeight}px`;
+//        iframeRef.current.style.minHeight = `${min}px`;
+//        iframeRef.current.style.maxHeight = `${max}px`;
+//      }
+//
+//      if (data.type === 'expand-iframe') {
+//        if (data.expanding) {
+//          if (!hasSkippedInitialExpand) {
+//            setHasSkippedInitialExpand(true);
+//            return;
+//          }
+//        }
+//
+//        setIsGenerating(data.expanding);
+//
+//        if (data.expanding && !hasEverGenerated) {
+//          setHasEverGenerated(true);
+//        }
+//
+//        if (iframeRef.current) {
+//          if (data.expanding) {
+//            Object.assign(iframeRef.current.style, {
+//              maxHeight: '800px',
+//              height: `${window.innerHeight}px`,
+//              position: 'fixed',
+//              top: '0',
+//              left: '0',
+//              width: '100%',
+//              zIndex: '1000',
+//            });
+//            document.body.style.overflow = 'hidden';
+//          } else {
+//            Object.assign(iframeRef.current.style, {
+//              position: 'relative',
+//              top: 'auto',
+//              left: 'auto',
+//              width: '100%',
+//              zIndex: 'auto',
+//              height: 'auto',
+//              minHeight: '200px',
+//              maxHeight: '800px',
+//            });
+//            document.body.style.overflow = 'auto';
+//            if (iframeRef.current.contentWindow) {
+//              try {
+//                iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
+//              } catch {}
+//            }
+//          }
+//        }
+//      }
+//    };
+//
+//    window.addEventListener('message', handleIframeMessage);
+//    return () => {
+//      window.removeEventListener('message', handleIframeMessage);
+//      document.body.style.overflow = 'auto';
+//    };
+//  }, [isGenerating, hasSkippedInitialExpand]);
+//
+//// Stato per indicare se SDK è pronto
+//  const [gsiReady, setGsiReady] = useState(false);
 
+useEffect(() => {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('sgai-theme', theme);
 
-
-  useEffect(() => {
-    const handleIframeMessage = (event: MessageEvent) => {
-      const data = event.data || {};
-
-      if (data.type === 'iframe-height' && iframeRef.current) {
-        let min = 200;
-        let max = 1600;
-        let boundedHeight = Math.max(min, Math.min(data.height, max));
-        console.log("SGAI [parent]: data.height ricevuta:", data.height, "-> usata:", boundedHeight);
-        iframeRef.current.style.height = `${boundedHeight}px`;
-        iframeRef.current.style.minHeight = `${min}px`;
-        iframeRef.current.style.maxHeight = `${max}px`;
-      }
-
-      if (data.type === 'expand-iframe') {
-        if (data.expanding) {
-          if (!hasSkippedInitialExpand) {
-            setHasSkippedInitialExpand(true);
-            return;
-          }
-        }
-
-        setIsGenerating(data.expanding);
-
-        if (data.expanding && !hasEverGenerated) {
-          setHasEverGenerated(true);
-        }
-
-        if (iframeRef.current) {
-          if (data.expanding) {
-            Object.assign(iframeRef.current.style, {
-              maxHeight: '800px',
-              height: `${window.innerHeight}px`,
-              position: 'fixed',
-              top: '0',
-              left: '0',
-              width: '100%',
-              zIndex: '1000',
-            });
-            document.body.style.overflow = 'hidden';
-          } else {
-            Object.assign(iframeRef.current.style, {
-              position: 'relative',
-              top: 'auto',
-              left: 'auto',
-              width: '100%',
-              zIndex: 'auto',
-              height: 'auto',
-              minHeight: '200px',
-              maxHeight: '800px',
-            });
-            document.body.style.overflow = 'auto';
-            if (iframeRef.current.contentWindow) {
-              try {
-                iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
-              } catch {}
-            }
-          }
-        }
-      }
-    };
-
-    window.addEventListener('message', handleIframeMessage);
-    return () => {
-      window.removeEventListener('message', handleIframeMessage);
-      document.body.style.overflow = 'auto';
-    };
-  }, [isGenerating, hasSkippedInitialExpand]);
-
-// Stato per indicare se SDK è pronto
-  const [gsiReady, setGsiReady] = useState(false);
+  // Invia il tema all’iframe, se presente
+  const iframe = document.querySelector('iframe[title="SGAI Chat Interface"]');
+  if (iframe && iframe.contentWindow) {
+    iframe.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
+  }
+}, [theme]);
 
   useEffect(() => {
   if (!showGoogleModal || !googleButtonRef.current || googleToken || !gsiReady) return;
@@ -298,29 +309,22 @@ const PresentationPage: React.FC = () => {
       </div>
 
       {/* CHAT SOTTO IL LOGO */}
-      <div
-        className={styles.iframeSection}
+      <div className={styles.iframeSection}>
+      <iframe
+        src="https://sgailegal.it/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm&visible_avatar=1"
+        title="SGAI Chat Interface"
         style={{
-          overflow: isGenerating ? 'visible' : 'hidden',
-          maxWidth: '100%',
+          borderRadius: 'var(--border-radius)',
+          width: '100%',
+          minHeight: 350,
+          maxHeight: 1600, // opzionale se vuoi fermare a max
+          border: 'none',
+          display: 'block',
+          background: 'transparent',
         }}
-      >
-        <iframe
-          ref={iframeRef}
-          src="https://sgailegal.it/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm&visible_avatar=1"
-          title="SGAI Chat Interface"
-          style={{
-            borderRadius: isGenerating ? '0' : 'var(--border-radius)',
-            maxWidth: '100%',
-            minHeight: 200,
-            maxHeight: 1600,
-            border: 'none',
-            width: '100%',
-            display: 'block',
-            // NON mettere height fisso, NON position absolute!
-          }}
-        />
-      </div>
+        allow="clipboard-write" // opzionale
+      />
+    </div>
 
       {/* FEATURE */}
       <div className={styles.featuresSection}>
