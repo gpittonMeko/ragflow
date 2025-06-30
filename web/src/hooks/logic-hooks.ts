@@ -408,7 +408,7 @@ export const useSelectDerivedMessages = () => {
   );
 
   return {
-    ref,
+    //ref,
     derivedMessages,
     setDerivedMessages,
     addNewestQuestion,
