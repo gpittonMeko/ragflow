@@ -120,6 +120,16 @@ useEffect(() => {
   if (!conversationId) {
     return <div>empty</div>;
   }
+
+
+  useEffect(() => {
+  const container = messagesContainerRef.current;
+  if (!container) return;
+  setTimeout(() => {
+    container.scrollTop = container.scrollHeight;
+  }, 120);
+}, [derivedMessages.length]);
+
 //
 //useEffect(() => {
 //  const scrollBox = messagesContainerRef.current;
@@ -188,11 +198,13 @@ useEffect(() => {
 
       <Flex flex={1} className={`${styles.chatContainer} ${styles[theme]}`} vertical>
         <Flex 
-          flex={1} 
-          vertical 
-          className={styles.messageContainer}
-          ref={messagesContainerRef}
-        >
+        flex={1} 
+        vertical 
+        className={styles.messageContainer}
+        ref={messagesContainerRef}
+      >
+
+          
           <div>
             <Spin spinning={loading}>
               {derivedMessages?.map((message, i) => {
