@@ -100,7 +100,7 @@ useEffect(() => {
 useEffect(() => {
   const resize = () => {
     if (window.innerWidth < 480) {
-      setBarWidth(window.innerWidth * 0.9); // 90% della width su mobile
+      setBarWidth(Math.min(window.innerWidth * 0.85, 260)); // 👈 massimo 260px su mobile
     } else if (window.innerWidth < 768) {
       setBarWidth(300);
     } else {
