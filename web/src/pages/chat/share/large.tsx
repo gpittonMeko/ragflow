@@ -122,11 +122,19 @@ useEffect(() => {
   }
 
 useEffect(() => {
-  if (lastMessageRef.current) {
+  const scrollBox = messagesContainerRef.current;
+  if (!scrollBox) return;
+
+  // Controllo: SE l'utente è già in fondo (con una tolleranza)
+  const isNearBottom = scrollBox.scrollHeight - scrollBox.scrollTop - scrollBox.clientHeight < 40;
+
+  if (isNearBottom && lastMessageRef.current) {
+    // Scrolla SOLO SE sei già in fondo!
     setTimeout(() => {
       lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }, 260);
+    }, 180);
   }
+  // Altrimenti, NON scrollare!
 }, [derivedMessages.length]);
 
   // Ultimo messaggio
