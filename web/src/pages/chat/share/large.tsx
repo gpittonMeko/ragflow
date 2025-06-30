@@ -122,11 +122,14 @@ useEffect(() => {
   }
 
     // Autoscroll automatico all'ultimo messaggio quando la lista messaggi cambia (o durante generazione)
-  useEffect(() => {
-    if (lastMessageRef.current) {
-      lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-  }, [derivedMessages, sendLoading, isGenerating]);
+    useEffect(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: 'smooth',
+        });
+      }
+    }, [derivedMessages.length]);
 
   // Ultimo messaggio
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;

@@ -33,16 +33,11 @@ const PresentationPage: React.FC = () => {
     const handleIframeMessage = (event: MessageEvent) => {
       const data = event.data || {};
 
-      if (data.type === 'iframe-height' && iframeRef.current && !isGenerating) {
-        if (!hasEverGenerated) {
-          iframeRef.current.style.maxHeight = '350px';
-          let boundedHeight = Math.max(60, Math.min(data.height, 350));
-          iframeRef.current.style.height = `${boundedHeight}px`;
-        } else {
-          iframeRef.current.style.maxHeight = '800px';
-          let boundedHeight = Math.max(60, Math.min(data.height, 800));
-          iframeRef.current.style.height = `${boundedHeight}px`;
-        }
+      if (data.type === 'iframe-height' && iframeRef.current) {
+        // Allunga dinamicamente l'iframe fino a 1600px
+        let boundedHeight = Math.max(100, Math.min(data.height, 1600));
+        iframeRef.current.style.height = `${boundedHeight}px`;
+        iframeRef.current.style.maxHeight = '1600px';
       }
 
       if (data.type === 'expand-iframe') {
