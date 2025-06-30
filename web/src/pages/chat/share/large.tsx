@@ -184,7 +184,7 @@ useEffect(() => {
                 className={styles.loaderBarLiquid}
                 style={{
                   width: '100%', // <-- QUESTA È LA CHIAVE!
-                  maxWidth: 370, // limite desktop
+                  maxWidth: 600, // limite desktop
                   minWidth: 120, // limite mobile
                   margin: '0 auto',
                   height: 16,
