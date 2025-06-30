@@ -122,23 +122,10 @@ useEffect(() => {
   }
 
 useEffect(() => {
-  if (lastMessageRef.current && lastMessageRef.current.parentElement) {
+  if (lastMessageRef.current) {
     setTimeout(() => {
-      // SCROLLA UN PO' PIÙ SU rispetto al fondo reale:
-      const container = lastMessageRef.current.parentElement;
-      const parentScrollBox = container.closest('.messageContainer') || container;
-      const offsetPadding = 80; // pixel di margine dal fondo — MODIFICA A PIACERE
-
-      if (parentScrollBox) {
-        parentScrollBox.scrollTo({
-          top: parentScrollBox.scrollHeight - parentScrollBox.clientHeight - offsetPadding,
-          behavior: 'smooth'
-        });
-      } else {
-        // Fallback: scrollIntoView normale se non trova nulla
-        lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 180);
+      lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 260);
   }
 }, [derivedMessages.length]);
 
