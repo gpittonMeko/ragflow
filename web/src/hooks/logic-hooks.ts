@@ -284,21 +284,21 @@ export const useSpeechWithSse = (url: string = api.tts) => {
 
 //#region chat hooks
 
-export const useScrollToBottom = (messages?: unknown) => {
-  const ref = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = useCallback(() => {
-    if (messages) {
-      ref.current?.scrollIntoView({ behavior: 'instant' });
-    }
-  }, [messages]); // If the message changes, scroll to the bottom
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [scrollToBottom]);
-
-  return ref;
-};
+//export const useScrollToBottom = (messages?: unknown) => {
+//  const ref = useRef<HTMLDivElement>(null);
+//
+//  const scrollToBottom = useCallback(() => {
+//    if (messages) {
+//      ref.current?.scrollIntoView({ behavior: 'instant' });
+//    }
+//  }, [messages]); // If the message changes, scroll to the bottom
+//
+//  useEffect(() => {
+//    scrollToBottom();
+//  }, [scrollToBottom]);
+//
+//  return ref;
+//};
 
 export const useHandleMessageInputChange = () => {
   const [value, setValue] = useState('');
