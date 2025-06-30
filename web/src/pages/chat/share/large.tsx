@@ -97,65 +97,6 @@ useEffect(() => {
   };
 }, [sendLoading, isGenerating]);
 
-    // Gestione focus e scroll
-  useEffect(() => {
-    if (!messagesContainerRef.current) return;
-
-    if (!isGeneratingRef.current && sendLoading) {
-      isGeneratingRef.current = true;
-
-      try {
-        window.parent.postMessage({
-          type: 'expand-iframe',
-          expanding: true
-        }, '*');
-      } catch (e) {
-        console.warn("Errore nell'invio del messaggio al parent", e);
-      }
-
-      if (ref.current) {
-        ref.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      }
-    } else if (isGeneratingRef.current && !sendLoading) {
-      isGeneratingRef.current = false;
-
-      setTimeout(() => {
-        try {
-          window.parent.postMessage({
-            type: 'expand-iframe',
-            expanding: false
-          }, '*');
-        } catch (e) {
-          console.warn("Errore nell'invio del messaggio al parent", e);
-        }
-
-        setTimeout(() => {
-          // Blocca il primo focus automatico con la flag
-          if (!hasFocusedOnce && !window.sessionStorage.getItem('chatFocusedOnce')) {
-            // Prima volta: non dare focus e registra la flag
-            window.sessionStorage.setItem('chatFocusedOnce', 'true');
-            setHasFocusedOnce(true);
-            return;
-          }
-
-          if (inputRef.current) {
-            try {
-              inputRef.current.focus();
-              if (inputContainerRef.current) {
-                inputContainerRef.current.scrollIntoView({
-                  behavior: 'smooth',
-                  block: 'center',
-                });
-              }
-            } catch (error) {
-              console.warn('Errore durante il focus/scroll:', error);
-            }
-          }
-        }, 200);
-      }, 300);
-    }
-  }, [sendLoading, derivedMessages, ref, hasFocusedOnce]);
-
   // Prevenzione focus durante digitazione
   useEffect(() => {
     const preventAutofocusScroll = (e) => {
@@ -179,6 +120,13 @@ useEffect(() => {
   if (!conversationId) {
     return <div>empty</div>;
   }
+
+    // Autoscroll automatico all'ultimo messaggio quando la lista messaggi cambia (o durante generazione)
+  useEffect(() => {
+    if (lastMessageRef.current) {
+      lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [derivedMessages, sendLoading, isGenerating]);
 
   // Ultimo messaggio
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
