@@ -34,10 +34,15 @@ const PresentationPage: React.FC = () => {
       const data = event.data || {};
 
       if (data.type === 'iframe-height' && iframeRef.current) {
-        // Allunga dinamicamente l'iframe fino a 1600px
-        let boundedHeight = Math.max(100, Math.min(data.height, 1600));
+        // Cambiato: parte basso, cresce quanto serve, non va a 1600 subito!
+        let min = 200;    // scegli qui la min-height che vuoi
+        let max = 1600;   // il massimo che vuoi per la chat
+        let boundedHeight = Math.max(min, Math.min(data.height, max));
         iframeRef.current.style.height = `${boundedHeight}px`;
-        iframeRef.current.style.maxHeight = '1600px';
+        iframeRef.current.style.minHeight = `${min}px`;
+        iframeRef.current.style.maxHeight = `${max}px`;
+        // Debug per vedere cosa succede:
+        // console.log("[SGAI] data.height:", data.height, "=> boundedHeight:", boundedHeight);
       }
 
       if (data.type === 'expand-iframe') {
