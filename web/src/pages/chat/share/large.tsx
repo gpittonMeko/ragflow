@@ -125,11 +125,17 @@ useEffect(() => {
 useEffect(() => {
   const container = messagesContainerRef.current;
   if (!container) return;
-  // Vai SEMPRE in fondo con scrollTop!
+
+  // Scrolla sempre in fondo
   setTimeout(() => {
     container.scrollTop = container.scrollHeight;
+    // Invia la nuova height ogni generazione
+    window.parent && window.parent.postMessage({
+      type: 'iframe-height',
+      height: container.scrollHeight,
+    }, '*');
   }, 120);
-}, [derivedMessages.length]);
+}, [derivedMessages.length, sendLoading, isGenerating]);
 
 //
 //useEffect(() => {
