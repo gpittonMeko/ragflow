@@ -31,28 +31,47 @@ const PresentationPage: React.FC = () => {
   }, [theme]);
 
 
+  // Stato/flag per sapere se espandere
+  const [canExpandIframe, setCanExpandIframe] = useState(false);
+  const expandTimeoutRef = useRef<any>(null);
+
   useEffect(() => {
-  const handler = (event) => {
-    if (event.data?.type === 'iframe-height') {
-      const iframe = document.querySelector('iframe[title="SGAI Chat Interface"]');
-      if (iframe) {
-        const minHeight = 400;    // <-- puoi mettere 1000 se preferisci!
-        const maxHeight = 1000;   // <-- opzionale, metti il max che vuoi
+    const handler = (event) => {
+      if (event.data?.type === 'iframe-height') {
+        const iframe = document.querySelector('iframe[title="SGAI Chat Interface"]');
+        if (!iframe) return;
+        const minHeight = 400;
+        const maxHeight = 1600; // se vuoi puoi mettere 1000 qui
+        
         let nextHeight = event.data.height;
 
-        // *** SOLO se il contenuto della chat supera 400px ***
-        if (nextHeight >= minHeight) {
+        // Se non puoi ancora espandere, rimani al minimo
+        if (!canExpandIframe) {
+          // Se la prima generazione supera 400px (o la tua soglia), parte il timeout
+          if (nextHeight > minHeight && !expandTimeoutRef.current) {
+            expandTimeoutRef.current = setTimeout(() => {
+              setCanExpandIframe(true);
+              expandTimeoutRef.current = null;
+            }, 10000); // 10 secondi
+          }
+          // Intanto l'iframe rimane minimo
+          nextHeight = minHeight;
+        } else {
+          // Puoi espandere normalmente (dopo 10 sec)
           nextHeight = Math.max(nextHeight, minHeight);
-          nextHeight = Math.min(nextHeight, maxHeight); // limita a max se vuoi
-          iframe.style.height = `${nextHeight}px`;
+          nextHeight = Math.min(nextHeight, maxHeight);
         }
-        // Altrimenti resta la min-height CSS (non serve fare nulla)
+
+        iframe.style.height = `${nextHeight}px`;
       }
-    }
-  };
-  window.addEventListener('message', handler);
-  return () => window.removeEventListener('message', handler);
-}, []);
+    };
+
+    window.addEventListener('message', handler);
+    return () => {
+      window.removeEventListener('message', handler);
+      if (expandTimeoutRef.current) clearTimeout(expandTimeoutRef.current);
+    };
+  }, [canExpandIframe]);
 //
 //
 //
