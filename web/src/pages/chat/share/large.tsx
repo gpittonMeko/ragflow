@@ -97,23 +97,23 @@ useEffect(() => {
   };
 }, [sendLoading, isGenerating]);
 
-  // Prevenzione focus durante digitazione
-  useEffect(() => {
-    const preventAutofocusScroll = (e) => {
-      if (sendLoading || isGeneratingRef.current) return;
-      if (inputRef.current && document.activeElement === inputRef.current) {
-        if (e.type === 'scroll') {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-      }
-    };
-    document.addEventListener('scroll', preventAutofocusScroll, { passive: false });
-    return () => {
-      document.removeEventListener('scroll', preventAutofocusScroll);
-    };
-  }, [sendLoading]);
+//  // Prevenzione focus durante digitazione
+//  useEffect(() => {
+//    const preventAutofocusScroll = (e) => {
+//      if (sendLoading || isGeneratingRef.current) return;
+//      if (inputRef.current && document.activeElement === inputRef.current) {
+//        if (e.type === 'scroll') {
+//          e.preventDefault();
+//          e.stopPropagation();
+//          return false;
+//        }
+//      }
+//    };
+//    document.addEventListener('scroll', preventAutofocusScroll, { passive: false });
+//    return () => {
+//      document.removeEventListener('scroll', preventAutofocusScroll);
+//    };
+//  }, [sendLoading]);
   
   const { data: avatarData } = useFetchAvatar();
 
