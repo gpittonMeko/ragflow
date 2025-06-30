@@ -29,6 +29,30 @@ const PresentationPage: React.FC = () => {
       iframe.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
     }
   }, [theme]);
+
+
+  useEffect(() => {
+  const handler = (event) => {
+    if (event.data?.type === 'iframe-height') {
+      const iframe = document.querySelector('iframe[title="SGAI Chat Interface"]');
+      if (iframe) {
+        const minHeight = 400;    // <-- puoi mettere 1000 se preferisci!
+        const maxHeight = 1000;   // <-- opzionale, metti il max che vuoi
+        let nextHeight = event.data.height;
+
+        // *** SOLO se il contenuto della chat supera 400px ***
+        if (nextHeight >= minHeight) {
+          nextHeight = Math.max(nextHeight, minHeight);
+          nextHeight = Math.min(nextHeight, maxHeight); // limita a max se vuoi
+          iframe.style.height = `${nextHeight}px`;
+        }
+        // Altrimenti resta la min-height CSS (non serve fare nulla)
+      }
+    }
+  };
+  window.addEventListener('message', handler);
+  return () => window.removeEventListener('message', handler);
+}, []);
 //
 //
 //
