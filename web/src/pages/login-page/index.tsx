@@ -99,7 +99,7 @@ const PresentationPage: React.FC = () => {
 //  }, [isGenerating, hasSkippedInitialExpand]);
 //
 //// Stato per indicare se SDK è pronto
-//  const [gsiReady, setGsiReady] = useState(false);
+  const [gsiReady, setGsiReady] = useState(false);
 
 useEffect(() => {
   document.documentElement.setAttribute('data-theme', theme);
