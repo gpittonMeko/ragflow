@@ -131,8 +131,7 @@ useEffect(() => {
   if (isNearBottom && lastMessageRef.current) {
     // Scrolla SOLO SE sei già in fondo!
     setTimeout(() => {
-      lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }, 180);
+lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });    }, 230);
   }
   // Altrimenti, NON scrollare!
 }, [derivedMessages.length]);
