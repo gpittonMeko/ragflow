@@ -22,8 +22,11 @@ const PresentationPage: React.FC = () => {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('sgai-theme', theme);
-    if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
+
+    // Usa querySelector per trovare l'iframe senza ref React!
+    const iframe = document.querySelector('iframe[title="SGAI Chat Interface"]');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
     }
   }, [theme]);
 //
