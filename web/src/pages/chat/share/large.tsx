@@ -125,15 +125,17 @@ useEffect(() => {
   const scrollBox = messagesContainerRef.current;
   if (!scrollBox) return;
 
-  // Controllo: SE l'utente è già in fondo (con una tolleranza)
+  // Solo se sei già in fondo
   const isNearBottom = scrollBox.scrollHeight - scrollBox.scrollTop - scrollBox.clientHeight < 40;
 
-  if (isNearBottom && lastMessageRef.current) {
-    // Scrolla SOLO SE sei già in fondo!
+  if (isNearBottom) {
     setTimeout(() => {
-lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });    }, 230);
+      scrollBox.scrollTo({
+        top: scrollBox.scrollHeight,
+        behavior: 'smooth',
+      });
+    }, 230);
   }
-  // Altrimenti, NON scrollare!
 }, [derivedMessages.length]);
 
   // Ultimo messaggio
