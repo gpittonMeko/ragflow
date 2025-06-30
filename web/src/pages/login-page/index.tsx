@@ -41,7 +41,7 @@ const PresentationPage: React.FC = () => {
         const iframe = document.querySelector('iframe[title="SGAI Chat Interface"]');
         if (!iframe) return;
         const minHeight = 400;
-        const maxHeight = 1600; // se vuoi puoi mettere 1000 qui
+        const maxHeight = 1000; // se vuoi puoi mettere 1000 qui
         
         let nextHeight = event.data.height;
 
