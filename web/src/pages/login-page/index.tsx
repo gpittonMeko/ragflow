@@ -307,19 +307,17 @@ const PresentationPage: React.FC = () => {
       >
         <iframe
           ref={iframeRef}
-          src="https://sgailegal.it/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm&visible_avatar=1"
+          src="..."
           title="SGAI Chat Interface"
           style={{
             borderRadius: isGenerating ? '0' : 'var(--border-radius)',
             maxWidth: '100%',
             minHeight: 200,
-            maxHeight: 350,
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            maxHeight: 1600,
             border: 'none',
+            width: '100%',
+            display: 'block',
+            // NON mettere height fisso, NON position absolute!
           }}
         />
       </div>
