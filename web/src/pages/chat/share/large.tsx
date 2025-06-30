@@ -185,7 +185,7 @@ useEffect(() => {
                 style={{
                   width: '100%', // <-- QUESTA È LA CHIAVE!
                   maxWidth: 600, // limite desktop
-                  minWidth: 120, // limite mobile
+                  minWidth: 100, // limite mobile
                   margin: '0 auto',
                   height: 16,
                   background: 'rgba(155,255,255,0.07)',
