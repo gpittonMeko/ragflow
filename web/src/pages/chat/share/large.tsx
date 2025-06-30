@@ -183,7 +183,7 @@ useEffect(() => {
               <div
                 className={styles.loaderBarLiquid}
                 style={{
-                  width: BAR_WIDTH_LG,
+                  width: barWidth,
                   height: 16,
                   background: 'rgba(155,255,255,0.07)',
                   borderRadius: 10,
