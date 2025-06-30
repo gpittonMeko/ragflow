@@ -42,7 +42,7 @@ const ChatContainer = ({ theme }) => {
 
   } = useSendSharedMessage();
   const SIMULATED_TOTAL_MS = 180000; // 3 minuti
-  const BAR_WIDTH_LG = 370; // oppure la larghezza che vuoi per la barra
+  const [barWidth, setBarWidth] = useState(370);
   const sendDisabled = useSendButtonDisabled(value);
   const messagesContainerRef = useRef(null);
   const isGeneratingRef = useRef(false);
@@ -96,6 +96,22 @@ useEffect(() => {
     if (interval) clearInterval(interval);
   };
 }, [sendLoading, isGenerating]);
+
+useEffect(() => {
+  const resize = () => {
+    if (window.innerWidth < 480) {
+      setBarWidth(window.innerWidth * 0.9); // 90% della width su mobile
+    } else if (window.innerWidth < 768) {
+      setBarWidth(300);
+    } else {
+      setBarWidth(370);
+    }
+  };
+  resize();
+  window.addEventListener('resize', resize);
+  return () => window.removeEventListener('resize', resize);
+}, []);
+
 
 //  // Prevenzione focus durante digitazione
 //  useEffect(() => {
