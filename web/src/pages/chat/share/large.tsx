@@ -121,12 +121,24 @@ useEffect(() => {
     return <div>empty</div>;
   }
 
-    // Autoscroll automatico all'ultimo messaggio quando la lista messaggi cambia (o durante generazione)
 useEffect(() => {
-  if (lastMessageRef.current) {
+  if (lastMessageRef.current && lastMessageRef.current.parentElement) {
     setTimeout(() => {
-      lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }, 120); // oppure 180ms, scegli il tempo più fluido per te
+      // SCROLLA UN PO' PIÙ SU rispetto al fondo reale:
+      const container = lastMessageRef.current.parentElement;
+      const parentScrollBox = container.closest('.messageContainer') || container;
+      const offsetPadding = 80; // pixel di margine dal fondo — MODIFICA A PIACERE
+
+      if (parentScrollBox) {
+        parentScrollBox.scrollTo({
+          top: parentScrollBox.scrollHeight - parentScrollBox.clientHeight - offsetPadding,
+          behavior: 'smooth'
+        });
+      } else {
+        // Fallback: scrollIntoView normale se non trova nulla
+        lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 180);
   }
 }, [derivedMessages.length]);
 
