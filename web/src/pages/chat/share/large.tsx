@@ -120,25 +120,25 @@ useEffect(() => {
   if (!conversationId) {
     return <div>empty</div>;
   }
-
-useEffect(() => {
-  const scrollBox = messagesContainerRef.current;
-  if (!scrollBox) return;
-
-  // Solo se sei già in fondo
-  const isNearBottom = scrollBox.scrollHeight - scrollBox.scrollTop - scrollBox.clientHeight < 40;
-
-  if (isNearBottom) {
-    setTimeout(() => {
-      scrollBox.scrollTo({
-        top: scrollBox.scrollHeight,
-        behavior: 'smooth',
-      });
-    }, 230);
-  }
-}, [derivedMessages.length]);
-
-  // Ultimo messaggio
+//
+//useEffect(() => {
+//  const scrollBox = messagesContainerRef.current;
+//  if (!scrollBox) return;
+//
+//  // Solo se sei già in fondo
+//  const isNearBottom = scrollBox.scrollHeight - scrollBox.scrollTop - scrollBox.clientHeight < 40;
+//
+//  if (isNearBottom) {
+//    setTimeout(() => {
+//      scrollBox.scrollTo({
+//        top: scrollBox.scrollHeight,
+//        behavior: 'smooth',
+//      });
+//    }, 230);
+//  }
+//}, [derivedMessages.length]);
+//
+//  // Ultimo messaggio
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
 
   return (
