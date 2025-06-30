@@ -319,7 +319,7 @@ export const useHandleMessageInputChange = () => {
 export const useSelectDerivedMessages = () => {
   const [derivedMessages, setDerivedMessages] = useState<IMessage[]>([]);
 
-  const ref = useScrollToBottom(derivedMessages);
+  //const ref = useScrollToBottom(derivedMessages);
 
   const addNewestQuestion = useCallback(
     (message: Message, answer: string = '') => {
