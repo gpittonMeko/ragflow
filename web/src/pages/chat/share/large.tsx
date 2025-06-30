@@ -183,7 +183,10 @@ useEffect(() => {
               <div
                 className={styles.loaderBarLiquid}
                 style={{
-                  width: barWidth,
+                  width: '100%', // <-- QUESTA È LA CHIAVE!
+                  maxWidth: 370, // limite desktop
+                  minWidth: 120, // limite mobile
+                  margin: '0 auto',
                   height: 16,
                   background: 'rgba(155,255,255,0.07)',
                   borderRadius: 10,
