@@ -611,7 +611,7 @@ def ask(question, kb_ids, tenant_id):
             think = ans_parts[0] + "</think>"
             answer = ans_parts[1]
 
-        # Costruzione mappa univoca doc_id -> numero progressivo
+        # Costruzione mappa univoca doc_id -> numero progressivo per tutte le chunk
         doc_id_to_ref = {}
         ref_docs = []
         ref_counter = 1
@@ -624,10 +624,12 @@ def ask(question, kb_ids, tenant_id):
                     "doc_name": chunk.get("doc_name") or chunk.get("docnm_kwd", "") or chunk.get("document_name", "")
                 })
                 ref_counter += 1
+
         logging.debug(f"DocID to citation number map: {doc_id_to_ref}")
         logging.debug(f"Total unique documents: {len(ref_docs)}")
 
         if knowledges and (prompt_config.get("quote", True) and kwargs.get("quote", True)):
+            # Se non ci sono citazioni, inseriscile
             if not re.search(r"##[0-9]+\$\$", answer):
                 answer, idx = retriever.insert_citations(
                     answer,
@@ -646,15 +648,19 @@ def ask(question, kb_ids, tenant_id):
                         idx.add(kbinfos["chunks"][i]["doc_id"])
 
             logging.debug(f"Document IDs actually used in citations: {idx}")
+
+            # Seleziona solo i documenti citati o tutti se nessuno
             recall_docs = [d for d in ref_docs if d["doc_id"] in idx] if idx else ref_docs
             logging.debug(f"Documents included in the final reference list: {len(recall_docs)}")
             kbinfos["doc_aggs"] = recall_docs
 
+        # Pulisce vettori dai chunk per alleggerire il payload
         refs = deepcopy(kbinfos)
         for c in refs["chunks"]:
             if c.get("vector"):
                 del c["vector"]
 
+        # Messaggio d'errore api key
         if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
             answer += " Please set LLM API-Key in 'User Setting -> Model Providers -> API-Key'"
 
