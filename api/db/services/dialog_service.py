@@ -600,12 +600,49 @@ def ask(question, kb_ids, tenant_id):
 
     def decorate_answer(answer):
         nonlocal knowledges, kbinfos, prompt
-        answer, idx = retriever.insert_citations(answer, [ck["content_ltks"] for ck in kbinfos["chunks"]], [ck["vector"] for ck in kbinfos["chunks"]], embd_mdl, tkweight=0.7, vtweight=0.3)
-        idx = set([kbinfos["chunks"][int(i)]["doc_id"] for i in idx])
-        recall_docs = [d for d in kbinfos["doc_aggs"] if d["doc_id"] in idx]
-        if not recall_docs:
-            recall_docs = kbinfos["doc_aggs"]
+        ans = answer.split("</think>")
+        think = ""
+        if len(ans) == 2:
+            think = ans[0] + "</think>"
+            answer = ans[1]
+
+        # Crea mappa doc_id -> numero progressivo univoco
+        doc_id_to_ref = {}
+        ref_docs = []
+        ref_counter = 1
+
+        for chunk in kbinfos.get("chunks", []):
+            doc_id = chunk.get("doc_id")
+            if doc_id and doc_id not in doc_id_to_ref:
+                doc_id_to_ref[doc_id] = ref_counter
+                ref_docs.append({
+                    "doc_id": doc_id,
+                    "doc_name": chunk.get("doc_name") or chunk.get("docnm_kwd", "") or chunk.get("document_name", "")
+                })
+                ref_counter += 1
+
+        # Inserisce citazioni se non già presenti, altrimenti le usa
+        if not re.search(r"##[0-9]+\$\$", answer):
+            answer, idx = retriever.insert_citations(
+                answer,
+                [ck["content_ltks"] for ck in kbinfos["chunks"]],
+                [ck["vector"] for ck in kbinfos["chunks"]],
+                embd_mdl,
+                tkweight=1 - dialog.vector_similarity_weight,
+                vtweight=dialog.vector_similarity_weight,
+            )
+            # mappa indici a doc_id
+            idx = set([kbinfos["chunks"][int(i)]["doc_id"] for i in idx])
+        else:
+            idx = set()
+            for match in re.finditer(r"##([0-9]+)\$\$", answer):
+                i = int(match.group(1))
+                if i < len(kbinfos["chunks"]):
+                    idx.add(kbinfos["chunks"][i]["doc_id"])
+
+        recall_docs = [d for d in ref_docs if d["doc_id"] in idx] if idx else ref_docs
         kbinfos["doc_aggs"] = recall_docs
+
         refs = deepcopy(kbinfos)
         for c in refs["chunks"]:
             if c.get("vector"):
@@ -613,8 +650,9 @@ def ask(question, kb_ids, tenant_id):
 
         if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
             answer += " Please set LLM API-Key in 'User Setting -> Model Providers -> API-Key'"
+
         refs["chunks"] = chunks_format(refs)
-        return {"answer": answer, "reference": refs}
+        return {"answer": think + answer, "reference": refs}
 
     answer = ""
     for ans in chat_mdl.chat_streamly(prompt, msg, {"temperature": 0.1}):
