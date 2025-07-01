@@ -599,18 +599,22 @@ def ask(question, kb_ids, tenant_id):
     msg = [{"role": "user", "content": question}]
 
     def decorate_answer(answer):
+        import logging
         nonlocal knowledges, kbinfos, prompt
-        ans = answer.split("</think>")
-        think = ""
-        if len(ans) == 2:
-            think = ans[0] + "</think>"
-            answer = ans[1]
 
-        # Crea mappa doc_id -> numero progressivo univoco
+        logging.debug("===== BEGIN decorate_answer =====")
+        logging.debug(f"Raw answer received:\n{answer[:500]}")  # stampa solo i primi 500 caratteri
+
+        ans_parts = answer.split("</think>")
+        think = ""
+        if len(ans_parts) == 2:
+            think = ans_parts[0] + "</think>"
+            answer = ans_parts[1]
+
+        # Costruzione mappa progressiva doc_id -> numero univoco
         doc_id_to_ref = {}
         ref_docs = []
         ref_counter = 1
-
         for chunk in kbinfos.get("chunks", []):
             doc_id = chunk.get("doc_id")
             if doc_id and doc_id not in doc_id_to_ref:
@@ -620,28 +624,32 @@ def ask(question, kb_ids, tenant_id):
                     "doc_name": chunk.get("doc_name") or chunk.get("docnm_kwd", "") or chunk.get("document_name", "")
                 })
                 ref_counter += 1
+        logging.debug(f"DocID to citation number map: {doc_id_to_ref}")
+        logging.debug(f"Total unique documents: {len(ref_docs)}")
 
-        # Inserisce citazioni se non già presenti, altrimenti le usa
-        if not re.search(r"##[0-9]+\$\$", answer):
-            answer, idx = retriever.insert_citations(
-                answer,
-                [ck["content_ltks"] for ck in kbinfos["chunks"]],
-                [ck["vector"] for ck in kbinfos["chunks"]],
-                embd_mdl,
-                tkweight=1 - dialog.vector_similarity_weight,
-                vtweight=dialog.vector_similarity_weight,
-            )
-            # mappa indici a doc_id
-            idx = set([kbinfos["chunks"][int(i)]["doc_id"] for i in idx])
-        else:
-            idx = set()
-            for match in re.finditer(r"##([0-9]+)\$\$", answer):
-                i = int(match.group(1))
-                if i < len(kbinfos["chunks"]):
-                    idx.add(kbinfos["chunks"][i]["doc_id"])
+        # Se non ci sono citazioni, inseriscile
+        if knowledges and (prompt_config.get("quote", True) and kwargs.get("quote", True)):
+            if not re.search(r"##[0-9]+\$\$", answer):
+                answer, idx = retriever.insert_citations(
+                    answer,
+                    [ck["content_ltks"] for ck in kbinfos["chunks"]],
+                    [ck["vector"] for ck in kbinfos["chunks"]],
+                    embd_mdl,
+                    tkweight=1 - dialog.vector_similarity_weight,
+                    vtweight=dialog.vector_similarity_weight,
+                )
+                idx = set([kbinfos["chunks"][int(i)]["doc_id"] for i in idx])
+            else:
+                idx = set()
+                for match in re.finditer(r"##([0-9]+)\$\$", answer):
+                    i = int(match.group(1))
+                    if i < len(kbinfos["chunks"]):
+                        idx.add(kbinfos["chunks"][i]["doc_id"])
 
-        recall_docs = [d for d in ref_docs if d["doc_id"] in idx] if idx else ref_docs
-        kbinfos["doc_aggs"] = recall_docs
+            logging.debug(f"Document IDs actually used in citations: {idx}")
+            recall_docs = [d for d in ref_docs if d["doc_id"] in idx] if idx else ref_docs
+            logging.debug(f"Documents included in the final reference list: {len(recall_docs)}")
+            kbinfos["doc_aggs"] = recall_docs
 
         refs = deepcopy(kbinfos)
         for c in refs["chunks"]:
@@ -652,6 +660,9 @@ def ask(question, kb_ids, tenant_id):
             answer += " Please set LLM API-Key in 'User Setting -> Model Providers -> API-Key'"
 
         refs["chunks"] = chunks_format(refs)
+        logging.debug(f"Final decorated answer (truncated):\n{(think + answer)[:500]}")
+        logging.debug("===== END decorate_answer =====")
+
         return {"answer": think + answer, "reference": refs}
 
     answer = ""
