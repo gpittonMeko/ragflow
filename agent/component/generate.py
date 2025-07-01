@@ -74,28 +74,29 @@ class Generate(ComponentBase):
         cpnts = set([i["key"] for i in inputs[1:] if i["key"].lower().find("answer") < 0 and i["key"].lower().find("begin") < 0])
         return list(cpnts)
 
-    def set_cite(self, retrieval_res, answer):
-        if "empty_response" in retrieval_res.columns:
-            retrieval_res["empty_response"].fillna("", inplace=True)
-        chunks = json.loads(retrieval_res["chunks"][0])
-        answer, idx = settings.retrievaler.insert_citations(answer,
-                                                            [ck["content_ltks"] for ck in chunks],
-                                                            [ck["vector"] for ck in chunks],
-                                                            LLMBundle(self._canvas.get_tenant_id(), LLMType.EMBEDDING,
-                                                                      self._canvas.get_embedding_model()), tkweight=0.7,
-                                                            vtweight=0.3)
+    def set_cite(self, chunks, answer):
+        answer, idx = settings.retrievaler.insert_citations(
+            answer,
+            [ck["content_ltks"] for ck in chunks],
+            [ck["vector"] for ck in chunks],
+            LLMBundle(self._canvas.get_tenant_id(), LLMType.EMBEDDING, self._canvas.get_embedding_model()),
+            tkweight=0.7,
+            vtweight=0.3
+        )
         doc_ids = set([])
         recall_docs = []
         for i in idx:
+            # i è l'indice del chunk nella lista unica
             did = chunks[int(i)]["doc_id"]
+            doc_name = chunks[int(i)].get("docnm_kwd") or chunks[int(i)].get("doc_name") or ""
             if did in doc_ids:
                 continue
             doc_ids.add(did)
-            recall_docs.append({"doc_id": did, "doc_name": chunks[int(i)]["docnm_kwd"]})
+            recall_docs.append({"doc_id": did, "doc_name": doc_name})
 
         for c in chunks:
-            del c["vector"]
-            del c["content_ltks"]
+            c.pop("vector", None)
+            c.pop("content_ltks", None)
 
         reference = {
             "chunks": chunks,
@@ -106,7 +107,6 @@ class Generate(ComponentBase):
             answer += " Please set LLM API-Key in 'User Setting -> Model providers -> API-Key'"
         res = {"content": answer, "reference": reference}
         res = structure_answer(None, res, "", "")
-
         return res
 
     def get_input_elements(self):
@@ -136,7 +136,10 @@ class Generate(ComponentBase):
         prompt = self._param.prompt
 
         retrieval_res = []
+        all_chunks = []
+        all_doc_aggs = []
         self._param.inputs = []
+
         for para in self.get_input_elements()[1:]:
             if para["key"].lower().find("begin@") == 0:
                 cpn_id, key = para["key"].split("@")
@@ -166,8 +169,26 @@ class Generate(ComponentBase):
             else:
                 if cpn.component_name.lower() == "retrieval":
                     retrieval_res.append(out)
+                    if "chunks" in out.columns:
+                        for chunk_json in out["chunks"]:
+                            try:
+                                cks = json.loads(chunk_json)
+                                all_chunks.extend(cks)
+                            except Exception as e:
+                                print(f"Errore parsing chunk JSON: {e}")
+                    if "doc_aggs" in out.columns:
+                        for doc_agg_json in out["doc_aggs"]:
+                            try:
+                                dgs = json.loads(doc_agg_json)
+                                all_doc_aggs.extend(dgs)
+                            except Exception as e:
+                                print(f"Errore nel parsing dei doc_aggs JSON: {e}")
                 kwargs[para["key"]] = "  - " + "\n - ".join([o if isinstance(o, str) else str(o) for o in out["content"]])
             self._param.inputs.append({"component_id": para["key"], "content": kwargs[para["key"]]})
+
+        # RIASSEGNA UNIFIED ID
+        for new_id, chunk in enumerate(all_chunks):
+            chunk["unified_id"] = new_id
 
         if retrieval_res:
             retrieval_res = pd.concat(retrieval_res, ignore_index=True)
@@ -185,8 +206,8 @@ class Generate(ComponentBase):
 
         downstreams = self._canvas.get_component(self._id)["downstream"]
         if kwargs.get("stream") and len(downstreams) == 1 and self._canvas.get_component(downstreams[0])[
-            "obj"].component_name.lower() == "answer":
-            return partial(self.stream_output, chat_mdl, prompt, retrieval_res)
+                "obj"].component_name.lower() == "answer":
+            return partial(self.stream_output, chat_mdl, prompt, all_chunks)  # <-- all_chunks, non retrieval_res # --> MODIFICATO: passi lista, non DataFrame!
 
         if "empty_response" in retrieval_res.columns and not "".join(retrieval_res["content"]):
             empty_res = "\n- ".join([str(t) for t in retrieval_res["empty_response"] if str(t)])
@@ -202,9 +223,9 @@ class Generate(ComponentBase):
         ans = chat_mdl.chat(msg[0]["content"], msg[1:], self._param.gen_conf())
         ans = re.sub(r"<think>.*</think>", "", ans, flags=re.DOTALL)
 
-        if self._param.cite and "chunks" in retrieval_res.columns:
-            res = self.set_cite(retrieval_res, ans)
-            return pd.DataFrame([res])
+        # PASSA LA LISTA UNIFICATA all_chunks invece che il DataFrame!
+        res = self.set_cite(all_chunks, ans)
+        return pd.DataFrame([res])
 
         return Generate.be_output(ans)
 
@@ -231,8 +252,9 @@ class Generate(ComponentBase):
             answer = ans
             yield res
 
-        if self._param.cite and "chunks" in retrieval_res.columns:
-            res = self.set_cite(retrieval_res, answer)
+         # Alla fine:
+        if self._param.cite:
+            res = self.set_cite(all_chunks, answer)
             yield res
 
         self.set_output(Generate.be_output(res))
