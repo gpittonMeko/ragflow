@@ -75,10 +75,13 @@ class Generate(ComponentBase):
         return list(cpnts)
 
     def set_cite(self, chunks, answer):
+        content_ltks_list = [ck.get("content_ltks", "") for ck in chunks]
+        vector_list = [ck.get("vector", None) for ck in chunks]
+
         answer, idx = settings.retrievaler.insert_citations(
             answer,
-            [ck["content_ltks"] for ck in chunks],
-            [ck["vector"] for ck in chunks],
+            content_ltks_list,
+            vector_list,
             LLMBundle(self._canvas.get_tenant_id(), LLMType.EMBEDDING, self._canvas.get_embedding_model()),
             tkweight=0.7,
             vtweight=0.3
