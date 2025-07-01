@@ -603,7 +603,7 @@ def ask(question, kb_ids, tenant_id):
         nonlocal knowledges, kbinfos, prompt
 
         logging.debug("===== BEGIN decorate_answer =====")
-        logging.debug(f"Raw answer received:\n{answer[:500]}")  # stampa solo i primi 500 caratteri
+        logging.debug(f"Raw answer received:\n{answer[:500]}")
 
         ans_parts = answer.split("</think>")
         think = ""
@@ -611,7 +611,7 @@ def ask(question, kb_ids, tenant_id):
             think = ans_parts[0] + "</think>"
             answer = ans_parts[1]
 
-        # Costruzione mappa progressiva doc_id -> numero univoco
+        # Costruzione mappa univoca doc_id -> numero progressivo
         doc_id_to_ref = {}
         ref_docs = []
         ref_counter = 1
@@ -627,7 +627,6 @@ def ask(question, kb_ids, tenant_id):
         logging.debug(f"DocID to citation number map: {doc_id_to_ref}")
         logging.debug(f"Total unique documents: {len(ref_docs)}")
 
-        # Se non ci sono citazioni, inseriscile
         if knowledges and (prompt_config.get("quote", True) and kwargs.get("quote", True)):
             if not re.search(r"##[0-9]+\$\$", answer):
                 answer, idx = retriever.insert_citations(
