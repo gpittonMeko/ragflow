@@ -139,7 +139,7 @@ def chat(dialog, messages, stream=True, **kwargs):
     else:
         llm_model_config = TenantLLMService.get_model_config(dialog.tenant_id, LLMType.CHAT, dialog.llm_id)
 
-    max_tokens = llm_model_config.get("max_tokens", 10000)
+    max_tokens = llm_model_config.get("max_tokens", 8192)
 
     check_llm_ts = timer()
 
