@@ -201,31 +201,25 @@ class Generate(ComponentBase):
                 kwargs[para["key"]] = "  - " + "\n - ".join([o if isinstance(o, str) else str(o) for o in out["content"]])
             self._param.inputs.append({"component_id": para["key"], "content": kwargs[para["key"]]})
 
-        # RIASSEGNA UNIFIED ID
+         # Riassegna unified_id
         for new_id, chunk in enumerate(all_chunks):
             chunk["unified_id"] = new_id
 
-        if retrieval_res:
-            retrieval_res = pd.concat(retrieval_res, ignore_index=True)
-        else:
-            retrieval_res = pd.DataFrame([])
-
-        for n, v in kwargs.items():
-            prompt = re.sub(r"\{%s\}" % re.escape(n), str(v).replace("\\", " "), prompt)
-
-        if not self._param.inputs and prompt.find("{input}") >= 0:
-            retrieval_res = self.get_input()
-            input = ("  - " + "\n  - ".join(
-                [c for c in retrieval_res["content"] if isinstance(c, str)])) if "content" in retrieval_res else ""
-            prompt = re.sub(r"\{input\}", re.escape(input), prompt)
-
         downstreams = self._canvas.get_component(self._id)["downstream"]
+
         if kwargs.get("stream") and len(downstreams) == 1 and self._canvas.get_component(downstreams[0])[
                 "obj"].component_name.lower() == "answer":
             return partial(self.stream_output, chat_mdl, prompt, all_chunks)
 
-        # Solo uno dei due branch deve attivarsi!
         if self._param.cite:
+            msg = self._canvas.get_history(self._param.message_history_window_size)
+            if len(msg) < 1:
+                msg.append({"role": "user", "content": "Output: "})
+            _, msg = message_fit_in([{"role": "system", "content": prompt}, *msg], int(chat_mdl.max_length * 0.97))
+            if len(msg) < 2:
+                msg.append({"role": "user", "content": "Output: "})
+            ans = chat_mdl.chat(msg[0]["content"], msg[1:], self._param.gen_conf())
+            ans = re.sub(r"<think>.*</think>", "", ans, flags=re.DOTALL)
             res = self.set_cite(all_chunks, ans)
             return pd.DataFrame([res])
 
@@ -233,55 +227,6 @@ class Generate(ComponentBase):
             empty_res = "\n- ".join([str(t) for t in retrieval_res["empty_response"] if str(t)])
             res = {"content": empty_res if empty_res else "Nothing found in knowledgebase!", "reference": []}
             return pd.DataFrame([res])
-
-        msg = self._canvas.get_history(self._param.message_history_window_size)
-        if len(msg) < 1:
-            msg.append({"role": "user", "content": "Output: "})
-        _, msg = message_fit_in([{"role": "system", "content": prompt}, *msg], int(chat_mdl.max_length * 0.97))
-        if len(msg) < 2:
-            msg.append({"role": "user", "content": "Output: "})
-        ans = chat_mdl.chat(msg[0]["content"], msg[1:], self._param.gen_conf())
-        ans = re.sub(r"<think>.*</think>", "", ans, flags=re.DOTALL)
-
-        # PASSA LA LISTA UNIFICATA all_chunks invece che il DataFrame!
-        res = self.set_cite(all_chunks, ans)
-        return pd.DataFrame([res])
-
-        return Generate.be_output(ans)
-
-    def stream_output(self, chat_mdl, prompt, all_chunks):      # <-- GIUSTO
-        answer = ""
-        for ans in chat_mdl.chat_streamly(prompt, [], self._param.gen_conf()):
-            res = {"content": ans, "reference": []}
-            answer = ans
-            yield res
-
-        if self._param.cite:
-            res = self.set_cite(all_chunks, answer)
-            yield res
-
-        self.set_output(Generate.be_output(res))
-
-        msg = self._canvas.get_history(self._param.message_history_window_size)
-        if msg and msg[0]['role'] == 'assistant':
-            msg.pop(0)
-        if len(msg) < 1:
-            msg.append({"role": "user", "content": "Output: "})
-        _, msg = message_fit_in([{"role": "system", "content": prompt}, *msg], int(chat_mdl.max_length * 0.97))
-        if len(msg) < 2:
-            msg.append({"role": "user", "content": "Output: "})
-        answer = ""
-        for ans in chat_mdl.chat_streamly(msg[0]["content"], msg[1:], self._param.gen_conf()):
-            res = {"content": ans, "reference": []}
-            answer = ans
-            yield res
-
-         # Alla fine:
-        if self._param.cite:
-            res = self.set_cite(all_chunks, answer)
-            yield res
-
-        self.set_output(Generate.be_output(res))
 
     def debug(self, **kwargs):
         chat_mdl = LLMBundle(self._canvas.get_tenant_id(), LLMType.CHAT, self._param.llm_id)
