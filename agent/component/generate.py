@@ -207,7 +207,7 @@ class Generate(ComponentBase):
         downstreams = self._canvas.get_component(self._id)["downstream"]
         if kwargs.get("stream") and len(downstreams) == 1 and self._canvas.get_component(downstreams[0])[
                 "obj"].component_name.lower() == "answer":
-            return partial(self.stream_output, chat_mdl, prompt, all_chunks)  # <-- all_chunks, non retrieval_res # --> MODIFICATO: passi lista, non DataFrame!
+            return partial(self.stream_output, chat_mdl, prompt, all_chunks)
 
         if "empty_response" in retrieval_res.columns and not "".join(retrieval_res["content"]):
             empty_res = "\n- ".join([str(t) for t in retrieval_res["empty_response"] if str(t)])
@@ -229,14 +229,18 @@ class Generate(ComponentBase):
 
         return Generate.be_output(ans)
 
-    def stream_output(self, chat_mdl, prompt, retrieval_res):
-        res = None
-        if "empty_response" in retrieval_res.columns and not "".join(retrieval_res["content"]):
-            empty_res = "\n- ".join([str(t) for t in retrieval_res["empty_response"] if str(t)])
-            res = {"content": empty_res if empty_res else "Nothing found in knowledgebase!", "reference": []}
+    def stream_output(self, chat_mdl, prompt, all_chunks):      # <-- GIUSTO
+        answer = ""
+        for ans in chat_mdl.chat_streamly(prompt, [], self._param.gen_conf()):
+            res = {"content": ans, "reference": []}
+            answer = ans
             yield res
-            self.set_output(res)
-            return
+
+        if self._param.cite:
+            res = self.set_cite(all_chunks, answer)
+            yield res
+
+        self.set_output(Generate.be_output(res))
 
         msg = self._canvas.get_history(self._param.message_history_window_size)
         if msg and msg[0]['role'] == 'assistant':
