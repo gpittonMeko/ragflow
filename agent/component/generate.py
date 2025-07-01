@@ -75,6 +75,19 @@ class Generate(ComponentBase):
         return list(cpnts)
 
     def set_cite(self, chunks, answer):
+        # DEBUG: Accumula tutti i chunk privi di content_ltks
+        missing_content_ltks = []
+        for idx, ck in enumerate(chunks):
+            if "content_ltks" not in ck:
+                missing_content_ltks.append({"index": idx, "keys": list(ck.keys()), "data": ck})
+
+        # SE CE NE SONO, forzano errore e mostrano in chiaro in output (così li vedi nel browser/UI!) 
+        if missing_content_ltks:
+            return {
+                "content": f"ERROR DEBUG: chunk(s) missing 'content_ltks': {json.dumps(missing_content_ltks, indent=2, ensure_ascii=False)}",
+                "reference": {}
+            }
+
         content_ltks_list = [ck.get("content_ltks", "") for ck in chunks]
         vector_list = [ck.get("vector", None) for ck in chunks]
 
@@ -89,7 +102,6 @@ class Generate(ComponentBase):
         doc_ids = set([])
         recall_docs = []
         for i in idx:
-            # i è l'indice del chunk nella lista unica
             did = chunks[int(i)]["doc_id"]
             doc_name = chunks[int(i)].get("docnm_kwd") or chunks[int(i)].get("doc_name") or ""
             if did in doc_ids:
@@ -211,6 +223,11 @@ class Generate(ComponentBase):
         if kwargs.get("stream") and len(downstreams) == 1 and self._canvas.get_component(downstreams[0])[
                 "obj"].component_name.lower() == "answer":
             return partial(self.stream_output, chat_mdl, prompt, all_chunks)
+
+        # Solo uno dei due branch deve attivarsi!
+        if self._param.cite:
+            res = self.set_cite(all_chunks, ans)
+            return pd.DataFrame([res])
 
         if "empty_response" in retrieval_res.columns and not "".join(retrieval_res["content"]):
             empty_res = "\n- ".join([str(t) for t in retrieval_res["empty_response"] if str(t)])
