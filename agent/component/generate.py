@@ -227,6 +227,19 @@ class Generate(ComponentBase):
             empty_res = "\n- ".join([str(t) for t in retrieval_res["empty_response"] if str(t)])
             res = {"content": empty_res if empty_res else "Nothing found in knowledgebase!", "reference": []}
             return pd.DataFrame([res])
+        
+    def stream_output(self, chat_mdl, prompt, all_chunks):
+        answer = ""
+        for ans in chat_mdl.chat_streamly(prompt, [], self._param.gen_conf()):
+            res = {"content": ans, "reference": []}
+            answer = ans
+            yield res
+
+        if self._param.cite:
+            res = self.set_cite(all_chunks, answer)
+            yield res
+
+        self.set_output(Generate.be_output(res))
 
     def debug(self, **kwargs):
         chat_mdl = LLMBundle(self._canvas.get_tenant_id(), LLMType.CHAT, self._param.llm_id)
