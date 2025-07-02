@@ -120,6 +120,32 @@ class Generate(ComponentBase):
                 all_docs.append({"doc_id": did, "doc_name": doc_name})
                 added_doc_ids.add(did)
 
+        doc_aggs = recall_docs + all_docs  # TUTTI I DOCUMENTI PDF ELENCATI, in ordine finale
+
+        # ---- PATCH MARKER ----
+        # Crea la mappa doc_id -> marker numerico progressivo
+        docid_to_marker = {rec["doc_id"]: f"##{ix+1}$$" for ix, rec in enumerate(doc_aggs)}
+
+        def remap_markers(answer, chunks, docid_to_marker):
+            for idx, ck in enumerate(chunks):
+                doc_id = ck.get('doc_id')
+                new_marker = docid_to_marker.get(doc_id)
+                if new_marker:
+                    answer = answer.replace(f"##{idx}$$", new_marker)
+            return answer
+
+        # Applica questa funzione sosituendo i vecchi marker
+        answer = remap_markers(answer, chunks, docid_to_marker)
+        # ---- FINE PATCH MARKER ----
+
+        reference = {
+            "chunks": chunks,
+            "doc_aggs": doc_aggs
+        }
+        res = {"content": answer, "reference": reference}
+        res = structure_answer(None, res, "", "")
+        return res
+
         # Inserisci sempre tutti i pdf presenti (citati + non citati, unico elenco)
         reference = {
             "chunks": chunks,
