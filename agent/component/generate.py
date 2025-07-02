@@ -99,6 +99,7 @@ class Generate(ComponentBase):
             tkweight=0.7,
             vtweight=0.3
         )
+        # 1. Referenze ai documenti EFFETTIVAMENTE citati nei marker (come ora)
         doc_ids = set([])
         recall_docs = []
         for i in idx:
@@ -109,15 +110,21 @@ class Generate(ComponentBase):
             doc_ids.add(did)
             recall_docs.append({"doc_id": did, "doc_name": doc_name})
 
-        for c in chunks:
-            c.pop("vector", None)
-            c.pop("content_ltks", None)
+        # Ora metti SEMPRE TUTTI i PDF dei chunk, non solo quelli citati
+        all_docs = []
+        added_doc_ids = set([rec["doc_id"] for rec in recall_docs])
+        for ck in chunks:
+            did = ck.get("doc_id")
+            doc_name = ck.get("docnm_kwd") or ck.get("doc_name") or ""
+            if did and did not in added_doc_ids:
+                all_docs.append({"doc_id": did, "doc_name": doc_name})
+                added_doc_ids.add(did)
 
+        # Inserisci sempre tutti i pdf presenti (citati + non citati, unico elenco)
         reference = {
             "chunks": chunks,
-            "doc_aggs": recall_docs
+            "doc_aggs": recall_docs + all_docs
         }
-
         if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
             answer += " Please set LLM API-Key in 'User Setting -> Model providers -> API-Key'"
         res = {"content": answer, "reference": reference}
