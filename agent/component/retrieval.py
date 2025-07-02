@@ -83,6 +83,8 @@ class Retrieval(ComponentBase, ABC):
         else:
             kbinfos = {"chunks": [], "doc_aggs": []}
 
+    
+
         if self._param.use_kg and kbs:
             ck = settings.kg_retrievaler.retrieval(query,
                                                    [kbs[0].tenant_id],
@@ -97,6 +99,23 @@ class Retrieval(ComponentBase, ABC):
             tav_res = tav.retrieve_chunks(query)
             kbinfos["chunks"].extend(tav_res["chunks"])
             kbinfos["doc_aggs"].extend(tav_res["doc_aggs"])
+
+        # PATCH doc_id/docnm_kwd su tutti i chunk
+        for ck in kbinfos.get("chunks", []):
+            if "doc_id" not in ck or not ck["doc_id"]:
+                # fallback su alternative chiavi o nome file (personalizza se hai nomi diversi)
+                ck["doc_id"] = (
+                    ck.get("document_id")
+                    or ck.get("id")
+                    or ck.get("doc_name")
+                    or ck.get("docnm_kwd")
+                    or ck.get("filename")
+                    or ck.get("file_name")
+                )
+            if not ck.get("docnm_kwd") and ck.get("doc_name"):
+                ck["docnm_kwd"] = ck["doc_name"]
+            if "content_ltks" not in ck:
+                ck["content_ltks"] = ""
 
         if not kbinfos["chunks"]:
             df = Retrieval.be_output("")
