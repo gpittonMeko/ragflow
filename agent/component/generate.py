@@ -287,8 +287,9 @@ class Generate(ComponentBase):
 
         # 4. SOSTITUZIONE PLACEHOLDER PROMPT CON knowledge ordinati
         for n, v in kwargs.items():
-            pattern = r"\{%s\}" % re.escape(n)
-            prompt = re.sub(pattern, str(v).replace("\\", " "), prompt)
+            # consente uno o più spazi prima/dopo la graffa e dopo
+            pattern = r"\s*\{%s\}\s*" % re.escape(n)
+            prompt = re.sub(pattern, "\n" + str(v).replace("\\", " ") + "\n", prompt)
 
         # 5. Riassegna unified_id in modo progressivo SOLO a quelli usati effettivamente:
         for new_id, chunk in enumerate(ordered_chunks):
