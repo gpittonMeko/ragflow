@@ -237,33 +237,31 @@ class Generate(ComponentBase):
 
         from collections import defaultdict
 
-        # Aggrega i testi per ogni retrieval_key (assumendo 'component_id' o 'cid' sia la chiave che identifica la source)
         agg_texts = defaultdict(list)
         for ck in all_chunks:
-            # Usa doc_id o un campo che identifica la sorgente retrieval, se non esiste aggiungi un campo unico nel retrieval originale
             key = ck.get('component_id') or ck.get('cid') or ck.get('doc_id')
             if not key:
                 key = 'unknown'
             text = ck.get('content_ltks') or ck.get('content') or ""
             agg_texts[key].append(text)
 
-        # Concatena i testi per ogni key
         for k in agg_texts:
             agg_texts[k] = "\n".join(agg_texts[k])
 
-        # Sostituisci nel prompt i placeholder {Retrieval:Key} con i testi aggregati
         for key, text in agg_texts.items():
-            placeholder = f"{{Retrieval:{key}}}"
-            if placeholder in prompt:
-                prompt = prompt.replace(placeholder, text)            
+            full_key = f"Retrieval:{key}"
+            kwargs[full_key] = text
 
-
-
-                
-
-         # Riassegna unified_id
         for new_id, chunk in enumerate(all_chunks):
             chunk["unified_id"] = new_id
+
+        # 5. concatena retrieval_res dfs prima di set_cite
+        if retrieval_res:
+            retrieval_res = pd.concat(retrieval_res, ignore_index=True)
+        else:
+            retrieval_res = pd.DataFrame([])
+
+       
 
         downstreams = self._canvas.get_component(self._id)["downstream"]
 
@@ -309,7 +307,8 @@ class Generate(ComponentBase):
             kwargs[para["key"]] = para.get("value", "")
 
         for n, v in kwargs.items():
-            prompt = re.sub(r"\{%s\}" % re.escape(n), str(v).replace("\\", " "), prompt)
+            pattern = r"\{%s\}" % re.escape(n)
+            prompt = re.sub(pattern, str(v).replace("\\", " "), prompt)
 
         u = kwargs.get("user")
         ans = chat_mdl.chat(prompt, [{"role": "user", "content": u if u else "Output: "}], self._param.gen_conf())
