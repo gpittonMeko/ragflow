@@ -277,3 +277,17 @@ class Generate(ComponentBase):
 
         # Fallback se non cita
         return Generate.be_output(ans)
+    
+def stream_output(self, chat_mdl, prompt, ordered_chunks):
+    answer = ""
+    for ans in chat_mdl.chat_streamly(prompt, [], self._param.gen_conf()):
+        res = {"content": ans, "reference": []}
+        answer = ans
+        yield res
+
+    # Alla fine del flusso stream, calcola l'output con le citazioni
+    if self._param.cite:
+        res = self.set_cite(ordered_chunks, answer)
+        yield res
+
+    self.set_output(Generate.be_output(res))
