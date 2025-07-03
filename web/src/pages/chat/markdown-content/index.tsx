@@ -98,18 +98,15 @@ const MarkdownContent = ({
 
   const getPopoverContent = useCallback(
     (chunkIndex: number) => {
-      const chunks = reference?.chunks ?? [];
-      const chunkItem = chunks[chunkIndex];
-      const document = reference?.doc_aggs?.find(
-        (x) => x?.doc_id === chunkItem?.document_id,
-      );
-      const documentId = document?.doc_id;
-      const documentUrl = document?.url;
+      const doc = reference?.doc_aggs?.[chunkIndex];
+      if (!doc) return null;
+      const documentId = doc.doc_id;
+      const documentUrl = doc.url;
       const fileThumbnail = documentId ? fileThumbnails[documentId] : '';
-      const fileExtension = documentId ? getExtension(document?.doc_name) : '';
-      const imageId = chunkItem?.image_id;
+      const fileExtension = documentId ? getExtension(doc.doc_name) : '';
+      const imageId = doc.image_id;
       return (
-        <div key={chunkItem?.id} className="flex gap-2">
+        <div key={doc.doc_id} className="flex gap-2">
           {imageId && (
             <Popover
               placement="left"
@@ -129,7 +126,7 @@ const MarkdownContent = ({
           <div className={'space-y-2 max-w-[40vw]'}>
             <div
               dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(chunkItem?.content ?? ''),
+                __html: DOMPurify.sanitize(doc.content ?? ''),
               }}
               className={classNames(styles.chunkContentText)}
             ></div>
@@ -152,47 +149,32 @@ const MarkdownContent = ({
                   className={classNames(styles.documentLink, 'text-wrap')}
                   onClick={handleDocumentButtonClick(
                     documentId,
-                    chunkItem,
+                    doc,
                     fileExtension === 'pdf',
                     documentUrl,
                   )}
                 >
-                  {document?.doc_name}
+                  {doc.doc_name}
                 </Button>
               </Flex>
             )}
           </div>
         </div>
       );
-    },
-    [reference, fileThumbnails, handleDocumentButtonClick],
-  );
 
   const renderReference = useCallback(
     (text: string) => {
       let replacedText = reactStringReplace(text, reg, (match, i) => {
-        // Estrae il numero dal marker, es: ~~1== => 1
-        const n = Number(match.replace(/\D/g, ''));
-        const doc = reference?.doc_aggs?.[n - 1]; // <-- MAPPING GIUSTO: 1→0, 2→1, ecc.
-        return doc ? (
-          <Popover
-            content={
-              <span>
-                <InfoCircleOutlined /> <b>{doc.doc_name}</b>
-              </span>
-            }
-            key={i}
-          >
-            <span className={styles.referenceIcon}>{match}</span>
+        const chunkIndex = getChunkIndex(match);  // <--- usa come PRIMA
+        return (
+          <Popover content={getPopoverContent(chunkIndex)} key={i}>
+            <InfoCircleOutlined className={styles.referenceIcon} />
           </Popover>
-        ) : (
-          <span className={styles.referenceIcon}>{match}</span>
         );
       });
-
       return replacedText;
     },
-    [reference]
+    [getPopoverContent],
   );
 
   return (
