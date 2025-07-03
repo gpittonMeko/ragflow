@@ -326,7 +326,7 @@ class Generate(ComponentBase):
         # AGGIUNGI SUBITO DOPO: salva il prompt finale post-sostituzione
         with open(DEBUG_PATH, "a", encoding="utf-8") as f:
             f.write("\n==== PROMPT POST REPLACE ====\n")
-            f.write(prompt[:7000] + ("...[TRUNCATED]..." if len(prompt) > 7000 else ""))
+            f.write(prompt)  # SCRIVE TUTTO IL PROMPT, intero!
 
         # 5. Riassegna unified_id in modo progressivo SOLO a quelli usati effettivamente:
         for new_id, chunk in enumerate(ordered_chunks):
