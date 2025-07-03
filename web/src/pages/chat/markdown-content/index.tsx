@@ -161,6 +161,7 @@ const MarkdownContent = ({
           </div>
         </div>
       );
+    })
 
   const renderReference = useCallback(
     (text: string) => {
