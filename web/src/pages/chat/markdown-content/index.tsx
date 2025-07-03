@@ -171,21 +171,28 @@ const MarkdownContent = ({
   const renderReference = useCallback(
     (text: string) => {
       let replacedText = reactStringReplace(text, reg, (match, i) => {
-        const chunkIndex = getChunkIndex(match);
-        return (
-          <Popover content={getPopoverContent(chunkIndex)} key={i}>
-            <InfoCircleOutlined className={styles.referenceIcon} />
+        // Estrae il numero dal marker, es: ~~1== => 1
+        const n = Number(match.replace(/\D/g, ''));
+        const doc = reference?.doc_aggs?.[n - 1]; // <-- MAPPING GIUSTO: 1→0, 2→1, ecc.
+        return doc ? (
+          <Popover
+            content={
+              <span>
+                <InfoCircleOutlined /> <b>{doc.doc_name}</b>
+              </span>
+            }
+            key={i}
+          >
+            <span className={styles.referenceIcon}>{match}</span>
           </Popover>
+        ) : (
+          <span className={styles.referenceIcon}>{match}</span>
         );
       });
 
-      // replacedText = reactStringReplace(replacedText, curReg, (match, i) => (
-      //   <span className={styles.cursor} key={i}></span>
-      // ));
-
       return replacedText;
     },
-    [getPopoverContent],
+    [reference]
   );
 
   return (
