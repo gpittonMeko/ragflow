@@ -30,6 +30,7 @@ import styles from './index.less';
 const reg = /(~{2}\d+={2})/g;
 // const curReg = /(~{2}\d+\${2})/g;
 
+/// versione con indici giusti ma manca il preview
 const getChunkIndex = (match: string) => Number(match.slice(2, -2));
 // TODO: The display of the table is inconsistent with the display previously placed in the MessageItem.
 const MarkdownContent = ({
