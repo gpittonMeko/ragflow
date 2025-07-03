@@ -100,10 +100,6 @@ class Generate(ComponentBase):
             vtweight=0.3
         )
 
-
-
-
-
         # 1. Referenze ai documenti EFFETTIVAMENTE citati nei marker (come ora)
         doc_ids = set([])
         recall_docs = []
@@ -143,24 +139,31 @@ class Generate(ComponentBase):
         answer = remap_markers(answer, chunks, docid_to_marker)
         # ---- FINE PATCH MARKER ----
 
+
+        
         reference = {
             "chunks": chunks,
             "doc_aggs": doc_aggs
         }
-        res = {"content": answer, "reference": reference}
-        res = structure_answer(None, res, "", "")
-        return res
 
-        # Inserisci sempre tutti i pdf presenti (citati + non citati, unico elenco)
-        reference = {
-            "chunks": chunks,
-            "doc_aggs": recall_docs + all_docs
-        }
-        if answer.lower().find("invalid key") >= 0 or answer.lower().find("invalid api") >= 0:
-            answer += " Please set LLM API-Key in 'User Setting -> Model providers -> API-Key'"
+        # Trova SOLO i numeri dei marker effettivamente usati nella risposta generata
+        marker_nums_presenti = sorted(set(
+            int(m.replace('##', '').replace('$$', '')) 
+            for m in re.findall(r'##\d+\$\$', answer)
+        ))
+
+        legend_lines = ["**Fonti:**"]
+        for n in marker_nums_presenti:
+            if 0 <= (n - 1) < len(doc_aggs):
+                legend_lines.append(f"- ##{n}$$ {doc_aggs[n-1]['doc_name']}")
+        legend = "\n".join(legend_lines)
+        answer += "\n\n" + legend
+
+        # Ora costruisci la risposta come al solito
         res = {"content": answer, "reference": reference}
         res = structure_answer(None, res, "", "")
         return res
+        
 
     def get_input_elements(self):
         key_set = set([])
