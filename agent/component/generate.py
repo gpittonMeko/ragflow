@@ -259,10 +259,21 @@ class Generate(ComponentBase):
                 ordered_chunks.extend(doc_chunks[key])
 
         docs_section = ""
+        docs_table = "Tabella mapping marker/documento da usare (IMPORTANTE, copiato sotto ogni documento!):\n"
+        for idx, ck in enumerate(ordered_chunks):
+            doc_name = ck.get("doc_name") or ck.get("docnm_kwd") or ck.get("document_name", "")
+            docs_table += f"##{idx+1}$$  ->  {doc_name}\n"
+
+        docs_section = docs_table + "\n"
         for idx, ck in enumerate(ordered_chunks):
             doc_name = ck.get("doc_name") or ck.get("docnm_kwd") or ck.get("document_name", "")
             testo = ck.get('content_ltks','') or ck.get('content','')
-            docs_section += f"\n==== DOCUMENTO ##{idx+1}$$ ({doc_name}) ====\n{testo}\n==== FINE DOCUMENTO ##{idx+1}$$ ====\n"
+            docs_section += (
+                f"\n>>> INIZIO DOCUMENTO MARKER ##{idx+1}$$ ({doc_name}) <<<\n"
+                f"Quando citi questo documento, usa sempre il marker ##{idx+1}$$ e scrivi il nome '{doc_name}' nel testo.\n"
+                f"{testo}\n"
+                f">>> FINE DOCUMENTO ##{idx+1}$$ ({doc_name}) <<<\n"
+    )
 
         # Sostituisci il segnaposto scelto con la knowledge dinamica calcolata nel backend
         prompt = prompt.replace("__DOCS_SECTION__", docs_section)   # se usi __DOCS_SECTION__
