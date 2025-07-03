@@ -249,47 +249,56 @@ class Generate(ComponentBase):
             if key in doc_chunks:
                 ordered_chunks.extend(doc_chunks[key])
 
-        # 3. AGGIORNA kwargs con knowledge aggregata per ciascun tag (opzionale, se vuoi anche una {knowledge_aggregata})
+        # 3. AGGIORNA kwargs con knowledge aggregata per ciascun tag (opzionale)
         for tag in prompt_tags:
             key = f"Retrieval:{tag}"
             chunks_text = "\n".join([ck.get('content_ltks','') or ck.get('content','') for ck in doc_chunks.get(key, [])])
             kwargs[key] = chunks_text
 
-            import os
+        # —> QUI il debug file, UNA SOLA VOLTA <—
+        import os
+        DEBUG_PATH = "/tmp/generate_debug.txt"
+        with open(DEBUG_PATH, "w", encoding="utf-8") as f:
+            f.write("====== KWARGS KEYS ======\n")
+            f.write(str(list(kwargs.keys())) + "\n")
+            f.write("====== KWARGS (DET) ======\n")
+            for k, v in kwargs.items():
+                f.write(f"\n--- {k} ---\n")
+                try:
+                    v_str = str(v)
+                    if len(v_str) > 500:
+                        f.write(v_str[:500] + "\n[TRUNCATED]\n")
+                    else:
+                        f.write(v_str)
+                except Exception as e:
+                    f.write(f"<<v non stringa, type={type(v)}, err={e}>>\n")
+                f.write("\n")
+            f.write("====== PROMPT TAGS (order) ======\n")
+            f.write(str(prompt_tags) + "\n")
+            f.write("====== PROMPT (pre replace) ======\n")
+            f.write(prompt + "\n\n")
+            f.write("====== CHUNKS COUNT PER TAG ======\n")
+            for k in doc_chunks.keys():
+                f.write(f"{k}: {len(doc_chunks[k])} chunks\n")
+            f.write("====== ordered_chunks LEN ======\n")
+            f.write(str(len(ordered_chunks)) + "\n")
 
-            DEBUG_PATH = "/tmp/generate_debug.txt"  # puoi cambiare path se preferisci
-
-            with open(DEBUG_PATH, "w", encoding="utf-8") as f:
-                f.write("====== KWARGS KEYS ======\n")
-                f.write(str(list(kwargs.keys())) + "\n")
-                f.write("====== KWARGS (DET) ======\n")
-                for k, v in kwargs.items():
-                    f.write(f"\n--- {k} ---\n")
-                    try:
-                        v_str = str(v)
-                        if len(v_str) > 500:
-                            f.write(v_str[:500] + "\n[TRUNCATED]\n")
-                        else:
-                            f.write(v_str)
-                    except Exception as e:
-                        f.write(f"<<v non stringa, type={type(v)}, err={e}>>\n")
-                    f.write("\n")
-                f.write("====== PROMPT TAGS (order) ======\n")
-                f.write(str(prompt_tags) + "\n")
-                f.write("====== PROMPT (after agg_text replace) ======\n")
-                f.write(prompt + "\n\n")
-                f.write("====== CHUNKS COUNT PER TAG ======\n")
-                for k in doc_chunks.keys():
-                    f.write(f"{k}: {len(doc_chunks[k])} chunks\n")
-                f.write("====== ordered_chunks LEN ======\n")
-                f.write(str(len(ordered_chunks)) + "\n")
-            
-
-        # 4. SOSTITUZIONE PLACEHOLDER PROMPT CON knowledge ordinati
+        # 4. SOSTITUZIONE PLACEHOLDER!
         for n, v in kwargs.items():
-            # consente uno o più spazi prima/dopo la graffa e dopo
             pattern = r"\s*\{%s\}\s*" % re.escape(n)
+            count_replacements = len(re.findall(pattern, prompt))
+            if count_replacements == 0:
+                with open(DEBUG_PATH, "a", encoding="utf-8") as f:
+                    f.write(f"\n[PLACEHOLDER WARNING] Placeholder {{{n}}} NON TROVATO nel prompt. (Possibili spazi o newline strani?)\n")
+            else:
+                with open(DEBUG_PATH, "a", encoding="utf-8") as f:
+                    f.write(f"\n[SOSTITUZIONE ESEGUITA] Placeholder {{{n}}} trovato {count_replacements} volta/e, knowledge inserita.\n")
             prompt = re.sub(pattern, "\n" + str(v).replace("\\", " ") + "\n", prompt)
+
+        # AGGIUNGI SUBITO DOPO: salva il prompt finale post-sostituzione
+        with open(DEBUG_PATH, "a", encoding="utf-8") as f:
+            f.write("\n==== PROMPT POST REPLACE ====\n")
+            f.write(prompt[:7000] + ("...[TRUNCATED]..." if len(prompt) > 7000 else ""))
 
         # 5. Riassegna unified_id in modo progressivo SOLO a quelli usati effettivamente:
         for new_id, chunk in enumerate(ordered_chunks):
