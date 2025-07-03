@@ -98,7 +98,7 @@ const MarkdownContent = ({
 
   const getPopoverContent = useCallback(
     (chunkIndex: number) => {
-      const doc = reference?.doc_aggs?.[chunkIndex];
+      const doc = reference?.doc_aggs?.[chunkIndex - 1];
       if (!doc) return null;
       const documentId = doc.doc_id;
       const documentUrl = doc.url;
@@ -106,7 +106,7 @@ const MarkdownContent = ({
       const fileExtension = documentId ? getExtension(doc.doc_name) : '';
       const imageId = doc.image_id;
       return (
-        <div key={doc.doc_id} className="flex gap-2">
+        <div key={doc.doc_id || doc.doc_name} className="flex gap-2">
           {imageId && (
             <Popover
               placement="left"
@@ -161,7 +161,9 @@ const MarkdownContent = ({
           </div>
         </div>
       );
-    })
+    },
+    [reference, fileThumbnails, handleDocumentButtonClick],
+  );
 
   const renderReference = useCallback(
     (text: string) => {
