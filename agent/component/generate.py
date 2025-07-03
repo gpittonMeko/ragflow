@@ -99,6 +99,11 @@ class Generate(ComponentBase):
             tkweight=0.7,
             vtweight=0.3
         )
+
+
+
+
+
         # 1. Referenze ai documenti EFFETTIVAMENTE citati nei marker (come ora)
         doc_ids = set([])
         recall_docs = []
@@ -187,6 +192,10 @@ class Generate(ComponentBase):
         doc_chunks = {}
         all_chunks = []
         self._param.inputs = []
+
+        with open("/tmp/generate_debug.txt", "a", encoding="utf-8") as f:
+            f.write("\n==== PROMPT FINALE DA PASSARE AL LLM ====\n")
+            f.write(prompt[:7000] + ("...[TRUNCATED]..." if len(prompt) > 3000 else ""))
 
         # 1. Raccogli i chunk, salva per ogni retrieval la lista chunk nel dict per ordinamento successivo
         for para in self.get_input_elements()[1:]:
