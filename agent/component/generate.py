@@ -184,10 +184,11 @@ class Generate(ComponentBase):
         prompt = self._param.prompt
 
         retrieval_res = []
+        doc_chunks = {}
         all_chunks = []
-        all_doc_aggs = []
         self._param.inputs = []
 
+        # 1. Raccogli i chunk, salva per ogni retrieval la lista chunk nel dict per ordinamento successivo
         for para in self.get_input_elements()[1:]:
             if para["key"].lower().find("begin@") == 0:
                 cpn_id, key = para["key"].split("@")
@@ -217,99 +218,62 @@ class Generate(ComponentBase):
             else:
                 if cpn.component_name.lower() == "retrieval":
                     retrieval_res.append(out)
+                    chunks_list = []
                     if "chunks" in out.columns:
                         for chunk_json in out["chunks"]:
                             try:
                                 cks = json.loads(chunk_json)
                                 all_chunks.extend(cks)
+                                chunks_list.extend(cks)
                             except Exception as e:
                                 print(f"Errore parsing chunk JSON: {e}")
-                    if "doc_aggs" in out.columns:
-                        for doc_agg_json in out["doc_aggs"]:
-                            try:
-                                dgs = json.loads(doc_agg_json)
-                                all_doc_aggs.extend(dgs)
-                            except Exception as e:
-                                print(f"Errore nel parsing dei doc_aggs JSON: {e}")
+                    doc_chunks[component_id] = chunks_list
+                kwargs[para["key"]] = "  - " + "\n - ".join(
+                    [o if isinstance(o, str) else str(o) for o in out["content"]])
+            self._param.inputs.append({"component_id": para["key"], "content": kwargs[para["key"]]})
 
-                kwargs[para["key"]] = "  - " + "\n - ".join([o if isinstance(o, str) else str(o) for o in out["content"]])
-                self._param.inputs.append({"component_id": para["key"], "content": kwargs[para["key"]]})    
+        # 2. ORDINA I TAG SECONDO L'ORDINE DEI TAG NEL PROMPT
+        prompt_tags = re.findall(r"\{Retrieval:([a-zA-Z0-9_]+)\}", prompt)
+        ordered_chunks = []
+        for tag in prompt_tags:
+            key = f"Retrieval:{tag}"
+            if key in doc_chunks:
+                ordered_chunks.extend(doc_chunks[key])
 
-        from collections import defaultdict
+        # 3. AGGIORNA kwargs con knowledge aggregata per ciascun tag (opzionale, se vuoi anche una {knowledge_aggregata})
+        for tag in prompt_tags:
+            key = f"Retrieval:{tag}"
+            chunks_text = "\n".join([ck.get('content_ltks','') or ck.get('content','') for ck in doc_chunks.get(key, [])])
+            kwargs[key] = chunks_text
 
-        agg_texts = defaultdict(list)
-        for ck in all_chunks:
-            key = ck.get('component_id') or ck.get('cid') or ck.get('doc_id')
-            if not key:
-                key = 'unknown'
-            text = ck.get('content_ltks') or ck.get('content') or ""
-            agg_texts[key].append(text)
-
-        for k in agg_texts:
-            agg_texts[k] = "\n".join(agg_texts[k])
-
-        for key, text in agg_texts.items():
-            full_key = f"Retrieval:{key}"
-            kwargs[full_key] = text
-
-        for new_id, chunk in enumerate(all_chunks):
-            chunk["unified_id"] = new_id
-
-        # 5. concatena retrieval_res dfs prima di set_cite
-        if retrieval_res:
-            retrieval_res = pd.concat(retrieval_res, ignore_index=True)
-        else:
-            retrieval_res = pd.DataFrame([])
-
-       
-
-        downstreams = self._canvas.get_component(self._id)["downstream"]
-
-        if kwargs.get("stream") and len(downstreams) == 1 and self._canvas.get_component(downstreams[0])[
-                "obj"].component_name.lower() == "answer":
-            return partial(self.stream_output, chat_mdl, prompt, all_chunks)
-
-        if self._param.cite:
-            msg = self._canvas.get_history(self._param.message_history_window_size)
-            if len(msg) < 1:
-                msg.append({"role": "user", "content": "Output: "})
-            _, msg = message_fit_in([{"role": "system", "content": prompt}, *msg], int(chat_mdl.max_length * 0.97))
-            if len(msg) < 2:
-                msg.append({"role": "user", "content": "Output: "})
-            ans = chat_mdl.chat(msg[0]["content"], msg[1:], self._param.gen_conf())
-            ans = re.sub(r"<think>.*</think>", "", ans, flags=re.DOTALL)
-            res = self.set_cite(all_chunks, ans)
-            return pd.DataFrame([res])
-
-        if "empty_response" in retrieval_res.columns and not "".join(retrieval_res["content"]):
-            empty_res = "\n- ".join([str(t) for t in retrieval_res["empty_response"] if str(t)])
-            res = {"content": empty_res if empty_res else "Nothing found in knowledgebase!", "reference": []}
-            return pd.DataFrame([res])
-        
-    def stream_output(self, chat_mdl, prompt, all_chunks):
-        answer = ""
-        for ans in chat_mdl.chat_streamly(prompt, [], self._param.gen_conf()):
-            res = {"content": ans, "reference": []}
-            answer = ans
-            yield res
-
-        if self._param.cite:
-            res = self.set_cite(all_chunks, answer)
-            yield res
-
-        self.set_output(Generate.be_output(res))
-
-    def debug(self, **kwargs):
-        chat_mdl = LLMBundle(self._canvas.get_tenant_id(), LLMType.CHAT, self._param.llm_id)
-        prompt = self._param.prompt
-
-        for para in self._param.debug_inputs:
-            kwargs[para["key"]] = para.get("value", "")
-
+        # 4. SOSTITUZIONE PLACEHOLDER PROMPT CON knowledge ordinati
         for n, v in kwargs.items():
             pattern = r"\{%s\}" % re.escape(n)
             prompt = re.sub(pattern, str(v).replace("\\", " "), prompt)
 
-        u = kwargs.get("user")
-        ans = chat_mdl.chat(prompt, [{"role": "user", "content": u if u else "Output: "}], self._param.gen_conf())
-        return pd.DataFrame([ans])
+        # 5. Riassegna unified_id in modo progressivo SOLO a quelli usati effettivamente:
+        for new_id, chunk in enumerate(ordered_chunks):
+            chunk["unified_id"] = new_id
+
+        # 6. Stream output subito (come sempre prima della generazione normale)
+        downstreams = self._canvas.get_component(self._id)["downstream"]
+        if kwargs.get("stream") and len(downstreams) == 1 and self._canvas.get_component(
+            downstreams[0])["obj"].component_name.lower() == "answer":
+            return partial(self.stream_output, chat_mdl, prompt, ordered_chunks)
+
+        # 7. Prepara messaggi e chiama il modello
+        msg = self._canvas.get_history(self._param.message_history_window_size)
+        if len(msg) < 1:
+            msg.append({"role": "user", "content": "Output: "})
+        _, msg = message_fit_in([{"role": "system", "content": prompt}, *msg], int(chat_mdl.max_length * 0.97))
+        if len(msg) < 2:
+            msg.append({"role": "user", "content": "Output: "})
+        ans = chat_mdl.chat(msg[0]["content"], msg[1:], self._param.gen_conf())
+        ans = re.sub(r"<think>.*</think>", "", ans, flags=re.DOTALL)
+
+        if self._param.cite:
+            res = self.set_cite(ordered_chunks, ans)     # Usa i chunks ordinati per le citazioni e i PDF!
+            return pd.DataFrame([res])
+
+        # Fallback se non cita
+        return Generate.be_output(ans)
