@@ -184,9 +184,15 @@ class Generate(ComponentBase):
             key_set.add(cpn_id)
         return res
 
+
+  
     def _run(self, history, **kwargs):
         chat_mdl = LLMBundle(self._canvas.get_tenant_id(), LLMType.CHAT, self._param.llm_id)
         prompt = self._param.prompt
+
+        # Sostituisci il segnaposto scelto con la knowledge dinamica calcolata nel backend
+        prompt = prompt.replace("__DOCS_SECTION__", docs_section)   # se usi __DOCS_SECTION__
+        # prompt = prompt.replace("{docs_section}", docs_section)    # oppure se usi {docs_section}
 
         retrieval_res = []
         doc_chunks = {}
@@ -249,11 +255,27 @@ class Generate(ComponentBase):
             if key in doc_chunks:
                 ordered_chunks.extend(doc_chunks[key])
 
-        # 3. AGGIORNA kwargs con knowledge aggregata per ciascun tag (opzionale)
-        for tag in prompt_tags:
-            key = f"Retrieval:{tag}"
-            chunks_text = "\n".join([ck.get('content_ltks','') or ck.get('content','') for ck in doc_chunks.get(key, [])])
-            kwargs[key] = chunks_text
+        docs_section = ""
+    
+        for idx, ck in enumerate(ordered_chunks):
+            doc_name = ck.get("doc_name") or ck.get("docnm_kwd") or ck.get("document_name", "")
+            testo = ck.get('content_ltks','') or ck.get('content','')
+            docs_section += f"\n==== DOCUMENTO ##{idx+1}$$ ({doc_name}) ====\n{testo}\n==== FINE DOCUMENTO ##{idx+1}$$ ====\n"
+        
+
+        # 3. AGGIORNA kwargs con knowledge aggregata per ciascun tag 
+        #for tag_i, tag in enumerate(prompt_tags):
+        #    key = f"Retrieval:{tag}"
+        #    docnum = tag_i + 1
+        #    doc_chunk_list = doc_chunks.get(key, [])
+        #    if doc_chunk_list:
+        #        doc_name = doc_chunk_list[0].get('doc_name', '') or doc_chunk_list[0].get('docnm_kwd', '')
+        #        joined = f"\n--- DOCUMENTO {docnum} ({doc_name}) ---\n"
+        #        joined += f"\n".join([(ck.get('content_ltks','') or ck.get('content','')) for ck in doc_chunk_list])
+        #        joined += f"\n--- FINE DOCUMENTO {docnum} ---\n"
+        #    else:
+        #        joined = ""
+        #    kwargs[key] = joined
 
         # —> QUI il debug file, UNA SOLA VOLTA <—
         import os
@@ -284,16 +306,16 @@ class Generate(ComponentBase):
             f.write(str(len(ordered_chunks)) + "\n")
 
         # 4. SOSTITUZIONE PLACEHOLDER!
-        for n, v in kwargs.items():
-            pattern = r"\s*\{%s\}\s*" % re.escape(n)
-            count_replacements = len(re.findall(pattern, prompt))
-            if count_replacements == 0:
-                with open(DEBUG_PATH, "a", encoding="utf-8") as f:
-                    f.write(f"\n[PLACEHOLDER WARNING] Placeholder {{{n}}} NON TROVATO nel prompt. (Possibili spazi o newline strani?)\n")
-            else:
-                with open(DEBUG_PATH, "a", encoding="utf-8") as f:
-                    f.write(f"\n[SOSTITUZIONE ESEGUITA] Placeholder {{{n}}} trovato {count_replacements} volta/e, knowledge inserita.\n")
-            prompt = re.sub(pattern, "\n" + str(v).replace("\\", " ") + "\n", prompt)
+        #for n, v in kwargs.items():
+        #    pattern = r"\s*\{%s\}\s*" % re.escape(n)
+        #    count_replacements = len(re.findall(pattern, prompt))
+        #    if count_replacements == 0:
+        #        with open(DEBUG_PATH, "a", encoding="utf-8") as f:
+        #            f.write(f"\n[PLACEHOLDER WARNING] Placeholder {{{n}}} NON TROVATO nel prompt. (Possibili spazi o newline strani?)\n")
+        #    else:
+        #        with open(DEBUG_PATH, "a", encoding="utf-8") as f:
+        #            f.write(f"\n[SOSTITUZIONE ESEGUITA] Placeholder {{{n}}} trovato {count_replacements} volta/e, knowledge inserita.\n")
+        #    prompt = re.sub(pattern, "\n" + str(v).replace("\\", " ") + "\n", prompt)
 
         # AGGIUNGI SUBITO DOPO: salva il prompt finale post-sostituzione
         with open(DEBUG_PATH, "a", encoding="utf-8") as f:
