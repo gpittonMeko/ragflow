@@ -190,9 +190,9 @@ class Generate(ComponentBase):
         chat_mdl = LLMBundle(self._canvas.get_tenant_id(), LLMType.CHAT, self._param.llm_id)
         prompt = self._param.prompt
 
-        # Sostituisci il segnaposto scelto con la knowledge dinamica calcolata nel backend
-        prompt = prompt.replace("__DOCS_SECTION__", docs_section)   # se usi __DOCS_SECTION__
-        # prompt = prompt.replace("{docs_section}", docs_section)    # oppure se usi {docs_section}
+
+
+
 
         retrieval_res = []
         doc_chunks = {}
@@ -256,12 +256,15 @@ class Generate(ComponentBase):
                 ordered_chunks.extend(doc_chunks[key])
 
         docs_section = ""
-    
         for idx, ck in enumerate(ordered_chunks):
             doc_name = ck.get("doc_name") or ck.get("docnm_kwd") or ck.get("document_name", "")
             testo = ck.get('content_ltks','') or ck.get('content','')
             docs_section += f"\n==== DOCUMENTO ##{idx+1}$$ ({doc_name}) ====\n{testo}\n==== FINE DOCUMENTO ##{idx+1}$$ ====\n"
-        
+
+        # Sostituisci il segnaposto scelto con la knowledge dinamica calcolata nel backend
+        prompt = prompt.replace("__DOCS_SECTION__", docs_section)   # se usi __DOCS_SECTION__
+        # prompt = prompt.replace("{docs_section}", docs_section)    # oppure se usi {docs_section}
+
 
         # 3. AGGIORNA kwargs con knowledge aggregata per ciascun tag 
         #for tag_i, tag in enumerate(prompt_tags):
