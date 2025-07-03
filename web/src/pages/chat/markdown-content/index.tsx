@@ -102,10 +102,13 @@ const MarkdownContent = ({
       const doc = reference?.doc_aggs?.[chunkIndex - 1];
       if (!doc) return null;
       const documentId = doc.doc_id;
-      const documentUrl = doc.url;
       const fileThumbnail = documentId ? fileThumbnails[documentId] : '';
       const fileExtension = documentId ? getExtension(doc.doc_name) : '';
-      const imageId = doc.image_id;
+      // get first chunk for this doc
+      const chunkItem = (reference?.chunks ?? []).find(
+        (ch) => ch.document_id === documentId
+      );
+      const imageId = chunkItem?.image_id;
       return (
         <div key={doc.doc_id || doc.doc_name} className="flex gap-2">
           {imageId && (
@@ -125,12 +128,12 @@ const MarkdownContent = ({
             </Popover>
           )}
           <div className={'space-y-2 max-w-[40vw]'}>
-            <div
-              dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(doc.content ?? ''),
-              }}
-              className={classNames(styles.chunkContentText)}
-            ></div>
+            {chunkItem?.content && (
+              <div
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(chunkItem.content ?? '') }}
+                className={classNames(styles.chunkContentText)}
+              ></div>
+            )}
             {documentId && (
               <Flex gap={'small'}>
                 {fileThumbnail ? (
@@ -150,9 +153,9 @@ const MarkdownContent = ({
                   className={classNames(styles.documentLink, 'text-wrap')}
                   onClick={handleDocumentButtonClick(
                     documentId,
-                    doc,
+                    chunkItem,
                     fileExtension === 'pdf',
-                    documentUrl,
+                    doc.url,
                   )}
                 >
                   {doc.doc_name}
