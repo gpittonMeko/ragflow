@@ -256,7 +256,14 @@ class Generate(ComponentBase):
                 f.write("====== KWARGS (DET) ======\n")
                 for k, v in kwargs.items():
                     f.write(f"\n--- {k} ---\n")
-                    f.write((v[:500] + "\n[TRUNCATED]\n") if len(v) > 500 else v)
+                    try:
+                        v_str = str(v)
+                        if len(v_str) > 500:
+                            f.write(v_str[:500] + "\n[TRUNCATED]\n")
+                        else:
+                            f.write(v_str)
+                    except Exception as e:
+                        f.write(f"<<v non stringa, type={type(v)}, err={e}>>\n")
                     f.write("\n")
                 f.write("====== PROMPT TAGS (order) ======\n")
                 f.write(str(prompt_tags) + "\n")
