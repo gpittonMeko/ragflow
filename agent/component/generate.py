@@ -204,7 +204,7 @@ class Generate(ComponentBase):
 
         with open("/tmp/generate_debug.txt", "a", encoding="utf-8") as f:
             f.write("\n==== PROMPT FINALE DA PASSARE AL LLM ====\n")
-            f.write(prompt[:100000] + ("...[TRUNCATED]..." if len(prompt) > 3000 else ""))
+            f.write(prompt)
 
         # 1. Raccogli i chunk, salva per ogni retrieval la lista chunk nel dict per ordinamento successivo
         for para in self.get_input_elements()[1:]:
