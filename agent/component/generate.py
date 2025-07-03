@@ -231,8 +231,35 @@ class Generate(ComponentBase):
                                 all_doc_aggs.extend(dgs)
                             except Exception as e:
                                 print(f"Errore nel parsing dei doc_aggs JSON: {e}")
+
                 kwargs[para["key"]] = "  - " + "\n - ".join([o if isinstance(o, str) else str(o) for o in out["content"]])
-            self._param.inputs.append({"component_id": para["key"], "content": kwargs[para["key"]]})
+                self._param.inputs.append({"component_id": para["key"], "content": kwargs[para["key"]]})    
+
+        from collections import defaultdict
+
+        # Aggrega i testi per ogni retrieval_key (assumendo 'component_id' o 'cid' sia la chiave che identifica la source)
+        agg_texts = defaultdict(list)
+        for ck in all_chunks:
+            # Usa doc_id o un campo che identifica la sorgente retrieval, se non esiste aggiungi un campo unico nel retrieval originale
+            key = ck.get('component_id') or ck.get('cid') or ck.get('doc_id')
+            if not key:
+                key = 'unknown'
+            text = ck.get('content_ltks') or ck.get('content') or ""
+            agg_texts[key].append(text)
+
+        # Concatena i testi per ogni key
+        for k in agg_texts:
+            agg_texts[k] = "\n".join(agg_texts[k])
+
+        # Sostituisci nel prompt i placeholder {Retrieval:Key} con i testi aggregati
+        for key, text in agg_texts.items():
+            placeholder = f"{{Retrieval:{key}}}"
+            if placeholder in prompt:
+                prompt = prompt.replace(placeholder, text)            
+
+
+
+                
 
          # Riassegna unified_id
         for new_id, chunk in enumerate(all_chunks):
