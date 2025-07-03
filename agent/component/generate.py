@@ -246,6 +246,29 @@ class Generate(ComponentBase):
             chunks_text = "\n".join([ck.get('content_ltks','') or ck.get('content','') for ck in doc_chunks.get(key, [])])
             kwargs[key] = chunks_text
 
+            import os
+
+            DEBUG_PATH = "/tmp/generate_debug.txt"  # puoi cambiare path se preferisci
+
+            with open(DEBUG_PATH, "w", encoding="utf-8") as f:
+                f.write("====== KWARGS KEYS ======\n")
+                f.write(str(list(kwargs.keys())) + "\n")
+                f.write("====== KWARGS (DET) ======\n")
+                for k, v in kwargs.items():
+                    f.write(f"\n--- {k} ---\n")
+                    f.write((v[:500] + "\n[TRUNCATED]\n") if len(v) > 500 else v)
+                    f.write("\n")
+                f.write("====== PROMPT TAGS (order) ======\n")
+                f.write(str(prompt_tags) + "\n")
+                f.write("====== PROMPT (after agg_text replace) ======\n")
+                f.write(prompt + "\n\n")
+                f.write("====== CHUNKS COUNT PER TAG ======\n")
+                for k in doc_chunks.keys():
+                    f.write(f"{k}: {len(doc_chunks[k])} chunks\n")
+                f.write("====== ordered_chunks LEN ======\n")
+                f.write(str(len(ordered_chunks)) + "\n")
+            
+
         # 4. SOSTITUZIONE PLACEHOLDER PROMPT CON knowledge ordinati
         for n, v in kwargs.items():
             pattern = r"\{%s\}" % re.escape(n)
