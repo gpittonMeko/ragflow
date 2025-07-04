@@ -74,51 +74,62 @@ class Generate(ComponentBase):
         cpnts = set([i["key"] for i in inputs[1:] if i["key"].lower().find("answer") < 0 and i["key"].lower().find("begin") < 0])
         return list(cpnts)
 
-    def set_cite(self, chunks, answer):
+    def set_cite(
+        self,
+        chunks: list[dict],
+        answer: str,
+        *,
+        avoid_duplicates: bool = True,   # salta marker già inseriti
+        show_quote: bool = True          # False = inserisce solo il marker
+    ):
         """
-        1. Inserisce i marker ##N$$ nel testo (via insert_citations)
-        2. Genera doc_aggs con la STESSA cardinalità e ordine dei chunk,
-        così marker, tabella di mapping e legenda restano coerenti.
-        3. Aggiunge la legenda “Fonti” in coda alla risposta.
+        • Inserisce i marker ##N$$ coerentemente con l’ordine di 'chunks'.
+        • Se avoid_duplicates=True, lo stesso marker viene aggiunto una sola volta.
+        • Se show_quote=False, non appende la citazione testuale OCR, ma solo il marker.
         """
 
-        # ------------------------------------------------------------------
-        # 0) DEBUG: verifica che ogni chunk disponga del campo 'content_ltks'
-        # ------------------------------------------------------------------
-        missing = [
-            {"index": i, "keys": list(ck.keys())}
-            for i, ck in enumerate(chunks)
-            if "content_ltks" not in ck
-        ]
-        if missing:
+        # -- 0) sanity check ----------------------------------------------------
+        miss = [i for i, ck in enumerate(chunks) if "content_ltks" not in ck]
+        if miss:
             return {
-                "content": "ERROR DEBUG – chunk(s) missing 'content_ltks':\n"
-                        + json.dumps(missing, indent=2, ensure_ascii=False),
+                "content": f"DEBUG ERROR – chunks senza 'content_ltks': {miss}",
                 "reference": {}
             }
 
-        # ------------------------------------------------------------------
-        # 1) Inserisci le citazioni automatiche
-        # ------------------------------------------------------------------
-        content_list = [ck.get("content_ltks", "") for ck in chunks]
-        vector_list  = [ck.get("vector")           for ck in chunks]
+        # -- 1) prepara liste per insert_citations -----------------------------
+        content_list = [ck["content_ltks"] for ck in chunks]
+        vector_list  = [ck.get("vector")  for ck in chunks]
 
-        answer, _ = settings.retrievaler.insert_citations(
+        answer, markers = settings.retrievaler.insert_citations(
             answer,
             content_list,
             vector_list,
-            LLMBundle(
-                self._canvas.get_tenant_id(),
-                LLMType.EMBEDDING,
-                self._canvas.get_embedding_model(),
-            ),
-            tkweight=0.7,
-            vtweight=0.3,
+            LLMBundle(self._canvas.get_tenant_id(),
+                    LLMType.EMBEDDING,
+                    self._canvas.get_embedding_model()),
+            tkweight=0.7, vtweight=0.3,
+            return_marker_pos=True          # <-- assicurati che torni la pos.
         )
 
-        # ------------------------------------------------------------------
-        # 2) doc_aggs: un record PER OGNI CHUNK (nessuna deduplicazione)
-        # ------------------------------------------------------------------
+        # ----------------------------------------------------------------------
+        # 2) rimuovi duplicati se necessario
+        # ----------------------------------------------------------------------
+        if avoid_duplicates:
+            seen = set()
+            def dedup(m):
+                num = int(m.group(0).replace("##", "").replace("$$", ""))
+                if num in seen:
+                    return ""  # elimina seconda, terza, … occorrenza
+                seen.add(num)
+                return m.group(0) if show_quote else f"##{num}$$"
+            answer = re.sub(r'##\d+\$\$', dedup, answer)
+        elif not show_quote:
+            # Mantieni tutte le occorrenze ma senza citazione testuale
+            answer = re.sub(r'##(\d+)\$\$', r'##\1$$', answer)
+
+        # ----------------------------------------------------------------------
+        # 3) doc_aggs = 1-a-1 con chunks (serve al frontend / download pdf)
+        # ----------------------------------------------------------------------
         doc_aggs = [
             {
                 "doc_id":   ck.get("doc_id"),
@@ -127,37 +138,25 @@ class Generate(ComponentBase):
             for ck in chunks
         ]
 
-        # ------------------------------------------------------------------
-        # 3) (opz.) riallinea eventuali placeholder-marker
-        # ------------------------------------------------------------------
-        def remap_markers(answer_txt, chks):
-            # enumerazione da 1 perché i marker vengono creati come ##1$$, ##2$$, …
-            for idx, ck in enumerate(chks, start=1):
-                default_marker = f"##{idx}$$"
-                real_marker    = ck.get("marker", default_marker)
-                if default_marker != real_marker:
-                    answer_txt = answer_txt.replace(default_marker, real_marker)
-            return answer_txt
+        # ----------------------------------------------------------------------
+        # 4) legenda “Fonti” senza duplicati, in ordine di prima comparsa
+        # ----------------------------------------------------------------------
+        legend_docs = []
+        already = set()
+        for m in re.finditer(r'##(\d+)\$\$', answer):
+            idx = int(m.group(1)) - 1
+            if 0 <= idx < len(doc_aggs):
+                d = doc_aggs[idx]
+                if d["doc_id"] not in already:
+                    legend_docs.append(f"- ##{idx+1}$$ {d['doc_name']}")
+                    already.add(d["doc_id"])
 
-        answer = remap_markers(answer, chunks)
+        if legend_docs:
+            answer += "\n\n**Fonti:**\n" + "\n".join(legend_docs)
 
-        # ------------------------------------------------------------------
-        # 4) Costruisci la legenda “Fonti” solo con i marker effettivamente usati
-        # ------------------------------------------------------------------
-        marker_nums = sorted({
-            int(m.group(0).replace("##", "").replace("$$", ""))
-            for m in re.finditer(r"##\d+\$\$", answer)
-        })
-
-        legend_lines = ["**Fonti:**"]
-        for n in marker_nums:
-            if 0 < n <= len(doc_aggs):
-                legend_lines.append(f"- ##{n}$$ {doc_aggs[n-1]['doc_name']}")
-        answer += "\n\n" + "\n".join(legend_lines)
-
-        # ------------------------------------------------------------------
-        # 5) Pacchetto finale (content + reference) -> structure_answer
-        # ------------------------------------------------------------------
+        # ----------------------------------------------------------------------
+        # 5) pacchetto finale
+        # ----------------------------------------------------------------------
         reference = {"chunks": chunks, "doc_aggs": doc_aggs}
         res = {"content": answer, "reference": reference}
         return structure_answer(None, res, "", "")
