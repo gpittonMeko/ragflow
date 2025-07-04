@@ -123,20 +123,14 @@ class Generate(ComponentBase):
 
         doc_aggs = recall_docs + all_docs  # TUTTI I DOCUMENTI PDF ELENCATI, in ordine finale
 
-        # ---- PATCH MARKER ----
-        # Crea la mappa doc_id -> marker numerico progressivo
-        docid_to_marker = {rec["doc_id"]: f"##{ix+1}$$" for ix, rec in enumerate(doc_aggs)}
-
-        def remap_markers(answer, chunks, docid_to_marker):
+        # ---- PATCH MARKER "STATICO", ALLINEATO AI CHUNK ----
+        def remap_markers_static(answer, chunks):
             for idx, ck in enumerate(chunks):
-                doc_id = ck.get('doc_id')
-                new_marker = docid_to_marker.get(doc_id)
-                if new_marker:
-                    answer = answer.replace(f"##{idx}$$", new_marker)
+                marker = ck.get("marker", f"##{idx}$$")
+                answer = answer.replace(f"##{idx}$$", marker)
             return answer
 
-        # Applica questa funzione sosituendo i vecchi marker
-        answer = remap_markers(answer, chunks, docid_to_marker)
+        answer = remap_markers_static(answer, chunks)
         # ---- FINE PATCH MARKER ----
 
 
