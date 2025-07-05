@@ -349,10 +349,6 @@ useEffect(() => {
         <div style={{ marginBottom: '2rem', width: '100%', maxWidth: '320px' }}>
           <SvgLogoInteractive flipped />
         </div>
-        <div className={styles.heroSubtitle} style={{ maxWidth: '600px', textAlign: 'center' }}>
-          L'intelligenza artificiale per il contenzioso tributario: L&apos;assistente legale che hai sempre desiderato
-        </div>
-      </div>
 
       {/* CHAT SOTTO IL LOGO */}
       <div className={styles.iframeSection}>
