@@ -349,7 +349,7 @@ useEffect(() => {
         <div style={{ marginBottom: '2rem', width: '100%', maxWidth: '320px' }}>
           <SvgLogoInteractive flipped />
         </div>
-
+</div>
       {/* CHAT SOTTO IL LOGO */}
       <div className={styles.iframeSection}>
       <iframe
