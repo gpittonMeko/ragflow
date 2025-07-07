@@ -116,6 +116,14 @@ class Generate(ComponentBase):
             vtweight=0.3
         )
 
+        # ---- NEW: rimuove marker se l'indice supera il n° di chunks ----
+        max_id = len(chunks)
+        answer = re.sub(
+            r'##(\d+)\$\$',
+            lambda m: m.group(0) if int(m.group(1)) <= max_id else '',
+            answer
+        )
+
         # ------------------------------------------------------------------ #
         # 2) Elimina marker duplicati (opzionale)                            #
         # ------------------------------------------------------------------ #
@@ -134,13 +142,18 @@ class Generate(ComponentBase):
         # ------------------------------------------------------------------ #
         # 3) Costruisci doc_aggs 1-a-1 con i chunk (nessuna dedup)           #
         # ------------------------------------------------------------------ #
-        doc_aggs = [
-            {
-                "doc_id":   ck.get("doc_id"),
-                "doc_name": ck.get("docnm_kwd") or ck.get("doc_name") or ""
-            }
-            for ck in chunks
-        ]
+        doc_aggs, seen = [], set()
+        for ck in chunks:
+            d_id = ck.get("doc_id")
+            if d_id in seen:
+                continue
+            doc_aggs.append(
+                {
+                    "doc_id": d_id,
+                    "doc_name": ck.get("docnm_kwd") or ck.get("doc_name") or ""
+                }
+            )
+            seen.add(d_id)
 
         # ------------------------------------------------------------------ #
         # 4) Legenda “Fonti” (una sola riga per documento)                   #
@@ -259,6 +272,18 @@ class Generate(ComponentBase):
             key = f"Retrieval:{tag}"
             if key in doc_chunks:
                 ordered_chunks.extend(doc_chunks[key])
+
+        # ----------------- NEW: tieni un solo chunk per PDF -------------
+        uniq_chunks, seen_docs = [], set()
+        for ck in ordered_chunks:            # mantiene l’ordine
+            d_id = ck.get("doc_id")
+            if d_id in seen_docs:
+                continue
+            uniq_chunks.append(ck)
+            seen_docs.add(d_id)
+
+        ordered_chunks = uniq_chunks
+        # ----------------------------------------------------------------
 
         docs_section = ""
         docs_table = "Tabella mapping marker/documento da usare (IMPORTANTE, copiato sotto ogni documento!):\n"
