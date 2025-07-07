@@ -27,11 +27,15 @@ import classNames from 'classnames';
 import { pipe } from 'lodash/fp';
 import styles from './index.less';
 
-const reg = /(~{2}\d+={2})/g;
+//const reg = /(~{2}\d+={2})/g;
 // const curReg = /(~{2}\d+\${2})/g;
 
 /// versione con indici giusti ma manca il preview
+//const getChunkIndex = (match: string) => Number(match.slice(2, -2));
+
+const reg = /(##\d+\$\$)/g;
 const getChunkIndex = (match: string) => Number(match.slice(2, -2));
+
 // TODO: The display of the table is inconsistent with the display previously placed in the MessageItem.
 const MarkdownContent = ({
   reference,
@@ -147,20 +151,34 @@ const MarkdownContent = ({
                     name={`file-icon/${fileExtension}`}
                     width={24}
                   ></SvgIcon>
-                )}
-                <Button
-                  type="link"
-                  className={classNames(styles.documentLink, 'text-wrap')}
-                  onClick={handleDocumentButtonClick(
-                    documentId,
-                    chunkItem,
-                    fileExtension === 'pdf',
-                    doc.url,
-                  )}
-                >
-                  {doc.doc_name}
-                </Button>
-              </Flex>
+               )}
+               <Button
+                 type="link"
+                 onClick={handleDocumentButtonClick(
+                   documentId,
+                   chunkItem,
+                   fileExtension === 'pdf',
+                   doc.url,
+                 )}
+               >
+                 Anteprima
+               </Button>
+
+               {/* Download sempre disponibile se doc.url c’è */}
+               {!!doc.url && (
+                 <a
+                   href={doc.url}
+                   download
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className={styles.documentLink}
+                 >
+                   <Button type="link">Scarica</Button>
+                 </a>
+               )}
+
+               <span className="text-wrap">{doc.doc_name}</span>
+             </Flex>
             )}
           </div>
         </div>
