@@ -124,6 +124,11 @@ class Generate(ComponentBase):
             answer
         )
 
+        # ---- COMPATTA eventuali ripetizioni consecutive dello stesso marker
+        answer = re.sub(r'(##\d+\$\$\s*){2,}',
+                        lambda m: m.group(0).split()[0] + ' ',
+                        answer)
+
         # ------------------------------------------------------------------ #
         # 2) Elimina marker duplicati (opzionale)                            #
         # ------------------------------------------------------------------ #
@@ -150,7 +155,8 @@ class Generate(ComponentBase):
             doc_aggs.append(
                 {
                     "doc_id": d_id,
-                    "doc_name": ck.get("docnm_kwd") or ck.get("doc_name") or ""
+                    "doc_name": ck.get("docnm_kwd") or ck.get("doc_name") or "",
+                    "url": ck.get("url") or ""          # <─ NEW
                 }
             )
             seen.add(d_id)
