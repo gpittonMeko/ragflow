@@ -56,7 +56,7 @@ services:
       mysql:
         condition: service_healthy
     image: ${RAGFLOW_IMAGE}
-    command: ["--disable-webserver", "--workers=5"]
+    command: ["--workers=5"]
 
 
     container_name: ragflow-executor
