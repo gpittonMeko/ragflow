@@ -56,6 +56,9 @@ services:
       mysql:
         condition: service_healthy
     image: ${RAGFLOW_IMAGE}
+    command: ["--disable-webserver", "--workers=5"]
+
+
     container_name: ragflow-executor
     volumes:
       - ./ragflow-logs:/ragflow/logs
@@ -65,7 +68,6 @@ services:
       - TZ=${TIMEZONE}
       - HF_ENDPOINT=${HF_ENDPOINT}
       - MACOS=${MACOS}
-    command: "python -m rag.task.executor --num-threads 5"
     networks:
       - ragflow
     restart: on-failure
