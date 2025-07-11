@@ -1,126 +1,139 @@
+"""
+backend.py – Flask server che:
+• valida l’ID-Token Google
+• registra/l legge l’utente in RAM (simulazione DB)
+• conta le generazioni in base al piano
+"""
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import google.auth.transport.requests
 import google.oauth2.id_token
 import threading
+import time
 
 app = Flask(__name__)
 CORS(app)
 
-CLIENT_ID = "872236618020-3len9toeui389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com"
+# ATTENZIONE! deve essere identico a quello nel front-end
+CLIENT_ID = "872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com"
 
-users_db = {}
+# simulazione di un DB in RAM
+users_db: dict[str, dict] = {}
 db_lock = threading.Lock()
 
 PLAN_LIMITS = {
     "free": 5,
     "standard": 50,
-    "premium": 1_000_000_000,  # quasi infinito
+    "premium": 1_000_000_000
 }
 
-def verify_token(token):
+
+def verify_token(token: str) -> dict | None:
+    """Restituisce il payload del token se valido, altrimenti None"""
     try:
-        request_adapter = google.auth.transport.requests.Request()
-        id_info = google.oauth2.id_token.verify_oauth2_token(token, request_adapter, CLIENT_ID)
-        print("ID token info:", id_info)
+        req = google.auth.transport.requests.Request()
+        id_info = google.oauth2.id_token.verify_oauth2_token(
+            token, req, CLIENT_ID
+        )
         return id_info
     except Exception as e:
-        print(f"Token validation failed: {e}")
+        print("Token validation failed:", e)
         return None
 
 
-@app.route('/api/auth/google', methods=['POST'])
+# ============ AUTH ============ #
+@app.post("/api/auth/google")
 def google_auth():
-    data = request.json or {}
-    token = data.get('token')
+    token = (request.json or {}).get("token")
     if not token:
-        return jsonify({"error": "Missing token"}), 400
+        return jsonify(error="Missing token"), 400
 
     id_info = verify_token(token)
     if not id_info:
-        return jsonify({"error": "Invalid token"}), 401
+        return jsonify(error="Invalid token"), 401
 
-    email = id_info.get('email')
+    email = id_info.get("email")
     if not email:
-        return jsonify({"error": "No email in token"}), 400
+        return jsonify(error="Email not present in token"), 400
 
     with db_lock:
-        user = users_db.setdefault(email, {"plan": "free", "usedGenerations": 0})
+        user = users_db.setdefault(
+            email, {"plan": "free", "usedGenerations": 0}
+        )
 
-    return jsonify({
-        'email': email,
-        'plan': user['plan'],
-        'usedGenerations': user['usedGenerations'],
-        'generationLimit': PLAN_LIMITS.get(user['plan'], 5)
-    })
+    return jsonify(
+        email=email,
+        plan=user["plan"],
+        usedGenerations=user["usedGenerations"],
+        generationLimit=PLAN_LIMITS[user["plan"]],
+    )
 
 
-@app.route('/api/generate', methods=['POST'])
+# ============ GENERATE ============ #
+@app.post("/api/generate")
 def generate():
-    auth_header = request.headers.get('Authorization', '')
-    if not auth_header.startswith('Bearer '):
-        return jsonify({"error": "Missing Bearer token"}), 401
-    token = auth_header.split(' ')[1]
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return jsonify(error="Missing Bearer token"), 401
+    token = auth_header.split(" ", 1)[1]
 
     id_info = verify_token(token)
     if not id_info:
-        return jsonify({"error": "Invalid token"}), 401
-
-    email = id_info.get('email')
-    if not email:
-        return jsonify({"error": "Invalid user email"}), 401
+        return jsonify(error="Invalid token"), 401
+    email = id_info.get("email")
 
     with db_lock:
-        if email not in users_db:
-            return jsonify({"error": "User not registered"}), 401
-        user = users_db[email]
-        limit = PLAN_LIMITS.get(user['plan'], 5)
-        if user['plan'] != 'premium' and user['usedGenerations'] >= limit:
-            return jsonify({"error": "Generation limit reached"}), 403
-        user['usedGenerations'] += 1
-        remaining = max(limit - user['usedGenerations'], 0)
+        user = users_db.get(email)
+        if not user:
+            return jsonify(error="User not registered"), 401
 
-    # Qui puoi mettere la logica effettiva di generazione AI
+        limit = PLAN_LIMITS[user["plan"]]
+        if user["plan"] != "premium" and user["usedGenerations"] >= limit:
+            return jsonify(error="Generation limit reached"), 403
 
-    return jsonify({"remainingGenerations": remaining})
+        user["usedGenerations"] += 1
+        remaining = max(limit - user["usedGenerations"], 0)
+
+    # simulazione del tempo di risposta AI
+    time.sleep(1)
+
+    return jsonify(
+        message="Fake AI response",
+        remainingGenerations=remaining,
+        usedGenerations=users_db[email]["usedGenerations"],
+    )
 
 
-@app.route('/api/upgrade', methods=['POST'])
+# ============ UPGRADE PIANO ============ #
+@app.post("/api/upgrade")
 def upgrade_plan():
-    auth_header = request.headers.get('Authorization', '')
-    if not auth_header.startswith('Bearer '):
-        return jsonify({"error": "Missing Bearer token"}), 401
-    token = auth_header.split(' ')[1]
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return jsonify(error="Missing Bearer token"), 401
+    token = auth_header.split(" ", 1)[1]
 
     id_info = verify_token(token)
     if not id_info:
-        return jsonify({"error": "Invalid token"}), 401
+        return jsonify(error="Invalid token"), 401
+    email = id_info.get("email")
 
-    email = id_info.get('email')
-    if not email:
-        return jsonify({"error": "Invalid user email"}), 401
-
-    data = request.json or {}
-    amount = data.get('amount')
+    amount = (request.json or {}).get("amount")  # es. 49.99, 69.99
     if amount not in [49.99, 69.99]:
-        return jsonify({"error": "Invalid amount"}), 400
+        return jsonify(error="Invalid amount"), 400
 
     with db_lock:
-        if email not in users_db:
-            return jsonify({"error": "User not registered"}), 401
+        user = users_db.get(email)
+        if not user:
+            return jsonify(error="User not registered"), 401
 
-        if amount == 49.99:
-            users_db[email]['plan'] = 'standard'
-        else:
-            users_db[email]['plan'] = 'premium'
+        user["plan"] = "standard" if amount == 49.99 else "premium"
+        user["usedGenerations"] = 0  # reset
+        plan = user["plan"]
+        limit = PLAN_LIMITS[plan]
 
-        # Reset contatore generazioni all'upgrade
-        users_db[email]['usedGenerations'] = 0
-        plan = users_db[email]['plan']
-        limit = PLAN_LIMITS.get(plan, 5)
-
-    return jsonify({"plan": plan, "generationLimit": limit})
+    return jsonify(plan=plan, generationLimit=limit)
 
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000, debug=True)

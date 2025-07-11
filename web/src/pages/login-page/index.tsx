@@ -3,7 +3,19 @@ import styles from './index.less';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
 import api from '@/utils/api'; // <-- sostituisci con il percorso reale del tuo file api
 
-const CLIENT_ID = '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
+const CLIENT_ID =
+  '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
+
+/* ──────────────────────────────────────────────────────────────
+   NUOVE COSTANTI / STATE PER BLOCCO GENERAZIONI ANONIMO
+────────────────────────────────────────────────────────────── */
+const FREE_LIMIT = 5; // quante generazioni consentite se anonimo
+
+declare global {
+  interface Window {
+    google: any;
+  }
+}
 
 const PresentationPage: React.FC = () => {
   //const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -15,9 +27,17 @@ const PresentationPage: React.FC = () => {
   //const [isGenerating, setIsGenerating] = useState(false);
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   //const [hasEverGenerated, setHasEverGenerated] = useState(false);
-  const [userData, setUserData] = useState<{ email: string; plan: string; usedGenerations: number } | null>(null);
+  const [userData, setUserData] = useState<{
+    email: string;
+    plan: string;
+    usedGenerations: number;
+  } | null>(null);
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   //const [hasSkippedInitialExpand, setHasSkippedInitialExpand] = useState(false);
+
+  /* ───────── nuovo state per limitatore anonimo ───────── */
+  const [genCount, setGenCount] = useState(0);
+  const [showLimitOverlay, setShowLimitOverlay] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -30,19 +50,18 @@ const PresentationPage: React.FC = () => {
     }
   }, [theme]);
 
-
   // Stato/flag per sapere se espandere
   const [canExpandIframe, setCanExpandIframe] = useState(false);
   const expandTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
-    const handler = (event) => {
+    const handler = (event: MessageEvent) => {
       if (event.data?.type === 'iframe-height') {
-        const iframe = document.querySelector('iframe[title="SGAI Chat Interface"]');
+        const iframe = document.querySelector<HTMLIFrameElement>('iframe[title="SGAI Chat Interface"]');
         if (!iframe) return;
         const minHeight = 400;
         const maxHeight = 1000; // se vuoi puoi mettere 1000 qui
-        
+
         let nextHeight = event.data.height;
 
         // Se non puoi ancora espandere, rimani al minimo
@@ -64,6 +83,17 @@ const PresentationPage: React.FC = () => {
 
         iframe.style.height = `${nextHeight}px`;
       }
+
+      /* ───────── nuovo blocco: intercetta fine generazione ───────── */
+      if (event.data?.type === 'generation-finished') {
+        if (!userData) {
+          setGenCount(prev => {
+            const next = prev + 1;
+            if (next >= FREE_LIMIT) setShowLimitOverlay(true);
+            return next;
+          });
+        }
+      }
     };
 
     window.addEventListener('message', handler);
@@ -71,110 +101,110 @@ const PresentationPage: React.FC = () => {
       window.removeEventListener('message', handler);
       if (expandTimeoutRef.current) clearTimeout(expandTimeoutRef.current);
     };
-  }, [canExpandIframe]);
-//
-//
-//
-//  useEffect(() => {
-//    const handleIframeMessage = (event: MessageEvent) => {
-//      const data = event.data || {};
-//
-//      if (data.type === 'iframe-height' && iframeRef.current) {
-//        let min = 200;
-//        let max = 1600;
-//        let boundedHeight = Math.max(min, Math.min(data.height, max));
-//        console.log("SGAI [parent]: data.height ricevuta:", data.height, "-> usata:", boundedHeight);
-//        iframeRef.current.style.height = `${boundedHeight}px`;
-//        iframeRef.current.style.minHeight = `${min}px`;
-//        iframeRef.current.style.maxHeight = `${max}px`;
-//      }
-//
-//      if (data.type === 'expand-iframe') {
-//        if (data.expanding) {
-//          if (!hasSkippedInitialExpand) {
-//            setHasSkippedInitialExpand(true);
-//            return;
-//          }
-//        }
-//
-//        setIsGenerating(data.expanding);
-//
-//        if (data.expanding && !hasEverGenerated) {
-//          setHasEverGenerated(true);
-//        }
-//
-//        if (iframeRef.current) {
-//          if (data.expanding) {
-//            Object.assign(iframeRef.current.style, {
-//              maxHeight: '800px',
-//              height: `${window.innerHeight}px`,
-//              position: 'fixed',
-//              top: '0',
-//              left: '0',
-//              width: '100%',
-//              zIndex: '1000',
-//            });
-//            document.body.style.overflow = 'hidden';
-//          } else {
-//            Object.assign(iframeRef.current.style, {
-//              position: 'relative',
-//              top: 'auto',
-//              left: 'auto',
-//              width: '100%',
-//              zIndex: 'auto',
-//              height: 'auto',
-//              minHeight: '200px',
-//              maxHeight: '800px',
-//            });
-//            document.body.style.overflow = 'auto';
-//            if (iframeRef.current.contentWindow) {
-//              try {
-//                iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
-//              } catch {}
-//            }
-//          }
-//        }
-//      }
-//    };
-//
-//    window.addEventListener('message', handleIframeMessage);
-//    return () => {
-//      window.removeEventListener('message', handleIframeMessage);
-//      document.body.style.overflow = 'auto';
-//    };
-//  }, [isGenerating, hasSkippedInitialExpand]);
-//
-//// Stato per indicare se SDK è pronto
+  }, [canExpandIframe, userData]);
+  //
+  //
+  //
+  //  useEffect(() => {
+  //    const handleIframeMessage = (event: MessageEvent) => {
+  //      const data = event.data || {};
+  //
+  //      if (data.type === 'iframe-height' && iframeRef.current) {
+  //        let min = 200;
+  //        let max = 1600;
+  //        let boundedHeight = Math.max(min, Math.min(data.height, max));
+  //        console.log("SGAI [parent]: data.height ricevuta:", data.height, "-> usata:", boundedHeight);
+  //        iframeRef.current.style.height = `${boundedHeight}px`;
+  //        iframeRef.current.style.minHeight = `${min}px`;
+  //        iframeRef.current.style.maxHeight = `${max}px`;
+  //      }
+  //
+  //      if (data.type === 'expand-iframe') {
+  //        if (data.expanding) {
+  //          if (!hasSkippedInitialExpand) {
+  //            setHasSkippedInitialExpand(true);
+  //            return;
+  //          }
+  //        }
+  //
+  //        setIsGenerating(data.expanding);
+  //
+  //        if (data.expanding && !hasEverGenerated) {
+  //          setHasEverGenerated(true);
+  //        }
+  //
+  //        if (iframeRef.current) {
+  //          if (data.expanding) {
+  //            Object.assign(iframeRef.current.style, {
+  //              maxHeight: '800px',
+  //              height: `${window.innerHeight}px`,
+  //              position: 'fixed',
+  //              top: '0',
+  //              left: '0',
+  //              width: '100%',
+  //              zIndex: '1000',
+  //            });
+  //            document.body.style.overflow = 'hidden';
+  //          } else {
+  //            Object.assign(iframeRef.current.style, {
+  //              position: 'relative',
+  //              top: 'auto',
+  //              left: 'auto',
+  //              width: '100%',
+  //              zIndex: 'auto',
+  //              height: 'auto',
+  //              minHeight: '200px',
+  //              maxHeight: '800px',
+  //            });
+  //            document.body.style.overflow = 'auto';
+  //            if (iframeRef.current.contentWindow) {
+  //              try {
+  //                iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
+  //              } catch {}
+  //            }
+  //          }
+  //        }
+  //      }
+  //    };
+  //
+  //    window.addEventListener('message', handleIframeMessage);
+  //    return () => {
+  //      window.removeEventListener('message', handleIframeMessage);
+  //      document.body.style.overflow = 'auto';
+  //    };
+  //  }, [isGenerating, hasSkippedInitialExpand]);
+  //
+  //// Stato per indicare se SDK è pronto
   const [gsiReady, setGsiReady] = useState(false);
 
-useEffect(() => {
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('sgai-theme', theme);
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('sgai-theme', theme);
 
-  // Invia il tema all’iframe, se presente
-  const iframe = document.querySelector('iframe[title="SGAI Chat Interface"]');
-  if (iframe && iframe.contentWindow) {
-    iframe.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
-  }
-}, [theme]);
+    // Invia il tema all’iframe, se presente
+    const iframe = document.querySelector('iframe[title="SGAI Chat Interface"]');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
+    }
+  }, [theme]);
 
   useEffect(() => {
-  if (!showGoogleModal || !googleButtonRef.current || googleToken || !gsiReady) return;
+    if (!showGoogleModal || !googleButtonRef.current || googleToken || !gsiReady) return;
 
-  window.google.accounts.id.initialize({
-    client_id: CLIENT_ID,
-    callback: handleGoogleResponse,
-    cancel_on_tap_outside: true,
-  });
+    window.google.accounts.id.initialize({
+      client_id: CLIENT_ID,
+      callback: handleGoogleResponse,
+      cancel_on_tap_outside: true,
+    });
 
-  window.google.accounts.id.renderButton(googleButtonRef.current, {
-    theme: theme === 'dark' ? 'filled_black' : 'outline',
-    size: 'large',
-    type: 'standard',
-  });
+    window.google.accounts.id.renderButton(googleButtonRef.current, {
+      theme: theme === 'dark' ? 'filled_black' : 'outline',
+      size: 'large',
+      type: 'standard',
+    });
 
-  window.google.accounts.id.prompt();
-}, [showGoogleModal, gsiReady, googleToken, theme]);
+    window.google.accounts.id.prompt();
+  }, [showGoogleModal, gsiReady, googleToken, theme]);
 
   useEffect(() => {
     if (window.google && window.google.accounts && window.google.accounts.id) {
@@ -183,7 +213,7 @@ useEffect(() => {
     }
 
     const script = document.createElement('script');
-    script.src = "https://accounts.google.com/gsi/client";
+    script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
     script.onload = () => setGsiReady(true);
@@ -205,6 +235,9 @@ useEffect(() => {
       if (res.ok) {
         setUserData(data);
         setShowGoogleModal(false);
+        /* ─── reset limite anonimo ─── */
+        setGenCount(0);
+        setShowLimitOverlay(false);
       } else {
         alert(`Errore di autenticazione: ${data.error || 'sconosciuto'}`);
         setGoogleToken(null);
@@ -220,6 +253,7 @@ useEffect(() => {
   const logout = () => {
     setGoogleToken(null);
     setUserData(null);
+    setGenCount(0);
   };
 
   return (
@@ -349,24 +383,74 @@ useEffect(() => {
         <div style={{ marginBottom: '2rem', width: '100%', maxWidth: '320px' }}>
           <SvgLogoInteractive flipped />
         </div>
-</div>
+      </div>
       {/* CHAT SOTTO IL LOGO */}
       <div className={styles.iframeSection}>
-      <iframe
-        src="https://sgailegal.it/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm&visible_avatar=1"
-        title="SGAI Chat Interface"
-        style={{
-          borderRadius: 'var(--border-radius)',
-          width: '100%',
-          minHeight: 350,
-          maxHeight: 1600, // opzionale se vuoi fermare a max
-          border: 'none',
-          display: 'block',
-          background: 'transparent',
-        }}
-        allow="clipboard-write" // opzionale
-      />
-    </div>
+        <iframe
+          src="https://sgailegal.it/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm&visible_avatar=1"
+          title="SGAI Chat Interface"
+          style={{
+            borderRadius: 'var(--border-radius)',
+            width: '100%',
+            minHeight: 350,
+            maxHeight: 1600, // opzionale se vuoi fermare a max
+            border: 'none',
+            display: 'block',
+            background: 'transparent',
+          }}
+          allow="clipboard-write" // opzionale
+        />
+      </div>
+
+      {/* ─────────── overlay di blocco se superato il limite ─────────── */}
+      {showLimitOverlay && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1500,
+            color: '#fff',
+            textAlign: 'center',
+            padding: '2rem',
+          }}
+        >
+          <div
+            style={{
+              background: 'rgba(30,30,30,0.85)',
+              borderRadius: 12,
+              padding: '2rem',
+              maxWidth: 420,
+            }}
+          >
+            <h2 style={{ marginTop: 0 }}>
+              Hai esaurito le {FREE_LIMIT} generazioni gratuite
+            </h2>
+            <p>Per continuare effettua l’accesso con Google.</p>
+            <button
+              onClick={() => {
+                setShowLimitOverlay(false);
+                setShowGoogleModal(true);
+              }}
+              style={{
+                marginTop: 24,
+                background: '#4285f4',
+                color: '#fff',
+                padding: '10px 24px',
+                borderRadius: 8,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              Accedi con Google
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* FEATURE */}
       <div className={styles.featuresSection}>
@@ -444,10 +528,8 @@ useEffect(() => {
         </p>
         <p>
           SGAI è un sistema in fase di sviluppo, basato sull’intelligenza artificiale. Lo sappiamo: non è ancora completo, e talvolta può fornire risposte inesatte, parziali o incoerenti. Ma è proprio grazie all’uso quotidiano e al supporto degli utenti che il progetto può evolversi e migliorare.
-          {' '}
           Il sistema viene aggiornato costantemente, con l’integrazione progressiva di nuove fonti,
           funzionalità e affinamenti della logica. Se oggi non trovi quello che cerchi, è possibile che domani ci sia.
-          {' '}
           Pur puntando alla massima accuratezza, invitiamo a verificare sempre i contenuti con fonti ufficiali e a consultare professionisti qualificati per ogni decisione rilevante.
         </p>
       </div>
