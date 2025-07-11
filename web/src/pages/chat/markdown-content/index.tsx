@@ -33,8 +33,9 @@ import styles from './index.less';
 /// versione con indici giusti ma manca il preview
 //const getChunkIndex = (match: string) => Number(match.slice(2, -2));
 
-const reg = /(##\d+\$\$)/g;
-const getChunkIndex = (match: string) => Number(match.slice(2, -2));
+const reg = /(~~\d+==|##\d+\$\$)/g;
+const getChunkIndex = (match: string) =>
+  parseInt(match.replace(/\D/g, ''), 10);   // estrae solo le cifre
 
 // TODO: The display of the table is inconsistent with the display previously placed in the MessageItem.
 const MarkdownContent = ({
