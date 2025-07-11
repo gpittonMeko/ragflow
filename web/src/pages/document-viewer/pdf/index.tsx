@@ -49,7 +49,14 @@ const PdfPreviewer = ({ url }: IProps) => {
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       {/* Pulsante di download in alto a destra */}
-      <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          zIndex: 9999,      // <<< più alto di qualunque canvas
+        }}
+      >
         <Button
           type="primary"
           size="small"
