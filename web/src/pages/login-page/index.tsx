@@ -23,7 +23,7 @@ declare global {
 const PresentationPage: React.FC = () => {
   //const iframeRef = useRef<HTMLIFrameElement>(null);
   const googleButtonRef = useRef<HTMLDivElement>(null);
-  
+
   const [genCount, setGenCount] = useState<number>(() => {
   const saved = Number(localStorage.getItem('sgai-gen-count') || 0);
   return isNaN(saved) ? 0 : saved;
@@ -388,13 +388,13 @@ useEffect(() => {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              backgroundColor: 'var(--card-bg)',
+              backgroundColor: '#fff',
               padding: '2rem',
               borderRadius: 'var(--border-radius)',
               boxShadow: 'var(--shadow)',
               width: '320px',
               textAlign: 'center',
-              color: 'var(--text-primary)',
+              color: '#000',
               userSelect: 'none',
             }}
           >
