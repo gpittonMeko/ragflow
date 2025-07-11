@@ -263,31 +263,52 @@ const PresentationPage: React.FC = () => {
         {theme === 'dark' ? <span className={styles.themeIcon}>☀️</span> : <span className={styles.themeIcon}>🌙</span>}
       </button>
 
-      {/* Pulsante login / user info */}
-      {!userData ? (
-        <button
-          onClick={() => setShowGoogleModal(true)}
-          className={styles.loginButton}
-          aria-label="Login con Google"
-          type="button"
-          style={{
-            position: 'fixed',
-            right: 80,
-            top: 20,
-            zIndex: 1100,
-            backgroundColor: '#fff',
-            color: '#222',
-            borderRadius: '8px',
-            padding: '10px 16px',
-            fontWeight: 600,
-            border: '1px solid #ccc',
-            cursor: 'pointer',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-          }}
-        >
-          👤 Accedi con Google
-        </button>
-      ) : (
+
+  {/* Pulsante login + contatore */}
+{!userData ? (
+  <>
+    <button
+      onClick={() => setShowGoogleModal(true)}
+      className={styles.loginButton}
+      aria-label="Login con Google"
+      type="button"
+      style={{
+        position: 'fixed',
+        right: 80,
+        top: 20,
+        zIndex: 1100,
+        backgroundColor: '#fff',
+        color: '#222',
+        borderRadius: 8,
+        padding: '10px 16px',
+        fontWeight: 600,
+        border: '1px solid #ccc',
+        cursor: 'pointer',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+      }}
+    >
+      👤 Accedi con Google
+    </button>
+
+    {/* === CONTATORE GENERAZIONI RESTANTI === */}
+    <div
+      style={{
+        position: 'fixed',
+        right: 80,
+        top: 60,
+        zIndex: 1100,
+        fontWeight: 600,
+        color: 'var(--text-primary)',
+        background: 'rgba(255,255,255,0.8)',
+        padding: '2px 8px',
+        borderRadius: 6,
+      }}
+    >
+      Generazioni rimaste: {Math.max(FREE_LIMIT - genCount, 0)} / {FREE_LIMIT}
+    </div>
+  </>
+) : (
+
         <>
           <div
             className={styles.userInfo}
