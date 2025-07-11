@@ -71,28 +71,36 @@ const ChatContainer = ({ theme }) => {
 }, []);
 
 useEffect(() => {
-  let interval = null;
-  let finished = false;
+  let interval: any = null;
   const START = Date.now();
 
   if (sendLoading || isGenerating) {
+    /*  stiamo GENERANDO  */
+    isGeneratingRef.current = true;              // ★ salva stato precedente
     setBarVisible(true);
     setProgress(0);
 
-  interval = setInterval(() => {
-    const elapsed = Date.now() - START;
-    let target = Math.min(90, (elapsed / SIMULATED_TOTAL_MS) * 90);
-    setProgress(target);
-  }, 200);
+    interval = setInterval(() => {
+      const elapsed = Date.now() - START;
+      const target = Math.min(90, (elapsed / SIMULATED_TOTAL_MS) * 90);
+      setProgress(target);
+    }, 200);
   } else {
-    setProgress(100);                // Va a 100% a fine generazione
-    finished = true;
-    setTimeout(() => setBarVisible(false), 650);  // Nascondi con fade-out
-    setTimeout(() => setProgress(0), 1200);      // Resetta per dopo
+    /*  la generazione è FINITA  */
+    if (isGeneratingRef.current) {               // ★ transizione true → false
+      window.parent?.postMessage(
+        { type: 'generation-finished' },
+        '*'
+      );
+    }
+    isGeneratingRef.current = false;             // ★ reset flag
+
+    setProgress(100);
+    setTimeout(() => setBarVisible(false), 650);
+    setTimeout(() => setProgress(0), 1200);
   }
 
   return () => {
-    finished = true;
     if (interval) clearInterval(interval);
   };
 }, [sendLoading, isGenerating]);
