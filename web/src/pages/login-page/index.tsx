@@ -52,6 +52,21 @@ useEffect(() => {
 
   const [showLimitOverlay, setShowLimitOverlay] = useState(false);
 
+
+  // comunica all’iframe se il limite è stato raggiunto
+useEffect(() => {
+  const iframe = document.querySelector<HTMLIFrameElement>(
+    'iframe[title="SGAI Chat Interface"]'
+  );
+  if (iframe && iframe.contentWindow) {
+    iframe.contentWindow.postMessage(
+      { type: 'limit-status', blocked: showLimitOverlay },
+      '*'
+    );
+  }
+}, [showLimitOverlay]);
+
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('sgai-theme', theme);

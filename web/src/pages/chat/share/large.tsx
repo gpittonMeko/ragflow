@@ -54,6 +54,9 @@ const ChatContainer = ({ theme }) => {
   const [hasMounted, setHasMounted] = useState(false);
   const [hasFocusedOnce, setHasFocusedOnce] = useState(false);
 
+  const [blocked, setBlocked] = useState(false);
+
+
   const useFetchAvatar = useMemo(() => {
     return from === SharedFrom.Agent
       ? useFetchFlowSSE
@@ -160,6 +163,17 @@ useEffect(() => {
     }, '*');
   }, 120);
 }, [derivedMessages.length, sendLoading, isGenerating]);
+
+
+useEffect(() => {
+  function handleLimitMsg(e: MessageEvent) {
+    if (e.data?.type === 'limit-status') {
+      setBlocked(Boolean(e.data.blocked));
+    }
+  }
+  window.addEventListener('message', handleLimitMsg);
+  return () => window.removeEventListener('message', handleLimitMsg);
+}, []);
 
 //
 //useEffect(() => {
@@ -278,11 +292,29 @@ useEffect(() => {
           <div ref={ref} />
         </Flex>
 
+
+        {blocked && (
+          <div
+            style={{
+              margin: '0 0 8px',
+              padding: '6px 12px',
+              background: '#fff3cd',
+              color: '#664d03',
+              border: '1px solid #ffecb5',
+              borderRadius: 6,
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            Limite gratuito raggiunto - effettua il login per continuare
+          </div>
+        )}
+
         <MessageInput
           isShared
           value={value}
-          disabled={hasError}
-          sendDisabled={sendDisabled}
+          disabled={hasError || blocked}
+          sendDisabled={sendDisabled|| blocked}}
           conversationId={conversationId}
           onInputChange={handleInputChange}
           onPressEnter={handlePressEnter}
