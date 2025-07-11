@@ -17,9 +17,17 @@ declare global {
   }
 }
 
+
+
+
 const PresentationPage: React.FC = () => {
   //const iframeRef = useRef<HTMLIFrameElement>(null);
   const googleButtonRef = useRef<HTMLDivElement>(null);
+  
+  const [genCount, setGenCount] = useState<number>(() => {
+  const saved = Number(localStorage.getItem('sgai-gen-count') || 0);
+  return isNaN(saved) ? 0 : saved;
+});
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('sgai-theme') as 'light' | 'dark') || 'dark';
@@ -36,7 +44,12 @@ const PresentationPage: React.FC = () => {
   //const [hasSkippedInitialExpand, setHasSkippedInitialExpand] = useState(false);
 
   /* ───────── nuovo state per limitatore anonimo ───────── */
-  const [genCount, setGenCount] = useState(0);
+  // salva il contatore su localStorage e ripristina overlay su refresh
+useEffect(() => {
+  localStorage.setItem('sgai-gen-count', String(genCount));
+  if (!userData && genCount >= FREE_LIMIT) setShowLimitOverlay(true);
+}, [genCount, userData]);
+
   const [showLimitOverlay, setShowLimitOverlay] = useState(false);
 
   useEffect(() => {
@@ -237,7 +250,9 @@ const PresentationPage: React.FC = () => {
         setShowGoogleModal(false);
         /* ─── reset limite anonimo ─── */
         setGenCount(0);
+        localStorage.removeItem('sgai-gen-count');   // <─ reset anche storage
         setShowLimitOverlay(false);
+
       } else {
         alert(`Errore di autenticazione: ${data.error || 'sconosciuto'}`);
         setGoogleToken(null);
@@ -254,6 +269,7 @@ const PresentationPage: React.FC = () => {
     setGoogleToken(null);
     setUserData(null);
     setGenCount(0);
+    localStorage.removeItem('sgai-gen-count');
   };
 
   return (
@@ -264,89 +280,93 @@ const PresentationPage: React.FC = () => {
       </button>
 
 
-  {/* Pulsante login + contatore */}
+  {/* Pulsante login + contatore oppure dati utente */}
 {!userData ? (
   <>
+    {/* --- Google button stile ufficiale --- */}
     <button
       onClick={() => setShowGoogleModal(true)}
-      className={styles.loginButton}
-      aria-label="Login con Google"
       type="button"
       style={{
         position: 'fixed',
         right: 80,
         top: 20,
         zIndex: 1100,
-        backgroundColor: '#fff',
-        color: '#222',
-        borderRadius: 8,
-        padding: '10px 16px',
-        fontWeight: 600,
-        border: '1px solid #ccc',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        background: '#fff',
+        color: '#3c4043',
+        border: '1px solid #dadce0',
+        borderRadius: 4,
+        padding: '9px 18px 9px 15px',
+        fontSize: 14,
+        fontWeight: 500,
         cursor: 'pointer',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+        boxShadow: '0 1px 3px rgba(0,0,0,.1)',
       }}
     >
-      👤 Accedi con Google
+      <svg width="18" height="18" viewBox="0 0 24 24">
+        <path fill="#EA4335" d="M12 11.989v4.318h6.017c-.241 1.304-1.45 3.823-6.017 3.823-3.626 0-6.582-2.978-6.582-6.645S8.374 6.84 12 6.84c2.063 0 3.448.884 4.243 1.642l2.898-2.806C17.181 3.827 14.807 2.66 12 2.66 6.522 2.66 2 7.162 2 12.485S6.522 22.31 12 22.31c6.94 0 10.647-4.849 10.647-9.765 0-.655-.074-1.155-.165-1.556H12z"/>
+      </svg>
+      Accedi con Google
     </button>
 
-    {/* === CONTATORE GENERAZIONI RESTANTI === */}
+    {/* --- “pill” del contatore --- */}
     <div
       style={{
         position: 'fixed',
         right: 80,
-        top: 60,
+        top: 70,
         zIndex: 1100,
+        background: 'linear-gradient(135deg,#4285F4,#34A853)',
+        color: '#fff',
+        padding: '3px 12px',
+        borderRadius: 999,
+        fontSize: 13,
         fontWeight: 600,
-        color: 'var(--text-primary)',
-        background: 'rgba(255,255,255,0.8)',
-        padding: '2px 8px',
-        borderRadius: 6,
+        boxShadow: '0 0 6px rgba(0,0,0,.25)',
       }}
     >
-      Generazioni rimaste: {Math.max(FREE_LIMIT - genCount, 0)} / {FREE_LIMIT}
+      {Math.max(FREE_LIMIT - genCount, 0)} / {FREE_LIMIT}
     </div>
   </>
 ) : (
-
-        <>
-          <div
-            className={styles.userInfo}
-            style={{
-              position: 'fixed',
-              right: 80,
-              top: 24,
-              zIndex: 1100,
-              color: 'var(--text-primary)',
-              fontWeight: 600,
-            }}
-          >
-            {userData.email} ({userData.plan})
-          </div>
-          <button
-            onClick={logout}
-            className={styles.logoutButton}
-            aria-label="Logout"
-            type="button"
-            style={{
-              position: 'fixed',
-              right: 20,
-              top: 20,
-              zIndex: 1100,
-              backgroundColor: '#ff4d4f',
-              color: '#fff',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '8px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 2px 6px rgba(255, 77, 79, 0.6)',
-            }}
-          >
-            🚪 Esci
-          </button>
-        </>
-      )}
+  <>
+    <div
+      style={{
+        position: 'fixed',
+        right: 80,
+        top: 26,
+        zIndex: 1100,
+        fontWeight: 600,
+        color: 'var(--text-primary)',
+      }}
+    >
+      {userData.email} ({userData.plan})
+    </div>
+    <button
+      onClick={logout}
+      type="button"
+      style={{
+        position: 'fixed',
+        right: 20,
+        top: 20,
+        zIndex: 1100,
+        background: '#d93025',
+        color: '#fff',
+        border: 'none',
+        padding: '10px 16px',
+        borderRadius: 6,
+        fontWeight: 600,
+        cursor: 'pointer',
+        boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+      }}
+    >
+      🚪 Esci
+    </button>
+  </>
+)}
 
       {/* Google auth modal popup */}
       {showGoogleModal && (
