@@ -314,7 +314,7 @@ useEffect(() => {
           isShared
           value={value}
           disabled={hasError || blocked}
-          sendDisabled={sendDisabled|| blocked}}
+          sendDisabled={sendDisabled || blocked}
           conversationId={conversationId}
           onInputChange={handleInputChange}
           onPressEnter={handlePressEnter}
