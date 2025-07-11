@@ -26,7 +26,7 @@ services:
       memlock:
         soft: -1
         hard: -1
-    mem_limit: ${MEM_LIMIT}
+    mem_limit: 64g  
     healthcheck:
       test:
         - "CMD-SHELL"
@@ -55,14 +55,14 @@ services:
       - discovery.seed_hosts=es01,es02
       - cluster.initial_master_nodes=es01,es02
       - bootstrap.memory_lock=true
-      - ES_JAVA_OPTS=-Xms8g -Xmx8g
+      - ES_JAVA_OPTS=-Xms30g -Xmx30g        # <-- CAMBIA 8g → 30g
       - xpack.security.enabled=false
       - TZ=${TIMEZONE}
     ulimits:
       memlock:
         soft: -1
         hard: -1
-    mem_limit: ${MEM_LIMIT}
+    mem_limit: 64g  
     networks:
       - ragflow
     restart: on-failure
