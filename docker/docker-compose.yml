@@ -55,6 +55,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      ragflow:              # <-- AGGIUNGI QUESTE 2 RIGHE
+        condition: service_started   # oppure service_healthy se aggiungi un healthcheck
     image: ${RAGFLOW_IMAGE}
     command: ["--workers=5"]
 
