@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import styles from './index.less';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
 import api from '@/utils/api'; // <-- sostituisci con il percorso reale del tuo file api
+import SubscriptionUpgradeButton from '@site/src/components/SubscriptionUpgradeButton'; // sistema path/import come serve
 
 const CLIENT_ID =
   '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
@@ -250,6 +251,8 @@ useEffect(() => {
     // NON rimuovere lo script al cleanup
   }, []);
 
+
+  
   const handleGoogleResponse = async (response: any) => {
     if (!response.credential) return;
     setGoogleToken(response.credential);
@@ -360,6 +363,15 @@ useEffect(() => {
     >
       {userData.email} ({userData.plan})
     </div>
+    {/* 🔽 ECCO QUI */}
+
+        {userData && userData.plan !== "premium" && googleToken && (
+      <SubscriptionUpgradeButton
+        googleToken={googleToken}
+        userPlan={userData.plan}
+      />
+    )}
+
     <button
       onClick={logout}
       type="button"
