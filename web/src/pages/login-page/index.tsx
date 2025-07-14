@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import styles from './index.less';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
 import api from '@/utils/api'; // <-- sostituisci con il percorso reale del tuo file api
-import SubscriptionUpgradeButton from '@site/src/components/SubscriptionUpgradeButton'; // sistema path/import come serve
+import SubscriptionUpgradeButton from '../../components/SubscriptionUpgradeButton';
 
 const CLIENT_ID =
   '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
