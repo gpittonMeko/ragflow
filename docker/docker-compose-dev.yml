@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
 
   es01:
@@ -42,6 +40,11 @@ services:
     restart: on-failure
     networks:
       - ragflow
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-u", "root", "-p${MYSQL_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7
@@ -97,11 +100,9 @@ services:
       - "9382:9382"
     volumes:
       - ./ragflow-logs:/ragflow/logs
-      - ../web:/ragflow/web      # Monta il codice frontend/backend per editing live
-      # aggiungi altri volumi conf/nginx se ti servono
+      - ../web:/ragflow/web
     environment:
       - TZ=${TIMEZONE}
-      # Altro se serve
     restart: on-failure
     networks:
       - ragflow
