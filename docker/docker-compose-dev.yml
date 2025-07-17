@@ -1,4 +1,5 @@
 services:
+
   es01:
     container_name: ragflow-es-01
     image: elasticsearch:${STACK_VERSION}
@@ -13,7 +14,7 @@ services:
       - network.host=0.0.0.0
       - discovery.type=single-node
       - bootstrap.memory_lock=true
-      - ES_JAVA_OPTS=${ES_JAVA_OPTS}
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g
       - xpack.security.enabled=false
       - TZ=${TIMEZONE}
     ulimits:
@@ -103,6 +104,52 @@ services:
       - "8000:8000"
     environment:
       - TZ=${TIMEZONE}
+    networks:
+      - ragflow
+    restart: on-failure
+
+  ragflow:
+    container_name: ragflow-server
+    depends_on:
+      mysql:
+        condition: service_healthy
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    image: ragflow-lite:latest
+    ports:
+      - ${SVR_HTTP_PORT}:9380
+    volumes:
+      - ./ragflow-logs:/ragflow/logs
+      # aggiungi/cancella volumi che davvero servono nella versione leggera!
+      # - ./nginx/ragflow.conf:/etc/nginx/conf.d/ragflow.conf # solo se serve!
+      # - ./service_conf.yaml.template:/ragflow/conf/service_conf.yaml.template # solo se serve!
+      # - ../web:/ragflow/web # solo se serve!
+    env_file: .env
+    environment:
+      - TZ=${TIMEZONE}
+      - HF_ENDPOINT=${HF_ENDPOINT}
+      - MACOS=${MACOS}
+    networks:
+      - ragflow
+    restart: on-failure
+
+  executor:
+    container_name: ragflow-executor
+    depends_on:
+      mysql:
+        condition: service_healthy
+      ragflow:
+        condition: service_started
+    image: ${RAGFLOW_IMAGE}
+    command: ["--workers=2"]
+    volumes:
+      - ./ragflow-logs:/ragflow/logs
+    env_file: .env
+    environment:
+      - TZ=${TIMEZONE}
+      - HF_ENDPOINT=${HF_ENDPOINT}
+      - MACOS=${MACOS}
     networks:
       - ragflow
     restart: on-failure
