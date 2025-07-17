@@ -1,8 +1,8 @@
 services:
 
   es01:
-    image: elasticsearch:${STACK_VERSION}
     container_name: ragflow-es-01
+    image: elasticsearch:${STACK_VERSION}
     env_file: .env
     volumes:
       - esdata01:/usr/share/elasticsearch/data
@@ -12,19 +12,47 @@ services:
       - node.name=es01
       - cluster.name=ragflow-cluster
       - network.host=0.0.0.0
-      - discovery.type=single-node
+      - discovery.type=single-node    # << SOLO NODE SINGOLO
       - bootstrap.memory_lock=true
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m # RAM BASSA PER DEV
       - xpack.security.enabled=false
       - TZ=${TIMEZONE}
     ulimits:
       memlock:
         soft: -1
         hard: -1
-    mem_limit: 1g
-    restart: on-failure
+    mem_limit: 1g  
     networks:
       - ragflow
+    restart: on-failure
+
+  infinity:
+    container_name: ragflow-infinity
+    image: infiniflow/infinity:v0.6.0-dev3
+    volumes:
+      - infinity_data:/var/infinity
+      - ./infinity_conf.toml:/infinity_conf.toml
+    command: ["-f", "/infinity_conf.toml"]
+    ports:
+      - ${INFINITY_THRIFT_PORT}:23817
+      - ${INFINITY_HTTP_PORT}:23820
+      - ${INFINITY_PSQL_PORT}:5432
+    env_file: .env
+    environment:
+      - TZ=${TIMEZONE}
+    mem_limit: ${MEM_LIMIT}
+    ulimits:
+      nofile:
+        soft: 500000
+        hard: 500000
+    networks:
+      - ragflow
+    healthcheck:
+      test: ["CMD", "curl", "http://localhost:23820/admin/node/current"]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    restart: on-failure
 
   mysql:
     image: mysql:8.0.39
@@ -33,29 +61,26 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}
       - TZ=${TIMEZONE}
-    volumes:
-      - mysql_data:/var/lib/mysql
+    command:
+      --max_connections=1000
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+      --tls_version=TLSv1.2,TLSv1.3
+      --init-file /data/application/init.sql
+      --binlog_expire_logs_seconds=604800
     ports:
       - "${MYSQL_PORT:-3306}:3306"
-    restart: on-failure
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/data/application/init.sql
     networks:
       - ragflow
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-u", "root", "-p${MYSQL_PASSWORD}"]
+      test: ["CMD", "mysqladmin" ,"ping", "-uroot", "-p${MYSQL_PASSWORD}"]
       interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7
-    container_name: ragflow-redis
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
-    networks:
-      - ragflow
+      timeout: 10s
+      retries: 3
     restart: on-failure
 
   minio:
@@ -65,6 +90,7 @@ services:
     ports:
       - "${MINIO_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    env_file: .env
     environment:
       - MINIO_ROOT_USER=${MINIO_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_PASSWORD}
@@ -74,6 +100,32 @@ services:
     networks:
       - ragflow
     restart: on-failure
+
+  redis:
+    image: valkey/valkey:8
+    container_name: ragflow-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 128mb --maxmemory-policy allkeys-lru
+    env_file: .env
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ragflow
+    restart: on-failure
+
+  backendoauth:
+    container_name: ragflow-backend-oauth
+    build:
+      context: ../web/src/pages/login-page
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - TZ=${TIMEZONE}
+    networks:
+      - ragflow
+    restart: on-failure  
 
   ragflow-server:
     build:
@@ -92,36 +144,12 @@ services:
       minio:
         condition: service_started
     ports:
-      - "${SVR_HTTP_PORT:-9380}:9380"
-      - "80:80"
-      - "443:443"
-      - "5678:5678"
-      - "5679:5679"
-      - "9382:9382"
+      - "${SVR_HTTP_PORT:-9380}:9380"      # <<--- LA TUA APP, MODIFICA SE TI SERVE UNA PORTA WEB DIVERSA!
+      # Esempio: - "3000:3000"  se la tua dev app sta su 3000!
     volumes:
       - ./ragflow-logs:/ragflow/logs
-      - ../web:/ragflow/web
-    environment:
-      - TZ=${TIMEZONE}
-    restart: on-failure
-    networks:
-      - ragflow
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-  executor:
-    image: ${RAGFLOW_IMAGE}
-    container_name: ragflow-executor
-    env_file: .env
-    depends_on:
-      mysql:
-        condition: service_healthy
-      ragflow-server:
-        condition: service_started
-    command: ["--workers=5"]
-    volumes:
-      - ./ragflow-logs:/ragflow/logs
-      - ../web:/ragflow/web
+      - ../web:/ragflow/web                # <<-- mount codice/app stesso volume di prima
+      # Nessun file nginx, nessuna conf nginx!
     environment:
       - TZ=${TIMEZONE}
     restart: on-failure
@@ -132,10 +160,19 @@ services:
 
 volumes:
   esdata01:
+    driver: local
+  esdata02:
+    driver: local
+  infinity_data:
+    driver: local
   mysql_data:
-  ragflow-logs:
-  redis_data:
+    driver: local
   minio_data:
+    driver: local
+  redis_data:
+    driver: local
+  ragflow-logs:
+    driver: local
 
 networks:
   ragflow:
