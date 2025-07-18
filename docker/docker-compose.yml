@@ -12,7 +12,7 @@ services:
     # example to setup MCP server
     # command:
     #   - --enable-mcpserver
-    #   - --mcp-host=0.0.0.0
+    #   - --mcp-host=0.0.0.0F
     #   - --mcp-port=9382
     #   - --mcp-base-url=http://127.0.0.1:9380
     #   - --mcp-script-path=/ragflow/mcp/server/server.py
