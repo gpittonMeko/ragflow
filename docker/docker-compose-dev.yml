@@ -136,43 +136,53 @@ services:
 
 
   # --- OAUTH BACKEND (ES.)
-  backendoauth:
-    container_name: ragflow-backend-oauth
+  ragflow:
+    depends_on:
+      mysql:
+        condition: service_healthy
     build:
-      context: ../web/src/pages/login-page
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - TZ=${TIMEZONE}
-    networks:
-      - ragflow
-    restart: on-failure  
-
-
-  # -------------------------------------------------
-  # RAGFLOW APP WEB PRINCIPALE (server/applicativo)
-  # -------------------------------------------------
-  ragflow-server:
-    build:
-      context: ../web                    # <-- la cartella dove c’è il tuo package.json di React!
-      dockerfile: Dockerfile             # <-- se ce l’hai (vedi sotto)
-    image: ragflow-react:dev             # <-- o altro nome che vuoi
+      context: ../              # cartella radice progetto (dove c’è setup.py)
+      dockerfile: Dockerfile    # se il nome è “Dockerfile” puoi ometterlo
+    image: ragflow-patched:latest   # (facoltativo) tag locale
+    # example to setup MCP server
+    # command:
+    #   - --enable-mcpserver
+    #   - --mcp-host=0.0.0.0F
+    #   - --mcp-port=9382
+    #   - --mcp-base-url=http://127.0.0.1:9380
+    #   - --mcp-script-path=/ragflow/mcp/server/server.py
+    #   - --mcp-mode=self-host
+    #   - --mcp--host-api-key="ragflow-xxxxxxx"
     container_name: ragflow-server
     ports:
-      - "3000:3000"                      # SOLO questa: host:container
+      - ${SVR_HTTP_PORT}:9380
+      - 80:80
+      - 443:443
+      - 5678:5678
+      - 5679:5679
+      - 9382:9382 # entry for MCP (host_port:docker_port). The docker_port should match with the value you set for `mcp-port` above
     volumes:
-      - ../web:/usr/src/app              # path host : path container
-    working_dir: /usr/src/app
-    command: ["npm", "start"]            # <-- QUESTO FA TUTTO (IGNORA nginx/entrypoint.sh)
+      - ./ragflow-logs:/ragflow/logs
+     
+      - ../history_data_agent:/ragflow/history_data_agent
+      - ./service_conf.yaml.template:/ragflow/conf/service_conf.yaml.template
+
+      - ../web:/ragflow/web
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./entrypoint.sh:/ragflow/entrypoint.sh  # Aggiungi questa riga
+
     env_file: .env
     environment:
       - TZ=${TIMEZONE}
-      # (altre env se servono, ma non servono di base)
+      - HF_ENDPOINT=${HF_ENDPOINT}
+      - MACOS=${MACOS}
     networks:
       - ragflow
     restart: on-failure
-
+    # https://docs.docker.com/engine/daemon/prometheus/#create-a-prometheus-configuration
+    # If you're using Docker Desktop, the --add-host flag is optional. This flag makes sure that the host's internal IP gets exposed to the Prometheus container.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   # ---------------------------
   # RAGFLOW EXECUTOR (background worker)
   # ---------------------------
