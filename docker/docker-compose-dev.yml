@@ -1,8 +1,8 @@
-
+version: '3.8'
 
 services:
-    # ---------------------------
-  # Elasticsearch 2-nodi
+  # ---------------------------
+  # Elasticsearch 1-nodo (2GB RAM)
   # ---------------------------
   es01:
     container_name: ragflow-es-01
@@ -18,8 +18,7 @@ services:
       - node.name=es01
       - cluster.name=ragflow-cluster
       - network.host=0.0.0.0
-      - discovery.seed_hosts=es01
-      - cluster.initial_master_nodes=es01
+      - discovery.type=single-node
       - bootstrap.memory_lock=true
       - ES_JAVA_OPTS=-Xms2g -Xmx2g
       - xpack.security.enabled=false
@@ -28,7 +27,7 @@ services:
       memlock:
         soft: -1
         hard: -1
-    mem_limit: 64g  
+    mem_limit: 2g
     healthcheck:
       test:
         - "CMD-SHELL"
@@ -41,8 +40,6 @@ services:
     networks:
       - ragflow
     restart: on-failure
-
-
 
   infinity:
     container_name: ragflow-infinity
@@ -74,9 +71,7 @@ services:
       retries: 120
     restart: on-failure
 
-
   mysql:
-    # mysql:5.7 linux/arm64 image is unavailable.
     image: mysql:8.0.39
     container_name: ragflow-mysql
     env_file: .env
@@ -124,7 +119,6 @@ services:
     restart: on-failure
 
   redis:
-    # swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/valkey/valkey:8
     image: valkey/valkey:8
     container_name: ragflow-redis
     command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 128mb --maxmemory-policy allkeys-lru
@@ -148,28 +142,19 @@ services:
       - TZ=${TIMEZONE}
     networks:
       - ragflow
-    restart: on-failure  
+    restart: on-failure
 
-
-
-
+  # ------------------------------------------
+  # RAGFLOW SERVER (con tutti i volumi richiesti)
+  # ------------------------------------------
   ragflow:
     depends_on:
       mysql:
         condition: service_healthy
     build:
-      context: ../              # cartella radice progetto (dove c’è setup.py)
-      dockerfile: Dockerfile    # se il nome è “Dockerfile” puoi ometterlo
-    image: ragflow-patched:latest   # (facoltativo) tag locale
-    # example to setup MCP server
-    # command:
-    #   - --enable-mcpserver
-    #   - --mcp-host=0.0.0.0F
-    #   - --mcp-port=9382
-    #   - --mcp-base-url=http://127.0.0.1:9380
-    #   - --mcp-script-path=/ragflow/mcp/server/server.py
-    #   - --mcp-mode=self-host
-    #   - --mcp--host-api-key="ragflow-xxxxxxx"
+      context: ../
+      dockerfile: Dockerfile
+    image: ragflow-patched:latest
     container_name: ragflow-server
     ports:
       - ${SVR_HTTP_PORT}:9380
@@ -177,7 +162,7 @@ services:
       - 443:443
       - 5678:5678
       - 5679:5679
-      - 9382:9382 # entry for MCP (host_port:docker_port). The docker_port should match with the value you set for `mcp-port` above
+      - 9382:9382
     volumes:
       - ./ragflow-logs:/ragflow/logs
       - ./nginx/ragflow.conf:/etc/nginx/conf.d/ragflow.conf
@@ -185,11 +170,9 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ../history_data_agent:/ragflow/history_data_agent
       - ./service_conf.yaml.template:/ragflow/conf/service_conf.yaml.template
-
       - ../web:/ragflow/web
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - ./entrypoint.sh:/ragflow/entrypoint.sh  # Aggiungi questa riga
-
+      - ./entrypoint.sh:/ragflow/entrypoint.sh
     env_file: .env
     environment:
       - TZ=${TIMEZONE}
@@ -198,26 +181,20 @@ services:
     networks:
       - ragflow
     restart: on-failure
-    # https://docs.docker.com/engine/daemon/prometheus/#create-a-prometheus-configuration
-    # If you're using Docker Desktop, the --add-host flag is optional. This flag makes sure that the host's internal IP gets exposed to the Prometheus container.
     extra_hosts:
       - "host.docker.internal:host-gateway"
-  
+
   executor:
     depends_on:
       mysql:
         condition: service_healthy
-      ragflow:              # <-- AGGIUNGI QUESTE 2 RIGHE
-        condition: service_started   # oppure service_healthy se aggiungi un healthcheck
+      ragflow:
+        condition: service_started # oppure service_healthy se aggiungi un healthcheck al servizio 'ragflow'
     image: ${RAGFLOW_IMAGE}
     command: ["--workers=5"]
-
-
     container_name: ragflow-executor
     volumes:
       - ./ragflow-logs:/ragflow/logs
-
-
     env_file: .env
     environment:
       - TZ=${TIMEZONE}
@@ -229,11 +206,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-
 volumes:
   esdata01:
-    driver: local
-  esdata02:
     driver: local
   infinity_data:
     driver: local
