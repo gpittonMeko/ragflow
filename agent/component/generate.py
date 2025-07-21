@@ -164,18 +164,18 @@ class Generate(ComponentBase):
         # ------------------------------------------------------------------ #
         # 4) Legenda “Fonti” (una sola riga per documento)                   #
         # ------------------------------------------------------------------ #
-        legend_lines = ["**Fonti:**"]
-        already = set()
-
-        for m in re.finditer(r'##(\d+)\$\$', answer):
-            idx = int(m.group(1)) - 1            # marker ##N$$ -> indice N-1
-            if 0 <= idx < len(doc_aggs):
-                doc = doc_aggs[idx]
-                if doc["doc_id"] not in already: # evita duplicati in legenda
-                    legend_lines.append(f"- ##{idx+1}$$ {doc['doc_name']}")
-                    already.add(doc["doc_id"])
-
-        answer += "\n\n" + "\n".join(legend_lines)
+        #legend_lines = ["**Fonti:**"]
+        #already = set()
+#
+        #for m in re.finditer(r'##(\d+)\$\$', answer):
+        #    idx = int(m.group(1)) - 1            # marker ##N$$ -> indice N-1
+        #    if 0 <= idx < len(doc_aggs):
+        #        doc = doc_aggs[idx]
+        #        if doc["doc_id"] not in already: # evita duplicati in legenda
+        #            legend_lines.append(f"- ##{idx+1}$$ {doc['doc_name']}")
+        #            already.add(doc["doc_id"])
+#
+        #answer += "\n\n" + "\n".join(legend_lines)
 
         # ------------------------------------------------------------------ #
         # 5) Pacchetto finale                                                #
