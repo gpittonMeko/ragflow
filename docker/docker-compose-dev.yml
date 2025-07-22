@@ -20,7 +20,7 @@ services:
       - network.host=0.0.0.0
       - discovery.type=single-node
       - bootstrap.memory_lock=true
-      - ES_JAVA_OPTS=-Xms2g -Xmx2g
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
       - xpack.security.enabled=false
       - TZ=${TIMEZONE}
     ulimits:
