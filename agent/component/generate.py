@@ -161,22 +161,21 @@ class Generate(ComponentBase):
             )
             seen.add(d_id)
 
-        # ------------------------------------------------------------------ #
-        # 4) Legenda “Fonti” (una sola riga per documento)                   #
-        # ------------------------------------------------------------------ #
-        #legend_lines = ["**Fonti:**"]
-        #already = set()
-#
-        #for m in re.finditer(r'##(\d+)\$\$', answer):
-        #    idx = int(m.group(1)) - 1            # marker ##N$$ -> indice N-1
-        #    if 0 <= idx < len(doc_aggs):
-        #        doc = doc_aggs[idx]
-        #        if doc["doc_id"] not in already: # evita duplicati in legenda
-        #            legend_lines.append(f"- ##{idx+1}$$ {doc['doc_name']}")
-        #            already.add(doc["doc_id"])
-#
-        #answer += "\n\n" + "\n".join(legend_lines)
+         #------------------------------------------------------------------ #
+         #4) Legenda “Fonti” (una sola riga per documento)                   #
+         #------------------------------------------------------------------ #
+        legend_lines = ["**Fonti:**"]
+        already = set()
 
+        for m in re.finditer(r'##(\d+)\$\$', answer):
+            idx = int(m.group(1)) - 1            # marker ##N$$ -> indice N-1
+            if 0 <= idx < len(doc_aggs):
+                doc = doc_aggs[idx]
+                if doc["doc_id"] not in already: # evita duplicati in legenda
+                    legend_lines.append(f"- ##{idx+1}$$ {doc['doc_name']}")
+                    already.add(doc["doc_id"])
+
+        answer += "\n\n" + "\n".join(legend_lines)
         # ------------------------------------------------------------------ #
         # 5) Pacchetto finale                                                #
         # ------------------------------------------------------------------ #
@@ -213,10 +212,6 @@ class Generate(ComponentBase):
     def _run(self, history, **kwargs):
         chat_mdl = LLMBundle(self._canvas.get_tenant_id(), LLMType.CHAT, self._param.llm_id)
         prompt = self._param.prompt
-
-
-
-
 
         retrieval_res = []
         doc_chunks = {}
