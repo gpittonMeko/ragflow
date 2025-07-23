@@ -197,34 +197,8 @@ const MessageItem = ({
               ></MarkdownContent>
             </div>
             
-            //{isAssistant && referenceDocumentList.length > 0 && (
-            //  <List
-            //    bordered
-            //    dataSource={referenceDocumentList}
-            //    renderItem={(item) => {
-            //      return (
-            //        <List.Item>
-            //          <Flex gap={'small'} align="center">
-            //            <FileIcon
-            //              id={item.doc_id}
-            //              name={item.doc_name}
-            //            ></FileIcon>
-            //
-            //            <NewDocumentLink
-            //              documentId={item.doc_id}
-            //              documentName={item.doc_name}
-            //              prefix="document"
-            //              link={item.url}
-            //            >
-            //              {item.doc_name}
-            //            </NewDocumentLink>
-            //          </Flex>
-            //        </List.Item>
-            //      );
-            //    }}
-            //  />
-            //)}
-            
+
+
             {isAssistant && referenceDocumentList.length > 0 && (
               <div style={{ marginTop: 16 }}>
                 <Text strong style={{ fontSize: 13 }}>Fonti:</Text>
