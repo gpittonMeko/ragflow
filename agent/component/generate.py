@@ -156,9 +156,11 @@ class Generate(ComponentBase):
                 {
                     "doc_id": d_id,
                     "doc_name": ck.get("docnm_kwd") or ck.get("doc_name") or "",
-                    "url": ck.get("url") or ""          # <─ NEW
+                    "url": ck.get("url") or "",
+                    "chunk_preview": (ck.get("content_ltks") or ck.get("content") or "")[:300]  # NEW
                 }
             )
+
             seen.add(d_id)
 
          #------------------------------------------------------------------ #

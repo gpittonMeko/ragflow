@@ -196,33 +196,79 @@ const MessageItem = ({
                 clickDocumentButton={clickDocumentButton}
               ></MarkdownContent>
             </div>
+            
+            //{isAssistant && referenceDocumentList.length > 0 && (
+            //  <List
+            //    bordered
+            //    dataSource={referenceDocumentList}
+            //    renderItem={(item) => {
+            //      return (
+            //        <List.Item>
+            //          <Flex gap={'small'} align="center">
+            //            <FileIcon
+            //              id={item.doc_id}
+            //              name={item.doc_name}
+            //            ></FileIcon>
+            //
+            //            <NewDocumentLink
+            //              documentId={item.doc_id}
+            //              documentName={item.doc_name}
+            //              prefix="document"
+            //              link={item.url}
+            //            >
+            //              {item.doc_name}
+            //            </NewDocumentLink>
+            //          </Flex>
+            //        </List.Item>
+            //      );
+            //    }}
+            //  />
+            //)}
+            
             {isAssistant && referenceDocumentList.length > 0 && (
-              <List
-                bordered
-                dataSource={referenceDocumentList}
-                renderItem={(item) => {
-                  return (
-                    <List.Item>
-                      <Flex gap={'small'} align="center">
-                        <FileIcon
-                          id={item.doc_id}
-                          name={item.doc_name}
-                        ></FileIcon>
-
-                        <NewDocumentLink
-                          documentId={item.doc_id}
-                          documentName={item.doc_name}
-                          prefix="document"
-                          link={item.url}
+              <div style={{ marginTop: 16 }}>
+                <Text strong style={{ fontSize: 13 }}>Fonti:</Text>
+                <List
+                  size="small"
+                  itemLayout="vertical"
+                  dataSource={referenceDocumentList}
+                  renderItem={(doc, idx) => (
+                    <List.Item
+                      style={{
+                        padding: '8px 0',
+                        border: 'none',
+                        borderBottom: '1px solid #f0f0f0',
+                      }}
+                    >
+                      <Flex vertical gap={4}>
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            color: '#0f4faa',
+                            wordBreak: 'break-word',
+                            fontWeight: 500,
+                          }}
                         >
-                          {item.doc_name}
-                        </NewDocumentLink>
+                          {`##${idx + 1}$$`} {doc.doc_name}
+                        </a>
+                        {/* Mini preview se disponibile */}
+                        {doc.chunk_preview && (
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {doc.chunk_preview.length > 200
+                              ? doc.chunk_preview.slice(0, 200) + '…'
+                              : doc.chunk_preview}
+                          </Text>
+                        )}
                       </Flex>
                     </List.Item>
-                  );
-                }}
-              />
+                  )}
+                />
+              </div>
             )}
+
+
             {isUser && documentList.length > 0 && (
               <List
                 bordered
