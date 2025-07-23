@@ -189,7 +189,7 @@ services:
       ragflow:
         condition: service_started # oppure service_healthy se aggiungi un healthcheck al servizio 'ragflow'
     image: ${RAGFLOW_IMAGE}
-    command: ["--workers=5"]
+    command: ["--workers=2"]
     container_name: ragflow-executor
     volumes:
       - ./ragflow-logs:/ragflow/logs
