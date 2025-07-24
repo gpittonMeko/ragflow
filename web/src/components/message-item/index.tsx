@@ -13,7 +13,8 @@ import { IRegenerateMessage, IRemoveMessageById } from '@/hooks/logic-hooks';
 import { IMessage } from '@/pages/chat/interface';
 import MarkdownContent from '@/pages/chat/markdown-content';
 import { getExtension, isImage } from '@/utils/document-util';
-import { Avatar, Button, Flex, List, Space, Typography } from 'antd';
+import { Avatar, Button, Flex, List, Space, Typography, Collapse, Tooltip } from 'antd';
+import { CopyOutlined, DownloadOutlined, EyeOutlined, LinkOutlined } from '@ant-design/icons';
 import FileIcon from '../file-icon';
 import IndentedTreeModal from '../indented-tree/modal';
 import NewDocumentLink from '../new-document-link';
@@ -21,7 +22,11 @@ import { useTheme } from '../theme-provider';
 import { AssistantGroupButton, UserGroupButton } from './group-button';
 import styles from './index.less';
 
+// *** NEW COMPONENT (stessa cartella) ***
+import SourceList from './source-list';
+
 const { Text } = Typography;
+const { Panel } = Collapse;
 
 interface IProps extends Partial<IRemoveMessageById>, IRegenerateMessage {
   item: IMessage;
@@ -63,6 +68,12 @@ const MessageItem = ({
   const [clickedDocumentId, setClickedDocumentId] = useState('');
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
+  // --- NEW: riferimento ai chunks per aprire il punto esatto nel PDF
+  const referenceChunks = useMemo(() => reference?.chunks ?? [], [reference?.chunks]);
+
+  // --- NEW: strip della legenda “Fonti” duplicata dal testo
+  const cleanedContent = useMemo(() => stripLegendFromContent(item.content), [item.content]);
+
   // Imposta la dimensione corretta per avatar basata su dimensione schermo
   useEffect(() => {
     const handleResize = () => {
@@ -82,8 +93,17 @@ const MessageItem = ({
 
   const avatarSize = getAvatarSize();
 
+  // Doc list da reference, ma deduplicata
   const referenceDocumentList = useMemo(() => {
-    return reference?.doc_aggs ?? [];
+    const docs = reference?.doc_aggs ?? [];
+    const seen = new Set<string>();
+    return docs.filter((d) => {
+      const id = d.doc_id || d.url || d.doc_name;
+      if (!id) return true;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
   }, [reference?.doc_aggs]);
 
   const handleUserDocumentClick = useCallback(
@@ -112,13 +132,44 @@ const MessageItem = ({
   // Determine message style based on theme and role
   const getMessageStyle = () => {
     if (isAssistant) {
-      // For assistant messages, we want to check if it's dark theme
       return theme === 'dark' ? styles.messageTextDark : styles.messageText;
     } else {
-      // For user messages, always use the messageUserText style (which is now theme-aware)
       return styles.messageUserText;
     }
   };
+
+  // --- NEW: helper per aprire doc e scrollare al marker
+  const onSourceClick = useCallback(
+    (idx: number) => {
+      const chunk = referenceChunks[idx];
+      if (clickDocumentButton && chunk && chunk.doc_id) {
+        clickDocumentButton(chunk.doc_id, chunk as IReferenceChunk);
+      }
+      // Highlight del marker nel DOM se vuoi (opzionale)
+      const marker = `##${idx + 1}$$`;
+      const el = document.querySelector(`[data-marker="${marker}"]`);
+      if (el && 'scrollIntoView' in el) {
+        (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add(styles.markerHighlight);
+        setTimeout(() => el.classList.remove(styles.markerHighlight), 1500);
+      }
+    },
+    [clickDocumentButton, referenceChunks],
+  );
+
+  // --- NEW: copia marker
+  const onCopyMarker = useCallback((marker: string) => {
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(marker).catch(() => {});
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = marker;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+  }, []);
 
   return (
     <div
@@ -140,23 +191,25 @@ const MessageItem = ({
         >
           {visibleAvatar &&
             (item.role === MessageType.User ? (
-              <Avatar 
-                size={avatarSize} 
+              <Avatar
+                size={avatarSize}
                 src={avatar ?? '/logo.svg'}
                 style={{ minWidth: `${avatarSize}px` }}
               />
             ) : avatarDialog ? (
-              <Avatar 
-                size={avatarSize} 
+              <Avatar
+                size={avatarSize}
                 src={avatarDialog}
                 style={{ minWidth: `${avatarSize}px` }}
               />
             ) : (
-              <div style={{ 
-                width: `${avatarSize}px`, 
-                height: `${avatarSize}px`, 
-                minWidth: `${avatarSize}px` 
-              }}>
+              <div
+                style={{
+                  width: `${avatarSize}px`,
+                  height: `${avatarSize}px`,
+                  minWidth: `${avatarSize}px`,
+                }}
+              >
                 <AssistantIcon style={{ width: '100%', height: '100%' }} />
               </div>
             ))}
@@ -179,70 +232,52 @@ const MessageItem = ({
                   content={item.content}
                   messageId={item.id}
                   removeMessageById={removeMessageById}
-                  regenerateMessage={
-                    regenerateMessage && handleRegenerateMessage
-                  }
+                  regenerateMessage={regenerateMessage && handleRegenerateMessage}
                   sendLoading={sendLoading}
                 ></UserGroupButton>
               )}
-
-              {/* <b>{isAssistant ? '' : nickname}</b> */}
             </Space>
+
+            {/* TESTO PRINCIPALE (ripulito dalla legenda Fonti duplicata) */}
             <div className={getMessageStyle()}>
               <MarkdownContent
                 loading={loading}
-                content={item.content}
+                content={cleanedContent}
                 reference={reference}
                 clickDocumentButton={clickDocumentButton}
               ></MarkdownContent>
             </div>
-            
 
-
+            {/* FONTI - UI MIGLIORATA */}
             {isAssistant && referenceDocumentList.length > 0 && (
-              <div style={{ marginTop: 16 }}>
-                <Text strong style={{ fontSize: 13 }}>Fonti:</Text>
-                <List
-                  size="small"
-                  itemLayout="vertical"
-                  dataSource={referenceDocumentList}
-                  renderItem={(doc, idx) => (
-                    <List.Item
-                      style={{
-                        padding: '8px 0',
-                        border: 'none',
-                        borderBottom: '1px solid #f0f0f0',
-                      }}
-                    >
-                      <Flex vertical gap={4}>
-                        <a
-                          href={doc.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            color: '#0f4faa',
-                            wordBreak: 'break-word',
-                            fontWeight: 500,
-                          }}
-                        >
-                          {`##${idx + 1}$$`} {doc.doc_name}
-                        </a>
-                        {/* Mini preview se disponibile */}
-                        {doc.chunk_preview && (
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            {doc.chunk_preview.length > 200
-                              ? doc.chunk_preview.slice(0, 200) + '…'
-                              : doc.chunk_preview}
-                          </Text>
-                        )}
+              <div className={styles.sourcesWrapper}>
+                <Collapse
+                  bordered={false}
+                  defaultActiveKey={['sources']}
+                  expandIconPosition="end"
+                  className={styles.sourcesCollapse}
+                >
+                  <Panel
+                    header={
+                      <Flex align="center" gap={6}>
+                        <Text strong style={{ fontSize: 13 }}>
+                          Fonti ({referenceDocumentList.length})
+                        </Text>
                       </Flex>
-                    </List.Item>
-                  )}
-                />
+                    }
+                    key="sources"
+                  >
+                    <SourceList
+                      docs={referenceDocumentList}
+                      onSourceClick={onSourceClick}
+                      onCopyMarker={onCopyMarker}
+                    />
+                  </Panel>
+                </Collapse>
               </div>
             )}
 
-
+            {/* LISTA DOCUMENTI UTENTE */}
             {isUser && documentList.length > 0 && (
               <List
                 bordered
@@ -296,3 +331,11 @@ const MessageItem = ({
 };
 
 export default memo(MessageItem);
+
+// --- NEW: funzione per rimuovere la seconda "Fonti:" dal testo generato dal backend
+function stripLegendFromContent(content: string): string {
+  if (!content) return content;
+  // Cerca blocco finale tipo "**Fonti:**" o "Fonti:" seguito da elenco
+  const regex = /\n{0,2}\*\*?Fonti:?[\s\S]*$/i; // abbastanza permissivo
+  return content.replace(regex, '');
+}
