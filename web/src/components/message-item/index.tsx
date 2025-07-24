@@ -22,7 +22,7 @@ import { useTheme } from '../theme-provider';
 import { AssistantGroupButton, UserGroupButton } from './group-button';
 import styles from './index.less';
 
-// *** NEW COMPONENT (stessa cartella) ***
+// --- NEW: import del componente nella stessa cartella
 import SourceList from './source-list';
 
 const { Text } = Typography;
@@ -71,7 +71,7 @@ const MessageItem = ({
   // --- NEW: riferimento ai chunks per aprire il punto esatto nel PDF
   const referenceChunks = useMemo(() => reference?.chunks ?? [], [reference?.chunks]);
 
-  // --- NEW: strip della legenda “Fonti” duplicata dal testo
+  // --- NEW: rimuovo la legenda "Fonti" duplicata dal testo
   const cleanedContent = useMemo(() => stripLegendFromContent(item.content), [item.content]);
 
   // Imposta la dimensione corretta per avatar basata su dimensione schermo
@@ -93,15 +93,16 @@ const MessageItem = ({
 
   const avatarSize = getAvatarSize();
 
-  // Doc list da reference, ma deduplicata
+  // Documenti citati dal modello (doc_aggs)
+  // Rimuovo eventuali duplicati (alcuni backend aggiungono doc con stesso id).
   const referenceDocumentList = useMemo(() => {
     const docs = reference?.doc_aggs ?? [];
     const seen = new Set<string>();
     return docs.filter((d) => {
-      const id = d.doc_id || d.url || d.doc_name;
-      if (!id) return true;
-      if (seen.has(id)) return false;
-      seen.add(id);
+      const key = d.doc_id || d.url || d.doc_name;
+      if (!key) return true;
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
   }, [reference?.doc_aggs]);
@@ -132,21 +133,26 @@ const MessageItem = ({
   // Determine message style based on theme and role
   const getMessageStyle = () => {
     if (isAssistant) {
+      // For assistant messages, we want to check if it's dark theme
       return theme === 'dark' ? styles.messageTextDark : styles.messageText;
     } else {
+      // For user messages, always use the messageUserText style (which is now theme-aware)
       return styles.messageUserText;
     }
   };
 
-  // --- NEW: helper per aprire doc e scrollare al marker
+  // --- NEW: click su fonte => apre drawer e highlight
   const onSourceClick = useCallback(
     (idx: number) => {
-      const chunk = referenceChunks[idx];
-      if (clickDocumentButton && chunk && chunk.doc_id) {
+      const marker = `##${idx + 1}$$`;
+      const chunk = referenceChunks?.[idx];
+
+      // 1) Apri PDF drawer, se disponibile
+      if (clickDocumentButton && chunk?.doc_id) {
         clickDocumentButton(chunk.doc_id, chunk as IReferenceChunk);
       }
-      // Highlight del marker nel DOM se vuoi (opzionale)
-      const marker = `##${idx + 1}$$`;
+
+      // 2) Highlight nel contenuto testo (opzionale)
       const el = document.querySelector(`[data-marker="${marker}"]`);
       if (el && 'scrollIntoView' in el) {
         (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -154,7 +160,7 @@ const MessageItem = ({
         setTimeout(() => el.classList.remove(styles.markerHighlight), 1500);
       }
     },
-    [clickDocumentButton, referenceChunks],
+    [referenceChunks, clickDocumentButton],
   );
 
   // --- NEW: copia marker
@@ -232,23 +238,26 @@ const MessageItem = ({
                   content={item.content}
                   messageId={item.id}
                   removeMessageById={removeMessageById}
-                  regenerateMessage={regenerateMessage && handleRegenerateMessage}
+                  regenerateMessage={
+                    regenerateMessage && handleRegenerateMessage
+                  }
                   sendLoading={sendLoading}
                 ></UserGroupButton>
               )}
+
+              {/* <b>{isAssistant ? '' : nickname}</b> */}
             </Space>
 
-            {/* TESTO PRINCIPALE (ripulito dalla legenda Fonti duplicata) */}
             <div className={getMessageStyle()}>
               <MarkdownContent
                 loading={loading}
-                content={cleanedContent}
+                content={cleanedContent} {/* <-- usare testo ripulito */}
                 reference={reference}
                 clickDocumentButton={clickDocumentButton}
               ></MarkdownContent>
             </div>
 
-            {/* FONTI - UI MIGLIORATA */}
+            {/* FONTI: UI migliorata, collapse, pulsanti, senza duplicato */}
             {isAssistant && referenceDocumentList.length > 0 && (
               <div className={styles.sourcesWrapper}>
                 <Collapse
@@ -260,9 +269,7 @@ const MessageItem = ({
                   <Panel
                     header={
                       <Flex align="center" gap={6}>
-                        <Text strong style={{ fontSize: 13 }}>
-                          Fonti ({referenceDocumentList.length})
-                        </Text>
+                        <Text strong style={{ fontSize: 13 }}>Fonti ({referenceDocumentList.length})</Text>
                       </Flex>
                     }
                     key="sources"
@@ -277,7 +284,6 @@ const MessageItem = ({
               </div>
             )}
 
-            {/* LISTA DOCUMENTI UTENTE */}
             {isUser && documentList.length > 0 && (
               <List
                 bordered
@@ -332,10 +338,10 @@ const MessageItem = ({
 
 export default memo(MessageItem);
 
-// --- NEW: funzione per rimuovere la seconda "Fonti:" dal testo generato dal backend
+// --- NEW: rimuove la legenda “Fonti” duplicata dal testo (se presente)
 function stripLegendFromContent(content: string): string {
   if (!content) return content;
-  // Cerca blocco finale tipo "**Fonti:**" o "Fonti:" seguito da elenco
-  const regex = /\n{0,2}\*\*?Fonti:?[\s\S]*$/i; // abbastanza permissivo
+  // cerca blocchi alla fine tipo "**Fonti:**" o "Fonti:" + elenco
+  const regex = /\n{0,2}\*\*?Fonti:?[\s\S]*$/i;
   return content.replace(regex, '');
 }
