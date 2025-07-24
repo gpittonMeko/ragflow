@@ -102,13 +102,13 @@ const MessageItem = ({
   };
   const avatarSize = getAvatarSize();
 
-  // Rimuovi “Fonti:” in coda aggiunte dal backend
+  // Rimuovi “Fonti:” dal testo backend
   const cleanedContent = useMemo(() => {
     if (!isAssistant) return item.content;
     return item.content.replace(/\*\*Fonti:\*\*[\s\S]*$/i, '').trim();
   }, [item.content, isAssistant]);
 
-  // Lista doc agg (fonti)
+  // Fonti
   const referenceDocumentList = useMemo(() => reference?.doc_aggs ?? [], [reference?.doc_aggs]);
 
   const handleUserDocumentClick = useCallback(
@@ -142,7 +142,7 @@ const MessageItem = ({
     }
   };
 
-  // Drawer: trova chunk e apri
+  // ==== Drawer ====
   const findChunkForDoc = useCallback(
     (docId?: string) => {
       if (!docId) return undefined;
@@ -153,21 +153,36 @@ const MessageItem = ({
 
   const openDrawer = useCallback(
     (docId?: string) => {
-      const chunk = findChunkForDoc(docId);
-      if (docId && chunk && clickDocumentButton) {
-        clickDocumentButton(docId, chunk as IReferenceChunk);
+      if (!docId || !clickDocumentButton) return;
+      let chunk = findChunkForDoc(docId) as IReferenceChunk | undefined;
+      // fallback: se non lo trova, prendi il primo chunk dello stesso doc_id o il primo in assoluto
+      if (!chunk && allChunks.length > 0) {
+        chunk =
+          (allChunks.find((c) => c.doc_id === docId) as IReferenceChunk) ||
+          (allChunks[0] as IReferenceChunk);
+      }
+      if (chunk) {
+        console.debug('[MessageItem] openDrawer ->', docId, chunk);
+        clickDocumentButton(docId, chunk);
+      } else {
+        console.warn('[MessageItem] Nessun chunk trovato per docId:', docId);
       }
     },
-    [findChunkForDoc, clickDocumentButton],
+    [allChunks, clickDocumentButton, findChunkForDoc],
   );
 
-  // ---- DOWNLOAD identico a PdfPreviewer ----
+  // ==== Download fetch+blob ====
   const downloadPdf = useCallback(async (url?: string) => {
     if (!url) return;
     try {
       const headers = { [Authorization]: getAuthorization() };
+      console.debug('[MessageItem] downloadPdf URL:', url);
       const res = await fetch(url, { headers });
-      if (!res.ok) throw new Error(`Impossibile scaricare il file: ${res.status}`);
+      if (!res.ok) {
+        console.warn('Download fallito, provo fallback window.open', res.status);
+        window.open(url, '_blank');
+        return;
+      }
 
       const blob = await res.blob();
       const blobUrl = window.URL.createObjectURL(blob);
@@ -180,11 +195,12 @@ const MessageItem = ({
       link.remove();
       window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.error(err);
+      console.error('downloadPdf error:', err);
+      window.open(url, '_blank');
     }
   }, []);
 
-  // Fallback url download (se il backend espone /api/document/:id/download)
+  // Fallback url se necessario
   const buildDownloadUrl = (docId?: string, url?: string) => {
     if (url) return url;
     if (docId) return `/api/document/${docId}/download`;
@@ -311,11 +327,12 @@ const MessageItem = ({
                             <Flex gap={'small'} align="center" wrap="wrap">
                               <FileIcon id={doc.doc_id} name={doc.doc_name} />
 
-                              {/* Preview al passaggio sul nome */}
+                              {/* Preview come sul marker: hover sul nome */}
                               <Popover
                                 content={renderPreviewPopover(url)}
                                 trigger="hover"
                                 placement="right"
+                                mouseEnterDelay={0.15}
                                 getPopupContainer={() => document.body}
                               >
                                 <NewDocumentLink
@@ -328,26 +345,29 @@ const MessageItem = ({
                                 </NewDocumentLink>
                               </Popover>
 
-                              {/* Azioni: occhio (hover same), download, link */}
+                              {/* Azioni: occhio, download, link */}
                               <Flex gap={6} align="center">
-                                {/* Occhio: hover = preview, click = drawer */}
+                                {/* Occhio: stessa preview su hover + click Drawer */}
                                 <Popover
                                   content={renderPreviewPopover(url)}
                                   trigger="hover"
                                   placement="right"
+                                  mouseEnterDelay={0.15}
                                   getPopupContainer={() => document.body}
                                 >
-                                  <Tooltip title="Anteprima (drawer)">
-                                    <Button
-                                      className={styles.sourceActionBtn}
-                                      icon={<EyeOutlined />}
-                                      onClick={() => openDrawer(doc.doc_id)}
-                                      size="small"
-                                    />
-                                  </Tooltip>
+                                  <span style={{ display: 'inline-block' }}>
+                                    <Tooltip title="Anteprima (drawer)">
+                                      <Button
+                                        className={styles.sourceActionBtn}
+                                        icon={<EyeOutlined />}
+                                        onClick={() => openDrawer(doc.doc_id)}
+                                        size="small"
+                                      />
+                                    </Tooltip>
+                                  </span>
                                 </Popover>
 
-                                {/* Download (visibile!) */}
+                                {/* Download (fetch+blob). Pulsante visibile */}
                                 <Tooltip title="Scarica PDF">
                                   <Button
                                     className={styles.sourceActionBtn}
@@ -375,14 +395,7 @@ const MessageItem = ({
                               </Flex>
                             </Flex>
 
-                            {/* OCR preview nascosta */}
-                            {/* {doc.chunk_preview && (
-                              <Text type="secondary" style={{ fontSize: 12 }}>
-                                {doc.chunk_preview.length > 200
-                                  ? doc.chunk_preview.slice(0, 200) + '…'
-                                  : doc.chunk_preview}
-                              </Text>
-                            )} */}
+                            {/* Preview OCR rimossa */}
                           </Flex>
                         </List.Item>
                       );
