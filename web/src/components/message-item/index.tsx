@@ -13,7 +13,14 @@ import { IRegenerateMessage, IRemoveMessageById } from '@/hooks/logic-hooks';
 import { IMessage } from '@/pages/chat/interface';
 import MarkdownContent from '@/pages/chat/markdown-content';
 import { getExtension, isImage } from '@/utils/document-util';
-import { Avatar, Button, Flex, List, Space, Typography } from 'antd';
+import { Avatar, Button, Flex, List, Space, Typography, Tooltip } from 'antd';
+import {
+  EyeOutlined,
+  CopyOutlined,
+  DownloadOutlined,
+  LinkOutlined,
+} from '@ant-design/icons';
+
 import FileIcon from '../file-icon';
 import IndentedTreeModal from '../indented-tree/modal';
 import NewDocumentLink from '../new-document-link';
@@ -63,6 +70,9 @@ const MessageItem = ({
   const [clickedDocumentId, setClickedDocumentId] = useState('');
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
+  // --- chunks per aprire la preview
+  const allChunks = useMemo(() => reference?.chunks ?? [], [reference?.chunks]);
+
   // Imposta la dimensione corretta per avatar basata su dimensione schermo
   useEffect(() => {
     const handleResize = () => {
@@ -82,6 +92,7 @@ const MessageItem = ({
 
   const avatarSize = getAvatarSize();
 
+  // Documenti citati (già li usavi)
   const referenceDocumentList = useMemo(() => {
     return reference?.doc_aggs ?? [];
   }, [reference?.doc_aggs]);
@@ -112,12 +123,42 @@ const MessageItem = ({
   // Determine message style based on theme and role
   const getMessageStyle = () => {
     if (isAssistant) {
-      // For assistant messages, we want to check if it's dark theme
       return theme === 'dark' ? styles.messageTextDark : styles.messageText;
     } else {
-      // For user messages, always use the messageUserText style (which is now theme-aware)
       return styles.messageUserText;
     }
+  };
+
+  // --- FUNZIONI NUOVE (preview, copia marker, download diretto)
+  const findChunkForDoc = useCallback(
+    (docId?: string) => {
+      if (!docId) return undefined;
+      return allChunks.find((c) => c.doc_id === docId);
+    },
+    [allChunks],
+  );
+
+  const previewDoc = useCallback(
+    (docId?: string) => {
+      const chunk = findChunkForDoc(docId);
+      if (docId && chunk && clickDocumentButton) {
+        clickDocumentButton(docId, chunk as IReferenceChunk);
+      }
+    },
+    [findChunkForDoc, clickDocumentButton],
+  );
+
+  const copyMarker = useCallback((idx: number) => {
+    const marker = `##${idx + 1}$$`;
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(marker).catch(() => {});
+    }
+  }, []);
+
+  const buildDownloadUrl = (docId?: string, fallbackUrl?: string) => {
+    // Se hai già /minio/... o /api/document/{id}/download → usa quello.
+    if (docId) return `/api/document/${docId}/download`; // ADATTA alla tua API
+    return fallbackUrl || '#';
   };
 
   return (
@@ -140,23 +181,25 @@ const MessageItem = ({
         >
           {visibleAvatar &&
             (item.role === MessageType.User ? (
-              <Avatar 
-                size={avatarSize} 
+              <Avatar
+                size={avatarSize}
                 src={avatar ?? '/logo.svg'}
                 style={{ minWidth: `${avatarSize}px` }}
               />
             ) : avatarDialog ? (
-              <Avatar 
-                size={avatarSize} 
+              <Avatar
+                size={avatarSize}
                 src={avatarDialog}
                 style={{ minWidth: `${avatarSize}px` }}
               />
             ) : (
-              <div style={{ 
-                width: `${avatarSize}px`, 
-                height: `${avatarSize}px`, 
-                minWidth: `${avatarSize}px` 
-              }}>
+              <div
+                style={{
+                  width: `${avatarSize}px`,
+                  height: `${avatarSize}px`,
+                  minWidth: `${avatarSize}px`,
+                }}
+              >
                 <AssistantIcon style={{ width: '100%', height: '100%' }} />
               </div>
             ))}
@@ -172,57 +215,104 @@ const MessageItem = ({
                     showLikeButton={showLikeButton}
                     audioBinary={item.audio_binary}
                     showLoudspeaker={showLoudspeaker}
-                  ></AssistantGroupButton>
+                  />
                 )
               ) : (
                 <UserGroupButton
                   content={item.content}
                   messageId={item.id}
                   removeMessageById={removeMessageById}
-                  regenerateMessage={
-                    regenerateMessage && handleRegenerateMessage
-                  }
+                  regenerateMessage={regenerateMessage && handleRegenerateMessage}
                   sendLoading={sendLoading}
-                ></UserGroupButton>
+                />
               )}
-
-              {/* <b>{isAssistant ? '' : nickname}</b> */}
             </Space>
+
             <div className={getMessageStyle()}>
               <MarkdownContent
                 loading={loading}
                 content={item.content}
                 reference={reference}
                 clickDocumentButton={clickDocumentButton}
-              ></MarkdownContent>
+              />
             </div>
+
+            {/* --- BLOCCO FONTI MIGLIORATO MA RESTANDO COMPATIBILE --- */}
             {isAssistant && referenceDocumentList.length > 0 && (
               <List
                 bordered
                 dataSource={referenceDocumentList}
-                renderItem={(item) => {
+                renderItem={(doc, idx) => {
+                  const downloadHref = buildDownloadUrl(doc.doc_id, doc.url);
                   return (
                     <List.Item>
-                      <Flex gap={'small'} align="center">
-                        <FileIcon
-                          id={item.doc_id}
-                          name={item.doc_name}
-                        ></FileIcon>
+                      <Flex gap={'small'} align="center" wrap="wrap">
+                        <FileIcon id={doc.doc_id} name={doc.doc_name} />
 
+                        {/* Il tuo componente che apre il viewer completo */}
                         <NewDocumentLink
-                          documentId={item.doc_id}
-                          documentName={item.doc_name}
+                          documentId={doc.doc_id}
+                          documentName={doc.doc_name}
                           prefix="document"
-                          link={item.url}
+                          link={doc.url}
                         >
-                          {item.doc_name}
+                          {doc.doc_name}
                         </NewDocumentLink>
+
+                        {/* AZIONI EXTRA: anteprima (PdfDrawer), copia marker, download diretto */}
+                        <Flex gap={4}>
+                          {/* Anteprima PDF nel drawer */}
+                          <Tooltip title="Anteprima (drawer)">
+                            <Button
+                              type="text"
+                              icon={<EyeOutlined />}
+                              onClick={() => previewDoc(doc.doc_id)}
+                              size="small"
+                            />
+                          </Tooltip>
+
+                          {/* Copia marker nel testo */}
+                          <Tooltip title="Copia marker">
+                            <Button
+                              type="text"
+                              icon={<CopyOutlined />}
+                              onClick={() => copyMarker(idx)}
+                              size="small"
+                            />
+                          </Tooltip>
+
+                          {/* Download diretto (se vuoi oltre al viewer) */}
+                          <Tooltip title="Scarica PDF">
+                            <Button
+                              type="text"
+                              icon={<DownloadOutlined />}
+                              href={downloadHref}
+                              download
+                              size="small"
+                            />
+                          </Tooltip>
+
+                          {/* Link esterno se serve */}
+                          {doc.url && (
+                            <Tooltip title="Apri link">
+                              <Button
+                                type="text"
+                                icon={<LinkOutlined />}
+                                href={doc.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                size="small"
+                              />
+                            </Tooltip>
+                          )}
+                        </Flex>
                       </Flex>
                     </List.Item>
                   );
                 }}
               />
             )}
+
             {isUser && documentList.length > 0 && (
               <List
                 bordered
@@ -269,7 +359,7 @@ const MessageItem = ({
           visible={visible}
           hideModal={hideModal}
           documentId={clickedDocumentId}
-        ></IndentedTreeModal>
+        />
       )}
     </div>
   );
