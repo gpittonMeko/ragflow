@@ -13,8 +13,7 @@ import { IRegenerateMessage, IRemoveMessageById } from '@/hooks/logic-hooks';
 import { IMessage } from '@/pages/chat/interface';
 import MarkdownContent from '@/pages/chat/markdown-content';
 import { getExtension, isImage } from '@/utils/document-util';
-import { Avatar, Button, Flex, List, Space, Typography, Collapse, Tooltip } from 'antd';
-import { CopyOutlined, DownloadOutlined, EyeOutlined, LinkOutlined } from '@ant-design/icons';
+import { Avatar, Button, Flex, List, Space, Typography } from 'antd';
 import FileIcon from '../file-icon';
 import IndentedTreeModal from '../indented-tree/modal';
 import NewDocumentLink from '../new-document-link';
@@ -22,11 +21,7 @@ import { useTheme } from '../theme-provider';
 import { AssistantGroupButton, UserGroupButton } from './group-button';
 import styles from './index.less';
 
-// --- NEW: import del componente nella stessa cartella
-import SourceList from './source-list';
-
 const { Text } = Typography;
-const { Panel } = Collapse;
 
 interface IProps extends Partial<IRemoveMessageById>, IRegenerateMessage {
   item: IMessage;
@@ -68,12 +63,6 @@ const MessageItem = ({
   const [clickedDocumentId, setClickedDocumentId] = useState('');
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-  // --- NEW: riferimento ai chunks per aprire il punto esatto nel PDF
-  const referenceChunks = useMemo(() => reference?.chunks ?? [], [reference?.chunks]);
-
-  // --- NEW: rimuovo la legenda "Fonti" duplicata dal testo
-  const cleanedContent = useMemo(() => stripLegendFromContent(item.content), [item.content]);
-
   // Imposta la dimensione corretta per avatar basata su dimensione schermo
   useEffect(() => {
     const handleResize = () => {
@@ -93,18 +82,8 @@ const MessageItem = ({
 
   const avatarSize = getAvatarSize();
 
-  // Documenti citati dal modello (doc_aggs)
-  // Rimuovo eventuali duplicati (alcuni backend aggiungono doc con stesso id).
   const referenceDocumentList = useMemo(() => {
-    const docs = reference?.doc_aggs ?? [];
-    const seen = new Set<string>();
-    return docs.filter((d) => {
-      const key = d.doc_id || d.url || d.doc_name;
-      if (!key) return true;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    return reference?.doc_aggs ?? [];
   }, [reference?.doc_aggs]);
 
   const handleUserDocumentClick = useCallback(
@@ -141,42 +120,6 @@ const MessageItem = ({
     }
   };
 
-  // --- NEW: click su fonte => apre drawer e highlight
-  const onSourceClick = useCallback(
-    (idx: number) => {
-      const marker = `##${idx + 1}$$`;
-      const chunk = referenceChunks?.[idx];
-
-      // 1) Apri PDF drawer, se disponibile
-      if (clickDocumentButton && chunk?.doc_id) {
-        clickDocumentButton(chunk.doc_id, chunk as IReferenceChunk);
-      }
-
-      // 2) Highlight nel contenuto testo (opzionale)
-      const el = document.querySelector(`[data-marker="${marker}"]`);
-      if (el && 'scrollIntoView' in el) {
-        (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.classList.add(styles.markerHighlight);
-        setTimeout(() => el.classList.remove(styles.markerHighlight), 1500);
-      }
-    },
-    [referenceChunks, clickDocumentButton],
-  );
-
-  // --- NEW: copia marker
-  const onCopyMarker = useCallback((marker: string) => {
-    if (navigator?.clipboard) {
-      navigator.clipboard.writeText(marker).catch(() => {});
-    } else {
-      const ta = document.createElement('textarea');
-      ta.value = marker;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-    }
-  }, []);
-
   return (
     <div
       className={classNames(styles.messageItem, {
@@ -197,25 +140,23 @@ const MessageItem = ({
         >
           {visibleAvatar &&
             (item.role === MessageType.User ? (
-              <Avatar
-                size={avatarSize}
+              <Avatar 
+                size={avatarSize} 
                 src={avatar ?? '/logo.svg'}
                 style={{ minWidth: `${avatarSize}px` }}
               />
             ) : avatarDialog ? (
-              <Avatar
-                size={avatarSize}
+              <Avatar 
+                size={avatarSize} 
                 src={avatarDialog}
                 style={{ minWidth: `${avatarSize}px` }}
               />
             ) : (
-              <div
-                style={{
-                  width: `${avatarSize}px`,
-                  height: `${avatarSize}px`,
-                  minWidth: `${avatarSize}px`,
-                }}
-              >
+              <div style={{ 
+                width: `${avatarSize}px`, 
+                height: `${avatarSize}px`, 
+                minWidth: `${avatarSize}px` 
+              }}>
                 <AssistantIcon style={{ width: '100%', height: '100%' }} />
               </div>
             ))}
@@ -247,43 +188,41 @@ const MessageItem = ({
 
               {/* <b>{isAssistant ? '' : nickname}</b> */}
             </Space>
-
             <div className={getMessageStyle()}>
               <MarkdownContent
                 loading={loading}
-                content={cleanedContent} 
+                content={item.content}
                 reference={reference}
                 clickDocumentButton={clickDocumentButton}
               ></MarkdownContent>
             </div>
-
-            {/* FONTI: UI migliorata, collapse, pulsanti, senza duplicato */}
             {isAssistant && referenceDocumentList.length > 0 && (
-              <div className={styles.sourcesWrapper}>
-                <Collapse
-                  bordered={false}
-                  defaultActiveKey={['sources']}
-                  expandIconPosition="end"
-                  className={styles.sourcesCollapse}
-                >
-                  <Panel
-                    header={
-                      <Flex align="center" gap={6}>
-                        <Text strong style={{ fontSize: 13 }}>Fonti ({referenceDocumentList.length})</Text>
-                      </Flex>
-                    }
-                    key="sources"
-                  >
-                    <SourceList
-                      docs={referenceDocumentList}
-                      onSourceClick={onSourceClick}
-                      onCopyMarker={onCopyMarker}
-                    />
-                  </Panel>
-                </Collapse>
-              </div>
-            )}
+              <List
+                bordered
+                dataSource={referenceDocumentList}
+                renderItem={(item) => {
+                  return (
+                    <List.Item>
+                      <Flex gap={'small'} align="center">
+                        <FileIcon
+                          id={item.doc_id}
+                          name={item.doc_name}
+                        ></FileIcon>
 
+                        <NewDocumentLink
+                          documentId={item.doc_id}
+                          documentName={item.doc_name}
+                          prefix="document"
+                          link={item.url}
+                        >
+                          {item.doc_name}
+                        </NewDocumentLink>
+                      </Flex>
+                    </List.Item>
+                  );
+                }}
+              />
+            )}
             {isUser && documentList.length > 0 && (
               <List
                 bordered
@@ -337,11 +276,3 @@ const MessageItem = ({
 };
 
 export default memo(MessageItem);
-
-// --- NEW: rimuove la legenda “Fonti” duplicata dal testo (se presente)
-function stripLegendFromContent(content: string): string {
-  if (!content) return content;
-  // cerca blocchi alla fine tipo "**Fonti:**" o "Fonti:" + elenco
-  const regex = /\n{0,2}\*\*?Fonti:?[\s\S]*$/i;
-  return content.replace(regex, '');
-}
