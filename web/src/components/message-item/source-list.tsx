@@ -11,14 +11,12 @@ interface SourceListProps {
   onCopyMarker?: (marker: string) => void;
 }
 
-const MAX_PREVIEW_CHARS = 180;
+const MAX_PREVIEW = 180;
 
 const SourceList: React.FC<SourceListProps> = ({ docs, onSourceClick, onCopyMarker }) => {
-  const [expandedPreview, setExpandedPreview] = useState<Record<number, boolean>>({});
+  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
 
-  const togglePreview = (i: number) => {
-    setExpandedPreview((prev) => ({ ...prev, [i]: !prev[i] }));
-  };
+  const toggle = (i: number) => setExpanded((p) => ({ ...p, [i]: !p[i] }));
 
   return (
     <List
@@ -27,16 +25,11 @@ const SourceList: React.FC<SourceListProps> = ({ docs, onSourceClick, onCopyMark
       dataSource={docs}
       renderItem={(doc, idx) => {
         const marker = `##${idx + 1}$$`;
-        const isLong = doc.chunk_preview && doc.chunk_preview.length > MAX_PREVIEW_CHARS;
-        const isExpanded = expandedPreview[idx];
+        const long = !!doc.chunk_preview && doc.chunk_preview.length > MAX_PREVIEW;
+        const showAll = expanded[idx];
 
-        const previewText = doc.chunk_preview
-          ? isExpanded
-            ? doc.chunk_preview
-            : doc.chunk_preview.slice(0, MAX_PREVIEW_CHARS) + (isLong ? '…' : '')
-          : '';
-
-        const downloadHref = doc.url || '#';
+        // Se hai un vero endpoint per il download binario, usa quello
+        const downloadHref = buildDownloadUrl(doc.doc_id, doc.url);
 
         return (
           <List.Item
@@ -95,7 +88,6 @@ const SourceList: React.FC<SourceListProps> = ({ docs, onSourceClick, onCopyMark
                     </Tooltip>
                   )}
 
-                  {/* DOWNLOAD: se hai un endpoint separato, sostituisci downloadHref */}
                   <Tooltip title="Scarica documento">
                     <Button
                       type="text"
@@ -108,21 +100,24 @@ const SourceList: React.FC<SourceListProps> = ({ docs, onSourceClick, onCopyMark
                 </Flex>
               </Flex>
 
-              {/* Mini preview */}
               {doc.chunk_preview && (
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  {previewText}
-                </Text>
-              )}
-              {isLong && (
-                <Button
-                  type="link"
-                  size="small"
-                  style={{ padding: 0, fontSize: 12 }}
-                  onClick={() => togglePreview(idx)}
-                >
-                  {isExpanded ? 'Mostra meno' : 'Mostra altro'}
-                </Button>
+                <>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {showAll
+                      ? doc.chunk_preview
+                      : doc.chunk_preview.slice(0, MAX_PREVIEW) + (long ? '…' : '')}
+                  </Text>
+                  {long && (
+                    <Button
+                      type="link"
+                      size="small"
+                      style={{ padding: 0, fontSize: 12 }}
+                      onClick={() => toggle(idx)}
+                    >
+                      {showAll ? 'Mostra meno' : 'Mostra altro'}
+                    </Button>
+                  )}
+                </>
               )}
             </Flex>
           </List.Item>
@@ -133,3 +128,12 @@ const SourceList: React.FC<SourceListProps> = ({ docs, onSourceClick, onCopyMark
 };
 
 export default SourceList;
+
+// --- Se non hai un endpoint dedicato, usa doc.url. Se doc.url è HTML, serve un endpoint download.
+// Modifica in base al tuo backend (esempio generico /api/document/{doc_id}/download).
+function buildDownloadUrl(docId?: string, fallbackUrl?: string) {
+  if (docId) {
+    return `/api/document/${docId}/download`; // <-- ADATTA a tua API
+  }
+  return fallbackUrl || '#';
+}
