@@ -13,7 +13,6 @@ import { IRegenerateMessage, IRemoveMessageById } from '@/hooks/logic-hooks';
 import { IMessage } from '@/pages/chat/interface';
 import MarkdownContent from '@/pages/chat/markdown-content';
 import { getExtension, isImage } from '@/utils/document-util';
-
 import { Avatar, Button, Flex, List, Space, Typography, Popover, Tooltip } from 'antd';
 import {
   EyeOutlined,
@@ -29,8 +28,8 @@ import IndentedTreeModal from '../indented-tree/modal';
 import NewDocumentLink from '../new-document-link';
 import { useTheme } from '../theme-provider';
 import { AssistantGroupButton, UserGroupButton } from './group-button';
+import PdfPreviewer from '@/components/pdf-previewer';
 
-import PdfPreviewer from '@/components/pdf-previewer'; // mini anteprima nel popover
 import styles from './index.less';
 
 const { Text } = Typography;
@@ -75,7 +74,7 @@ const MessageItem = ({
   const [clickedDocumentId, setClickedDocumentId] = useState('');
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-  // tutti i chunk referenziati (per aprire il drawer al punto giusto)
+  // tutti i chunk referenziati (per Drawer)
   const allChunks = useMemo(() => reference?.chunks ?? [], [reference?.chunks]);
 
   useEffect(() => {
@@ -90,6 +89,12 @@ const MessageItem = ({
     return 40;
   };
   const avatarSize = getAvatarSize();
+
+  // pulizia “Fonti:” dal testo assistente (backend)
+  const cleanedContent = useMemo(() => {
+    if (!isAssistant) return item.content;
+    return item.content.replace(/\*\*Fonti:\*\*[\s\S]*$/i, '').trim();
+  }, [item.content, isAssistant]);
 
   // lista doc agg (fonti)
   const referenceDocumentList = useMemo(() => reference?.doc_aggs ?? [], [reference?.doc_aggs]);
@@ -125,7 +130,7 @@ const MessageItem = ({
     }
   };
 
-  // Trova il chunk per aprire il drawer
+  // trova chunk -> apri drawer
   const findChunkForDoc = useCallback(
     (docId?: string) => {
       if (!docId) return undefined;
@@ -134,7 +139,6 @@ const MessageItem = ({
     [allChunks],
   );
 
-  // Apri drawer (stessa UX dei marker)
   const previewDocInDrawer = useCallback(
     (docId?: string) => {
       const chunk = findChunkForDoc(docId);
@@ -145,7 +149,7 @@ const MessageItem = ({
     [findChunkForDoc, clickDocumentButton],
   );
 
-  // Funzione download identica a quella del PdfPreviewer
+  // download fetch + blob (come PdfPreviewer)
   const downloadPdf = useCallback(async (url?: string) => {
     if (!url) return;
     try {
@@ -168,7 +172,7 @@ const MessageItem = ({
     }
   }, []);
 
-  // Mini anteprima nel popover
+  // mini anteprima popover
   const renderPreviewPopover = (url?: string) => {
     if (!url) return null;
     return (
@@ -248,7 +252,7 @@ const MessageItem = ({
             <div className={getMessageStyle()}>
               <MarkdownContent
                 loading={loading}
-                content={item.content}
+                content={cleanedContent}
                 reference={reference}
                 clickDocumentButton={clickDocumentButton}
               />
@@ -262,7 +266,7 @@ const MessageItem = ({
                   size="small"
                   itemLayout="vertical"
                   dataSource={referenceDocumentList}
-                  renderItem={(doc, idx) => {
+                  renderItem={(doc) => {
                     const url = doc.url;
                     return (
                       <List.Item
@@ -276,7 +280,7 @@ const MessageItem = ({
                           <Flex gap={'small'} align="center" wrap="wrap">
                             <FileIcon id={doc.doc_id} name={doc.doc_name} />
 
-                            {/* Nome documento con popover preview */}
+                            {/* Nome doc con popover (mini preview) */}
                             <Popover
                               content={renderPreviewPopover(url)}
                               trigger="hover"
@@ -292,19 +296,25 @@ const MessageItem = ({
                               </NewDocumentLink>
                             </Popover>
 
-                            {/* Azioni: anteprima drawer, download, link esterno */}
+                            {/* Azioni: drawer, download, link */}
                             <Flex gap={4}>
-                              {/* Anteprima drawer */}
-                              <Tooltip title="Anteprima (drawer)">
-                                <Button
-                                  type="text"
-                                  icon={<EyeOutlined />}
-                                  onClick={() => previewDocInDrawer(doc.doc_id)}
-                                  size="small"
-                                />
-                              </Tooltip>
+                              {/* Occhio = Drawer */}
+                              <Popover
+                                content={renderPreviewPopover(url)}
+                                trigger="hover"
+                                placement="right"
+                              >
+                                <Tooltip title="Anteprima (drawer)">
+                                  <Button
+                                    type="text"
+                                    icon={<EyeOutlined />}
+                                    onClick={() => previewDocInDrawer(doc.doc_id)}
+                                    size="small"
+                                  />
+                                </Tooltip>
+                              </Popover>
 
-                              {/* Download (fetch+blob) */}
+                              {/* Download */}
                               {url && (
                                 <Tooltip title="Scarica PDF">
                                   <Button
@@ -332,14 +342,14 @@ const MessageItem = ({
                             </Flex>
                           </Flex>
 
-                          {/* Mini preview testo chunk, se presente */}
-                          {doc.chunk_preview && (
+                          {/* NIENTE chunk_preview OCR brutti: commentato */}
+                          {/* {doc.chunk_preview && (
                             <Text type="secondary" style={{ fontSize: 12 }}>
                               {doc.chunk_preview.length > 200
                                 ? doc.chunk_preview.slice(0, 200) + '…'
                                 : doc.chunk_preview}
                             </Text>
-                          )}
+                          )} */}
                         </Flex>
                       </List.Item>
                     );
@@ -359,7 +369,6 @@ const MessageItem = ({
                     <List.Item>
                       <Flex gap={'small'} align="center">
                         <FileIcon id={item.id} name={item.name} />
-
                         {isImage(fileExtension) ? (
                           <NewDocumentLink
                             documentId={item.id}
