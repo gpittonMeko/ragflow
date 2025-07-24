@@ -13,7 +13,18 @@ import { IRegenerateMessage, IRemoveMessageById } from '@/hooks/logic-hooks';
 import { IMessage } from '@/pages/chat/interface';
 import MarkdownContent from '@/pages/chat/markdown-content';
 import { getExtension, isImage } from '@/utils/document-util';
-import { Avatar, Button, Flex, List, Space, Typography, Popover, Tooltip } from 'antd';
+
+import {
+  Avatar,
+  Button,
+  Flex,
+  List,
+  Space,
+  Typography,
+  Popover,
+  Tooltip,
+  Collapse,
+} from 'antd';
 import {
   EyeOutlined,
   DownloadOutlined,
@@ -33,6 +44,7 @@ import PdfPreviewer from '@/components/pdf-previewer';
 import styles from './index.less';
 
 const { Text } = Typography;
+const { Panel } = Collapse;
 
 interface IProps extends Partial<IRemoveMessageById>, IRegenerateMessage {
   item: IMessage;
@@ -90,7 +102,7 @@ const MessageItem = ({
   };
   const avatarSize = getAvatarSize();
 
-  // pulizia “Fonti:” dal testo assistente (backend)
+  // 1) rimuovi “Fonti:” appended dal backend
   const cleanedContent = useMemo(() => {
     if (!isAssistant) return item.content;
     return item.content.replace(/\*\*Fonti:\*\*[\s\S]*$/i, '').trim();
@@ -130,7 +142,7 @@ const MessageItem = ({
     }
   };
 
-  // trova chunk -> apri drawer
+  // Drawer: trova chunk e apri
   const findChunkForDoc = useCallback(
     (docId?: string) => {
       if (!docId) return undefined;
@@ -139,7 +151,7 @@ const MessageItem = ({
     [allChunks],
   );
 
-  const previewDocInDrawer = useCallback(
+  const openDrawer = useCallback(
     (docId?: string) => {
       const chunk = findChunkForDoc(docId);
       if (docId && chunk && clickDocumentButton) {
@@ -149,7 +161,7 @@ const MessageItem = ({
     [findChunkForDoc, clickDocumentButton],
   );
 
-  // download fetch + blob (come PdfPreviewer)
+  // Download fetch+blob (uguale a PdfPreviewer)
   const downloadPdf = useCallback(async (url?: string) => {
     if (!url) return;
     try {
@@ -172,7 +184,7 @@ const MessageItem = ({
     }
   }, []);
 
-  // mini anteprima popover
+  // mini anteprima nel popover
   const renderPreviewPopover = (url?: string) => {
     if (!url) return null;
     return (
@@ -260,102 +272,114 @@ const MessageItem = ({
 
             {/* FONTI */}
             {isAssistant && referenceDocumentList.length > 0 && (
-              <div className={styles.sourcesWrapper}>
-                <Text strong style={{ fontSize: 13 }}>Fonti:</Text>
-                <List
-                  size="small"
-                  itemLayout="vertical"
-                  dataSource={referenceDocumentList}
-                  renderItem={(doc) => {
-                    const url = doc.url;
-                    return (
-                      <List.Item
-                        style={{
-                          padding: '8px 0',
-                          border: 'none',
-                          borderBottom: '1px solid #f0f0f0',
-                        }}
-                      >
-                        <Flex vertical gap={4}>
-                          <Flex gap={'small'} align="center" wrap="wrap">
-                            <FileIcon id={doc.doc_id} name={doc.doc_name} />
+              <Collapse
+                ghost
+                className={styles.sourcesCollapse}
+                defaultActiveKey={['fonti']}
+              >
+                <Panel
+                  header={
+                    <Text strong style={{ fontSize: 13 }}>
+                      Fonti ({referenceDocumentList.length})
+                    </Text>
+                  }
+                  key="fonti"
+                >
+                  <List
+                    size="small"
+                    itemLayout="vertical"
+                    dataSource={referenceDocumentList}
+                    renderItem={(doc) => {
+                      const url = doc.url;
+                      return (
+                        <List.Item
+                          style={{
+                            padding: '8px 0',
+                            border: 'none',
+                            borderBottom: '1px solid #f0f0f0',
+                          }}
+                        >
+                          <Flex vertical gap={4}>
+                            <Flex gap={'small'} align="center" wrap="wrap">
+                              <FileIcon id={doc.doc_id} name={doc.doc_name} />
 
-                            {/* Nome doc con popover (mini preview) */}
-                            <Popover
-                              content={renderPreviewPopover(url)}
-                              trigger="hover"
-                              placement="right"
-                            >
-                              <NewDocumentLink
-                                documentId={doc.doc_id}
-                                documentName={doc.doc_name}
-                                prefix="document"
-                                link={doc.url}
-                              >
-                                {doc.doc_name}
-                              </NewDocumentLink>
-                            </Popover>
-
-                            {/* Azioni: drawer, download, link */}
-                            <Flex gap={4}>
-                              {/* Occhio = Drawer */}
+                              {/* POPUP preview anche sul nome documento */}
                               <Popover
                                 content={renderPreviewPopover(url)}
                                 trigger="hover"
                                 placement="right"
                               >
-                                <Tooltip title="Anteprima (drawer)">
-                                  <Button
-                                    type="text"
-                                    icon={<EyeOutlined />}
-                                    onClick={() => previewDocInDrawer(doc.doc_id)}
-                                    size="small"
-                                  />
-                                </Tooltip>
+                                <NewDocumentLink
+                                  documentId={doc.doc_id}
+                                  documentName={doc.doc_name}
+                                  prefix="document"
+                                  link={doc.url}
+                                >
+                                  {doc.doc_name}
+                                </NewDocumentLink>
                               </Popover>
 
-                              {/* Download */}
-                              {url && (
-                                <Tooltip title="Scarica PDF">
-                                  <Button
-                                    type="text"
-                                    icon={<DownloadOutlined />}
-                                    onClick={() => downloadPdf(url)}
-                                    size="small"
-                                  />
-                                </Tooltip>
-                              )}
+                              {/* Azioni: occhio(drawer), download, link */}
+                              <Flex gap={4}>
+                                {/* occhio: hover = preview, click = drawer */}
+                                <Popover
+                                  content={renderPreviewPopover(url)}
+                                  trigger="hover"
+                                  placement="right"
+                                >
+                                  <Tooltip title="Anteprima (drawer)">
+                                    <Button
+                                      type="text"
+                                      icon={<EyeOutlined />}
+                                      onClick={() => openDrawer(doc.doc_id)}
+                                      size="small"
+                                    />
+                                  </Tooltip>
+                                </Popover>
 
-                              {/* Link esterno */}
-                              {doc.url && (
-                                <Tooltip title="Apri link">
-                                  <Button
-                                    type="text"
-                                    icon={<LinkOutlined />}
-                                    href={doc.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    size="small"
-                                  />
-                                </Tooltip>
-                              )}
+                                {/* Download */}
+                                {url && (
+                                  <Tooltip title="Scarica PDF">
+                                    <Button
+                                      type="text"
+                                      icon={<DownloadOutlined />}
+                                      onClick={() => downloadPdf(url)}
+                                      size="small"
+                                    />
+                                  </Tooltip>
+                                )}
+
+                                {/* Link esterno */}
+                                {doc.url && (
+                                  <Tooltip title="Apri link">
+                                    <Button
+                                      type="text"
+                                      icon={<LinkOutlined />}
+                                      href={doc.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      size="small"
+                                    />
+                                  </Tooltip>
+                                )}
+                              </Flex>
                             </Flex>
-                          </Flex>
 
-                          {/* NIENTE chunk_preview OCR brutti: commentato */}
-                          {/* {doc.chunk_preview && (
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              {doc.chunk_preview.length > 200
-                                ? doc.chunk_preview.slice(0, 200) + '…'
-                                : doc.chunk_preview}
-                            </Text>
-                          )} */}
-                        </Flex>
-                      </List.Item>
-                    );
-                  }}
-                />
-              </div>
+                            {/* OCR preview brutta: nascondo */}
+                            {/* {doc.chunk_preview && (
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {doc.chunk_preview.length > 200
+                                  ? doc.chunk_preview.slice(0, 200) + '…'
+                                  : doc.chunk_preview}
+                              </Text>
+                            )} */}
+                          </Flex>
+                        </List.Item>
+                      );
+                    }}
+                  />
+                </Panel>
+              </Collapse>
             )}
 
             {/* Documenti caricati dall'utente */}
@@ -378,8 +402,11 @@ const MessageItem = ({
                             {item.name}
                           </NewDocumentLink>
                         ) : (
-                          <Button type={'text'} onClick={handleUserDocumentClick(item.id)}>
-                            <Text style={{ maxWidth: '40vw' }} ellipsis={{ tooltip: item.name }}>
+                          <Button type="text" onClick={handleUserDocumentClick(item.id)}>
+                            <Text
+                              style={{ maxWidth: '40vw' }}
+                              ellipsis={{ tooltip: item.name }}
+                            >
                               {item.name}
                             </Text>
                           </Button>
