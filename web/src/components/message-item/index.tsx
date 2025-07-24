@@ -251,7 +251,7 @@ const MessageItem = ({
             <div className={getMessageStyle()}>
               <MarkdownContent
                 loading={loading}
-                content={cleanedContent} {/* <-- usare testo ripulito */}
+                content={cleanedContent} 
                 reference={reference}
                 clickDocumentButton={clickDocumentButton}
               ></MarkdownContent>
