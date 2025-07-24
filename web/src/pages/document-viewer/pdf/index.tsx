@@ -28,7 +28,7 @@ import FileIcon from '@/components/file-icon';
 import IndentedTreeModal from '@/components/indented-tree/modal';
 import NewDocumentLink from '@/components/new-document-link';
 import { useTheme } from '@/components/theme-provider';
-import { AssistantGroupButton, UserGroupButton } from './group-button';
+import { AssistantGroupButton, UserGroupButton } from '@/components/message-item/group-button';
 import PdfPreviewer from '@/components/pdf-previewer';
 import styles from './index.less';
 
