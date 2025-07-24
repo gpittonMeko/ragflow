@@ -102,13 +102,13 @@ const MessageItem = ({
   };
   const avatarSize = getAvatarSize();
 
-  // 1) rimuovi “Fonti:” appended dal backend
+  // Rimuovi “Fonti:” in coda aggiunte dal backend
   const cleanedContent = useMemo(() => {
     if (!isAssistant) return item.content;
     return item.content.replace(/\*\*Fonti:\*\*[\s\S]*$/i, '').trim();
   }, [item.content, isAssistant]);
 
-  // lista doc agg (fonti)
+  // Lista doc agg (fonti)
   const referenceDocumentList = useMemo(() => reference?.doc_aggs ?? [], [reference?.doc_aggs]);
 
   const handleUserDocumentClick = useCallback(
@@ -161,7 +161,7 @@ const MessageItem = ({
     [findChunkForDoc, clickDocumentButton],
   );
 
-  // Download fetch+blob (uguale a PdfPreviewer)
+  // Download fetch+blob (uguale PdfPreviewer)
   const downloadPdf = useCallback(async (url?: string) => {
     if (!url) return;
     try {
@@ -184,7 +184,7 @@ const MessageItem = ({
     }
   }, []);
 
-  // mini anteprima nel popover
+  // Mini anteprima nel popover
   const renderPreviewPopover = (url?: string) => {
     if (!url) return null;
     return (
@@ -303,7 +303,7 @@ const MessageItem = ({
                             <Flex gap={'small'} align="center" wrap="wrap">
                               <FileIcon id={doc.doc_id} name={doc.doc_name} />
 
-                              {/* POPUP preview anche sul nome documento */}
+                              {/* POPUP preview sul nome documento */}
                               <Popover
                                 content={renderPreviewPopover(url)}
                                 trigger="hover"
@@ -320,8 +320,8 @@ const MessageItem = ({
                               </Popover>
 
                               {/* Azioni: occhio(drawer), download, link */}
-                              <Flex gap={4}>
-                                {/* occhio: hover = preview, click = drawer */}
+                              <Flex gap={6} align="center">
+                                {/* Occhio: hover preview + click drawer */}
                                 <Popover
                                   content={renderPreviewPopover(url)}
                                   trigger="hover"
@@ -329,7 +329,7 @@ const MessageItem = ({
                                 >
                                   <Tooltip title="Anteprima (drawer)">
                                     <Button
-                                      type="text"
+                                      className={styles.sourceActionBtn}
                                       icon={<EyeOutlined />}
                                       onClick={() => openDrawer(doc.doc_id)}
                                       size="small"
@@ -341,19 +341,21 @@ const MessageItem = ({
                                 {url && (
                                   <Tooltip title="Scarica PDF">
                                     <Button
-                                      type="text"
+                                      className={styles.sourceActionBtn}
                                       icon={<DownloadOutlined />}
                                       onClick={() => downloadPdf(url)}
                                       size="small"
-                                    />
+                                    >
+                                      Scarica
+                                    </Button>
                                   </Tooltip>
                                 )}
 
                                 {/* Link esterno */}
                                 {doc.url && (
-                                  <Tooltip title="Apri link">
+                                  <Tooltip title="Apri link esterno">
                                     <Button
-                                      type="text"
+                                      className={styles.sourceActionBtn}
                                       icon={<LinkOutlined />}
                                       href={doc.url}
                                       target="_blank"
@@ -365,7 +367,7 @@ const MessageItem = ({
                               </Flex>
                             </Flex>
 
-                            {/* OCR preview brutta: nascondo */}
+                            {/* OCR preview brutta: nascosta */}
                             {/* {doc.chunk_preview && (
                               <Text type="secondary" style={{ fontSize: 12 }}>
                                 {doc.chunk_preview.length > 200
