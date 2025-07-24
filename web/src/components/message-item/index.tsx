@@ -13,10 +13,10 @@ import { IRegenerateMessage, IRemoveMessageById } from '@/hooks/logic-hooks';
 import { IMessage } from '@/pages/chat/interface';
 import MarkdownContent from '@/pages/chat/markdown-content';
 import { getExtension, isImage } from '@/utils/document-util';
+
 import { Avatar, Button, Flex, List, Space, Typography, Popover, Tooltip } from 'antd';
 import {
   EyeOutlined,
-  CopyOutlined,
   DownloadOutlined,
   LinkOutlined,
 } from '@ant-design/icons';
@@ -29,8 +29,8 @@ import IndentedTreeModal from '../indented-tree/modal';
 import NewDocumentLink from '../new-document-link';
 import { useTheme } from '../theme-provider';
 import { AssistantGroupButton, UserGroupButton } from './group-button';
-import PdfPreviewer from '@/components/pdf-previewer'; // mini preview nel popover
 
+import PdfPreviewer from '@/components/pdf-previewer'; // mini anteprima nel popover
 import styles from './index.less';
 
 const { Text } = Typography;
@@ -75,13 +75,11 @@ const MessageItem = ({
   const [clickedDocumentId, setClickedDocumentId] = useState('');
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-  // chunks per aprire il drawer
+  // tutti i chunk referenziati (per aprire il drawer al punto giusto)
   const allChunks = useMemo(() => reference?.chunks ?? [], [reference?.chunks]);
 
   useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-    };
+    const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -93,10 +91,8 @@ const MessageItem = ({
   };
   const avatarSize = getAvatarSize();
 
-  // lista doc agg per "Fonti"
-  const referenceDocumentList = useMemo(() => {
-    return reference?.doc_aggs ?? [];
-  }, [reference?.doc_aggs]);
+  // lista doc agg (fonti)
+  const referenceDocumentList = useMemo(() => reference?.doc_aggs ?? [], [reference?.doc_aggs]);
 
   const handleUserDocumentClick = useCallback(
     (id: string) => () => {
@@ -129,7 +125,7 @@ const MessageItem = ({
     }
   };
 
-  // --- FUNZIONI NUOVE ---
+  // Trova il chunk per aprire il drawer
   const findChunkForDoc = useCallback(
     (docId?: string) => {
       if (!docId) return undefined;
@@ -138,8 +134,8 @@ const MessageItem = ({
     [allChunks],
   );
 
-  // preview drawer (come i marker)
-  const previewDoc = useCallback(
+  // Apri drawer (stessa UX dei marker)
+  const previewDocInDrawer = useCallback(
     (docId?: string) => {
       const chunk = findChunkForDoc(docId);
       if (docId && chunk && clickDocumentButton) {
@@ -149,14 +145,7 @@ const MessageItem = ({
     [findChunkForDoc, clickDocumentButton],
   );
 
-  const copyMarker = useCallback((idx: number) => {
-    const marker = `##${idx + 1}$$`;
-    if (navigator?.clipboard) {
-      navigator.clipboard.writeText(marker).catch(() => {});
-    }
-  }, []);
-
-  // Download via fetch + blob
+  // Funzione download identica a quella del PdfPreviewer
   const downloadPdf = useCallback(async (url?: string) => {
     if (!url) return;
     try {
@@ -179,7 +168,7 @@ const MessageItem = ({
     }
   }, []);
 
-  // mini preview nel popover
+  // Mini anteprima nel popover
   const renderPreviewPopover = (url?: string) => {
     if (!url) return null;
     return (
@@ -192,19 +181,19 @@ const MessageItem = ({
   return (
     <div
       className={classNames(styles.messageItem, {
-        [styles.messageItemLeft]: item.role === MessageType.Assistant,
-        [styles.messageItemRight]: item.role === MessageType.User,
+        [styles.messageItemLeft]: isAssistant,
+        [styles.messageItemRight]: isUser,
       })}
     >
       <section
         className={classNames(styles.messageItemSection, {
-          [styles.messageItemSectionLeft]: item.role === MessageType.Assistant,
-          [styles.messageItemSectionRight]: item.role === MessageType.User,
+          [styles.messageItemSectionLeft]: isAssistant,
+          [styles.messageItemSectionRight]: isUser,
         })}
       >
         <div
           className={classNames(styles.messageItemContent, {
-            [styles.messageItemContentReverse]: item.role === MessageType.User,
+            [styles.messageItemContentReverse]: isUser,
           })}
         >
           {visibleAvatar &&
@@ -265,93 +254,98 @@ const MessageItem = ({
               />
             </div>
 
-            {/* --- BLOCCO FONTI --- */}
+            {/* FONTI */}
             {isAssistant && referenceDocumentList.length > 0 && (
-              <List
-                bordered
-                dataSource={referenceDocumentList}
-                renderItem={(doc, idx) => {
-                  const url = doc.url; // URL già usato da link / drawer
-                  return (
-                    <List.Item>
-                      <Flex gap={'small'} align="center" wrap="wrap">
-                        <FileIcon id={doc.doc_id} name={doc.doc_name} />
+              <div className={styles.sourcesWrapper}>
+                <Text strong style={{ fontSize: 13 }}>Fonti:</Text>
+                <List
+                  size="small"
+                  itemLayout="vertical"
+                  dataSource={referenceDocumentList}
+                  renderItem={(doc, idx) => {
+                    const url = doc.url;
+                    return (
+                      <List.Item
+                        style={{
+                          padding: '8px 0',
+                          border: 'none',
+                          borderBottom: '1px solid #f0f0f0',
+                        }}
+                      >
+                        <Flex vertical gap={4}>
+                          <Flex gap={'small'} align="center" wrap="wrap">
+                            <FileIcon id={doc.doc_id} name={doc.doc_name} />
 
-                        {/* Nome doc: preview su hover */}
-                        <Popover
-                          content={renderPreviewPopover(url)}
-                          trigger="hover"
-                          placement="right"
-                        >
-                          <NewDocumentLink
-                            documentId={doc.doc_id}
-                            documentName={doc.doc_name}
-                            prefix="document"
-                            link={doc.url}
-                          >
-                            {doc.doc_name}
-                          </NewDocumentLink>
-                        </Popover>
+                            {/* Nome documento con popover preview */}
+                            <Popover
+                              content={renderPreviewPopover(url)}
+                              trigger="hover"
+                              placement="right"
+                            >
+                              <NewDocumentLink
+                                documentId={doc.doc_id}
+                                documentName={doc.doc_name}
+                                prefix="document"
+                                link={doc.url}
+                              >
+                                {doc.doc_name}
+                              </NewDocumentLink>
+                            </Popover>
 
-                        {/* Azioni */}
-                        <Flex gap={4}>
-                          {/* Occhio: hover preview piccola, click apre drawer con highlight */}
-                          <Popover
-                            content={renderPreviewPopover(url)}
-                            trigger="hover"
-                            placement="right"
-                          >
-                            <Tooltip title="Anteprima (drawer al click)">
-                              <Button
-                                type="text"
-                                icon={<EyeOutlined />}
-                                onClick={() => previewDoc(doc.doc_id)}
-                                size="small"
-                              />
-                            </Tooltip>
-                          </Popover>
+                            {/* Azioni: anteprima drawer, download, link esterno */}
+                            <Flex gap={4}>
+                              {/* Anteprima drawer */}
+                              <Tooltip title="Anteprima (drawer)">
+                                <Button
+                                  type="text"
+                                  icon={<EyeOutlined />}
+                                  onClick={() => previewDocInDrawer(doc.doc_id)}
+                                  size="small"
+                                />
+                              </Tooltip>
 
-                          {/* Copia marker ##N$$ */}
-                          <Tooltip title="Copia marker">
-                            <Button
-                              type="text"
-                              icon={<CopyOutlined />}
-                              onClick={() => copyMarker(idx)}
-                              size="small"
-                            />
-                          </Tooltip>
+                              {/* Download (fetch+blob) */}
+                              {url && (
+                                <Tooltip title="Scarica PDF">
+                                  <Button
+                                    type="text"
+                                    icon={<DownloadOutlined />}
+                                    onClick={() => downloadPdf(url)}
+                                    size="small"
+                                  />
+                                </Tooltip>
+                              )}
 
-                          {/* Download con fetch+blob */}
-                          {url && (
-                            <Tooltip title="Scarica PDF">
-                              <Button
-                                type="text"
-                                icon={<DownloadOutlined />}
-                                onClick={() => downloadPdf(url)}
-                                size="small"
-                              />
-                            </Tooltip>
-                          )}
+                              {/* Link esterno */}
+                              {doc.url && (
+                                <Tooltip title="Apri link">
+                                  <Button
+                                    type="text"
+                                    icon={<LinkOutlined />}
+                                    href={doc.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    size="small"
+                                  />
+                                </Tooltip>
+                              )}
+                            </Flex>
+                          </Flex>
 
-                          {/* Link esterno se serve */}
-                          {doc.url && (
-                            <Tooltip title="Apri link">
-                              <Button
-                                type="text"
-                                icon={<LinkOutlined />}
-                                href={doc.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                size="small"
-                              />
-                            </Tooltip>
+                          {/* Mini preview testo chunk, se presente */}
+                          {doc.chunk_preview && (
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              {doc.chunk_preview.length > 200
+                                ? doc.chunk_preview.slice(0, 200) + '…'
+                                : doc.chunk_preview}
+                            </Text>
                           )}
                         </Flex>
-                      </Flex>
-                    </List.Item>
-                  );
-                }}
-              />
+                      </List.Item>
+                    );
+                  }}
+                />
+              </div>
             )}
 
             {/* Documenti caricati dall'utente */}
@@ -364,7 +358,7 @@ const MessageItem = ({
                   return (
                     <List.Item>
                       <Flex gap={'small'} align="center">
-                        <FileIcon id={item.id} name={item.name}></FileIcon>
+                        <FileIcon id={item.id} name={item.name} />
 
                         {isImage(fileExtension) ? (
                           <NewDocumentLink
@@ -375,14 +369,8 @@ const MessageItem = ({
                             {item.name}
                           </NewDocumentLink>
                         ) : (
-                          <Button
-                            type={'text'}
-                            onClick={handleUserDocumentClick(item.id)}
-                          >
-                            <Text
-                              style={{ maxWidth: '40vw' }}
-                              ellipsis={{ tooltip: item.name }}
-                            >
+                          <Button type={'text'} onClick={handleUserDocumentClick(item.id)}>
+                            <Text style={{ maxWidth: '40vw' }} ellipsis={{ tooltip: item.name }}>
                               {item.name}
                             </Text>
                           </Button>
