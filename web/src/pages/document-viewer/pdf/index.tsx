@@ -8,7 +8,6 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   useFetchDocumentInfosByIds,
   useFetchDocumentThumbnailsByIds,
-  useGetDocumentUrl,
 } from '@/hooks/document-hooks';
 import { IRegenerateMessage, IRemoveMessageById } from '@/hooks/logic-hooks';
 import { IMessage } from '@/pages/chat/interface';
@@ -25,12 +24,12 @@ import {
 import { Authorization } from '@/constants/authorization';
 import { getAuthorization } from '@/utils/authorization-util';
 
-import FileIcon from '../file-icon';
-import IndentedTreeModal from '../indented-tree/modal';
-import NewDocumentLink from '../new-document-link';
-import { useTheme } from '../theme-provider';
+import FileIcon from '@/components/file-icon';
+import IndentedTreeModal from '@/components/indented-tree/modal';
+import NewDocumentLink from '@/components/new-document-link';
+import { useTheme } from '@/components/theme-provider';
 import { AssistantGroupButton, UserGroupButton } from './group-button';
-import PdfPreviewer from '../pdf-previewer'; // <--- IMPORT del previewer che hai postato
+import PdfPreviewer from '@/components/pdf-previewer';
 import styles from './index.less';
 
 const { Text } = Typography;
@@ -75,14 +74,11 @@ const MessageItem = ({
   const [clickedDocumentId, setClickedDocumentId] = useState('');
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-  // Lista completa dei chunks (per aprire drawer allo stesso punto)
+  // Tutti i chunks riferiti (per aprire Drawer nel punto giusto)
   const allChunks = useMemo(() => reference?.chunks ?? [], [reference?.chunks]);
 
-  // Imposta la dimensione corretta per avatar basata su dimensione schermo
   useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-    };
+    const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -94,7 +90,6 @@ const MessageItem = ({
   };
   const avatarSize = getAvatarSize();
 
-  // Documenti citati (doc_aggs)
   const referenceDocumentList = useMemo(() => {
     return reference?.doc_aggs ?? [];
   }, [reference?.doc_aggs]);
@@ -104,7 +99,7 @@ const MessageItem = ({
       setClickedDocumentId(id);
       showModal();
     },
-    [showModal],
+    [showModal]
   );
 
   const handleRegenerateMessage = useCallback(() => {
@@ -130,16 +125,15 @@ const MessageItem = ({
     }
   };
 
-  // Trova il primo chunk per doc_id
   const findChunkForDoc = useCallback(
     (docId?: string) => {
       if (!docId) return undefined;
       return allChunks.find((c) => c.doc_id === docId);
     },
-    [allChunks],
+    [allChunks]
   );
 
-  // Apri Drawer (come sui marker)
+  // Apri Drawer (come quando clicchi marker)
   const openDrawerPreview = useCallback(
     (docId?: string) => {
       const chunk = findChunkForDoc(docId);
@@ -147,10 +141,10 @@ const MessageItem = ({
         clickDocumentButton(docId, chunk as IReferenceChunk);
       }
     },
-    [findChunkForDoc, clickDocumentButton],
+    [findChunkForDoc, clickDocumentButton]
   );
 
-  // Copia marker
+  // Copia marker ##N$$
   const copyMarker = useCallback((idx: number) => {
     const marker = `##${idx + 1}$$`;
     if (navigator?.clipboard) {
@@ -158,12 +152,13 @@ const MessageItem = ({
     }
   }, []);
 
-  // Download PDF (stessa logica del tuo PdfPreviewer)
+  // Download PDF via fetch + blob (come nel tuo PdfPreviewer)
   const downloadPdf = useCallback(async (url: string) => {
     try {
       const headers = { [Authorization]: getAuthorization() };
       const res = await fetch(url, { headers });
       if (!res.ok) throw new Error(`Impossibile scaricare il file: ${res.status}`);
+
       const blob = await res.blob();
       const blobUrl = window.URL.createObjectURL(blob);
 
@@ -179,10 +174,9 @@ const MessageItem = ({
     }
   }, []);
 
-  // Popover content: preview piccolo
+  // Preview mini in Popover
   const renderPreviewPopover = (url?: string) => {
     if (!url) return null;
-    // Altezza/larghezza per non occupare tutto
     return (
       <div style={{ width: 320, height: 420 }}>
         <PdfPreviewer url={url} />
@@ -193,19 +187,19 @@ const MessageItem = ({
   return (
     <div
       className={classNames(styles.messageItem, {
-        [styles.messageItemLeft]: item.role === MessageType.Assistant,
-        [styles.messageItemRight]: item.role === MessageType.User,
+        [styles.messageItemLeft]: isAssistant,
+        [styles.messageItemRight]: isUser,
       })}
     >
       <section
         className={classNames(styles.messageItemSection, {
-          [styles.messageItemSectionLeft]: item.role === MessageType.Assistant,
-          [styles.messageItemSectionRight]: item.role === MessageType.User,
+          [styles.messageItemSectionLeft]: isAssistant,
+          [styles.messageItemSectionRight]: isUser,
         })}
       >
         <div
           className={classNames(styles.messageItemContent, {
-            [styles.messageItemContentReverse]: item.role === MessageType.User,
+            [styles.messageItemContentReverse]: isUser,
           })}
         >
           {visibleAvatar &&
@@ -266,22 +260,21 @@ const MessageItem = ({
               />
             </div>
 
-            {/* FONTI con preview su hover, download funzionante */}
+            {/* FONTI (UI migliorata senza rompere preview/download) */}
             {isAssistant && referenceDocumentList.length > 0 && (
               <List
                 bordered
                 dataSource={referenceDocumentList}
                 renderItem={(doc, idx) => {
                   const chunk = findChunkForDoc(doc.doc_id);
-                  // URL PDF (se serve passare via hook)
-                  const url = doc.url || (chunk?.doc_id ? useGetDocumentUrl(chunk.doc_id)() : '');
+                  const url = doc.url; // URL già funzionante per il viewer
 
                   return (
                     <List.Item>
                       <Flex gap={'small'} align="center" wrap="wrap">
                         <FileIcon id={doc.doc_id} name={doc.doc_name} />
 
-                        {/* NewDocumentLink: apre la visualizzazione completa (che già ti funziona) */}
+                        {/* Nome documento con preview su hover */}
                         <Popover
                           content={renderPreviewPopover(url)}
                           trigger="hover"
@@ -297,14 +290,15 @@ const MessageItem = ({
                           </NewDocumentLink>
                         </Popover>
 
+                        {/* Azioni a destra */}
                         <Flex gap={4}>
-                          {/* Anteprima (drawer) all'hover dell'icona occhio + click opzionale */}
+                          {/* Icona occhio: hover = preview piccola, click = drawer */}
                           <Popover
                             content={renderPreviewPopover(url)}
                             trigger="hover"
                             placement="right"
                           >
-                            <Tooltip title="Anteprima (drawer all click)">
+                            <Tooltip title="Anteprima (drawer al click)">
                               <Button
                                 type="text"
                                 icon={<EyeOutlined />}
@@ -314,7 +308,7 @@ const MessageItem = ({
                             </Tooltip>
                           </Popover>
 
-                          {/* Copia marker */}
+                          {/* Copia marker ##N$$ */}
                           <Tooltip title="Copia marker">
                             <Button
                               type="text"
@@ -324,7 +318,7 @@ const MessageItem = ({
                             />
                           </Tooltip>
 
-                          {/* Download (fetch con header) */}
+                          {/* Download (fetch + blob) */}
                           {url && (
                             <Tooltip title="Scarica PDF">
                               <Button
@@ -357,6 +351,7 @@ const MessageItem = ({
               />
             )}
 
+            {/* Documenti caricati dall'utente */}
             {isUser && documentList.length > 0 && (
               <List
                 bordered
@@ -377,14 +372,8 @@ const MessageItem = ({
                             {item.name}
                           </NewDocumentLink>
                         ) : (
-                          <Button
-                            type={'text'}
-                            onClick={handleUserDocumentClick(item.id)}
-                          >
-                            <Text
-                              style={{ maxWidth: '40vw' }}
-                              ellipsis={{ tooltip: item.name }}
-                            >
+                          <Button type={'text'} onClick={handleUserDocumentClick(item.id)}>
+                            <Text style={{ maxWidth: '40vw' }} ellipsis={{ tooltip: item.name }}>
                               {item.name}
                             </Text>
                           </Button>
