@@ -13,7 +13,7 @@ import { IRegenerateMessage, IRemoveMessageById } from '@/hooks/logic-hooks';
 import { IMessage } from '@/pages/chat/interface';
 import MarkdownContent from '@/pages/chat/markdown-content';
 import { getExtension, isImage } from '@/utils/document-util';
-import { Avatar, Button, Flex, List, Space, Typography, Tooltip } from 'antd';
+import { Avatar, Button, Flex, List, Space, Typography, Popover, Tooltip } from 'antd';
 import {
   EyeOutlined,
   CopyOutlined,
@@ -21,11 +21,16 @@ import {
   LinkOutlined,
 } from '@ant-design/icons';
 
+import { Authorization } from '@/constants/authorization';
+import { getAuthorization } from '@/utils/authorization-util';
+
 import FileIcon from '../file-icon';
 import IndentedTreeModal from '../indented-tree/modal';
 import NewDocumentLink from '../new-document-link';
 import { useTheme } from '../theme-provider';
 import { AssistantGroupButton, UserGroupButton } from './group-button';
+import PdfPreviewer from '@/components/pdf-previewer'; // mini preview nel popover
+
 import styles from './index.less';
 
 const { Text } = Typography;
@@ -70,29 +75,25 @@ const MessageItem = ({
   const [clickedDocumentId, setClickedDocumentId] = useState('');
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-  // --- chunks per aprire la preview
+  // chunks per aprire il drawer
   const allChunks = useMemo(() => reference?.chunks ?? [], [reference?.chunks]);
 
-  // Imposta la dimensione corretta per avatar basata su dimensione schermo
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
     };
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Calcola la dimensione avatar in base alla larghezza della finestra
   const getAvatarSize = () => {
     if (windowWidth <= 480) return 28;
     if (windowWidth <= 768) return 32;
     return 40;
   };
-
   const avatarSize = getAvatarSize();
 
-  // Documenti citati (già li usavi)
+  // lista doc agg per "Fonti"
   const referenceDocumentList = useMemo(() => {
     return reference?.doc_aggs ?? [];
   }, [reference?.doc_aggs]);
@@ -120,7 +121,6 @@ const MessageItem = ({
     }
   }, [item.doc_ids, setDocumentIds, setIds, documentThumbnails]);
 
-  // Determine message style based on theme and role
   const getMessageStyle = () => {
     if (isAssistant) {
       return theme === 'dark' ? styles.messageTextDark : styles.messageText;
@@ -129,7 +129,7 @@ const MessageItem = ({
     }
   };
 
-  // --- FUNZIONI NUOVE (preview, copia marker, download diretto)
+  // --- FUNZIONI NUOVE ---
   const findChunkForDoc = useCallback(
     (docId?: string) => {
       if (!docId) return undefined;
@@ -138,6 +138,7 @@ const MessageItem = ({
     [allChunks],
   );
 
+  // preview drawer (come i marker)
   const previewDoc = useCallback(
     (docId?: string) => {
       const chunk = findChunkForDoc(docId);
@@ -155,10 +156,37 @@ const MessageItem = ({
     }
   }, []);
 
-  const buildDownloadUrl = (docId?: string, fallbackUrl?: string) => {
-    // Se hai già /minio/... o /api/document/{id}/download → usa quello.
-    if (docId) return `/api/document/${docId}/download`; // ADATTA alla tua API
-    return fallbackUrl || '#';
+  // Download via fetch + blob
+  const downloadPdf = useCallback(async (url?: string) => {
+    if (!url) return;
+    try {
+      const headers = { [Authorization]: getAuthorization() };
+      const res = await fetch(url, { headers });
+      if (!res.ok) throw new Error(`Impossibile scaricare il file: ${res.status}`);
+
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = url.split('/').pop() || 'documento.pdf';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  // mini preview nel popover
+  const renderPreviewPopover = (url?: string) => {
+    if (!url) return null;
+    return (
+      <div style={{ width: 320, height: 420 }}>
+        <PdfPreviewer url={url} />
+      </div>
+    );
   };
 
   return (
@@ -237,41 +265,53 @@ const MessageItem = ({
               />
             </div>
 
-            {/* --- BLOCCO FONTI MIGLIORATO MA RESTANDO COMPATIBILE --- */}
+            {/* --- BLOCCO FONTI --- */}
             {isAssistant && referenceDocumentList.length > 0 && (
               <List
                 bordered
                 dataSource={referenceDocumentList}
                 renderItem={(doc, idx) => {
-                  const downloadHref = buildDownloadUrl(doc.doc_id, doc.url);
+                  const url = doc.url; // URL già usato da link / drawer
                   return (
                     <List.Item>
                       <Flex gap={'small'} align="center" wrap="wrap">
                         <FileIcon id={doc.doc_id} name={doc.doc_name} />
 
-                        {/* Il tuo componente che apre il viewer completo */}
-                        <NewDocumentLink
-                          documentId={doc.doc_id}
-                          documentName={doc.doc_name}
-                          prefix="document"
-                          link={doc.url}
+                        {/* Nome doc: preview su hover */}
+                        <Popover
+                          content={renderPreviewPopover(url)}
+                          trigger="hover"
+                          placement="right"
                         >
-                          {doc.doc_name}
-                        </NewDocumentLink>
+                          <NewDocumentLink
+                            documentId={doc.doc_id}
+                            documentName={doc.doc_name}
+                            prefix="document"
+                            link={doc.url}
+                          >
+                            {doc.doc_name}
+                          </NewDocumentLink>
+                        </Popover>
 
-                        {/* AZIONI EXTRA: anteprima (PdfDrawer), copia marker, download diretto */}
+                        {/* Azioni */}
                         <Flex gap={4}>
-                          {/* Anteprima PDF nel drawer */}
-                          <Tooltip title="Anteprima (drawer)">
-                            <Button
-                              type="text"
-                              icon={<EyeOutlined />}
-                              onClick={() => previewDoc(doc.doc_id)}
-                              size="small"
-                            />
-                          </Tooltip>
+                          {/* Occhio: hover preview piccola, click apre drawer con highlight */}
+                          <Popover
+                            content={renderPreviewPopover(url)}
+                            trigger="hover"
+                            placement="right"
+                          >
+                            <Tooltip title="Anteprima (drawer al click)">
+                              <Button
+                                type="text"
+                                icon={<EyeOutlined />}
+                                onClick={() => previewDoc(doc.doc_id)}
+                                size="small"
+                              />
+                            </Tooltip>
+                          </Popover>
 
-                          {/* Copia marker nel testo */}
+                          {/* Copia marker ##N$$ */}
                           <Tooltip title="Copia marker">
                             <Button
                               type="text"
@@ -281,16 +321,17 @@ const MessageItem = ({
                             />
                           </Tooltip>
 
-                          {/* Download diretto (se vuoi oltre al viewer) */}
-                          <Tooltip title="Scarica PDF">
-                            <Button
-                              type="text"
-                              icon={<DownloadOutlined />}
-                              href={downloadHref}
-                              download
-                              size="small"
-                            />
-                          </Tooltip>
+                          {/* Download con fetch+blob */}
+                          {url && (
+                            <Tooltip title="Scarica PDF">
+                              <Button
+                                type="text"
+                                icon={<DownloadOutlined />}
+                                onClick={() => downloadPdf(url)}
+                                size="small"
+                              />
+                            </Tooltip>
+                          )}
 
                           {/* Link esterno se serve */}
                           {doc.url && (
@@ -313,6 +354,7 @@ const MessageItem = ({
               />
             )}
 
+            {/* Documenti caricati dall'utente */}
             {isUser && documentList.length > 0 && (
               <List
                 bordered
@@ -354,6 +396,7 @@ const MessageItem = ({
           </Flex>
         </div>
       </section>
+
       {visible && (
         <IndentedTreeModal
           visible={visible}
