@@ -86,7 +86,7 @@ const MessageItem = ({
   const [clickedDocumentId, setClickedDocumentId] = useState('');
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-  // tutti i chunk referenziati (per Drawer)
+  // Tutti i chunk referenziati (per Drawer)
   const allChunks = useMemo(() => reference?.chunks ?? [], [reference?.chunks]);
 
   useEffect(() => {
@@ -161,7 +161,7 @@ const MessageItem = ({
     [findChunkForDoc, clickDocumentButton],
   );
 
-  // Download fetch+blob (uguale PdfPreviewer)
+  // ---- DOWNLOAD identico a PdfPreviewer ----
   const downloadPdf = useCallback(async (url?: string) => {
     if (!url) return;
     try {
@@ -183,6 +183,13 @@ const MessageItem = ({
       console.error(err);
     }
   }, []);
+
+  // Fallback url download (se il backend espone /api/document/:id/download)
+  const buildDownloadUrl = (docId?: string, url?: string) => {
+    if (url) return url;
+    if (docId) return `/api/document/${docId}/download`;
+    return '#';
+  };
 
   // Mini anteprima nel popover
   const renderPreviewPopover = (url?: string) => {
@@ -291,6 +298,7 @@ const MessageItem = ({
                     dataSource={referenceDocumentList}
                     renderItem={(doc) => {
                       const url = doc.url;
+                      const dlUrl = buildDownloadUrl(doc.doc_id, url);
                       return (
                         <List.Item
                           style={{
@@ -303,11 +311,12 @@ const MessageItem = ({
                             <Flex gap={'small'} align="center" wrap="wrap">
                               <FileIcon id={doc.doc_id} name={doc.doc_name} />
 
-                              {/* POPUP preview sul nome documento */}
+                              {/* Preview al passaggio sul nome */}
                               <Popover
                                 content={renderPreviewPopover(url)}
                                 trigger="hover"
                                 placement="right"
+                                getPopupContainer={() => document.body}
                               >
                                 <NewDocumentLink
                                   documentId={doc.doc_id}
@@ -319,13 +328,14 @@ const MessageItem = ({
                                 </NewDocumentLink>
                               </Popover>
 
-                              {/* Azioni: occhio(drawer), download, link */}
+                              {/* Azioni: occhio (hover same), download, link */}
                               <Flex gap={6} align="center">
-                                {/* Occhio: hover preview + click drawer */}
+                                {/* Occhio: hover = preview, click = drawer */}
                                 <Popover
                                   content={renderPreviewPopover(url)}
                                   trigger="hover"
                                   placement="right"
+                                  getPopupContainer={() => document.body}
                                 >
                                   <Tooltip title="Anteprima (drawer)">
                                     <Button
@@ -337,19 +347,17 @@ const MessageItem = ({
                                   </Tooltip>
                                 </Popover>
 
-                                {/* Download */}
-                                {url && (
-                                  <Tooltip title="Scarica PDF">
-                                    <Button
-                                      className={styles.sourceActionBtn}
-                                      icon={<DownloadOutlined />}
-                                      onClick={() => downloadPdf(url)}
-                                      size="small"
-                                    >
-                                      Scarica
-                                    </Button>
-                                  </Tooltip>
-                                )}
+                                {/* Download (visibile!) */}
+                                <Tooltip title="Scarica PDF">
+                                  <Button
+                                    className={styles.sourceActionBtn}
+                                    icon={<DownloadOutlined />}
+                                    size="small"
+                                    onClick={() => downloadPdf(dlUrl)}
+                                  >
+                                    Scarica
+                                  </Button>
+                                </Tooltip>
 
                                 {/* Link esterno */}
                                 {doc.url && (
@@ -367,7 +375,7 @@ const MessageItem = ({
                               </Flex>
                             </Flex>
 
-                            {/* OCR preview brutta: nascosta */}
+                            {/* OCR preview nascosta */}
                             {/* {doc.chunk_preview && (
                               <Text type="secondary" style={{ fontSize: 12 }}>
                                 {doc.chunk_preview.length > 200
