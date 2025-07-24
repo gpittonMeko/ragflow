@@ -147,21 +147,15 @@ class Generate(ComponentBase):
         # ------------------------------------------------------------------ #
         # 3) Costruisci doc_aggs 1-a-1 con i chunk (nessuna dedup)           #
         # ------------------------------------------------------------------ #
-        doc_aggs, seen = [], set()
+        doc_aggs = []
         for ck in chunks:
-            d_id = ck.get("doc_id")
-            if d_id in seen:
-                continue
-            doc_aggs.append(
-                {
-                    "doc_id": d_id,
-                    "doc_name": ck.get("docnm_kwd") or ck.get("doc_name") or "",
-                    "url": ck.get("url") or "",
-                    "chunk_preview": (ck.get("content_ltks") or ck.get("content") or "")[:300]  # NEW
-                }
-            )
+            doc_aggs.append({
+                "doc_id": ck.get("doc_id"),
+                "doc_name": ck.get("docnm_kwd") or ck.get("doc_name") or "",
+                "url": ck.get("url") or "",
+                "chunk_preview": (ck.get("content_ltks") or ck.get("content") or "")[:300]
+            })
 
-            seen.add(d_id)
 
          #------------------------------------------------------------------ #
          #4) Legenda “Fonti” (una sola riga per documento)                   #
