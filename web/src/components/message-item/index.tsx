@@ -199,27 +199,53 @@ const MessageItem = ({
   }, []);
 
 
-    /**
-   * Costruisce l’URL di download partendo da:
-   *  - doc.url   (link “frontend” /document/<id>?ext=pdf&prefix=document)
-   *  - docId     (solo ID)
-   * Restituisce sempre l’endpoint REST che risponde 200 PDF:
-   *  /v1/document/get/<id>
-   */
-  const buildDownloadUrl = (docId?: string, url?: string) => {
-    // ① se ho già l'URL REST corretto lo riuso
-    if (url?.startsWith('/v1/document/get/')) return url;
+  // ---------- patch ----------
 
-    // ② se arriva l’URL "frontend", estraggo l’ID e ritorno quello REST
-    const idFromFrontend = url?.match(/\/document\/([a-f0-9]{32})/i)?.[1];
+  // downloadPdf: aggiorno token ad ogni click
+  const downloadPdf = useCallback(async (url?: string) => {
+    if (!url || url === '#') {
+      console.warn('downloadPdf: URL non valido:', url);
+      return;
+    }
+
+    try {
+      const headers = { [Authorization]: getAuthorization() }; // token fresco
+      const res = await fetch(url, { headers });
+      if (!res.ok) throw new Error(`Download fallito: ${res.status}`);
+
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = url.split('/').pop() || 'documento.pdf';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Errore durante il download:', err);
+      window.open(url, '_blank'); // fallback
+    }
+  }, []);
+
+  // buildDownloadUrl: mappa qualunque link “frontend” o id all’endpoint REST
+  const buildDownloadUrl = (docId?: string, url?: string) => {
+    // 1) URL già corretto (assoluto o relativo)
+    if (url?.includes('/v1/document/get/')) return url;
+
+    // 2) URL “frontend” → estraggo l’id
+    const idFromFrontend = url?.match(/\/document\/([a-f0-9-]+)/i)?.[1];
     if (idFromFrontend) return `/v1/document/get/${idFromFrontend}`;
 
-    // ③ fallback: se ho solo docId
+    // 3) ho solo l’id
     if (docId) return `/v1/document/get/${docId}`;
 
-    // ④ nothing: URL invalido
+    // 4) nessun dato
     return '#';
   };
+  // ---------- fine patch ----------
+
 
 
   // Mini anteprima nel popover
