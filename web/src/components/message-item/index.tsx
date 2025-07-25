@@ -171,32 +171,7 @@ const MessageItem = ({
     [allChunks, clickDocumentButton, findChunkForDoc],
   );
 
-  const downloadPdf = useCallback(async (url?: string) => {
-    if (!url || url === '#') {
-      console.warn('downloadPdf: URL non valido:', url);
-      return;
-    }
 
-    try {
-      const headers = { [Authorization]: getAuthorization() };
-      const res = await fetch(url, { headers });
-      if (!res.ok) throw new Error(`Download fallito: ${res.status}`);
-
-      const blob = await res.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = url.split('/').pop() || 'documento.pdf';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      console.error('Errore durante il download:', err);
-      window.open(url, '_blank'); // fallback
-    }
-  }, []);
 
 
   // downloadPdf: token fresco ad ogni click
