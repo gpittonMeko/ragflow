@@ -171,18 +171,16 @@ const MessageItem = ({
     [allChunks, clickDocumentButton, findChunkForDoc],
   );
 
-  // ==== Download fetch+blob ====
   const downloadPdf = useCallback(async (url?: string) => {
-    if (!url) return;
+    if (!url || url === '#') {
+      console.warn('downloadPdf: URL non valido:', url);
+      return;
+    }
+
     try {
       const headers = { [Authorization]: getAuthorization() };
-      console.debug('[MessageItem] downloadPdf URL:', url);
       const res = await fetch(url, { headers });
-      if (!res.ok) {
-        console.warn('Download fallito, provo fallback window.open', res.status);
-        window.open(url, '_blank');
-        return;
-      }
+      if (!res.ok) throw new Error(`Download fallito: ${res.status}`);
 
       const blob = await res.blob();
       const blobUrl = window.URL.createObjectURL(blob);
@@ -195,10 +193,11 @@ const MessageItem = ({
       link.remove();
       window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.error('downloadPdf error:', err);
-      window.open(url, '_blank');
+      console.error('Errore durante il download:', err);
+      window.open(url, '_blank'); // fallback
     }
   }, []);
+
 
   // Fallback url se necessario
   const buildDownloadUrl = (docId?: string, url?: string) => {
