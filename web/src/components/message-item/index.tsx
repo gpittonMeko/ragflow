@@ -325,7 +325,13 @@ const MessageItem = ({
                     dataSource={referenceDocumentList}
                     renderItem={(doc) => {
                       const url = doc.url;
-                      const displayName = doc.file_name || doc.name || doc.doc_name; // 👈 nuovo
+                      console.log('DOC →', doc);
+                      const displayName =
+                      doc.original_name ||          // 👈 aggiungi il campo corretto
+                      doc.originalFilename ||       // (o quello che hai visto nel log)
+                      doc.file_name ||
+                      doc.name ||
+                      doc.doc_name;
                       const dlUrl = buildDownloadUrl(doc.doc_id, url);
                       return (
                         <List.Item
