@@ -61,6 +61,8 @@ interface IProps extends Partial<IRemoveMessageById>, IRegenerateMessage {
   showLoudspeaker?: boolean;
 }
 
+
+
 const MessageItem = ({
   item,
   reference,
@@ -119,6 +121,8 @@ const MessageItem = ({
     [showModal],
   );
 
+  
+
   const handleRegenerateMessage = useCallback(() => {
     regenerateMessage?.(item);
   }, [regenerateMessage, item]);
@@ -172,7 +176,7 @@ const MessageItem = ({
   );
 
 
-
+  
 
   // downloadPdf: token fresco ad ogni click
   const downloadPdf = useCallback(async (url?: string) => {
@@ -321,6 +325,7 @@ const MessageItem = ({
                     dataSource={referenceDocumentList}
                     renderItem={(doc) => {
                       const url = doc.url;
+                      const displayName = doc.file_name || doc.name || doc.doc_name; // 👈 nuovo
                       const dlUrl = buildDownloadUrl(doc.doc_id, url);
                       return (
                         <List.Item
@@ -344,11 +349,11 @@ const MessageItem = ({
                               >
                                 <NewDocumentLink
                                   documentId={doc.doc_id}
-                                  documentName={doc.doc_name}
+                                  documentName={displayName}        // 👈 cambiato
                                   prefix="document"
                                   link={doc.url}
                                 >
-                                  {doc.doc_name}
+                                  {displayName}                     {/* 👈 cambiato */}
                                 </NewDocumentLink>
                               </Popover>
 
