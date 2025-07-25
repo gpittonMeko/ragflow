@@ -199,9 +199,7 @@ const MessageItem = ({
   }, []);
 
 
-  // ---------- patch ----------
-
-  // downloadPdf: aggiorno token ad ogni click
+  // downloadPdf: token fresco ad ogni click
   const downloadPdf = useCallback(async (url?: string) => {
     if (!url || url === '#') {
       console.warn('downloadPdf: URL non valido:', url);
@@ -209,7 +207,7 @@ const MessageItem = ({
     }
 
     try {
-      const headers = { [Authorization]: getAuthorization() }; // token fresco
+      const headers = { [Authorization]: getAuthorization() }; // token aggiornato
       const res = await fetch(url, { headers });
       if (!res.ok) throw new Error(`Download fallito: ${res.status}`);
 
@@ -229,22 +227,15 @@ const MessageItem = ({
     }
   }, []);
 
-  // buildDownloadUrl: mappa qualunque link “frontend” o id all’endpoint REST
+
+  // buildDownloadUrl: converte id o link “frontend” nell’endpoint REST
   const buildDownloadUrl = (docId?: string, url?: string) => {
-    // 1) URL già corretto (assoluto o relativo)
-    if (url?.includes('/v1/document/get/')) return url;
-
-    // 2) URL “frontend” → estraggo l’id
-    const idFromFrontend = url?.match(/\/document\/([a-f0-9-]+)/i)?.[1];
+    if (url?.includes('/v1/document/get/')) return url;                      // già corretto
+    const idFromFrontend = url?.match(/\/document\/([a-f0-9-]+)/i)?.[1];     // estrae id
     if (idFromFrontend) return `/v1/document/get/${idFromFrontend}`;
-
-    // 3) ho solo l’id
-    if (docId) return `/v1/document/get/${docId}`;
-
-    // 4) nessun dato
-    return '#';
+    if (docId) return `/v1/document/get/${docId}`;                           // fallback solo id
+    return '#';                                                              // nessun dato
   };
-  // ---------- fine patch ----------
 
 
 
