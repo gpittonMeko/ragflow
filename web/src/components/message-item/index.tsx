@@ -199,12 +199,28 @@ const MessageItem = ({
   }, []);
 
 
-  // Fallback url se necessario
+    /**
+   * Costruisce l’URL di download partendo da:
+   *  - doc.url   (link “frontend” /document/<id>?ext=pdf&prefix=document)
+   *  - docId     (solo ID)
+   * Restituisce sempre l’endpoint REST che risponde 200 PDF:
+   *  /v1/document/get/<id>
+   */
   const buildDownloadUrl = (docId?: string, url?: string) => {
-    if (url) return url;
-    if (docId) return `/api/document/${docId}/download`;
+    // ① se ho già l'URL REST corretto lo riuso
+    if (url?.startsWith('/v1/document/get/')) return url;
+
+    // ② se arriva l’URL "frontend", estraggo l’ID e ritorno quello REST
+    const idFromFrontend = url?.match(/\/document\/([a-f0-9]{32})/i)?.[1];
+    if (idFromFrontend) return `/v1/document/get/${idFromFrontend}`;
+
+    // ③ fallback: se ho solo docId
+    if (docId) return `/v1/document/get/${docId}`;
+
+    // ④ nothing: URL invalido
     return '#';
   };
+
 
   // Mini anteprima nel popover
   const renderPreviewPopover = (url?: string) => {
