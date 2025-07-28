@@ -492,7 +492,7 @@ useEffect(() => {
       {/* CHAT SOTTO IL LOGO */}
       <div className={styles.iframeSection}>
         <iframe
-          src="https://sgailegal.it/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm&visible_avatar=1"
+          src="http://16.170.85.194/chat/share?shared_id=9afb6a2267bf11f0a1f2fec73c0cd884&from=agent&auth=diODc1MmRlNmJjMzExZjA5OTFjYzI5Zj&visible_avatar=1"
           title="SGAI Chat Interface"
           style={{
             borderRadius: 'var(--border-radius)',
