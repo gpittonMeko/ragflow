@@ -3,6 +3,8 @@ import styles from './index.less';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
 import api from '@/utils/api'; // <-- sostituisci con il percorso reale del tuo file api
 import SubscriptionUpgradeButton from '../../components/SubscriptionUpgradeButton';
+import { loadStripe } from '@stripe/stripe-js';
+
 
 const CLIENT_ID =
   '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
@@ -11,6 +13,9 @@ const CLIENT_ID =
    NUOVE COSTANTI / STATE PER BLOCCO GENERAZIONI ANONIMO
 ────────────────────────────────────────────────────────────── */
 const FREE_LIMIT = 5; // quante generazioni consentite se anonimo
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!);
+
 
 declare global {
   interface Window {
@@ -290,6 +295,33 @@ useEffect(() => {
     localStorage.removeItem('sgai-gen-count');
   };
 
+
+  const handleCheckout = async () => {
+  try {
+    const stripe = await stripePromise;
+    if (!stripe) throw new Error('Stripe non caricato');
+
+    const res = await fetch('/api/stripe/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: userData?.email,
+        selected_plan: 'premium', // oppure 'standard'
+      }),
+    });
+
+    const { sessionId, error } = await res.json();
+    if (error) throw new Error(error);
+
+    const { error: stripeErr } = await stripe.redirectToCheckout({ sessionId });
+    if (stripeErr) alert(stripeErr.message);
+  } catch (err: any) {
+    alert(err.message || 'Errore checkout Stripe');
+  }
+};
+
+
+
   return (
     <div className={styles.pageContainer}>
       {/* Toggle tema */}
@@ -365,12 +397,17 @@ useEffect(() => {
     </div>
     {/* 🔽 ECCO QUI */}
 
-        {userData && userData.plan !== "premium" && googleToken && (
-      <SubscriptionUpgradeButton
-        googleToken={googleToken}
-        userPlan={userData.plan}
-      />
-    )}
+        {userData && userData.plan !== 'premium' && googleToken && (
+        <button
+          onClick={handleCheckout}
+          className={styles.upgradeBtn}
+          aria-label="Esegui l'upgrade"
+        >
+          <span className={styles.upgradeGlow}></span>
+          <span className={styles.upgradeContent}>🔓 Sblocca versione Premium</span>
+        </button>
+      )}
+
 
     <button
       onClick={logout}
