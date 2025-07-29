@@ -340,32 +340,18 @@ useEffect(() => {
   <>
     {/* --- Google button stile ufficiale --- */}
     <button
-      onClick={() => setShowGoogleModal(true)}
-      type="button"
-      style={{
-        position: 'fixed',
-        right: 80,
-        top: 20,
-        zIndex: 1100,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        background: '#fff',
-        color: '#3c4043',
-        border: '1px solid #dadce0',
-        borderRadius: 4,
-        padding: '9px 18px 9px 15px',
-        fontSize: 14,
-        fontWeight: 500,
-        cursor: 'pointer',
-        boxShadow: '0 1px 3px rgba(0,0,0,.1)',
-      }}
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24">
-        <path fill="#EA4335" d="M12 11.989v4.318h6.017c-.241 1.304-1.45 3.823-6.017 3.823-3.626 0-6.582-2.978-6.582-6.645S8.374 6.84 12 6.84c2.063 0 3.448.884 4.243 1.642l2.898-2.806C17.181 3.827 14.807 2.66 12 2.66 6.522 2.66 2 7.162 2 12.485S6.522 22.31 12 22.31c6.94 0 10.647-4.849 10.647-9.765 0-.655-.074-1.155-.165-1.556H12z"/>
-      </svg>
-      Accedi con Google
-    </button>
+    onClick={() => setShowGoogleModal(true)}
+    className={styles.glassBtn}
+    style={{position:'fixed',right:80,top:20,zIndex:1100}}
+    aria-label="Accedi con Google"
+  >
+    <img
+      src="https://developers.google.com/identity/images/g-logo.png"
+      alt=""
+      style={{width:18,marginRight:8,verticalAlign:'middle'}}
+    />
+    Accedi con Google
+  </button>
 
 
 
@@ -407,36 +393,26 @@ useEffect(() => {
 
         {userData && userData.plan !== 'premium'  && (
         <button
-          onClick={handleCheckout}
-          className={styles.upgradeBtn}
-          aria-label="Esegui l'upgrade"
+          onClick={() => handleCheckout('premium')}
+          className={`${styles.glassBtn} ${styles.upgradeBtn}`}
+          style={{position:'fixed',right:80,top:110,zIndex:1100}}
+          aria-label="Passa a Premium"
         >
-          <span className={styles.upgradeGlow}></span>
-          <span className={styles.upgradeContent}>🔓 Sblocca versione Premium</span>
+          🔓 Passa a Premium
         </button>
+
       )}
 
 
     <button
       onClick={logout}
-      type="button"
-      style={{
-        position: 'fixed',
-        right: 20,
-        top: 20,
-        zIndex: 1100,
-        background: '#d93025',
-        color: '#fff',
-        border: 'none',
-        padding: '10px 16px',
-        borderRadius: 6,
-        fontWeight: 600,
-        cursor: 'pointer',
-        boxShadow: '0 1px 3px rgba(0,0,0,.2)',
-      }}
+      className={styles.glassBtn}
+      style={{position:'fixed',right:20,top:20,zIndex:1100,background:'rgba(255,80,80,.25)'}}
+      aria-label="Logout"
     >
-      🚪 Esci
+      🚪 Esci
     </button>
+
   </>
 )}
 
