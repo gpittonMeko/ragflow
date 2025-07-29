@@ -463,3 +463,35 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 8px 22px rgba(0,0,0,.35);
 }
+
+/* --- bottone “vetro liquido” stile Apple --- */
+.glassBtn {
+  --t: 0.3s;
+
+  background: rgba(255,255,255,0.18);          /* glass */
+  border: 1px solid rgba(255,255,255,0.35);
+  box-shadow: 0 10px 20px rgba(0,0,0,.15);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 22px;
+  border-radius: 12px;
+  transition: transform var(--t), box-shadow var(--t);
+  cursor: pointer;
+
+  &:hover   { transform: translateY(-2px); box-shadow:0 14px 24px rgba(0,0,0,.18);}
+  &:active  { transform: translateY( 1px); box-shadow:0 6px 12px  rgba(0,0,0,.18);}
+}
+
+/* “upgradeBtn” esistente → eredita il look glass */
+.upgradeBtn { composes: glassBtn; position:fixed; right:80px; top:110px; }
+
+/* Google modal centrato meglio */
+.googleModal {
+  background: rgba(255,255,255,.85);
+  backdrop-filter: blur(6px);
+  display:flex; align-items:center; justify-content:center;
+}
