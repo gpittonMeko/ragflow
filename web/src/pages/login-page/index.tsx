@@ -10,6 +10,9 @@ const CLIENT_ID =
   '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
 
 
+const FREE_LIMIT = 5;        //  ←  DEVE restare definito prima di qualunque uso
+
+
 // chiave pubblica Stripe (ok metterla nel client)
 const STRIPE_PK = 'pk_live_51RkiUSBo6bKd1aEWDjFk1pcLrwyqKH2Z5W7HMYfs41Zl018725OsU5bEImNUR4RgwMIYFuZwdTktddU3ydAL8cYY00TBKXJ0di';
 
