@@ -298,29 +298,32 @@ useEffect(() => {
   };
 
 
-  const handleCheckout = async () => {
-  try {
-    const stripe = await stripePromise;
-    if (!stripe) throw new Error('Stripe non caricato');
+  // prima: prendeva solo "premium" ed usava userData?.email
+  // dopo: accetta il piano e passa l'email solo se c’è
+  const handleCheckout = async (plan: 'standard' | 'premium' = 'premium') => {
+    try {
+      const stripe = await stripePromise;
+      if (!stripe) throw new Error('Stripe non caricato');
 
-    const res = await fetch('/api/stripe/create-checkout-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: userData?.email,
-        selected_plan: 'premium', // oppure 'standard'
-      }),
-    });
+      const res = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userData?.email ?? null,   // <‑‑ adesso opzionale
+          selected_plan: plan,
+        }),
+      });
 
-    const { sessionId, error } = await res.json();
-    if (error) throw new Error(error);
+      const { sessionId, error } = await res.json();
+      if (error) throw new Error(error);
 
-    const { error: stripeErr } = await stripe.redirectToCheckout({ sessionId });
-    if (stripeErr) alert(stripeErr.message);
-  } catch (err: any) {
-    alert(err.message || 'Errore checkout Stripe');
-  }
-};
+      const { error: stripeErr } = await stripe.redirectToCheckout({ sessionId });
+      if (stripeErr) alert(stripeErr.message);
+    } catch (err: any) {
+      alert(err.message || 'Errore checkout Stripe');
+    }
+  };
+
 
 
 
@@ -364,6 +367,9 @@ useEffect(() => {
       Accedi con Google
     </button>
 
+
+
+
     {/* --- “pill” del contatore --- */}
     <div
       style={{
@@ -399,7 +405,7 @@ useEffect(() => {
     </div>
     {/* 🔽 ECCO QUI */}
 
-        {userData && userData.plan !== 'premium' && googleToken && (
+        {userData && userData.plan !== 'premium'  && (
         <button
           onClick={handleCheckout}
           className={styles.upgradeBtn}
@@ -470,6 +476,19 @@ useEffect(() => {
               Annulla
             </button>
           </div>
+
+
+          
+    <button
+    onClick={() => handleCheckout('premium')}
+    className={styles.upgradeBtn}
+    aria-label="Acquista Premium"
+    style={{ marginTop: 12 }}
+  >
+    🔓 Passa direttamente a Premium
+  </button>
+
+  
         </div>
       )}
 

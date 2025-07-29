@@ -1,25 +1,30 @@
 """
-backend.py – Flask server che:
-• valida l’ID-Token Google
-• gestisce utenti/limiti in RAM (simulazione DB)
-• crea le Stripe Checkout Session
+backend.py – Flask server one‑file
+• valida l’ID‑Token Google
+• mantiene un “DB” in RAM con piano & contatore
+• espone /api/generate con limite per piano
+• crea la Stripe Checkout Session (email facoltativa)
 • riceve il webhook Stripe e aggiorna il piano
 """
 
 import os
-import time
 import threading
+import time
+from typing import Dict, Optional
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 import google.auth.transport.requests
 import google.oauth2.id_token
-
 import stripe
 
-# ===================== CONFIG ===================== #
-CLIENT_ID = "872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com"
+# ─────────────────────────────────────────────────────────────
+# CONFIG
+# ─────────────────────────────────────────────────────────────
+CLIENT_ID = (
+    "872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com"
+)
 
 PLAN_LIMITS = {
     "free": 5,
@@ -27,35 +32,38 @@ PLAN_LIMITS = {
     "premium": 1_000_000_000,
 }
 
-# Variabili d'ambiente (imposta nel tuo docker/hosting)
-# STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_STANDARD, STRIPE_PRICE_PREMIUM, APP_URL
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
-APP_URL = os.environ.get("APP_URL", "http://localhost:5173")
+# Stripe – impostale nel tuo ambiente / docker‑compose
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+APP_URL = os.getenv("APP_URL", "http://localhost:5173")
+
 SUCCESS_URL = f"{APP_URL}/success?session_id={{CHECKOUT_SESSION_ID}}"
 CANCEL_URL = f"{APP_URL}/"
 
-# ===================== APP ===================== #
+# ─────────────────────────────────────────────────────────────
+# APP & “DB” in RAM
+# ─────────────────────────────────────────────────────────────
 app = Flask(__name__)
 CORS(app)
 
-# DB in RAM
-users_db: dict[str, dict] = {}
+users_db: Dict[str, Dict] = {}
 db_lock = threading.Lock()
 
-
-# ===================== HELPER ===================== #
-def verify_token(token: str) -> dict | None:
-    """Ritorna il payload del token Google se valido, altrimenti None."""
+# ─────────────────────────────────────────────────────────────
+# HELPER
+# ─────────────────────────────────────────────────────────────
+def verify_token(token: str) -> Optional[Dict]:
+    """Restituisce il payload se il token Google è valido; altrimenti None."""
     try:
         req = google.auth.transport.requests.Request()
-        id_info = google.oauth2.id_token.verify_oauth2_token(token, req, CLIENT_ID)
-        return id_info
-    except Exception as e:
-        print("Token validation failed:", e)
+        return google.oauth2.id_token.verify_oauth2_token(token, req, CLIENT_ID)
+    except Exception as exc:  # noqa: BLE001
+        print("Token validation failed:", exc)
         return None
 
 
-# ===================== AUTH ===================== #
+# ─────────────────────────────────────────────────────────────
+# AUTH
+# ─────────────────────────────────────────────────────────────
 @app.post("/api/auth/google")
 def google_auth():
     token = (request.json or {}).get("token")
@@ -81,7 +89,9 @@ def google_auth():
     )
 
 
-# ===================== GENERATE (FAKE AI) ===================== #
+# ─────────────────────────────────────────────────────────────
+# GENERATE (finto)
+# ─────────────────────────────────────────────────────────────
 @app.post("/api/generate")
 def generate():
     auth_header = request.headers.get("Authorization", "")
@@ -106,79 +116,102 @@ def generate():
         user["usedGenerations"] += 1
         remaining = max(limit - user["usedGenerations"], 0)
 
-    # simulazione ritardo risposta
-    time.sleep(1)
+    time.sleep(1)  # simuliamo l’attesa AI
 
     return jsonify(
-        message="Fake AI response",
+        message="Fake AI response",
         remainingGenerations=remaining,
-        usedGenerations=users_db[email]["usedGenerations"],
+        usedGenerations=user["usedGenerations"],
     )
 
 
-# ===================== STRIPE: CREATE CHECKOUT SESSION ===================== #
+# ─────────────────────────────────────────────────────────────
+# STRIPE – Create Checkout Session
+# ─────────────────────────────────────────────────────────────
 @app.post("/api/stripe/create-checkout-session")
 def create_checkout_session():
+    if not stripe.api_key:
+        return jsonify(error="Stripe secret key missing"), 500
+
     data = request.get_json() or {}
-    email = data.get("email")
+    email = data.get("email")               # può essere None
     selected_plan = data.get("selected_plan", "premium")
 
     if selected_plan not in ("standard", "premium"):
         return jsonify(error="Invalid plan"), 400
 
-    price_env = "STRIPE_PRICE_PREMIUM" if selected_plan == "premium" else "STRIPE_PRICE_STANDARD"
-    price_id = os.environ.get(price_env)
+    price_id = os.getenv(
+        "STRIPE_PRICE_PREMIUM" if selected_plan == "premium" else "STRIPE_PRICE_STANDARD"
+    )
     if not price_id:
         return jsonify(error="Stripe price missing"), 500
 
-    session = stripe.checkout.Session.create(
+    params = dict(
         mode="subscription",
         success_url=SUCCESS_URL,
         cancel_url=CANCEL_URL,
-        customer_email=email,
         line_items=[{"price": price_id, "quantity": 1}],
-        metadata={"selected_plan": selected_plan, "email": email},
+        metadata={"selected_plan": selected_plan},
     )
+    if email:              # aggiungi l’e‑mail solo se la conosci
+        params["customer_email"] = email
+        params["metadata"]["email"] = email
 
+    session = stripe.checkout.Session.create(**params)
     return jsonify(sessionId=session.id)
 
 
-# ===================== STRIPE: WEBHOOK ===================== #
+# ─────────────────────────────────────────────────────────────
+# STRIPE – Webhook
+# ─────────────────────────────────────────────────────────────
 @app.post("/api/stripe/webhook")
 def stripe_webhook():
-    payload = request.get_data(as_text=False)  # raw bytes
+    if not stripe.api_key:
+        return jsonify(error="Stripe secret key missing"), 500
+
+    endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+    if not endpoint_secret:
+        return jsonify(error="Webhook secret missing"), 500
+
+    payload = request.get_data(as_text=False)
     sig_header = request.headers.get("Stripe-Signature", "")
-    endpoint_secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
-    except Exception as e:
-        return jsonify(error=str(e)), 400
+    except Exception as exc:  # noqa: BLE001
+        return jsonify(error=str(exc)), 400
 
-    # gestisci gli eventi che ti servono
     evt_type = event["type"]
 
     if evt_type == "checkout.session.completed":
         session = event["data"]["object"]
-        email = session["metadata"].get("email")
+        email = session["metadata"].get("email")      # può essere None
         plan = session["metadata"].get("selected_plan", "premium")
 
-        with db_lock:
-            user = users_db.setdefault(email, {"plan": "free", "usedGenerations": 0})
-            user["plan"] = plan
-            user["usedGenerations"] = 0
+        if email:  # aggiorniamo solo se abbiamo l'e‑mail
+            with db_lock:
+                user = users_db.setdefault(
+                    email, {"plan": "free", "usedGenerations": 0}
+                )
+                user["plan"] = plan
+                user["usedGenerations"] = 0
 
     elif evt_type == "customer.subscription.deleted":
-        # downgrade se vuoi gestirlo
-        subscription = event["data"]["object"]
-        # qui non hai sempre l'email, conviene salvare customer->email nel tuo DB
-        # se vuoi ignorare, lascia così
-        pass
+        sub = event["data"]["object"]
+        email = sub.get("customer_email")
+        if email:
+            with db_lock:
+                user = users_db.get(email)
+                if user:
+                    user["plan"] = "free"
+                    user["usedGenerations"] = 0
 
     return jsonify(received=True)
 
 
-# ===================== MAIN ===================== #
+# ─────────────────────────────────────────────────────────────
+# MAIN
+# ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    # In produzione usa un WSGI server (gunicorn/uwsgi). Porta: 8000 come nel tuo esempio
+    # In produzione usa gunicorn/uwsgi. Qui debug=True per test.
     app.run(host="0.0.0.0", port=8000, debug=True)
