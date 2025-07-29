@@ -14,7 +14,7 @@ const FREE_LIMIT = 5;        //  ←  DEVE restare definito prima di qualunque u
 
 
 // chiave pubblica Stripe (ok metterla nel client)
-const STRIPE_PK = 'pk_live_51RkiUSBo6bKd1aEWDjFk1pcLrwyqKH2Z5W7HMYfs41Zl018725OsU5bEImNUR4RgwMIYFuZwdTktddU3ydAL8cYY00TBKXJ0di';
+const STRIPE_PK = 'pk_test_51RkiUbPZKD2mbdh6v8NVHrLCw5s3HCuP5CfMHn6xBJycK7YHo7L6IiwdZJPMhmuFc9nhHT6A9jbPmecxvFL7rWol00YV1QplUz';
 
 const stripePromise = loadStripe(STRIPE_PK);
 
