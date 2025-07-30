@@ -21,3 +21,8 @@
 .idea/
 *.tmproj
 .vscode/
+
+
+# segreti locali
+.env
+*.env
