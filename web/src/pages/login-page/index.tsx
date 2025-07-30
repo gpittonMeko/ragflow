@@ -20,12 +20,9 @@ const STRIPE_PK = 'pk_test_51RkiUbPZKD2mbdh6v8NVHrLCw5s3HCuP5CfMHn6xBJycK7YHo7L6
 const stripePromise = loadStripe(STRIPE_PK);
 
 const API_BASE =
-  // Vite (o qualunque bundler che esponga import.meta.env)
-  (typeof import !== 'undefined' && (import.meta as any)?.env?.VITE_API_BASE) ??
-  // CRA / Webpack
-  process.env.REACT_APP_API_BASE ??
-  // fallback ⇒ richieste relative allo stesso host 
-  '';
+  /* CRA / Webpack */ (process.env.REACT_APP_API_BASE as string | undefined) ??
+  /* Vite / altri bundler con import.meta */ (import.meta as any)?.env?.VITE_API_BASE ??
+  /* fallback ⇒ stesse origin */ '';
 
 
 
