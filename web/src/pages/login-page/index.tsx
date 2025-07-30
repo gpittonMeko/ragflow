@@ -20,7 +20,9 @@ const STRIPE_PK = 'pk_test_51RkiUbPZKD2mbdh6v8NVHrLCw5s3HCuP5CfMHn6xBJycK7YHo7L6
 const stripePromise = loadStripe(STRIPE_PK);
 
 // login‑page/PresentationPage.tsx  (o dove hai il codice)
-const API_BASE = import.meta.env.VITE_API_BASE!;   // <-- niente fallback a ''
+const API_BASE =
+  (import.meta.env.VITE_API_BASE as string | undefined) ??
+  window.location.origin;
 
 
 
