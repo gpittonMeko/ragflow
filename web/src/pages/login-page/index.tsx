@@ -21,14 +21,8 @@ const stripePromise = loadStripe(STRIPE_PK);
 
 // login‑page/PresentationPage.tsx  (o dove hai il codice)
 // --- costante che non manda mai in crash ----------
-const API_BASE =
-  // se Vite ha iniettato l’oggetto:
-  (typeof import.meta !== 'undefined' &&
-   (import.meta as any).env &&
-   (import.meta as any).env.VITE_API_BASE)
-    ? (import.meta as any).env.VITE_API_BASE as string
-    // altrimenti fallback:
-    : window.location.origin;
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 
 
 
