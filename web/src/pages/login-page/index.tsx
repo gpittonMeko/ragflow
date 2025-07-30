@@ -310,31 +310,34 @@ useEffect(() => {
   // prima: prendeva solo "premium" ed usava userData?.email
   // dopo: accetta il piano e passa l'email solo se c’è
   const handleCheckout = async (plan: 'standard' | 'premium' = 'premium') => {
-    try {
-      const stripe = await stripePromise;
-      if (!stripe) throw new Error('Stripe non caricato');
+  try {
+    const stripe = await stripePromise;
+    if (!stripe) throw new Error('Stripe non caricato');
 
-      const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userData?.email ?? null,
-          selected_plan: plan,
-        }),
-      });
+    const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: userData?.email ?? null,
+        selected_plan: plan,
+      }),
+    });
 
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload.error || 'Errore server Stripe');   // ←  mostra l’errore vero
+    const text = await res.text(); // Cambia temporaneamente per capire risposta backend
+    console.log("Risposta backend:", text); // Log chiaro per debug immediato
 
-      const { sessionId } = payload;
-      if (!sessionId) throw new Error('Session ID mancante dal backend');
+    const payload = JSON.parse(text);
+    if (!res.ok) throw new Error(payload.error || 'Errore server Stripe');
 
-      const { error: stripeErr } = await stripe.redirectToCheckout({ sessionId });
-      if (stripeErr) alert(stripeErr.message);
-    } catch (err: any) {
-      alert(err.message || 'Errore checkout Stripe');
-    }
-  };
+    const { sessionId } = payload;
+    if (!sessionId) throw new Error('Session ID mancante dal backend');
+
+    const { error: stripeErr } = await stripe.redirectToCheckout({ sessionId });
+    if (stripeErr) alert(stripeErr.message);
+  } catch (err: any) {
+    alert(err.message || 'Errore checkout Stripe');
+  }
+};
 
 
 
