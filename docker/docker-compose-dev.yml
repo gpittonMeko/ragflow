@@ -139,8 +139,9 @@ services:
     env_file: .env    # <— path reale del tuo .env
     ports:
       - "8000:8000"
-    environment:        # <— disponibili *a runtime* nel container
+    environment:                      # ⬅️  ENV → run‑time
       TZ: ${TIMEZONE}
+      VITE_API_BASE: http://16.170.85.194:8000   # <<< QUESTA RIGA
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_PRICE_PREMIUM: ${STRIPE_PRICE_PREMIUM}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
