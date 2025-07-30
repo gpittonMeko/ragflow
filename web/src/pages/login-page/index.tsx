@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect } from 'react';
 import styles from './index.less';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
 import api from '@/utils/api'; // <-- sostituisci con il percorso reale del tuo file api
-import SubscriptionUpgradeButton from '../../components/SubscriptionUpgradeButton';
 import { loadStripe } from '@stripe/stripe-js';
 import { LogOut, LockKeyhole } from 'lucide-react';
 
@@ -14,10 +13,14 @@ const CLIENT_ID =
 const FREE_LIMIT = 5;        //  ←  DEVE restare definito prima di qualunque uso
 
 
+
 // chiave pubblica Stripe (ok metterla nel client)
 const STRIPE_PK = 'pk_test_51RkiUbPZKD2mbdh6v8NVHrLCw5s3HCuP5CfMHn6xBJycK7YHo7L6IiwdZJPMhmuFc9nhHT6A9jbPmecxvFL7rWol00YV1QplUz';
 
 const stripePromise = loadStripe(STRIPE_PK);
+
+const API_BASE = import.meta.env.VITE_API_BASE ?? '';   // es: "http://localhost:8000"
+
 
 
 declare global {
@@ -306,17 +309,20 @@ useEffect(() => {
       const stripe = await stripePromise;
       if (!stripe) throw new Error('Stripe non caricato');
 
-      const res = await fetch('/api/stripe/create-checkout-session', {
+      const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: userData?.email ?? null,   // <‑‑ adesso opzionale
+          email: userData?.email ?? null,
           selected_plan: plan,
         }),
       });
 
-      const { sessionId, error } = await res.json();
-      if (error) throw new Error(error);
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || 'Errore server Stripe');   // ←  mostra l’errore vero
+
+      const { sessionId } = payload;
+      if (!sessionId) throw new Error('Session ID mancante dal backend');
 
       const { error: stripeErr } = await stripe.redirectToCheckout({ sessionId });
       if (stripeErr) alert(stripeErr.message);
@@ -324,6 +330,7 @@ useEffect(() => {
       alert(err.message || 'Errore checkout Stripe');
     }
   };
+
 
 
 
@@ -347,7 +354,7 @@ useEffect(() => {
     aria-label="Accedi con Google"
   >
     <img
-      src="https://developers.google.com/identity/images/g-logo.png"
+       src="https://developers.google.com/identity/images/g-logo.png?sz=40"
       alt=""
       style={{width:18,marginRight:8,verticalAlign:'middle'}}
     />
@@ -465,19 +472,22 @@ useEffect(() => {
           role="dialog"
           tabIndex={-1}
         >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              backgroundColor: '#fff',
-              padding: '2rem',
-              borderRadius: 'var(--border-radius)',
-              boxShadow: 'var(--shadow)',
-              width: '320px',
-              textAlign: 'center',
-              color: '#000',
-              userSelect: 'none',
-            }}
-          >
+           <div
+             onClick={e => e.stopPropagation()}
+             style={{
+               backgroundColor: '#fff',
+               padding: '2rem 2.5rem 2.5rem',    // ↑ più spazio in basso
+               borderRadius: 'var(--border-radius)',
+               boxShadow: 'var(--shadow)',
+               width: '320px',
+               textAlign: 'center',
+               color: '#000',
+               userSelect: 'none',
+               display: 'flex',
+               flexDirection: 'column',
+               gap: '1.25rem',                  // ← spazio costante fra elemento
+             }}
+           >
             <h2>Accedi con Google</h2>
             <div ref={googleButtonRef} />
             <button onClick={() => setShowGoogleModal(false)} style={{ marginTop: '1rem' }} aria-label="Chiudi">
