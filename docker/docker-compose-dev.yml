@@ -137,11 +137,11 @@ services:
       context: ../web/src/pages/login-page
       dockerfile: Dockerfile
       args:                       # 👈 inietta gli ARG in fase di build
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_PRICE_PREMIUM: ${STRIPE_PRICE_PREMIUM}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
-      APP_URL: ${APP_URL}       # ← utile se servirà anche al front‑end
-      VITE_API_BASE: ${VITE_API_BASE}  
+        STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+        STRIPE_PRICE_PREMIUM: ${STRIPE_PRICE_PREMIUM}
+        STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+        APP_URL: ${APP_URL}       # ← utile se servirà anche al front‑end
+        VITE_API_BASE: ${VITE_API_BASE}  
     env_file: ../docker/.env     # <— path reale del tuo .env
     ports:
       - "8000:8000"
