@@ -135,37 +135,27 @@ def create_checkout_session():
 
     data = request.get_json() or {}
     email = data.get("email")
-    selected_plan = data.get("selected_plan", "premium")
 
-    if selected_plan not in ("standard", "premium"):
-        return jsonify(error="Invalid plan"), 400
-
-    price_env_var = "STRIPE_PRICE_PREMIUM" if selected_plan == "premium" else "STRIPE_PRICE_STANDARD"
-    price_id = os.getenv(price_env_var)
-
+    price_id = os.getenv("STRIPE_PRICE_PREMIUM")
     if not price_id:
-        print(f"Stripe price missing for selected plan: {selected_plan}")
         return jsonify(error="Stripe price missing"), 500
 
-    params = {
-        "mode": "subscription",
-        "success_url": SUCCESS_URL,
-        "cancel_url": CANCEL_URL,
-        "line_items": [{"price": price_id, "quantity": 1}],
-        "metadata": {"selected_plan": selected_plan},
-    }
-
-    if email:
-        params["customer_email"] = email
-        params["metadata"]["email"] = email
-
     try:
-        session = stripe.checkout.Session.create(**params)
-        print("Stripe session created successfully:", session.id)
-        return jsonify(sessionId=session.id)
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            payment_method_types=["card"],
+            success_url=SUCCESS_URL,
+            cancel_url=CANCEL_URL,
+            line_items=[{"price": price_id, "quantity": 1}],
+            metadata={"selected_plan": "premium", **({"email": email} if email else {})},
+            customer_email=email or None,
+        )
+        print("Stripe session created:", session.id)
+        return jsonify(sessionId=session.id)      # *** nome invariato per il front-end ***
     except Exception as e:
         print("Stripe error:", e)
         return jsonify(error=str(e)), 500
+
 
 
 # ─────────────────────────────────────────────────────────────

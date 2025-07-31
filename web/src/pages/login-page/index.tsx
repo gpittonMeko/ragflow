@@ -309,35 +309,33 @@ useEffect(() => {
 
   // prima: prendeva solo "premium" ed usava userData?.email
   // dopo: accetta il piano e passa l'email solo se c’è
-  const handleCheckout = async (plan: 'standard' | 'premium' = 'premium') => {
-  try {
-    const stripe = await stripePromise;
-    if (!stripe) throw new Error('Stripe non caricato');
+  // in PresentationPage.tsx  (snippet completo e corretto)
+  const handleCheckout = async () => {               // ← senza argomento
+    try {
+      const stripe = await stripePromise;
+      if (!stripe) throw new Error('Stripe non caricato');
 
-    const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: userData?.email ?? null,
-        selected_plan: plan,
-      }),
-    });
+      const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userData?.email ?? null,
+        }),
+      });
 
-    const text = await res.text(); // Cambia temporaneamente per capire risposta backend
-    console.log("Risposta backend:", text); // Log chiaro per debug immediato
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || 'Errore server Stripe');
 
-    const payload = JSON.parse(text);
-    if (!res.ok) throw new Error(payload.error || 'Errore server Stripe');
+      const { sessionId } = payload;
+      if (!sessionId) throw new Error('Session ID mancante dal backend');
 
-    const { sessionId } = payload;
-    if (!sessionId) throw new Error('Session ID mancante dal backend');
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+      if (error) alert(error.message);
+    } catch (err: any) {
+      alert(err.message || 'Errore checkout Stripe');
+    }
+  };
 
-    const { error: stripeErr } = await stripe.redirectToCheckout({ sessionId });
-    if (stripeErr) alert(stripeErr.message);
-  } catch (err: any) {
-    alert(err.message || 'Errore checkout Stripe');
-  }
-};
 
 
 
@@ -448,15 +446,16 @@ useEffect(() => {
 /* upgrade */
 {userData?.plan !== 'premium' && (
   <button
-    onClick={() => handleCheckout('premium')}
+    onClick={handleCheckout}         // ← niente parametri
     className={`${styles.glassBtn} ${styles.upgradeBtn}`}
-    style={{ position:'fixed', right:80, top:110, zIndex:1100 }}
-    aria-label="Passa a Premium"
+    style={{ position: 'fixed', right: 80, top: 110, zIndex: 1100 }}
+    aria-label="Passa a Premium"
   >
     <LockKeyhole size={18} className={styles.icon} />
     &nbsp;Passa&nbsp;a&nbsp;Premium
   </button>
 )}
+
 
 
 
