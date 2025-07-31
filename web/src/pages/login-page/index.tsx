@@ -307,34 +307,55 @@ useEffect(() => {
   };
 
 
-  // prima: prendeva solo "premium" ed usava userData?.email
-  // dopo: accetta il piano e passa l'email solo se c’è
-  // in PresentationPage.tsx  (snippet completo e corretto)
-  const handleCheckout = async () => {               // ← senza argomento
-    try {
-      const stripe = await stripePromise;
-      if (!stripe) throw new Error('Stripe non caricato');
+  // PresentationPage.tsx  – dentro il componente
+const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
-      const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userData?.email ?? null,
-        }),
-      });
+const handleCheckout = async (plan: 'premium' = 'premium') => {
+  setDebugInfo(null);                        // reset
+  try {
+    const stripe = await stripePromise;
+    if (!stripe) throw new Error('Stripe non caricato');
 
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload.error || 'Errore server Stripe');
+    const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: userData?.email ?? null, selected_plan: plan }),
+    });
 
-      const { sessionId } = payload;
-      if (!sessionId) throw new Error('Session ID mancante dal backend');
+    // ▼ logga header + HTTP code
+    console.log('[Stripe] status', res.status, res.statusText);
+    console.log('[Stripe] content-type', res.headers.get('content-type'));
 
-      const { error } = await stripe.redirectToCheckout({ sessionId });
-      if (error) alert(error.message);
-    } catch (err: any) {
-      alert(err.message || 'Errore checkout Stripe');
+    // ▼ prendi il payload a seconda del content-type
+    let payload: any = null;
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('application/json')) {
+      payload = await res.json();
+    } else {
+      const text = await res.text();
+      throw new Error(`Backend ha restituito ${ct}:\n${text}`);
     }
-  };
+    console.log('[Stripe] payload', payload);
+
+    if (!res.ok) {
+      throw new Error(payload?.error || 'Errore backend Stripe');
+    }
+
+    const { sessionId } = payload;
+    if (!sessionId) {
+      throw new Error(
+        `sessionId assente nel payload: ${JSON.stringify(payload, null, 2)}`
+      );
+    }
+
+    const { error } = await stripe.redirectToCheckout({ sessionId });
+    if (error) throw new Error(error.message);
+  } catch (err: any) {
+    console.error('[Stripe] catch', err);
+    setDebugInfo(String(err));               // mostra nell’interfaccia
+    alert(err.message || err);               // oppure toast
+  }
+};
 
 
 
@@ -446,7 +467,7 @@ useEffect(() => {
 /* upgrade */
 {userData?.plan !== 'premium' && (
   <button
-    onClick={handleCheckout}         // ← niente parametri
+    onClick={() => handleCheckout('premium')}        // ← niente parametri
     className={`${styles.glassBtn} ${styles.upgradeBtn}`}
     style={{ position: 'fixed', right: 80, top: 110, zIndex: 1100 }}
     aria-label="Passa a Premium"
@@ -456,6 +477,26 @@ useEffect(() => {
   </button>
 )}
 
+{debugInfo && (
+  <pre
+    style={{
+      position: 'fixed',
+      bottom: 20,
+      left: 20,
+      maxWidth: '40vw',
+      maxHeight: '40vh',
+      overflow: 'auto',
+      padding: '1rem',
+      background: 'rgba(0,0,0,0.75)',
+      color: '#fff',
+      zIndex: 2000,
+      borderRadius: 8,
+      fontSize: 12,
+    }}
+  >
+    {debugInfo}
+  </pre>
+)}
 
 
 
