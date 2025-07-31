@@ -3,7 +3,6 @@ import threading
 
 PLAN_LIMITS = {
     "free": 5,
-    "standard": 50,
     "premium": 1_000_000_000,
 }
 
