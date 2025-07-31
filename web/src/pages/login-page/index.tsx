@@ -21,7 +21,10 @@ const stripePromise = loadStripe(STRIPE_PK);
 
 // login‑page/PresentationPage.tsx  (o dove hai il codice)
 // --- costante che non manda mai in crash ----------
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE =
+  process.env.API_BASE ||               // Umi (build-time)
+  (import.meta as any).env?.VITE_API_BASE || // resta compatibile se un giorno passi a Vite
+  'http://localhost:8000';              // fallback d’emergenza
 
 
 
