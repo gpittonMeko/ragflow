@@ -21,7 +21,10 @@ const stripePromise = loadStripe(STRIPE_PK);
 
 // login‑page/PresentationPage.tsx  (o dove hai il codice)
 // --- costante che non manda mai in crash ----------
-const baseURL = process.env.UMI_APP_API_BASE!;
+const baseURL =
+  (process.env.UMI_APP_API_BASE as string | undefined) ??
+  'http://16.170.85.194:8000';   // fallback di sicurezza
+
 
 
 
@@ -316,7 +319,8 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
     const stripe = await stripePromise;
     if (!stripe) throw new Error('Stripe non caricato');
 
-    const res = await fetch(`${process.env.UMI_APP_API_BASE}/api/stripe/create-checkout-session`, {
+    const res = await fetch(`${baseURL}/api/stripe/create-checkout-session`,
+, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: userData?.email ?? null, selected_plan: plan }),
