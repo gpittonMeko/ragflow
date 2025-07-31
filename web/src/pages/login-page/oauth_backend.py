@@ -129,6 +129,12 @@ def generate():
 # STRIPE – Create Checkout Session
 # ─────────────────────────────────────────────────────────────
 @app.post("/api/stripe/create-checkout-session")
+dfrom flask import Flask, request, jsonify
+import stripe, os
+
+# … variabili d’ambiente come prima …
+
+@app.post("/api/stripe/create-checkout-session")
 def create_checkout_session():
     if not stripe.api_key:
         return jsonify(error="Stripe secret key missing"), 500
@@ -138,7 +144,9 @@ def create_checkout_session():
 
     price_id = os.getenv("STRIPE_PRICE_PREMIUM")
     if not price_id:
-        return jsonify(error="Stripe price missing"), 500
+        msg = "Stripe price missing: env STRIPE_PRICE_PREMIUM non impostata"
+        print("\033[91m" + msg + "\033[0m")   # rosso
+        return jsonify(error=msg, debug={"price_id": None}), 500
 
     try:
         session = stripe.checkout.Session.create(
@@ -150,11 +158,12 @@ def create_checkout_session():
             metadata={"selected_plan": "premium", **({"email": email} if email else {})},
             customer_email=email or None,
         )
-        print("Stripe session created:", session.id)
-        return jsonify(sessionId=session.id)      # *** nome invariato per il front-end ***
-    except Exception as e:
-        print("Stripe error:", e)
-        return jsonify(error=str(e)), 500
+        print("\033[92mStripe session OK:\033[0m", session.id)  # verde
+        return jsonify(sessionId=session.id)
+    except Exception as exc:
+        print("\033[91mStripe error:\033[0m", exc)              # rosso
+        return jsonify(error="Stripe exception", debug=str(exc)), 500
+
 
 
 
