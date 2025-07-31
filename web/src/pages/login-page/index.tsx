@@ -320,7 +320,7 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
     if (!stripe) throw new Error('Stripe non caricato');
 
     const res = await fetch(`${baseURL}/api/stripe/create-checkout-session`,
-, {
+ {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: userData?.email ?? null, selected_plan: plan }),
@@ -443,7 +443,7 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
       )}
 
 
-    /* logout */
+    {/* logout */}
     <button
       onClick={logout}
       className={styles.glassBtn}
@@ -455,8 +455,8 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
       &nbsp;Esci
     </button>
 
-/* upgrade */
-/* logout */
+{/* upgrade*/}
+{/* logout */}
 <button
   onClick={logout}
   className={styles.glassBtn}
@@ -468,7 +468,7 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
   &nbsp;Esci
 </button>
 
-/* upgrade */
+{/* upgrade */}
 {userData?.plan !== 'premium' && (
   <button
     onClick={() => handleCheckout('premium')}        // ← niente parametri
