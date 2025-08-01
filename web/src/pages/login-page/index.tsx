@@ -26,6 +26,21 @@ const baseURL =
   'http://16.170.85.194:8000';   // fallback di sicurezza
 
 
+/* --- mini-component per la “G” trasparente --- */
+const GoogleGIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
+  <svg
+    viewBox="0 0 256 262"
+    width={size}
+    height={size}
+    aria-hidden="true"
+    style={{ verticalAlign: 'middle' }}
+  >
+    <path fill="#4285F4" d="M255.9 133.5c0-11.5-1-23.1-3.2-34.2H130v64.8h70.8c-3.1 17-12.7 31.4-27 41.2l43.6 34.2c25.5-23.5 40.5-58.3 40.5-106z"/>
+    <path fill="#34A853" d="M130 262c36.7 0 67.6-12.1 90.2-32.8l-43.6-34.2c-12.1 8.3-27.6 13.2-46.6 13.2-35.8 0-66.2-24.1-77-56.8l-45 34.7c22.7 44.4 69.3 75.9 122 75.9z"/>
+    <path fill="#FBBC05" d="M53 151.4c-2.9-8.4-4.6-17.4-4.6-26.4s1.7-18 4.6-26.4l-45-34.7C3 85.5 0 101.2 0 125s3 39.5 8 61.1l45-34.7z"/>
+    <path fill="#EA4335" d="M130 49.8c20 0 38 6.9 52.1 20.4l39-39C199.3 11 166.6 0 130 0 77.3 0 30.7 31.5 8 75.9l45 34.7C63.8 73.9 94.2 49.8 130 49.8z"/>
+  </svg>
+);
 
 
 
@@ -384,11 +399,7 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
     style={{position:'fixed',right:80,top:20,zIndex:1100}}
     aria-label="Accedi con Google"
   >
-    <img
-       src="https://developers.google.com/identity/images/g-logo.png?sz=40"
-      alt=""
-      style={{width:18,marginRight:8,verticalAlign:'middle'}}
-    />
+    <GoogleGIcon />
     Accedi con Google
   </button>
 
@@ -634,12 +645,7 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
           aria-label="Accedi con Google"
         >
           {/* logo ufficiale – sfondo trasparente, retina‑ready */}
-          <svg viewBox="0 0 256 262" width="18" height="18" className={styles.icon}>
-            <path fill="#4285F4" d="M255.9 133.5c0-11.5-1-23.1-3.2-34.2H130v64.8h70.8c-3.1 17-12.7 31.4-27 41.2l43.6 34.2c25.5-23.5 40.5-58.3 40.5-106z"/>
-            <path fill="#34A853" d="M130 262c36.7 0 67.6-12.1 90.2-32.8l-43.6-34.2c-12.1 8.3-27.6 13.2-46.6 13.2-35.8 0-66.2-24.1-77-56.8l-45 34.7c22.7 44.4 69.3 75.9 122 75.9z"/>
-            <path fill="#FBBC05" d="M53 151.4c-2.9-8.4-4.6-17.4-4.6-26.4s1.7-18 4.6-26.4l-45-34.7C3 85.5 0 101.2 0 125s3 39.5 8 61.1l45-34.7z"/>
-            <path fill="#EA4335" d="M130 49.8c20 0 38 6.9 52.1 20.4l39-39C199.3 11 166.6 0 130 0 77.3 0 30.7 31.5 8 75.9l45 34.7C63.8 73.9 94.2 49.8 130 49.8z"/>
-          </svg>
+          <GoogleGIcon />
           Accedi&nbsp;con&nbsp;Google
         </button>
 
