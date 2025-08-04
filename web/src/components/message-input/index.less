@@ -26,32 +26,7 @@
     box-shadow: none;
     padding: 4px 8px 0;
   }
-}
 
-// Responsive fix sotto i 520px
-@media (max-width: 520px) {
-  .messageInputWrapper {
-    margin: 6px 8px; // più spazio sopra/sotto
-    padding: 8px 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    z-index: 2;
-
-    &:hover {
-      box-shadow: 0 0 0 2px var(--accent-color, #40a9ff), 0 4px 14px rgba(64, 169, 255, 0.3);
-      border-color: var(--accent-color, #40a9ff);
-      z-index: 4;
-    }
-
-    textarea.ant-input,
-    .ant-input-affix-wrapper textarea.ant-input {
-      font-size: 0.9rem !important;
-    }
-  }
-
-
-
-
-  // Area di testo
   textarea.ant-input,
   .ant-input-affix-wrapper textarea.ant-input {
     background-color: transparent !important;
@@ -61,6 +36,7 @@
     margin: 0 !important;
     box-shadow: none !important;
     transition: background-color 0.3s, color 0.3s;
+    font-size: clamp(0.85rem, 2.5vw, 1rem);
 
     &::placeholder {
       color: var(--text-secondary, #a1a1a6) !important;
@@ -68,7 +44,6 @@
     }
   }
 
-  // Pulsanti azione (invio, allega)
   :global(.ant-btn-primary) {
     border-radius: 6px;
     box-shadow: 0 0 4px rgba(255, 255, 255, 0.05);
@@ -102,6 +77,44 @@
       transition: color 0.3s;
     }
   }
+
+  @media (max-width: 520px) {
+    margin: 6px 8px;
+    padding: 8px 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    z-index: 2;
+
+    &:hover {
+      box-shadow: 0 0 0 2px var(--accent-color, #40a9ff), 0 4px 14px rgba(64, 169, 255, 0.3);
+      border-color: var(--accent-color, #40a9ff);
+      z-index: 4;
+    }
+
+    textarea.ant-input,
+    .ant-input-affix-wrapper textarea.ant-input {
+      font-size: 0.9rem !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    margin-right: 5px;
+    padding: 6px;
+
+    textarea.ant-input,
+    .ant-input-affix-wrapper textarea.ant-input {
+      font-size: 0.85rem !important;
+    }
+  }
+
+  @media (max-width: 768px) {
+    margin-right: 0px;
+    padding: 8px;
+
+    textarea.ant-input,
+    .ant-input-affix-wrapper textarea.ant-input {
+      font-size: 0.95rem !important;
+    }
+  }
 }
 
 .documentCard {
@@ -112,6 +125,12 @@
     background-color: var(--card-bg, #2c2c2c);
     color: var(--text-primary, #f0f0f0);
     transition: background-color 0.3s, color 0.3s;
+  }
+
+  @media (max-width: 768px) {
+    :global(.ant-card-body) {
+      padding: 8px;
+    }
   }
 }
 
@@ -142,34 +161,4 @@
   top: -4px;
   color: #ff4d4f;
   cursor: pointer;
-}
-
-@media (max-width: 768px) {
-  .messageInputWrapper {
-    margin-right: 0px;
-    padding: 8px;
-
-    textarea.ant-input,
-    .ant-input-affix-wrapper textarea.ant-input {
-      font-size: 0.95rem !important;
-    }
-  }
-
-  .documentCard {
-    :global(.ant-card-body) {
-      padding: 8px;
-    }
-  }
-}
-
-@media (max-width: 480px) {
-  .messageInputWrapper {
-    margin-right: 5px;
-    padding: 6px;
-
-    textarea.ant-input,
-    .ant-input-affix-wrapper textarea.ant-input {
-      font-size: 0.9rem !important;
-    }
-  }
 }
