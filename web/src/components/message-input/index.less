@@ -1,24 +1,23 @@
 @import '../../theme/vars.less';
 
 .messageInputWrapper {
-  margin: 0;
-  padding: 12px 16px;
+  margin: 4px 8px; // ✅ Aggiunto margine verticale per distanziare dal bordo iframe
+  padding: 10px 14px; // ✅ Leggermente ridotto il padding per compattezza
   background-color: var(--card-bg, #1e1e1e);
   border: 1px solid var(--border-color, #333);
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   transition: all 0.3s ease;
-  position: relative;
   overflow: visible;
-
+  position: relative;
+  z-index: 1;
 
   &:hover {
-    box-shadow: 0 0 0 2px var(--accent-color, #40a9ff), 0 6px 16px rgba(64, 169, 255, 0.35); // ✅ glow chiaro intorno
+    box-shadow: 0 0 0 2px var(--accent-color, #40a9ff), 0 6px 16px rgba(64, 169, 255, 0.35);
     border-color: var(--accent-color, #40a9ff);
-    z-index: 2; // ✅ per sicurezza su mobile
+    z-index: 3;
   }
 
-  // Wrapper input
   :global(.ant-input-affix-wrapper) {
     margin: 0 !important;
     border: none;
@@ -27,6 +26,8 @@
     box-shadow: none;
     padding: 4px 8px 0;
   }
+}
+
 
   // Area di testo
   textarea.ant-input,
