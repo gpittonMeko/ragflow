@@ -7,13 +7,15 @@
   border: 1px solid var(--border-color, #333);
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  overflow: hidden; // <-- blocca sovrapposizioni
   transition: all 0.3s ease;
+  position: relative;
+  overflow: visible;
 
 
   &:hover {
-    box-shadow: 0 6px 16px rgba(64, 169, 255, 0.35);
+    box-shadow: 0 0 0 2px var(--accent-color, #40a9ff), 0 6px 16px rgba(64, 169, 255, 0.35); // ✅ glow chiaro intorno
     border-color: var(--accent-color, #40a9ff);
+    z-index: 2; // ✅ per sicurezza su mobile
   }
 
   // Wrapper input
