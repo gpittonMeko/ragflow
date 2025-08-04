@@ -1,37 +1,77 @@
 @import '../../theme/vars.less';
 
 .messageInputWrapper {
-  margin-right: 0px;
-  padding: 10px;
+  margin: 0; // Rimuove lo spazio sopra e sotto
+  padding: 12px 16px;
   background-color: var(--card-bg, #1e1e1e);
-  border: 1px solid var(--border-color, #333333);
-  transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
-  
+  border: 1px solid var(--border-color, #333);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); // Ombra in rilievo
+  transition: all 0.3s ease;
+
   &:hover {
+    box-shadow: 0 6px 16px rgba(64, 169, 255, 0.35);
     border-color: var(--accent-color, #40a9ff);
-    box-shadow: 0 0 5px var(--accent-shadow, rgba(64, 169, 255, 0.5));
   }
-  border-radius: 8px;
 
-  /* Stili per il contenitore dell'input (TextArea) */
+  // Wrapper input
   :global(.ant-input-affix-wrapper) {
-    border-bottom-right-radius: 0;
-    border-bottom-left-radius: 0;
-    background-color: transparent; /* Rende trasparente lo sfondo del wrapper */
-    color: var(--text-primary, #f0f0f0);
-    border: 1px solid var(--border-color, #333333);
-    transition: color 0.3s, border-color 0.3s;
+    margin: 0 !important;
+    border: none;
+    border-radius: 0;
+    background-color: transparent;
+    box-shadow: none;
+    padding: 0 8px;
   }
 
-  /* Stili specifici per l'elemento TextArea */
+  // Area di testo
   textarea.ant-input,
   .ant-input-affix-wrapper textarea.ant-input {
-    background-color: var(--card-bg, #1e1e1e) !important;
+    background-color: transparent !important;
     color: var(--text-primary, #f0f0f0) !important;
+    border: none !important;
+    padding: 8px 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
     transition: background-color 0.3s, color 0.3s;
-    
+
     &::placeholder {
       color: var(--text-secondary, #a1a1a6) !important;
+      transition: color 0.3s;
+    }
+  }
+
+  // Pulsanti azione (invio, allega)
+  :global(.ant-btn-primary) {
+    border-radius: 6px;
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.05);
+    background-color: var(--button-bg, #333333);
+    border-color: var(--border-color, #333333);
+    color: var(--text-primary, #f0f0f0);
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+
+    &:hover,
+    &:focus {
+      background-color: var(--button-hover, #404040);
+      border-color: var(--border-color, #404040);
+      box-shadow: 0 0 6px rgba(64, 169, 255, 0.3);
+      color: var(--text-primary, #f0f0f0);
+    }
+
+    &:active {
+      background-color: var(--card-bg, #222222);
+      border-color: var(--border-color, #222222);
+      color: var(--text-primary, #f0f0f0);
+    }
+
+    &:disabled {
+      background-color: var(--button-disabled, #555555);
+      border-color: var(--border-color, #555555);
+      color: var(--text-secondary, #999999);
+    }
+
+    svg[data-icon='send'] {
+      color: var(--text-primary, #f0f0f0);
       transition: color 0.3s;
     }
   }
@@ -55,14 +95,13 @@
   width: 100%;
   background-color: var(--bg-color, #1e1e1e);
   transition: background-color 0.3s;
-  
-  /* Nascondi scrollbar ma mantieni funzionalità */
+
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-  
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
   &::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
+    display: none;
   }
 }
 
@@ -78,50 +117,17 @@
   cursor: pointer;
 }
 
-/* Stili per il pulsante di invio */
-.messageInputWrapper :global(.ant-btn-primary) {
-  background-color: var(--button-bg, #333333);
-  border-color: var(--border-color, #333333);
-  color: var(--text-primary, #f0f0f0);
-  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
-
-  &:hover,
-  &:focus {
-    background-color: var(--button-hover, #404040);
-    border-color: var(--border-color, #404040);
-    color: var(--text-primary, #f0f0f0);
-  }
-
-  &:active {
-    background-color: var(--card-bg, #222222);
-    border-color: var(--border-color, #222222);
-    color: var(--text-primary, #f0f0f0);
-  }
-
-  &:disabled {
-    background-color: var(--button-disabled, #555555);
-    border-color: var(--border-color, #555555);
-    color: var(--text-secondary, #999999);
-  }
-
-  svg[data-icon='send'] {
-    color: var(--text-primary, #f0f0f0);
-    transition: color 0.3s;
-  }
-}
-
-/* Responsive styles per dispositivi mobili */
 @media (max-width: 768px) {
   .messageInputWrapper {
     margin-right: 0px;
     padding: 8px;
-    
+
     textarea.ant-input,
     .ant-input-affix-wrapper textarea.ant-input {
       font-size: 0.95rem !important;
     }
   }
-  
+
   .documentCard {
     :global(.ant-card-body) {
       padding: 8px;
@@ -133,7 +139,7 @@
   .messageInputWrapper {
     margin-right: 5px;
     padding: 6px;
-    
+
     textarea.ant-input,
     .ant-input-affix-wrapper textarea.ant-input {
       font-size: 0.9rem !important;
