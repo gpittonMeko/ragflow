@@ -1,13 +1,15 @@
 @import '../../theme/vars.less';
 
 .messageInputWrapper {
-  margin: 0; // Rimuove lo spazio sopra e sotto
+  margin: 0;
   padding: 12px 16px;
   background-color: var(--card-bg, #1e1e1e);
   border: 1px solid var(--border-color, #333);
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); // Ombra in rilievo
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  overflow: hidden; // <-- blocca sovrapposizioni
   transition: all 0.3s ease;
+
 
   &:hover {
     box-shadow: 0 6px 16px rgba(64, 169, 255, 0.35);
@@ -21,7 +23,7 @@
     border-radius: 0;
     background-color: transparent;
     box-shadow: none;
-    padding: 0 8px;
+    padding: 4px 8px 0;
   }
 
   // Area di testo
