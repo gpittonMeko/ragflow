@@ -1,8 +1,8 @@
 @import '../../theme/vars.less';
 
 .messageInputWrapper {
-  margin: 4px 8px; // ✅ Aggiunto margine verticale per distanziare dal bordo iframe
-  padding: 10px 14px; // ✅ Leggermente ridotto il padding per compattezza
+  margin: 4px 8px;
+  padding: 10px 14px;
   background-color: var(--card-bg, #1e1e1e);
   border: 1px solid var(--border-color, #333);
   border-radius: 10px;
@@ -27,6 +27,28 @@
     padding: 4px 8px 0;
   }
 }
+
+// Responsive fix sotto i 520px
+@media (max-width: 520px) {
+  .messageInputWrapper {
+    margin: 6px 8px; // più spazio sopra/sotto
+    padding: 8px 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    z-index: 2;
+
+    &:hover {
+      box-shadow: 0 0 0 2px var(--accent-color, #40a9ff), 0 4px 14px rgba(64, 169, 255, 0.3);
+      border-color: var(--accent-color, #40a9ff);
+      z-index: 4;
+    }
+
+    textarea.ant-input,
+    .ant-input-affix-wrapper textarea.ant-input {
+      font-size: 0.9rem !important;
+    }
+  }
+}
+
 
 
   // Area di testo
