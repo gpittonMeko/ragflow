@@ -85,7 +85,8 @@
     z-index: 2;
 
     &:hover {
-      box-shadow: 0 0 0 2px var(--accent-color, #40a9ff), 0 4px 14px rgba(64, 169, 255, 0.3);
+      box-shadow: 0 0 0 2px var(--accent-color, #40a9ff),
+                  0 4px 14px rgba(64, 169, 255, 0.3);
       border-color: var(--accent-color, #40a9ff);
       z-index: 4;
     }
@@ -94,7 +95,13 @@
     .ant-input-affix-wrapper textarea.ant-input {
       font-size: 0.9rem !important;
     }
+
+    :global(.ant-btn-primary) {
+      font-size: 0.9rem !important;
+    }
   }
+
+
 
   @media (max-width: 480px) {
     margin-right: 5px;
