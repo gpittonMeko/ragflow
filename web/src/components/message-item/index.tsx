@@ -13,15 +13,42 @@ import { IRegenerateMessage, IRemoveMessageById } from '@/hooks/logic-hooks';
 import { IMessage } from '@/pages/chat/interface';
 import MarkdownContent from '@/pages/chat/markdown-content';
 import { getExtension, isImage } from '@/utils/document-util';
-import { Avatar, Button, Flex, List, Space, Typography } from 'antd';
+
+
+import {
+  Avatar,
+  Button,
+  Flex,
+  List,
+  Space,
+  Typography,
+  Popover,
+  Tooltip,
+  Collapse,
+} from 'antd';
+import {
+  EyeOutlined,
+  DownloadOutlined,
+  LinkOutlined,
+} from '@ant-design/icons';
+
+import { Authorization } from '@/constants/authorization';
+import { getAuthorization } from '@/utils/authorization-util';
+
 import FileIcon from '../file-icon';
 import IndentedTreeModal from '../indented-tree/modal';
 import NewDocumentLink from '../new-document-link';
 import { useTheme } from '../theme-provider';
 import { AssistantGroupButton, UserGroupButton } from './group-button';
+import PdfPreviewer from '@/components/pdf-previewer';
+
 import styles from './index.less';
 
+import { humanizePdfName, replacePdfNamesInText } from './humanize-sentenza';
+
+
 const { Text } = Typography;
+const { Panel } = Collapse;
 
 interface IProps extends Partial<IRemoveMessageById>, IRegenerateMessage {
   item: IMessage;
@@ -37,6 +64,8 @@ interface IProps extends Partial<IRemoveMessageById>, IRegenerateMessage {
   showLikeButton?: boolean;
   showLoudspeaker?: boolean;
 }
+
+
 
 const MessageItem = ({
   item,
@@ -63,28 +92,36 @@ const MessageItem = ({
   const [clickedDocumentId, setClickedDocumentId] = useState('');
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-  // Imposta la dimensione corretta per avatar basata su dimensione schermo
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-    };
+  // Tutti i chunk referenziati (per Drawer)
+  const allChunks = useMemo(() => reference?.chunks ?? [], [reference?.chunks]);
 
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Calcola la dimensione avatar in base alla larghezza della finestra
   const getAvatarSize = () => {
     if (windowWidth <= 480) return 28;
     if (windowWidth <= 768) return 32;
     return 40;
   };
-
   const avatarSize = getAvatarSize();
 
-  const referenceDocumentList = useMemo(() => {
-    return reference?.doc_aggs ?? [];
-  }, [reference?.doc_aggs]);
+  // Rimuovi “Fonti:” dal testo backend
+  const cleanedContent = useMemo(() => {
+    if (!isAssistant) return item.content;
+    return item.content.replace(/\*\*Fonti:\*\*[\s\S]*$/i, '').trim();
+  }, [item.content, isAssistant]);
+
+
+  const beautifiedContent = useMemo(() => {
+    if (!isAssistant) return cleanedContent;
+    return replacePdfNamesInText(cleanedContent, humanizePdfName);
+  }, [cleanedContent, isAssistant]);
+
+  // Fonti
+  const referenceDocumentList = useMemo(() => reference?.doc_aggs ?? [], [reference?.doc_aggs]);
 
   const handleUserDocumentClick = useCallback(
     (id: string) => () => {
@@ -93,6 +130,8 @@ const MessageItem = ({
     },
     [showModal],
   );
+
+  
 
   const handleRegenerateMessage = useCallback(() => {
     regenerateMessage?.(item);
@@ -109,54 +148,135 @@ const MessageItem = ({
     }
   }, [item.doc_ids, setDocumentIds, setIds, documentThumbnails]);
 
-  // Determine message style based on theme and role
   const getMessageStyle = () => {
     if (isAssistant) {
-      // For assistant messages, we want to check if it's dark theme
       return theme === 'dark' ? styles.messageTextDark : styles.messageText;
     } else {
-      // For user messages, always use the messageUserText style (which is now theme-aware)
       return styles.messageUserText;
     }
+  };
+
+  // ==== Drawer ====
+  const findChunkForDoc = useCallback(
+    (docId?: string) => {
+      if (!docId) return undefined;
+      return allChunks.find((c) => c.doc_id === docId);
+    },
+    [allChunks],
+  );
+
+  const openDrawer = useCallback(
+    (docId?: string) => {
+      if (!docId || !clickDocumentButton) return;
+      let chunk = findChunkForDoc(docId) as IReferenceChunk | undefined;
+      // fallback: se non lo trova, prendi il primo chunk dello stesso doc_id o il primo in assoluto
+      if (!chunk && allChunks.length > 0) {
+        chunk =
+          (allChunks.find((c) => c.doc_id === docId) as IReferenceChunk) ||
+          (allChunks[0] as IReferenceChunk);
+      }
+      if (chunk) {
+        console.debug('[MessageItem] openDrawer ->', docId, chunk);
+        clickDocumentButton(docId, chunk);
+      } else {
+        console.warn('[MessageItem] Nessun chunk trovato per docId:', docId);
+      }
+    },
+    [allChunks, clickDocumentButton, findChunkForDoc],
+  );
+
+
+  
+
+  // downloadPdf: token fresco ad ogni click
+  const downloadPdf = useCallback(async (url?: string) => {
+    if (!url || url === '#') {
+      console.warn('downloadPdf: URL non valido:', url);
+      return;
+    }
+
+    try {
+      const headers = { [Authorization]: getAuthorization() }; // token aggiornato
+      const res = await fetch(url, { headers });
+      if (!res.ok) throw new Error(`Download fallito: ${res.status}`);
+
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = url.split('/').pop() || 'documento.pdf';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Errore durante il download:', err);
+      window.open(url, '_blank'); // fallback
+    }
+  }, []);
+
+
+  // buildDownloadUrl: converte id o link “frontend” nell’endpoint REST
+  const buildDownloadUrl = (docId?: string, url?: string) => {
+    if (url?.includes('/v1/document/get/')) return url;                      // già corretto
+    const idFromFrontend = url?.match(/\/document\/([a-f0-9-]+)/i)?.[1];     // estrae id
+    if (idFromFrontend) return `/v1/document/get/${idFromFrontend}`;
+    if (docId) return `/v1/document/get/${docId}`;                           // fallback solo id
+    return '#';                                                              // nessun dato
+  };
+
+
+
+  // Mini anteprima nel popover
+  const renderPreviewPopover = (url?: string) => {
+    if (!url) return null;
+    return (
+      <div style={{ width: 320, height: 420 }}>
+        <PdfPreviewer url={url} />
+      </div>
+    );
   };
 
   return (
     <div
       className={classNames(styles.messageItem, {
-        [styles.messageItemLeft]: item.role === MessageType.Assistant,
-        [styles.messageItemRight]: item.role === MessageType.User,
+        [styles.messageItemLeft]: isAssistant,
+        [styles.messageItemRight]: isUser,
       })}
     >
       <section
         className={classNames(styles.messageItemSection, {
-          [styles.messageItemSectionLeft]: item.role === MessageType.Assistant,
-          [styles.messageItemSectionRight]: item.role === MessageType.User,
+          [styles.messageItemSectionLeft]: isAssistant,
+          [styles.messageItemSectionRight]: isUser,
         })}
       >
         <div
           className={classNames(styles.messageItemContent, {
-            [styles.messageItemContentReverse]: item.role === MessageType.User,
+            [styles.messageItemContentReverse]: isUser,
           })}
         >
           {visibleAvatar &&
             (item.role === MessageType.User ? (
-              <Avatar 
-                size={avatarSize} 
+              <Avatar
+                size={avatarSize}
                 src={avatar ?? '/logo.svg'}
                 style={{ minWidth: `${avatarSize}px` }}
               />
             ) : avatarDialog ? (
-              <Avatar 
-                size={avatarSize} 
+              <Avatar
+                size={avatarSize}
                 src={avatarDialog}
                 style={{ minWidth: `${avatarSize}px` }}
               />
             ) : (
-              <div style={{ 
-                width: `${avatarSize}px`, 
-                height: `${avatarSize}px`, 
-                minWidth: `${avatarSize}px` 
-              }}>
+              <div
+                style={{
+                  width: `${avatarSize}px`,
+                  height: `${avatarSize}px`,
+                  minWidth: `${avatarSize}px`,
+                }}
+              >
                 <AssistantIcon style={{ width: '100%', height: '100%' }} />
               </div>
             ))}
@@ -172,57 +292,147 @@ const MessageItem = ({
                     showLikeButton={showLikeButton}
                     audioBinary={item.audio_binary}
                     showLoudspeaker={showLoudspeaker}
-                  ></AssistantGroupButton>
+                  />
                 )
               ) : (
                 <UserGroupButton
                   content={item.content}
                   messageId={item.id}
                   removeMessageById={removeMessageById}
-                  regenerateMessage={
-                    regenerateMessage && handleRegenerateMessage
-                  }
+                  regenerateMessage={regenerateMessage && handleRegenerateMessage}
                   sendLoading={sendLoading}
-                ></UserGroupButton>
+                />
               )}
-
-              {/* <b>{isAssistant ? '' : nickname}</b> */}
             </Space>
+
             <div className={getMessageStyle()}>
               <MarkdownContent
                 loading={loading}
-                content={item.content}
+                content={beautifiedContent}
+
+
                 reference={reference}
                 clickDocumentButton={clickDocumentButton}
-              ></MarkdownContent>
-            </div>
-            {isAssistant && referenceDocumentList.length > 0 && (
-              <List
-                bordered
-                dataSource={referenceDocumentList}
-                renderItem={(item) => {
-                  return (
-                    <List.Item>
-                      <Flex gap={'small'} align="center">
-                        <FileIcon
-                          id={item.doc_id}
-                          name={item.doc_name}
-                        ></FileIcon>
-
-                        <NewDocumentLink
-                          documentId={item.doc_id}
-                          documentName={item.doc_name}
-                          prefix="document"
-                          link={item.url}
-                        >
-                          {item.doc_name}
-                        </NewDocumentLink>
-                      </Flex>
-                    </List.Item>
-                  );
-                }}
               />
+            </div>
+
+            {/* FONTI */}
+            {isAssistant && referenceDocumentList.length > 0 && (
+              <Collapse
+                ghost
+                className={styles.sourcesCollapse}
+                defaultActiveKey={['fonti']}
+              >
+                <Panel
+                  header={
+                    <Text strong style={{ fontSize: 13 }}>
+                      Fonti ({referenceDocumentList.length})
+                    </Text>
+                  }
+                  key="fonti"
+                >
+                  <List
+                    size="small"
+                    itemLayout="vertical"
+                    dataSource={referenceDocumentList}
+                    renderItem={(doc) => {
+                    const url = doc.url;
+                    console.log('DOC →', doc);
+                    const displayName =
+                      doc.original_name ||
+                      doc.originalFilename ||
+                      doc.file_name ||
+                      doc.name ||
+                      doc.doc_name;
+
+                    const prettyName = humanizePdfName(displayName) || displayName;
+                    const dlUrl = buildDownloadUrl(doc.doc_id, url);
+
+                    return (
+                      <List.Item
+                        style={{
+                          padding: '8px 0',
+                          border: 'none',
+                          borderBottom: '1px solid #f0f0f0',
+                        }}
+                      >
+                        <Flex vertical gap={4}>
+                          <Flex gap={'small'} align="center" wrap="wrap">
+                            <FileIcon id={doc.doc_id} name={doc.doc_name} />
+
+                            <Popover
+                              content={renderPreviewPopover(url)}
+                              trigger="hover"
+                              placement="right"
+                              mouseEnterDelay={0.15}
+                              getPopupContainer={() => document.body}
+                            >
+                              <NewDocumentLink
+                                documentId={doc.doc_id}
+                                documentName={prettyName}
+                                prefix="document"
+                                link={doc.url}
+                              >
+                                {prettyName}
+                              </NewDocumentLink>
+                            </Popover>
+
+                            <Flex gap={6} align="center">
+                              <Popover
+                                content={renderPreviewPopover(url)}
+                                trigger="hover"
+                                placement="right"
+                                mouseEnterDelay={0.15}
+                                getPopupContainer={() => document.body}
+                              >
+                                <span style={{ display: 'inline-block' }}>
+                                  <Tooltip title="Anteprima (drawer)">
+                                    <Button
+                                      className={styles.sourceActionBtn}
+                                      icon={<EyeOutlined />}
+                                      onClick={() => openDrawer(doc.doc_id)}
+                                      size="small"
+                                    />
+                                  </Tooltip>
+                                </span>
+                              </Popover>
+
+                              <Tooltip title="Scarica PDF">
+                                <Button
+                                  className={styles.sourceActionBtn}
+                                  icon={<DownloadOutlined />}
+                                  size="small"
+                                  onClick={() => downloadPdf(dlUrl)}
+                                >
+                                  Scarica
+                                </Button>
+                              </Tooltip>
+
+                              {doc.url && (
+                                <Tooltip title="Apri link esterno">
+                                  <Button
+                                    className={styles.sourceActionBtn}
+                                    icon={<LinkOutlined />}
+                                    href={doc.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    size="small"
+                                  />
+                                </Tooltip>
+                              )}
+                            </Flex>
+                          </Flex>
+                        </Flex>
+                      </List.Item>
+                    );
+                  }}
+
+                  />
+                </Panel>
+              </Collapse>
             )}
+
+            {/* Documenti caricati dall'utente */}
             {isUser && documentList.length > 0 && (
               <List
                 bordered
@@ -232,8 +442,7 @@ const MessageItem = ({
                   return (
                     <List.Item>
                       <Flex gap={'small'} align="center">
-                        <FileIcon id={item.id} name={item.name}></FileIcon>
-
+                        <FileIcon id={item.id} name={item.name} />
                         {isImage(fileExtension) ? (
                           <NewDocumentLink
                             documentId={item.id}
@@ -243,10 +452,7 @@ const MessageItem = ({
                             {item.name}
                           </NewDocumentLink>
                         ) : (
-                          <Button
-                            type={'text'}
-                            onClick={handleUserDocumentClick(item.id)}
-                          >
+                          <Button type="text" onClick={handleUserDocumentClick(item.id)}>
                             <Text
                               style={{ maxWidth: '40vw' }}
                               ellipsis={{ tooltip: item.name }}
@@ -264,12 +470,13 @@ const MessageItem = ({
           </Flex>
         </div>
       </section>
+
       {visible && (
         <IndentedTreeModal
           visible={visible}
           hideModal={hideModal}
           documentId={clickedDocumentId}
-        ></IndentedTreeModal>
+        />
       )}
     </div>
   );
