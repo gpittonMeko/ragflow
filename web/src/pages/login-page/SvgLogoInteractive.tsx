@@ -1,89 +1,91 @@
 import React, { useRef, useState, useEffect } from 'react';
 
-
-
-
 const VIEWBOX_W = 13500;
 const VIEWBOX_H = 10500;
 
-
-
-
-export const SvgLogoInteractive: React.FC <{ flipped?: boolean }> = ({ flipped }) =>  {
+export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const gradientRef = useRef<SVGLinearGradientElement>(null);
-  const [gradientTheme, setGradientTheme] = useState<'soft' | 'vivid'>('soft');
-  const [transition, setTransition] = useState(0); // 0: solo soft, 1: solo vivid
+  const [gradientTheme, setGradientTheme] = useState<'soft' | 'vivid' | 'ultra'>('soft');
+  const [transition, setTransition] = useState(0); // 0 = soft, 1 = vivid, 2 = ultra
 
-const SOFT_GRADIENT_STOPS = [
-  { offset: "0%",   color: "#8EC5FC" }, // azzurro pastello
-  { offset: "22%",  color: "#B0D2FA" }, // blu chiaro
-  { offset: "43%",  color: "#D8B4F8" }, // lilla chiaro
-  { offset: "67%",  color: "#FFD6E8" }, // rosa chiarissimo
-  { offset: "85%",  color: "#C8FCEA" }, // verde acqua chiaro
-  { offset: "100%", color: "#8EC5FC" }
-];
+  const SOFT_GRADIENT = [
+    "#8EC5FC", "#B0D2FA", "#D8B4F8", "#FFD6E8", "#C8FCEA", "#8EC5FC"
+  ];
+  const VIVID_GRADIENT = [
+    "#7BB6F9", "#A0C8F5", "#CFA1F3", "#FFC8E0", "#B2F7DF", "#7BB6F9"
+  ];
+  const ULTRA_GRADIENT = [
+    "#5CA0F5", "#8CB8F0", "#B07AEF", "#FF9FD0", "#90F5D3", "#5CA0F5"
+  ];
 
-const VIVID_GRADIENT_STOPS = [
-  { offset: "0%",   color: "#7BB6F9" }, // blu un po' più deciso ma ancora pastello
-  { offset: "22%",  color: "#A0C8F5" },
-  { offset: "43%",  color: "#CFA1F3" },
-  { offset: "67%",  color: "#FFC8E0" },
-  { offset: "85%",  color: "#B2F7DF" },
-  { offset: "100%", color: "#7BB6F9" }
-];
+  const gradientStops = (palette: string[]) =>
+    palette.map((color, i) => ({
+      offset: `${(i / (palette.length - 1)) * 100}%`,
+      color
+    }));
 
-  // Stato gradiente animato + target
-const [gradient, setGradient] = useState({ x1: 50, y1: 30, x2: 60, y2: 90 });
+  const SOFT_GRADIENT_STOPS = gradientStops(SOFT_GRADIENT);
+  const VIVID_GRADIENT_STOPS = gradientStops(VIVID_GRADIENT);
+  const ULTRA_GRADIENT_STOPS = gradientStops(ULTRA_GRADIENT);
 
-useEffect(() => {
-  let start = Date.now();
-  const interval = setInterval(() => {
-    const now = Date.now();
-    const t = (now - start) / 1000;
-    setGradient({
-      x1: (50 + 25 * Math.sin(t * 0.25)) % 100,
-      y1: (30 + 20 * Math.cos(t * 0.27)) % 100,
-      x2: (80 + 18 * Math.sin(t * 0.16)) % 100,
-      y2: (60 + 22 * Math.cos(t * 0.22)) % 100
-    });
-  }, 40);
-  return () => clearInterval(interval);
-}, []);
+  const [gradient, setGradient] = useState({ x1: 50, y1: 30, x2: 60, y2: 90 });
 
-  // Interpolazione smooth (lerp)
   useEffect(() => {
-  let anim: any;
-  function animate() {
-    setTransition(tran =>
-      Math.abs(tran - (gradientTheme === 'vivid' ? 1 : 0)) < 0.03
-        ? (gradientTheme === 'vivid' ? 1 : 0)
-        : tran + ((gradientTheme === 'vivid' ? 1 : 0) - tran) * 0.11
-    );
-    anim = requestAnimationFrame(animate);
+    let start = Date.now();
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const t = (now - start) / 1000;
+      setGradient({
+        x1: (50 + 25 * Math.sin(t * 0.25)) % 100,
+        y1: (30 + 20 * Math.cos(t * 0.27)) % 100,
+        x2: (80 + 18 * Math.sin(t * 0.16)) % 100,
+        y2: (60 + 22 * Math.cos(t * 0.22)) % 100
+      });
+    }, 40);
+    return () => clearInterval(interval);
+  }, []);
+
+  // transizione fluida tra 3 livelli
+  useEffect(() => {
+    let anim: any;
+    function animate() {
+      const target =
+        gradientTheme === 'soft' ? 0 :
+        gradientTheme === 'vivid' ? 1 : 2;
+
+      setTransition(tran =>
+        Math.abs(tran - target) < 0.02
+          ? target
+          : tran + (target - tran) * 0.12
+      );
+      anim = requestAnimationFrame(animate);
+    }
+    animate();
+    return () => cancelAnimationFrame(anim);
+  }, [gradientTheme]);
+
+  function lerpColor(a: string, b: string, t: number) {
+    let A = parseInt(a.substring(1), 16);
+    let B = parseInt(b.substring(1), 16);
+    let r = ((A >> 16) + ((B >> 16) - (A >> 16)) * t) | 0;
+    let g = ((A >> 8 & 0xff) + ((B >> 8 & 0xff) - (A >> 8 & 0xff)) * t) | 0;
+    let b2 = ((A & 0xff) + ((B & 0xff) - (A & 0xff)) * t) | 0;
+    return `#${(1 << 24 | (r << 16) | (g << 8) | b2).toString(16).slice(1)}`;
   }
-  animate();
-  return () => cancelAnimationFrame(anim);
-}, [gradientTheme]);
 
+  // mix tra soft → vivid → ultra
+  const vividMix = Math.min(transition, 1);
+  const ultraMix = Math.max(0, transition - 1);
 
+  const currentStops = SOFT_GRADIENT_STOPS.map((s, i) => {
+    const vividColor = lerpColor(s.color, VIVID_GRADIENT_STOPS[i].color, vividMix);
+    return {
+      offset: s.offset,
+      color: lerpColor(vividColor, ULTRA_GRADIENT_STOPS[i].color, ultraMix)
+    };
+  });
 
-function lerpColor(a: string, b: string, t: number) {
-  // a, b es: "#aabbcc"
-  let A = parseInt(a.substring(1),16);
-  let B = parseInt(b.substring(1),16);
-  let r = ((A >> 16) + (( (B >> 16) - (A >> 16) ) * t))|0;
-  let g = ((A >> 8 & 0xff) + (((B >> 8 & 0xff) - (A >> 8 & 0xff)) * t))|0;
-  let b2 = ((A & 0xff) + (((B & 0xff) - (A & 0xff)) * t))|0;
-  return `#${(1<<24|(r<<16)|(g<<8)|b2).toString(16).slice(1)}`;
-}
-
-const currentStops = SOFT_GRADIENT_STOPS.map((s, i) => ({
-  offset: s.offset,
-  color: lerpColor(s.color, VIVID_GRADIENT_STOPS[i].color, transition)
-}));
-
-  // Render responsive
   return (
     <svg
       ref={svgRef}
@@ -91,50 +93,51 @@ const currentStops = SOFT_GRADIENT_STOPS.map((s, i) => ({
       width="90%"
       role="img"
       aria-label="Logo SGAI"
+      shapeRendering="geometricPrecision"
       style={{
-        maxWidth: "min(95vw, 520px)", // era 680px
+        maxWidth: "min(95vw, 520px)",
         height: 'auto',
         display: 'block',
-        margin: "0px auto 0px",
+        margin: "0 auto",
         cursor: 'pointer',
         userSelect: 'none',
         transition: 'box-shadow 0.6s'
       }}
       onMouseEnter={() => setGradientTheme('vivid')}
       onMouseLeave={() => setGradientTheme('soft')}
-      onTouchStart={() => setGradientTheme('vivid')}
+      onMouseDown={() => setGradientTheme('ultra')}
+      onMouseUp={() => setGradientTheme('vivid')}
+      onTouchStart={() => setGradientTheme('ultra')}
       onTouchEnd={() => setGradientTheme('soft')}
     >
       <defs>
         <linearGradient
-            id="gradient-hover"
-            ref={gradientRef}
-            gradientUnits="userSpaceOnUse"
-            x1={gradient.x1 * VIEWBOX_W / 100}
-            y1={gradient.y1 * VIEWBOX_H / 100}
-            x2={gradient.x2 * VIEWBOX_W / 100}
-            y2={gradient.y2 * VIEWBOX_H / 100}
-            >
-            {currentStops.map(s =>
-                <stop key={s.offset} offset={s.offset} stopColor={s.color} />
-            )}
-            </linearGradient>
+          id="gradient-hover"
+          ref={gradientRef}
+          gradientUnits="userSpaceOnUse"
+          x1={gradient.x1 * VIEWBOX_W / 100}
+          y1={gradient.y1 * VIEWBOX_H / 100}
+          x2={gradient.x2 * VIEWBOX_W / 100}
+          y2={gradient.y2 * VIEWBOX_H / 100}
+        >
+          {currentStops.map(s => (
+            <stop key={s.offset} offset={s.offset} stopColor={s.color} />
+          ))}
+        </linearGradient>
       </defs>
       <filter id="logo-glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation={gradientTheme === "vivid" ? 90 : 50} result="glow" />
-      <feMerge>
+        <feGaussianBlur stdDeviation={transition >= 2 ? 140 : transition >= 1 ? 90 : 50} result="glow" />
+        <feMerge>
           <feMergeNode in="glow" />
           <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
-
-       <g
-  fill="url(#gradient-hover)"
-  filter="url(#logo-glow)"
-  transform={`
-  scale(1.15,-1.15) translate(-1700,-${VIEWBOX_H}) 
-  translate(0,-600)
-`} >
+        </feMerge>
+      </filter>
+      <g
+        fill="url(#gradient-hover)"
+        filter="url(#logo-glow)"
+        transform={`scale(1.15,-1.15) translate(-1700,-${VIEWBOX_H}) translate(0,-600)`}
+        vectorEffect="non-scaling-stroke"
+      >
     <path d="M2900 8409 c-117 -8 -234 -25 -260 -39 -10 -5 -28 -10 -39 -10 -11 0
         -37 -7 -58 -16 -37 -16 -55 -24 -138 -60 -164 -72 -346 -246 -419 -399 -10
         -22 -24 -49 -29 -60 -6 -11 -14 -36 -18 -55 -4 -19 -12 -53 -18 -75 -14 -52
