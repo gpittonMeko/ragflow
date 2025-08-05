@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 
 const VIEWBOX_W = 13500;
-const VIEWBOX_H = 10500;
+const VIEWBOX_H = 8000;
 
 export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped }) => {
   const svgRef = useRef<SVGSVGElement>(null);
