@@ -129,7 +129,7 @@ def generate():
 # STRIPE – Create Checkout Session
 # ─────────────────────────────────────────────────────────────
 @app.post("/api/stripe/create-checkout-session")
-dfrom flask import Flask, request, jsonify
+from flask import Flask, request, jsonify
 import stripe, os
 
 # … variabili d’ambiente come prima …
