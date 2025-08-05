@@ -161,17 +161,24 @@ services:
     restart: on-failure
 
   backendoauth:
-    container_name: ragflow-backend-oauth
-    build:
-      context: ../web/src/pages/login-page
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - TZ=${TIMEZONE}
-    networks:
-      - ragflow
-    restart: on-failure  
+      container_name: ragflow-backend-oauth
+      build:
+        context: ../web/src/pages/login-page
+        dockerfile: Dockerfile
+      env_file: .env
+      environment:
+        - TZ=${TIMEZONE}
+        # --- variabili usate dal backend OAuth ---
+        - APP_URL=${APP_URL}
+        - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+        - STRIPE_PRICE_PREMIUM=${STRIPE_PRICE_PREMIUM}
+        - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      ports:
+        - "8000:8000"         # pubblica l'API (ok anche in prod)
+      networks:
+        - ragflow
+      restart: on-failure 
+  
 
 
 volumes:
