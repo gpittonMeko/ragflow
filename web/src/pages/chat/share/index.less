@@ -43,7 +43,7 @@
 }
 .dark {
   background-color: var(--bg-secondary);
-  :global(.messageInputWrapper___nie1o .ant-input) { color: #ffffff !important; }
+  :global(.messageInputWrapper___nie1o .ant-input) { color: #ffffff !important; font-size: clamp(0.9rem, 1vw, 1rem);}
   :global(.messageInputWrapper___nie1o .ant-input::placeholder) { color: rgba(255,255,255,0.6) !important; }
 }
 
@@ -117,9 +117,11 @@
     &::-webkit-scrollbar { display: none; }
 
     :global(.messageItem___OK1Zd) {
-      background-color: var(--bg-message);
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px) saturate(180%);
+      -webkit-backdrop-filter: blur(12px) saturate(180%);
       color: var(--text-primary);
-      border-radius: 12px;
+      border-radius: 16px;
       margin-bottom: 12px;
       transition: background-color var(--transition-time), color var(--transition-time);
     }
@@ -131,7 +133,11 @@
   }
 
   :global(.messageInputWrapper___nie1o) {
-    background-color: var(--bg-primary);
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border-radius: 14px;
+
     border-top: 1px solid var(--border-color);
     transition: background-color var(--transition-time), border-color var(--transition-time);
     margin-top: 4px;
@@ -198,7 +204,9 @@
 
 /* Vari stili di supporto */
 body {
-  font-family: 'Titillium Web', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(0.95rem, 1vw, 1.05rem);
+  line-height: 1.5;
   margin: 0;
   padding: 0;
   background-color: var(--bg-primary);
@@ -209,4 +217,5 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
 
