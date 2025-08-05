@@ -28,8 +28,12 @@
   --disclaimer-bg: rgba(200, 200, 200, 0.3);
 }
 
+html {
+  font-size: clamp(14px, 1.1vw, 18px);
+}
+
 body {
-  font-family: 'Titillium Web', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   margin: 0;
   padding: 0;
   background-color: var(--bg-primary);
@@ -40,6 +44,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
 
 .pageContainer {
   max-width: 1200px;
@@ -418,4 +423,157 @@ body {
 }
 .logoutButton:hover {
   background-color: #d9363e;
+}
+
+.upgradeBtn {
+  position: fixed;
+  right: 20px;
+  top: 70px;
+  z-index: 1100;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+}
+
+.upgradeGlow {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  filter: blur(12px);
+  background: linear-gradient(135deg, #635bff, #00d4ff);
+  opacity: 0.6;
+  transition: opacity .25s;
+}
+
+.upgradeContent {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #0f0f12;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  transition: transform .15s, box-shadow .15s;
+}
+
+.upgradeBtn:hover .upgradeGlow { opacity: 0.9; }
+.upgradeBtn:hover .upgradeContent {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0,0,0,.35);
+}
+
+/* --- bottone “vetro liquido” stile Apple --- */
+.glassBtn {
+  --t: 0.3s;
+
+  background: rgba(255,255,255,0.18);          /* glass */
+  border: 1px solid rgba(255,255,255,0.35);
+  box-shadow: 0 10px 20px rgba(0,0,0,.15);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 22px;
+  border-radius: 12px;
+  transition: transform var(--t), box-shadow var(--t);
+  cursor: pointer;
+
+  &:hover   { transform: translateY(-2px); box-shadow:0 14px 24px rgba(0,0,0,.18);}
+  &:active  { transform: translateY( 1px); box-shadow:0 6px 12px  rgba(0,0,0,.18);}
+}
+
+/* “upgradeBtn” esistente → eredita il look glass */
+.upgradeBtn { composes: glassBtn; position:fixed; right:80px; top:110px; }
+
+/* Google modal centrato meglio */
+.googleModal {
+  background: rgba(255,255,255,.85);
+  backdrop-filter: blur(6px);
+  display:flex; align-items:center; justify-content:center;
+}
+
+
+/* allinea qualsiasi SVG/icona nei glass button */
+.icon { vertical-align: middle; }
+
+/* icone lucide ereditano colore dal testo */
+.glassBtn .icon { stroke-width: 2; color: currentColor; }
+
+/* ---------- colore testi pulsanti = dinamico ---------- */
+.glassBtn {
+  color: var(--text-primary);
+
+  [data-theme='light'] & {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    color: var(--text-primary);
+  }
+}
+
+/* contatore free-limit */
+.freeCounter {
+  position: fixed;
+  right: 80px;
+  top: 70px;
+  z-index: 1100;
+  background: linear-gradient(135deg, #4285F4, #34A853);
+  color: #fff;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 0 6px rgba(0,0,0,.25);
+}
+
+/* dark/light per titoli e testi featureCard */
+.featureCard h3,
+.featureCard p {
+  color: var(--feature-text-color);
+}
+
+/* ---------- elimina gap in fondo ai messaggi ---------- */
+.messageContainer { padding-bottom: 0 !important; }
+.messageItem:last-child { margin-bottom: 0 !important; }
+
+
+.glassSurface {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-radius: var(--border-radius);
+}
+
+.featureCard,
+.disclaimerSection,
+.iframeSection {
+  composes: glassSurface;
+}
+
+.pageContainer,
+.featuresSection,
+.disclaimerSection,
+.iframeSection {
+  font-size: clamp(0.9rem, 1.2vw, 1rem);
+  line-height: 1.5;
+}
+
+h1, h2, h3 {
+  font-size: clamp(1.2rem, 2vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+p, li, span {
+  font-size: clamp(0.85rem, 1vw, 1rem);
 }

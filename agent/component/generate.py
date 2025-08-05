@@ -147,36 +147,37 @@ class Generate(ComponentBase):
         # ------------------------------------------------------------------ #
         # 3) Costruisci doc_aggs 1-a-1 con i chunk (nessuna dedup)           #
         # ------------------------------------------------------------------ #
-        doc_aggs, seen = [], set()
+        doc_aggs = []
         for ck in chunks:
-            d_id = ck.get("doc_id")
-            if d_id in seen:
-                continue
-            doc_aggs.append(
-                {
-                    "doc_id": d_id,
-                    "doc_name": ck.get("docnm_kwd") or ck.get("doc_name") or "",
-                    "url": ck.get("url") or ""          # <─ NEW
-                }
-            )
-            seen.add(d_id)
+            doc_aggs.append({
+                "doc_id": ck.get("doc_id"),
+                "doc_name": ck.get("docnm_kwd") or ck.get("doc_name") or "",
+                "file_name": ck.get("file_name")                      # 👈 nuovo campo
+                            or ck.get("original_name")               # (scegli le chiavi che hai a DB)
+                            or ck.get("name")
+                            or "",
+                "url": ck.get("url") or "",
+                "chunk_preview": (ck.get("content_ltks") or ck.get("content") or "")[:300]
+            })
 
-        # ------------------------------------------------------------------ #
-        # 4) Legenda “Fonti” (una sola riga per documento)                   #
-        # ------------------------------------------------------------------ #
-        #legend_lines = ["**Fonti:**"]
-        #already = set()
-#
-        #for m in re.finditer(r'##(\d+)\$\$', answer):
-        #    idx = int(m.group(1)) - 1            # marker ##N$$ -> indice N-1
-        #    if 0 <= idx < len(doc_aggs):
-        #        doc = doc_aggs[idx]
-        #        if doc["doc_id"] not in already: # evita duplicati in legenda
-        #            legend_lines.append(f"- ##{idx+1}$$ {doc['doc_name']}")
-        #            already.add(doc["doc_id"])
-#
-        #answer += "\n\n" + "\n".join(legend_lines)
 
+
+
+         #------------------------------------------------------------------ #
+         #4) Legenda “Fonti” (una sola riga per documento)                   #
+         #------------------------------------------------------------------ #
+        legend_lines = ["**Fonti:**"]
+        already = set()
+
+        for m in re.finditer(r'##(\d+)\$\$', answer):
+            idx = int(m.group(1)) - 1            # marker ##N$$ -> indice N-1
+            if 0 <= idx < len(doc_aggs):
+                doc = doc_aggs[idx]
+                if doc["doc_id"] not in already: # evita duplicati in legenda
+                    legend_lines.append(f"- ##{idx+1}$$ {doc['doc_name']}")
+                    already.add(doc["doc_id"])
+
+        answer += "\n\n" + "\n".join(legend_lines)
         # ------------------------------------------------------------------ #
         # 5) Pacchetto finale                                                #
         # ------------------------------------------------------------------ #
@@ -213,10 +214,6 @@ class Generate(ComponentBase):
     def _run(self, history, **kwargs):
         chat_mdl = LLMBundle(self._canvas.get_tenant_id(), LLMType.CHAT, self._param.llm_id)
         prompt = self._param.prompt
-
-
-
-
 
         retrieval_res = []
         doc_chunks = {}
