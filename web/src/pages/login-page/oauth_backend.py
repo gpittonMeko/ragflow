@@ -1,9 +1,9 @@
 """
-backend.py – Flask server one‑file
-• valida l’ID‑Token Google
+oauth_backend.py – Flask server one-file
+• valida l’ID-Token Google
 • mantiene un “DB” in RAM con piano & contatore
 • espone /api/generate con limite per piano
-• crea la Stripe Checkout Session (email facoltativa)
+• crea la Stripe Checkout Session (email facoltativa)
 • riceve il webhook Stripe e aggiorna il piano
 """
 
@@ -32,7 +32,7 @@ PLAN_LIMITS = {
     "premium": 1_000_000_000,
 }
 
-# Stripe – impostale nel tuo ambiente / docker‑compose
+# Stripe – impostale nel tuo ambiente / docker-compose
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 APP_URL = os.getenv("APP_URL", "http://localhost:5173")
 
@@ -40,7 +40,7 @@ SUCCESS_URL = f"{APP_URL}/success?session_id={{CHECKOUT_SESSION_ID}}"
 CANCEL_URL = f"{APP_URL}/"
 
 # ─────────────────────────────────────────────────────────────
-# APP & “DB” in RAM
+# APP & “DB” in RAM
 # ─────────────────────────────────────────────────────────────
 app = Flask(__name__)
 CORS(app)
@@ -56,7 +56,7 @@ def verify_token(token: str) -> Optional[Dict]:
     try:
         req = google.auth.transport.requests.Request()
         return google.oauth2.id_token.verify_oauth2_token(token, req, CLIENT_ID)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         print("Token validation failed:", exc)
         return None
 
@@ -90,7 +90,7 @@ def google_auth():
 
 
 # ─────────────────────────────────────────────────────────────
-# GENERATE (finto)
+# GENERATE (finto)
 # ─────────────────────────────────────────────────────────────
 @app.post("/api/generate")
 def generate():
@@ -119,21 +119,15 @@ def generate():
     time.sleep(1)  # simuliamo l’attesa AI
 
     return jsonify(
-        message="Fake AI response",
+        message="Fake AI response",
         remainingGenerations=remaining,
         usedGenerations=user["usedGenerations"],
     )
 
 
 # ─────────────────────────────────────────────────────────────
-# STRIPE – Create Checkout Session
+# STRIPE – Create Checkout Session
 # ─────────────────────────────────────────────────────────────
-@app.post("/api/stripe/create-checkout-session")
-from flask import Flask, request, jsonify
-import stripe, os
-
-# … variabili d’ambiente come prima …
-
 @app.post("/api/stripe/create-checkout-session")
 def create_checkout_session():
     if not stripe.api_key:
@@ -145,7 +139,7 @@ def create_checkout_session():
     price_id = os.getenv("STRIPE_PRICE_PREMIUM")
     if not price_id:
         msg = "Stripe price missing: env STRIPE_PRICE_PREMIUM non impostata"
-        print("\033[91m" + msg + "\033[0m")   # rosso
+        print("\033[91m" + msg + "\033[0m")  # rosso
         return jsonify(error=msg, debug={"price_id": None}), 500
 
     try:
@@ -161,14 +155,12 @@ def create_checkout_session():
         print("\033[92mStripe session OK:\033[0m", session.id)  # verde
         return jsonify(sessionId=session.id)
     except Exception as exc:
-        print("\033[91mStripe error:\033[0m", exc)              # rosso
+        print("\033[91mStripe error:\033[0m", exc)  # rosso
         return jsonify(error="Stripe exception", debug=str(exc)), 500
 
 
-
-
 # ─────────────────────────────────────────────────────────────
-# STRIPE – Webhook
+# STRIPE – Webhook
 # ─────────────────────────────────────────────────────────────
 @app.post("/api/stripe/webhook")
 def stripe_webhook():
@@ -179,22 +171,22 @@ def stripe_webhook():
     if not endpoint_secret:
         return jsonify(error="Webhook secret missing"), 500
 
-    payload = request.get_data(as_text=False)
+    payload = request.get_data(as_text=False)  # raw bytes
     sig_header = request.headers.get("Stripe-Signature", "")
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         return jsonify(error=str(exc)), 400
 
     evt_type = event["type"]
 
     if evt_type == "checkout.session.completed":
         session = event["data"]["object"]
-        email = session["metadata"].get("email")      # può essere None
+        email = session["metadata"].get("email")  # può essere None
         plan = session["metadata"].get("selected_plan", "premium")
 
-        if email:  # aggiorniamo solo se abbiamo l'e‑mail
+        if email:  # aggiorniamo solo se abbiamo l’e-mail
             with db_lock:
                 user = users_db.setdefault(
                     email, {"plan": "free", "usedGenerations": 0}
@@ -204,6 +196,8 @@ def stripe_webhook():
 
     elif evt_type == "customer.subscription.deleted":
         sub = event["data"]["object"]
+        # Attenzione: questo evento normalmente non contiene customer_email;
+        # qui usiamo solo se presente.
         email = sub.get("customer_email")
         if email:
             with db_lock:
@@ -219,5 +213,5 @@ def stripe_webhook():
 # MAIN
 # ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    # In produzione usa gunicorn/uwsgi. Qui debug=True per test.
+    # In produzione usa gunicorn/uwsgi. Qui debug=True per test.
     app.run(host="0.0.0.0", port=8000, debug=True)
