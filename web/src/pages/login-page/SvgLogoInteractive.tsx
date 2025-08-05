@@ -16,20 +16,21 @@ export const SvgLogoInteractive: React.FC <{ flipped?: boolean }> = ({ flipped }
   const [transition, setTransition] = useState(0); // 0: solo soft, 1: solo vivid
 
 const SOFT_GRADIENT_STOPS = [
-  { offset: "0%",   color: "#34aaff" },
-  { offset: "22%",  color: "#7ca6f7" },
-  { offset: "43%",  color: "#b38ffa" },
-  { offset: "67%",  color: "#e7a4ff" },
-  { offset: "85%",  color: "#a4ffe7" },
-  { offset: "100%", color: "#34aaff" }
+  { offset: "0%",   color: "#8EC5FC" }, // azzurro pastello
+  { offset: "22%",  color: "#B0D2FA" }, // blu chiaro
+  { offset: "43%",  color: "#D8B4F8" }, // lilla chiaro
+  { offset: "67%",  color: "#FFD6E8" }, // rosa chiarissimo
+  { offset: "85%",  color: "#C8FCEA" }, // verde acqua chiaro
+  { offset: "100%", color: "#8EC5FC" }
 ];
+
 const VIVID_GRADIENT_STOPS = [
-  { offset: "0%",   color: "#22caff" },
-  { offset: "22%",  color: "#6b8afd" },
-  { offset: "43%",  color: "#fa2d91" },
-  { offset: "67%",  color: "#faff86" },
-  { offset: "85%",  color: "#0ffcdf" },
-  { offset: "100%", color: "#22caff" }
+  { offset: "0%",   color: "#7BB6F9" }, // blu un po' più deciso ma ancora pastello
+  { offset: "22%",  color: "#A0C8F5" },
+  { offset: "43%",  color: "#CFA1F3" },
+  { offset: "67%",  color: "#FFC8E0" },
+  { offset: "85%",  color: "#B2F7DF" },
+  { offset: "100%", color: "#7BB6F9" }
 ];
 
   // Stato gradiente animato + target
@@ -91,20 +92,18 @@ const currentStops = SOFT_GRADIENT_STOPS.map((s, i) => ({
       role="img"
       aria-label="Logo SGAI"
       style={{
-        maxWidth: "min(95vw, 680px)",
+        maxWidth: "min(95vw, 520px)", // era 680px
         height: 'auto',
         display: 'block',
-        margin: "0px auto 0px", // negativo qui!
-
+        margin: "0px auto 0px",
         cursor: 'pointer',
         userSelect: 'none',
         transition: 'box-shadow 0.6s'
       }}
-      // NEL COMPONENTE SVG
-        onMouseEnter={() => setGradientTheme('vivid')}
-        onMouseLeave={() => setGradientTheme('soft')}
-        onTouchStart={() => setGradientTheme('vivid')}
-        onTouchEnd={() => setGradientTheme('soft')}
+      onMouseEnter={() => setGradientTheme('vivid')}
+      onMouseLeave={() => setGradientTheme('soft')}
+      onTouchStart={() => setGradientTheme('vivid')}
+      onTouchEnd={() => setGradientTheme('soft')}
     >
       <defs>
         <linearGradient
@@ -122,20 +121,20 @@ const currentStops = SOFT_GRADIENT_STOPS.map((s, i) => ({
             </linearGradient>
       </defs>
       <filter id="logo-glow" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation={gradientTheme === "vivid" ? 120 : 70} result="glow" />
-        <feMerge>
-            <feMergeNode in="glow" />
-            <feMergeNode in="SourceGraphic" />
-        </feMerge>
-        </filter>
+      <feGaussianBlur stdDeviation={gradientTheme === "vivid" ? 90 : 50} result="glow" />
+      <feMerge>
+          <feMergeNode in="glow" />
+          <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
 
        <g
   fill="url(#gradient-hover)"
   filter="url(#logo-glow)"
   transform={`
-    scale(1.35,-1.35) translate(-1700,-${VIEWBOX_H}) 
-    translate(0,-600)`} 
->
+  scale(1.15,-1.15) translate(-1700,-${VIEWBOX_H}) 
+  translate(0,-600)
+`} >
     <path d="M2900 8409 c-117 -8 -234 -25 -260 -39 -10 -5 -28 -10 -39 -10 -11 0
         -37 -7 -58 -16 -37 -16 -55 -24 -138 -60 -164 -72 -346 -246 -419 -399 -10
         -22 -24 -49 -29 -60 -6 -11 -14 -36 -18 -55 -4 -19 -12 -53 -18 -75 -14 -52
