@@ -1,30 +1,24 @@
 import React, { useRef, useState, useEffect } from 'react';
 import styles from './index.less';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
-import api from '@/utils/api'; // <-- sostituisci con il percorso reale del tuo file api
+import api from '@/utils/api'; // <-- percorso reale del tuo file api
 import { loadStripe } from '@stripe/stripe-js';
 import { LogOut, LockKeyhole } from 'lucide-react';
-
+import { v4 as uuidv4 } from 'uuid';
 
 const CLIENT_ID =
   '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
 
-
-const FREE_LIMIT = 5;        //  ←  DEVE restare definito prima di qualunque uso
-
-
+const FREE_LIMIT = 5; // fallback visuale
 
 // chiave pubblica Stripe (ok metterla nel client)
 const STRIPE_PK = 'pk_test_51RkiUbPZKD2mbdh6v8NVHrLCw5s3HCuP5CfMHn6xBJycK7YHo7L6IiwdZJPMhmuFc9nhHT6A9jbPmecxvFL7rWol00YV1QplUz';
-
 const stripePromise = loadStripe(STRIPE_PK);
 
-// login‑page/PresentationPage.tsx  (o dove hai il codice)
-// --- costante che non manda mai in crash ----------
+// --- base URL backend ---
 const baseURL =
   (process.env.UMI_APP_API_BASE as string | undefined) ??
-  'http://16.170.85.194:8000';   // fallback di sicurezza
-
+  'http://16.170.85.194:8000';
 
 /* --- mini-component per la “G” trasparente --- */
 const GoogleGIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
@@ -42,104 +36,169 @@ const GoogleGIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
   </svg>
 );
 
-
-
-
-
 declare global {
   interface Window {
     google: any;
   }
 }
 
+/* ------------- TIPI QUOTA ------------- */
+type QuotaAnon = {
+  scope: 'anon';
+  id: string;
+  plan: 'anon';
+  usedTotal: number;
+  totalLimit: number;
+  remainingTotal: number;
+};
 
+type QuotaUser = {
+  scope: 'user';
+  id: string;           // email
+  plan: 'free' | 'premium';
+  usedToday: number;
+  dailyLimit: number;
+  remainingToday: number;
+  day: string;
+};
 
+function getOrCreateClientId(): string {
+  let id = localStorage.getItem('sgai-client-id');
+  if (!id) {
+    id = uuidv4();
+    localStorage.setItem('sgai-client-id', id);
+  }
+  return id;
+}
 
 const PresentationPage: React.FC = () => {
-  //const iframeRef = useRef<HTMLIFrameElement>(null);
   const googleButtonRef = useRef<HTMLDivElement>(null);
 
+  // contatore legacy locale (lo lasciamo ma ora fa solo da fallback UI)
   const [genCount, setGenCount] = useState<number>(() => {
-  const saved = Number(localStorage.getItem('sgai-gen-count') || 0);
-  return isNaN(saved) ? 0 : saved;
-});
+    const saved = Number(localStorage.getItem('sgai-gen-count') || 0);
+    return isNaN(saved) ? 0 : saved;
+  });
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('sgai-theme') as 'light' | 'dark') || 'dark';
   });
-  //const [isGenerating, setIsGenerating] = useState(false);
+
   const [googleToken, setGoogleToken] = useState<string | null>(null);
-  //const [hasEverGenerated, setHasEverGenerated] = useState(false);
   const [userData, setUserData] = useState<{
     email: string;
     plan: string;
-    usedGenerations: number;
+    usedGenerations?: number;
   } | null>(null);
+
   const [showGoogleModal, setShowGoogleModal] = useState(false);
-  //const [hasSkippedInitialExpand, setHasSkippedInitialExpand] = useState(false);
-
-  /* ───────── nuovo state per limitatore anonimo ───────── */
-  // salva il contatore su localStorage e ripristina overlay su refresh
-useEffect(() => {
-  localStorage.setItem('sgai-gen-count', String(genCount));
-  if (!userData && genCount >= FREE_LIMIT) setShowLimitOverlay(true);
-}, [genCount, userData]);
-
   const [showLimitOverlay, setShowLimitOverlay] = useState(false);
 
+  // quota server-side
+  const [quota, setQuota] = useState<QuotaAnon | QuotaUser | null>(null);
+  const clientIdRef = useRef<string>(getOrCreateClientId());
+
+  // salva legacy contatore
+  useEffect(() => {
+    localStorage.setItem('sgai-gen-count', String(genCount));
+    // overlay legacy (fallback) — resta, ma ora la logica principale usa quota
+    if (!userData && genCount >= FREE_LIMIT) setShowLimitOverlay(true);
+  }, [genCount, userData]);
 
   // comunica all’iframe se il limite è stato raggiunto
-useEffect(() => {
-  const iframe = document.querySelector<HTMLIFrameElement>(
-    'iframe[title="SGAI Chat Interface"]'
-  );
-  if (iframe && iframe.contentWindow) {
-    iframe.contentWindow.postMessage(
-      { type: 'limit-status', blocked: showLimitOverlay },
-      '*'
+  useEffect(() => {
+    const iframe = document.querySelector<HTMLIFrameElement>(
+      'iframe[title="SGAI Chat Interface"]'
     );
-  }
-}, [showLimitOverlay]);
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage(
+        { type: 'limit-status', blocked: showLimitOverlay },
+        '*'
+      );
+    }
+  }, [showLimitOverlay]);
 
-
+  // tema + sync a iframe
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('sgai-theme', theme);
-
-    // Usa querySelector per trovare l'iframe senza ref React!
     const iframe = document.querySelector('iframe[title="SGAI Chat Interface"]');
     if (iframe && iframe.contentWindow) {
       iframe.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
     }
   }, [theme]);
 
-  // Stato/flag per sapere se espandere
+  // espansione iframe
   const [canExpandIframe, setCanExpandIframe] = useState(false);
   const expandTimeoutRef = useRef<any>(null);
 
+  // ======= FUNZIONI QUOTA =======
+  async function refreshQuota() {
+    try {
+      const headers: Record<string, string> = {};
+      if (googleToken) headers['Authorization'] = `Bearer ${googleToken}`;
+      else headers['X-Client-Id'] = clientIdRef.current;
+
+      const res = await fetch(`${baseURL}/api/quota`, { headers });
+      const data = await res.json();
+      if (res.ok) {
+        setQuota(data);
+        // decidi overlay in base alla quota
+        if (data.scope === 'anon') {
+          setShowLimitOverlay((data as QuotaAnon).remainingTotal <= 0);
+        } else if (data.scope === 'user') {
+          const q = data as QuotaUser;
+          setShowLimitOverlay(q.plan !== 'premium' && q.remainingToday <= 0);
+        }
+      } else {
+        console.warn('quota error', data);
+      }
+    } catch (e) {
+      console.warn('quota network error', e);
+    }
+  }
+
+  async function tickGeneration() {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (googleToken) headers['Authorization'] = `Bearer ${googleToken}`;
+      else headers['X-Client-Id'] = clientIdRef.current;
+
+      const res = await fetch(`${baseURL}/api/generate`, { method: 'POST', headers });
+      const data = await res.json();
+      if (!res.ok) {
+        await refreshQuota();
+        alert(data?.error || 'Limite raggiunto');
+        return false;
+      }
+      // ok → sync quota
+      await refreshQuota();
+      return true;
+    } catch (e) {
+      console.error('generate error', e);
+      return false;
+    }
+  }
+
+  // ======= LISTENER postMessage (altezza + fine generazione) =======
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.data?.type === 'iframe-height') {
         const iframe = document.querySelector<HTMLIFrameElement>('iframe[title="SGAI Chat Interface"]');
         if (!iframe) return;
         const minHeight = 400;
-        const maxHeight = 1000; // se vuoi puoi mettere 1000 qui
-
+        const maxHeight = 1000;
         let nextHeight = event.data.height;
 
-        // Se non puoi ancora espandere, rimani al minimo
         if (!canExpandIframe) {
-          // Se la prima generazione supera 400px (o la tua soglia), parte il timeout
           if (nextHeight > minHeight && !expandTimeoutRef.current) {
             expandTimeoutRef.current = setTimeout(() => {
               setCanExpandIframe(true);
               expandTimeoutRef.current = null;
-            }, 10000); // 10 secondi
+            }, 10000);
           }
-          // Intanto l'iframe rimane minimo
           nextHeight = minHeight;
         } else {
-          // Puoi espandere normalmente (dopo 10 sec)
           nextHeight = Math.max(nextHeight, minHeight);
           nextHeight = Math.min(nextHeight, maxHeight);
         }
@@ -147,8 +206,9 @@ useEffect(() => {
         iframe.style.height = `${nextHeight}px`;
       }
 
-      /* ───────── nuovo blocco: intercetta fine generazione ───────── */
+      // FINE GENERAZIONE → conteggio lato server
       if (event.data?.type === 'generation-finished') {
+        // fallback legacy locale (non blocca mai da solo)
         if (!userData) {
           setGenCount(prev => {
             const next = prev + 1;
@@ -156,6 +216,8 @@ useEffect(() => {
             return next;
           });
         }
+        // conteggio ufficiale lato server
+        void tickGeneration();
       }
     };
 
@@ -164,129 +226,24 @@ useEffect(() => {
       window.removeEventListener('message', handler);
       if (expandTimeoutRef.current) clearTimeout(expandTimeoutRef.current);
     };
-  }, [canExpandIframe, userData]);
-  //
-  //
-  //
-  //  useEffect(() => {
-  //    const handleIframeMessage = (event: MessageEvent) => {
-  //      const data = event.data || {};
-  //
-  //      if (data.type === 'iframe-height' && iframeRef.current) {
-  //        let min = 200;
-  //        let max = 1600;
-  //        let boundedHeight = Math.max(min, Math.min(data.height, max));
-  //        console.log("SGAI [parent]: data.height ricevuta:", data.height, "-> usata:", boundedHeight);
-  //        iframeRef.current.style.height = `${boundedHeight}px`;
-  //        iframeRef.current.style.minHeight = `${min}px`;
-  //        iframeRef.current.style.maxHeight = `${max}px`;
-  //      }
-  //
-  //      if (data.type === 'expand-iframe') {
-  //        if (data.expanding) {
-  //          if (!hasSkippedInitialExpand) {
-  //            setHasSkippedInitialExpand(true);
-  //            return;
-  //          }
-  //        }
-  //
-  //        setIsGenerating(data.expanding);
-  //
-  //        if (data.expanding && !hasEverGenerated) {
-  //          setHasEverGenerated(true);
-  //        }
-  //
-  //        if (iframeRef.current) {
-  //          if (data.expanding) {
-  //            Object.assign(iframeRef.current.style, {
-  //              maxHeight: '800px',
-  //              height: `${window.innerHeight}px`,
-  //              position: 'fixed',
-  //              top: '0',
-  //              left: '0',
-  //              width: '100%',
-  //              zIndex: '1000',
-  //            });
-  //            document.body.style.overflow = 'hidden';
-  //          } else {
-  //            Object.assign(iframeRef.current.style, {
-  //              position: 'relative',
-  //              top: 'auto',
-  //              left: 'auto',
-  //              width: '100%',
-  //              zIndex: 'auto',
-  //              height: 'auto',
-  //              minHeight: '200px',
-  //              maxHeight: '800px',
-  //            });
-  //            document.body.style.overflow = 'auto';
-  //            if (iframeRef.current.contentWindow) {
-  //              try {
-  //                iframeRef.current.contentWindow.postMessage({ type: 'request-height' }, '*');
-  //              } catch {}
-  //            }
-  //          }
-  //        }
-  //      }
-  //    };
-  //
-  //    window.addEventListener('message', handleIframeMessage);
-  //    return () => {
-  //      window.removeEventListener('message', handleIframeMessage);
-  //      document.body.style.overflow = 'auto';
-  //    };
-  //  }, [isGenerating, hasSkippedInitialExpand]);
-  //
-  //// Stato per indicare se SDK è pronto
+  }, [canExpandIframe, userData, googleToken]);
+
+  // ======= GOOGLE SDK =======
   const [gsiReady, setGsiReady] = useState(false);
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('sgai-theme', theme);
-
-    // Invia il tema all’iframe, se presente
-    const iframe = document.querySelector('iframe[title="SGAI Chat Interface"]');
-    if (iframe && iframe.contentWindow) {
-      iframe.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
-    }
-  }, [theme]);
-
-  useEffect(() => {
-    if (!showGoogleModal || !googleButtonRef.current || googleToken || !gsiReady) return;
-
-    window.google.accounts.id.initialize({
-      client_id: CLIENT_ID,
-      callback: handleGoogleResponse,
-      cancel_on_tap_outside: true,
-    });
-
-    window.google.accounts.id.renderButton(googleButtonRef.current, {
-      theme: theme === 'dark' ? 'filled_black' : 'outline',
-      size: 'large',
-      type: 'standard',
-    });
-
-    window.google.accounts.id.prompt();
-  }, [showGoogleModal, gsiReady, googleToken, theme]);
 
   useEffect(() => {
     if (window.google && window.google.accounts && window.google.accounts.id) {
       setGsiReady(true);
       return;
     }
-
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
     script.onload = () => setGsiReady(true);
     document.body.appendChild(script);
-
-    // NON rimuovere lo script al cleanup
   }, []);
 
-
-  
   const handleGoogleResponse = async (response: any) => {
     if (!response.credential) return;
     setGoogleToken(response.credential);
@@ -300,11 +257,11 @@ useEffect(() => {
       if (res.ok) {
         setUserData(data);
         setShowGoogleModal(false);
-        /* ─── reset limite anonimo ─── */
+        // reset legacy locale
         setGenCount(0);
-        localStorage.removeItem('sgai-gen-count');   // <─ reset anche storage
+        localStorage.removeItem('sgai-gen-count');
         setShowLimitOverlay(false);
-
+        await refreshQuota(); // <— sync quota loggato
       } else {
         alert(`Errore di autenticazione: ${data.error || 'sconosciuto'}`);
         setGoogleToken(null);
@@ -315,6 +272,26 @@ useEffect(() => {
     }
   };
 
+  useEffect(() => {
+    if (!showGoogleModal || !googleButtonRef.current || googleToken || !gsiReady) return;
+    window.google.accounts.id.initialize({
+      client_id: CLIENT_ID,
+      callback: handleGoogleResponse,
+      cancel_on_tap_outside: true,
+    });
+    window.google.accounts.id.renderButton(googleButtonRef.current, {
+      theme: theme === 'dark' ? 'filled_black' : 'outline',
+      size: 'large',
+      type: 'standard',
+    });
+    window.google.accounts.id.prompt();
+  }, [showGoogleModal, gsiReady, googleToken, theme]);
+
+  // all'avvio e quando cambia token → allinea quota
+  useEffect(() => {
+    void refreshQuota();
+  }, [googleToken]);
+
   const toggleTheme = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
 
   const logout = () => {
@@ -322,64 +299,55 @@ useEffect(() => {
     setUserData(null);
     setGenCount(0);
     localStorage.removeItem('sgai-gen-count');
+    // dopo logout torni anonimo → ricalcola quota anon
+    void refreshQuota();
   };
 
+  // Stripe
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
-  // PresentationPage.tsx  – dentro il componente
-const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const handleCheckout = async (plan: 'premium' = 'premium') => {
+    setDebugInfo(null);
+    try {
+      const stripe = await stripePromise;
+      if (!stripe) throw new Error('Stripe non caricato');
 
-const handleCheckout = async (plan: 'premium' = 'premium') => {
-  setDebugInfo(null);                        // reset
-  try {
-    const stripe = await stripePromise;
-    if (!stripe) throw new Error('Stripe non caricato');
+      const res = await fetch(`${baseURL}/api/stripe/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userData?.email ?? null, selected_plan: plan }),
+      });
 
-    const res = await fetch(`${baseURL}/api/stripe/create-checkout-session`,
- {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: userData?.email ?? null, selected_plan: plan }),
-    });
+      console.log('[Stripe] status', res.status, res.statusText);
+      console.log('[Stripe] content-type', res.headers.get('content-type'));
 
-    // ▼ logga header + HTTP code
-    console.log('[Stripe] status', res.status, res.statusText);
-    console.log('[Stripe] content-type', res.headers.get('content-type'));
+      let payload: any = null;
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        payload = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(`Backend ha restituito ${ct}:\n${text}`);
+      }
+      console.log('[Stripe] payload', payload);
 
-    // ▼ prendi il payload a seconda del content-type
-    let payload: any = null;
-    const ct = res.headers.get('content-type') || '';
-    if (ct.includes('application/json')) {
-      payload = await res.json();
-    } else {
-      const text = await res.text();
-      throw new Error(`Backend ha restituito ${ct}:\n${text}`);
+      if (!res.ok) {
+        throw new Error(payload?.error || 'Errore backend Stripe');
+      }
+
+      const { sessionId } = payload;
+      if (!sessionId) {
+        throw new Error(`sessionId assente nel payload: ${JSON.stringify(payload, null, 2)}`);
+      }
+
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+      if (error) throw new Error(error.message);
+    } catch (err: any) {
+      console.error('[Stripe] catch', err);
+      setDebugInfo(String(err));
+      alert(err.message || err);
     }
-    console.log('[Stripe] payload', payload);
-
-    if (!res.ok) {
-      throw new Error(payload?.error || 'Errore backend Stripe');
-    }
-
-    const { sessionId } = payload;
-    if (!sessionId) {
-      throw new Error(
-        `sessionId assente nel payload: ${JSON.stringify(payload, null, 2)}`
-      );
-    }
-
-    const { error } = await stripe.redirectToCheckout({ sessionId });
-    if (error) throw new Error(error.message);
-  } catch (err: any) {
-    console.error('[Stripe] catch', err);
-    setDebugInfo(String(err));               // mostra nell’interfaccia
-    alert(err.message || err);               // oppure toast
-  }
-};
-
-
-
-
-
+  };
 
   return (
     <div className={styles.pageContainer}>
@@ -388,135 +356,118 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
         {theme === 'dark' ? <span className={styles.themeIcon}>☀️</span> : <span className={styles.themeIcon}>🌙</span>}
       </button>
 
+      {/* Pulsante login + contatore oppure dati utente */}
+      {!userData ? (
+        <>
+          {/* --- Google button stile ufficiale --- */}
+          <button
+            onClick={() => setShowGoogleModal(true)}
+            className={styles.glassBtn}
+            style={{ position: 'fixed', right: 80, top: 20, zIndex: 1100 }}
+            aria-label="Accedi con Google"
+          >
+            <GoogleGIcon />
+            Accedi con&nbsp;Google
+          </button>
 
-  {/* Pulsante login + contatore oppure dati utente */}
-{!userData ? (
-  <>
-    {/* --- Google button stile ufficiale --- */}
-    <button
-    onClick={() => setShowGoogleModal(true)}
-    className={styles.glassBtn}
-    style={{position:'fixed',right:80,top:20,zIndex:1100}}
-    aria-label="Accedi con Google"
-  >
-    <GoogleGIcon />
-    Accedi con Google
-  </button>
+          {/* --- “pill” del contatore --- */}
+          <div
+            style={{
+              position: 'fixed',
+              right: 80,
+              top: 70,
+              zIndex: 1100,
+              background: 'linear-gradient(135deg,#4285F4,#34A853)',
+              color: '#fff',
+              padding: '3px 12px',
+              borderRadius: 999,
+              fontSize: 13,
+              fontWeight: 600,
+              boxShadow: '0 0 6px rgba(0,0,0,.25)',
+            }}
+          >
+            {/* Se quota anon nota: usa server; altrimenti fallback locale */}
+            {quota?.scope === 'anon'
+              ? `${Math.max((quota as QuotaAnon).remainingTotal, 0)} / ${(quota as QuotaAnon).totalLimit}`
+              : `${Math.max(FREE_LIMIT - genCount, 0)} / ${FREE_LIMIT}`}
+          </div>
+        </>
+      ) : (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              right: 80,
+              top: 26,
+              zIndex: 1100,
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+            }}
+          >
+            {userData.email} ({userData.plan})
+            {/* pillquota se non premium */}
+            {quota?.scope === 'user' && quota.plan !== 'premium' && (
+              <span
+                style={{
+                  marginLeft: 8,
+                  background: 'linear-gradient(135deg,#4285F4,#34A853)',
+                  color: '#fff',
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  fontSize: 12,
+                }}
+              >
+                {quota.remainingToday} / {quota.dailyLimit}
+              </span>
+            )}
+          </div>
 
+          {/* upgrade */}
+          {userData.plan !== 'premium' && (
+            <button
+              onClick={() => handleCheckout('premium')}
+              className={`${styles.glassBtn} ${styles.upgradeBtn}`}
+              style={{ position: 'fixed', right: 80, top: 110, zIndex: 1100 }}
+              aria-label="Passa a Premium"
+            >
+              <LockKeyhole size={18} className={styles.icon} />
+              &nbsp;Passa&nbsp;a&nbsp;Premium
+            </button>
+          )}
 
+          {/* logout */}
+          <button
+            onClick={logout}
+            className={styles.glassBtn}
+            style={{ position: 'fixed', right: 20, top: 20, zIndex: 1100, background: 'rgba(255,80,80,.25)' }}
+            aria-label="Logout"
+          >
+            <LogOut size={18} className={styles.icon} />
+            &nbsp;Esci
+          </button>
 
-
-    {/* --- “pill” del contatore --- */}
-    <div
-      style={{
-        position: 'fixed',
-        right: 80,
-        top: 70,
-        zIndex: 1100,
-        background: 'linear-gradient(135deg,#4285F4,#34A853)',
-        color: '#fff',
-        padding: '3px 12px',
-        borderRadius: 999,
-        fontSize: 13,
-        fontWeight: 600,
-        boxShadow: '0 0 6px rgba(0,0,0,.25)',
-      }}
-    >
-      {Math.max(FREE_LIMIT - genCount, 0)} / {FREE_LIMIT}
-    </div>
-  </>
-) : (
-  <>
-    <div
-      style={{
-        position: 'fixed',
-        right: 80,
-        top: 26,
-        zIndex: 1100,
-        fontWeight: 600,
-        color: 'var(--text-primary)',
-      }}
-    >
-      {userData.email} ({userData.plan})
-    </div>
-    {/* 🔽 ECCO QUI */}
-
-        {userData && userData.plan !== 'premium'  && (
-        <button
-          onClick={() => handleCheckout('premium')}
-          className={`${styles.glassBtn} ${styles.upgradeBtn}`}
-          style={{position:'fixed',right:80,top:110,zIndex:1100}}
-          aria-label="Passa a Premium"
-        >
-          🔓 Passa a Premium
-        </button>
-
+          {debugInfo && (
+            <pre
+              style={{
+                position: 'fixed',
+                bottom: 20,
+                left: 20,
+                maxWidth: '40vw',
+                maxHeight: '40vh',
+                overflow: 'auto',
+                padding: '1rem',
+                background: 'rgba(0,0,0,0.75)',
+                color: '#fff',
+                zIndex: 2000,
+                borderRadius: 8,
+                fontSize: 12,
+              }}
+            >
+              {debugInfo}
+            </pre>
+          )}
+        </>
       )}
-
-
-    {/* logout */}
-    <button
-      onClick={logout}
-      className={styles.glassBtn}
-      style={{ position:'fixed', right:20, top:20, zIndex:1100,
-              background:'rgba(255,80,80,.25)' }}
-      aria-label="Logout"
-    >
-      <LogOut size={18} className={styles.icon} />
-      &nbsp;Esci
-    </button>
-
-{/* upgrade*/}
-{/* logout */}
-<button
-  onClick={logout}
-  className={styles.glassBtn}
-  style={{ position:'fixed', right:20, top:20, zIndex:1100,
-           background:'rgba(255,80,80,.25)' }}
-  aria-label="Logout"
->
-  <LogOut size={18} className={styles.icon} />
-  &nbsp;Esci
-</button>
-
-{/* upgrade */}
-{userData?.plan !== 'premium' && (
-  <button
-    onClick={() => handleCheckout('premium')}        // ← niente parametri
-    className={`${styles.glassBtn} ${styles.upgradeBtn}`}
-    style={{ position: 'fixed', right: 80, top: 110, zIndex: 1100 }}
-    aria-label="Passa a Premium"
-  >
-    <LockKeyhole size={18} className={styles.icon} />
-    &nbsp;Passa&nbsp;a&nbsp;Premium
-  </button>
-)}
-
-{debugInfo && (
-  <pre
-    style={{
-      position: 'fixed',
-      bottom: 20,
-      left: 20,
-      maxWidth: '40vw',
-      maxHeight: '40vh',
-      overflow: 'auto',
-      padding: '1rem',
-      background: 'rgba(0,0,0,0.75)',
-      color: '#fff',
-      zIndex: 2000,
-      borderRadius: 8,
-      fontSize: 12,
-    }}
-  >
-    {debugInfo}
-  </pre>
-)}
-
-
-
-  </>
-)}
 
       {/* Google auth modal popup */}
       {showGoogleModal && (
@@ -535,41 +486,38 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
           role="dialog"
           tabIndex={-1}
         >
-           <div
-             onClick={e => e.stopPropagation()}
-             style={{
-               backgroundColor: '#fff',
-               padding: '2rem 2.5rem 2.5rem',    // ↑ più spazio in basso
-               borderRadius: 'var(--border-radius)',
-               boxShadow: 'var(--shadow)',
-               width: '320px',
-               textAlign: 'center',
-               color: '#000',
-               userSelect: 'none',
-               display: 'flex',
-               flexDirection: 'column',
-               gap: '1.25rem',                  // ← spazio costante fra elemento
-             }}
-           >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              backgroundColor: '#fff',
+              padding: '2rem 2.5rem 2.5rem',
+              borderRadius: 'var(--border-radius)',
+              boxShadow: 'var(--shadow)',
+              width: '320px',
+              textAlign: 'center',
+              color: '#000',
+              userSelect: 'none',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.25rem',
+            }}
+          >
             <h2>Accedi con Google</h2>
             <div ref={googleButtonRef} />
             <button onClick={() => setShowGoogleModal(false)} style={{ marginTop: '1rem' }} aria-label="Chiudi">
               Annulla
             </button>
+
+            {/* upgrade diretto */}
+            <button
+              onClick={() => handleCheckout('premium')}
+              className={styles.upgradeBtn}
+              aria-label="Acquista Premium"
+              style={{ marginTop: 12 }}
+            >
+              🔓 Passa direttamente a Premium
+            </button>
           </div>
-
-
-          
-    <button
-    onClick={() => handleCheckout('premium')}
-    className={styles.upgradeBtn}
-    aria-label="Acquista Premium"
-    style={{ marginTop: 12 }}
-  >
-    🔓 Passa direttamente a Premium
-  </button>
-
-  
         </div>
       )}
 
@@ -591,6 +539,7 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
           <SvgLogoInteractive flipped />
         </div>
       </div>
+
       {/* CHAT SOTTO IL LOGO */}
       <div className={styles.iframeSection}>
         <iframe
@@ -600,12 +549,12 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
             borderRadius: 'var(--border-radius)',
             width: '100%',
             minHeight: 350,
-            maxHeight: 1600, // opzionale se vuoi fermare a max
+            maxHeight: 1600,
             border: 'none',
             display: 'block',
             background: 'transparent',
           }}
-          allow="clipboard-write" // opzionale
+          allow="clipboard-write"
         />
       </div>
 
@@ -635,20 +584,40 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
             }}
           >
             <h2 style={{ marginTop: 0 }}>
-              Hai esaurito le {FREE_LIMIT} generazioni gratuite
+              {quota?.scope === 'anon'
+                ? 'Hai esaurito le 5 generazioni gratuite'
+                : quota?.scope === 'user' && (quota as QuotaUser).plan !== 'premium'
+                ? 'Hai esaurito le 5 generazioni giornaliere'
+                : 'Limite raggiunto'}
             </h2>
-            <p>Per continuare effettua l’accesso con Google.</p>
-            <button
-          onClick={() => setShowGoogleModal(true)}
-          className={styles.glassBtn}
-          style={{ position:'fixed', right:80, top:20, zIndex:1100 }}
-          aria-label="Accedi con Google"
-        >
-          {/* logo ufficiale – sfondo trasparente, retina‑ready */}
-          <GoogleGIcon />
-          Accedi&nbsp;con&nbsp;Google
-        </button>
+            <p>
+              {quota?.scope === 'anon'
+                ? 'Per continuare effettua l’accesso con Google (5 al giorno).'
+                : 'Per generazioni illimitate passa a Premium.'}
+            </p>
 
+            {!userData ? (
+              <button
+                onClick={() => setShowGoogleModal(true)}
+                className={styles.glassBtn}
+                aria-label="Accedi con Google"
+              >
+                <GoogleGIcon />
+                Accedi&nbsp;con&nbsp;Google
+              </button>
+            ) : (
+              (quota as QuotaUser)?.plan !== 'premium' && (
+                <button
+                  onClick={() => handleCheckout('premium')}
+                  className={`${styles.glassBtn} ${styles.upgradeBtn}`}
+                  aria-label="Passa a Premium"
+                  style={{ marginTop: 12 }}
+                >
+                  <LockKeyhole size={18} className={styles.icon} />
+                  &nbsp;Passa&nbsp;a&nbsp;Premium
+                </button>
+              )
+            )}
           </div>
         </div>
       )}
@@ -657,14 +626,7 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
       <div className={styles.featuresSection}>
         <div className={styles.featureCard}>
           <div className={styles.featureIcon}>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -679,14 +641,7 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
         </div>
         <div className={styles.featureCard}>
           <div className={styles.featureIcon}>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
               <path d="M2 17l10 5 10-5" />
               <path d="M2 12l10 5 10-5" />
@@ -701,14 +656,7 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
         </div>
         <div className={styles.featureCard}>
           <div className={styles.featureIcon}>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8h1a4 4 0 010 8h-1" />
               <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
               <line x1="6" y1="1" x2="6" y2="4" />
@@ -724,9 +672,7 @@ const handleCheckout = async (plan: 'premium' = 'premium') => {
       </div>
 
       <div className={styles.disclaimerSection}>
-        <p>
-          <strong>Disclaimer:</strong>
-        </p>
+        <p><strong>Disclaimer:</strong></p>
         <p>
           SGAI è un sistema in fase di sviluppo, basato sull’intelligenza artificiale. Lo sappiamo: non è ancora completo, e talvolta può fornire risposte inesatte, parziali o incoerenti. Ma è proprio grazie all’uso quotidiano e al supporto degli utenti che il progetto può evolversi e migliorare.
           Il sistema viene aggiornato costantemente, con l’integrazione progressiva di nuove fonti,
