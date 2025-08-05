@@ -16,7 +16,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 import google.auth.transport.requests
-import google.oauth2.id_token
+import google.oauth2.id_token 
 import stripe
 
 # ─────────────────────────────────────────────────────────────
