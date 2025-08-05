@@ -18,7 +18,7 @@ const stripePromise = loadStripe(STRIPE_PK);
 // --- base URL backend ---
 const baseURL =
   (process.env.UMI_APP_API_BASE as string | undefined) ??
-  'http://16.170.85.194:8000';
+  window.location.origin;
 
 /* --- mini-component per la “G” trasparente --- */
 const GoogleGIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
@@ -543,7 +543,7 @@ const PresentationPage: React.FC = () => {
       {/* CHAT SOTTO IL LOGO */}
       <div className={styles.iframeSection}>
         <iframe
-          src="http://16.170.85.194/chat/share?shared_id=9afb6a2267bf11f0a1f2fec73c0cd884&from=agent&auth=diODc1MmRlNmJjMzExZjA5OTFjYzI5Zj&visible_avatar=1"
+          src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm&visible_avatar=1"
           title="SGAI Chat Interface"
           style={{
             borderRadius: 'var(--border-radius)',
