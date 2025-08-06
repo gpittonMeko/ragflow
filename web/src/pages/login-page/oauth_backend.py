@@ -283,9 +283,18 @@ def stripe_webhook():
     evt_type = event["type"]
 
     if evt_type == "checkout.session.completed":
-        session_obj = event["data"]["object"]
-        email = (session_obj.get("metadata") or {}).get("email")
-        plan = (session_obj.get("metadata") or {}).get("selected_plan", "premium")
+        s = event["data"]["object"]
+        email = (
+            s.get("customer_email")                          # Checkout v2
+            or (s.get("customer_details") or {}).get("email")# Checkout v1
+            or (s.get("metadata") or {}).get("email")        # fallback
+        )
+        plan = (s.get("metadata") or {}).get("selected_plan", "premium")
+
+        # (facoltativo ma consigliato)
+        if s.get("payment_status") != "paid":
+            return jsonify(received=True)  # Abort: non è stato pagato
+
         if email:
             with db_lock:
                 u = users_db.setdefault(email, {"plan": "free", "usedToday": 0, "day": today_key(), "email": email})
@@ -295,7 +304,14 @@ def stripe_webhook():
 
     elif evt_type == "customer.subscription.deleted":
         sub = event["data"]["object"]
-        email = sub.get("customer_email")
+
+        # Estrai l’e-mail da tutti i campi possibili (stessa logica del completed)
+        email = (
+            sub.get("customer_email")
+            or (sub.get("customer_details") or {}).get("email")
+            or (sub.get("metadata") or {}).get("email")
+        )
+
         if email:
             with db_lock:
                 u = users_db.get(email)
@@ -303,6 +319,7 @@ def stripe_webhook():
                     u["plan"] = "free"
                     u["usedToday"] = 0
                     u["day"] = today_key()
+
 
     return jsonify(received=True)
 
