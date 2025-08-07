@@ -545,7 +545,7 @@ body {
   }
 }
 
-/* contatore free-limit */
+/* pillola anonimo – resta fissa dove l’hai già messa */
 .freeCounter {
   position: fixed;
   right: 80px;
@@ -560,21 +560,23 @@ body {
   box-shadow: 0 0 6px rgba(0,0,0,.25);
 }
 
-/* contatore FREE quando l’utente È loggato */
+/* pillola utente FREE – inline accanto all’e-mail */
 .userCounter {
-  composes: freeCounter;          /* eredita tutto */
-  background: linear-gradient(135deg,#ffb156,#ff7a3c); /* arancio – diverso! */
-  padding-left: 10px;             /* spazio per l’icona */
-  position: fixed;
-  right: 20px;                    /* stessa colonna dei pulsanti */
-  top: 70px;
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(135deg, #ffb156, #ff7a3c); /* arancio */
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;          /* un po’ di spazio dall’e-mail */
 }
 
-/* piccola icona di check ✓ bianca */
-.userCounter::before{
+.userCounter::before {       /* spunta ✓ opzionale */
   content: "✓";
   font-weight: 700;
-  margin-right: 6px;
+  margin-right: 4px;
 }
 
 
