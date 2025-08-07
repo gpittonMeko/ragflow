@@ -13,6 +13,8 @@
   --button-hover: rgba(255, 255, 255, 0.2);
   --nav-blur: blur(10px);
   --disclaimer-bg: rgba(100, 100, 100, 0.15);
+  --toggle-bg: rgba(255, 255, 255, 0.18);
+  --toggle-border: rgba(255, 255, 255, 0.35);
 }
 
 [data-theme="light"] {
@@ -26,6 +28,8 @@
   --button-bg: rgba(0, 0, 0, 0.05);
   --button-hover: rgba(0, 0, 0, 0.1);
   --disclaimer-bg: rgba(200, 200, 200, 0.3);
+  --toggle-bg: rgba(0, 0, 0, 0.05);
+  --toggle-border: rgba(0, 0, 0, 0.15);
 }
 
 html {
@@ -58,24 +62,40 @@ body {
   position: fixed;
   top: 20px;
   right: 20px;
+  z-index: 1100;
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background-color: var(--button-bg);
-  border: none;
+  background: var(--toggle-bg);
+  border: 1px solid var(--toggle-border);
+
+  @supports (backdrop-filter: blur(8px)) {
+    backdrop-filter: blur(8px) saturate(180%);
+    -webkit-backdrop-filter: blur(8px) saturate(180%);
+  }
+
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 100;
-  backdrop-filter: var(--nav-blur);
-  -webkit-backdrop-filter: var(--nav-blur);
-  transition: background-color 0.2s ease;
-  
-  &:hover {
-    background-color: var(--button-hover);
+  transition: background-color .2s ease, transform .15s ease;
+
+  &:hover   { background: rgba(255, 255, 255, 0.25); }
+  &:active  { transform: scale(.96); }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:active { transform: none; }
+  }
+
+  svg { stroke: var(--text-primary); }
 }
+
 
 .themeIcon {
   font-size: 20px;

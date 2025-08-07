@@ -3,7 +3,7 @@ import styles from './index.less';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
 import api from '@/utils/api'; // <-- percorso reale del tuo file api
 import { loadStripe } from '@stripe/stripe-js';
-import { LogOut, LockKeyhole } from 'lucide-react';
+import { LogOut, LockKeyhole, Sun, Moon } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 const CLIENT_ID =
@@ -352,8 +352,12 @@ const PresentationPage: React.FC = () => {
   return (
     <div className={styles.pageContainer}>
       {/* Toggle tema */}
-      <button onClick={toggleTheme} className={styles.themeToggle} style={{ zIndex: 1100 }} aria-label="Toggle Theme">
-        {theme === 'dark' ? <span className={styles.themeIcon}>☀️</span> : <span className={styles.themeIcon}>🌙</span>}
+      <button
+        onClick={toggleTheme}
+        className={styles.themeToggle}
+        aria-label={theme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
+      >
+        {theme === 'dark' ? <Sun size={20} aria-hidden /> : <Moon size={20} aria-hidden />}
       </button>
 
       {/* Pulsante login + contatore oppure dati utente */}
