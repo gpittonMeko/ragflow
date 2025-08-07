@@ -374,7 +374,7 @@ const PresentationPage: React.FC = () => {
             Accedi con&nbsp;Google
           </button>
 
-          {/* --- pillola contatore --- */}
+         {/* --- pillola contatore --- */}
         {quota?.scope === 'anon' && (
           <div className={styles.freeCounter}>
             {quota.remainingTotal} / {quota.totalLimit}
@@ -390,7 +390,7 @@ const PresentationPage: React.FC = () => {
           </div>
         )}
         </>
-      ) : (
+        ) : (
         <>
           <div
             style={{
@@ -403,11 +403,24 @@ const PresentationPage: React.FC = () => {
             }}
           >
             {userData.email} ({userData.plan})
-            {/* pillquota se non premium */}
+            {/* pillquota se l’utente è FREE (non premium) */}
             {quota?.scope === 'user' && quota.plan !== 'premium' && (
-              
+              <span
+                style={{
+                  marginLeft: 8,
+                  background: 'linear-gradient(135deg,#4285F4,#34A853)',
+                  color: '#fff',
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  fontSize: 12,
+                }}
+                title={`Si azzera a mezzanotte (${quota.day})`}
+              >
+                {quota.remainingToday} / {quota.dailyLimit}
+              </span>
             )}
           </div>
+
 
           {/* upgrade */}
           {!showGoogleModal && userData?.plan !== 'premium' && (
