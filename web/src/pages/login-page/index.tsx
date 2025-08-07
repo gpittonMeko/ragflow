@@ -362,8 +362,9 @@ const PresentationPage: React.FC = () => {
 
       {/* Pulsante login + contatore oppure dati utente */}
       {!userData ? (
+        /* ───── Ramo ANONIMO ───── */
         <>
-          {/* --- Google button stile ufficiale --- */}
+          {/* Google login */}
           <button
             onClick={() => setShowGoogleModal(true)}
             className={styles.glassBtn}
@@ -374,36 +375,41 @@ const PresentationPage: React.FC = () => {
             Accedi con&nbsp;Google
           </button>
 
-         {/* ---------- PILLOLA CONTATORE ---------- */}
-          {/* 1️⃣  ANONIMO  */}
-          {!userData && (
-            <div className={styles.freeCounter}>
-              {quota?.scope === 'anon'
-                ? `${quota.remainingTotal} / ${quota.totalLimit}`
-                : `${Math.max(FREE_LIMIT - genCount, 0)} / ${FREE_LIMIT}` /* fallback */}
-            </div>
-          )}
+          {/* Contatore ANON (5 totali) */}
+          <div className={styles.freeCounter}>
+            {quota?.scope === 'anon'
+              ? `${quota.remainingTotal} / ${quota.totalLimit}`
+              : `${Math.max(FREE_LIMIT - genCount, 0)} / ${FREE_LIMIT}` /* fallback */}
+          </div>
+        </>
+      ) : (
+        /* ───── Ramo UTENTE LOGGATO ───── */
+        <>
+          {/* Email + piano */}
+          <div
+            style={{
+              position: 'fixed',
+              right: 80,
+              top: 26,
+              zIndex: 1100,
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+            }}
+          >
+            {userData.email} ({userData.plan})
+            {/* Contatore solo se è FREE */}
+            {quota?.scope === 'user' && quota.plan === 'free' && (
+              <span
+                className={styles.userCounter}
+                title={`Si azzera a mezzanotte (${quota.day})`}
+              >
+                {quota.remainingToday} / {quota.dailyLimit}
+              </span>
+            )}
+          </div>
 
-          {/* 2️⃣  USER FREE (dopo il login) */}
-          {userData && userData.plan === 'free' && (
-            <span
-              className={styles.userCounter}
-              title={
-                quota?.scope === 'user'
-                  ? `Si azzera a mezzanotte (${quota.day})`
-                  : undefined
-              }
-            >
-              {quota?.scope === 'user'
-                ? `${quota.remainingToday} / ${quota.dailyLimit}`
-                : `${Math.max(FREE_LIMIT - genCount, 0)} / ${FREE_LIMIT}` /* fallback */}
-            </span>
-          )}
-
-
-
-          {/* upgrade */}
-          {!showGoogleModal && userData?.plan !== 'premium' && (
+          {/* Upgrade se non premium */}
+          {userData.plan !== 'premium' && (
             <button
               onClick={() => handleCheckout('premium')}
               className={`${styles.glassBtn} ${styles.upgradeBtn}`}
@@ -415,39 +421,25 @@ const PresentationPage: React.FC = () => {
             </button>
           )}
 
-          {/* logout */}
+          {/* Logout */}
           <button
             onClick={logout}
             className={styles.glassBtn}
-            style={{ position: 'fixed', right: 20, top: 20, zIndex: 1100, background: 'rgba(255,80,80,.25)' }}
+            style={{
+              position: 'fixed',
+              right: 20,
+              top: 20,
+              zIndex: 1100,
+              background: 'rgba(255,80,80,.25)',
+            }}
             aria-label="Logout"
           >
             <LogOut size={18} className={styles.icon} />
             &nbsp;Esci
           </button>
-
-          {debugInfo && (
-            <pre
-              style={{
-                position: 'fixed',
-                bottom: 20,
-                left: 20,
-                maxWidth: '40vw',
-                maxHeight: '40vh',
-                overflow: 'auto',
-                padding: '1rem',
-                background: 'rgba(0,0,0,0.75)',
-                color: '#fff',
-                zIndex: 2000,
-                borderRadius: 8,
-                fontSize: 12,
-              }}
-            >
-              {debugInfo}
-            </pre>
-          )}
         </>
       )}
+
 
       {/* Google auth modal popup */}
       {showGoogleModal && (
