@@ -15,6 +15,9 @@
   --disclaimer-bg: rgba(100, 100, 100, 0.15);
   --toggle-bg: rgba(255, 255, 255, 0.18);
   --toggle-border: rgba(255, 255, 255, 0.35);
+  --modal-card-bg: #ffffff;
+  --modal-card-text: #000000;
+  --premium-btn-bg: linear-gradient(135deg,#ff8a05,#ff4f05);
 }
 
 [data-theme="light"] {
@@ -30,6 +33,9 @@
   --disclaimer-bg: rgba(200, 200, 200, 0.3);
   --toggle-bg: rgba(0, 0, 0, 0.05);
   --toggle-border: rgba(0, 0, 0, 0.15);
+  --modal-card-bg: #1e1e1e;
+  --modal-card-text: #f5f5f7;
+  --premium-btn-bg: linear-gradient(135deg,#ffb156,#ff7a3c);
 }
 
 html {
@@ -596,4 +602,48 @@ h1, h2, h3 {
 
 p, li, span {
   font-size: clamp(0.85rem, 1vw, 1rem);
+}
+
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1200;
+}
+
+.authModal {
+  background: var(--modal-card-bg);
+  color: var(--modal-card-text);
+  padding: 2rem 2.5rem 2.5rem;
+  border-radius: var(--border-radius);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+  width: 320px;
+  text-align: center;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.premiumInModal {
+  background: var(--premium-btn-bg);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  transition: transform .15s, box-shadow .15s;
+
+  &:hover   { transform: translateY(-2px); box-shadow:0 8px 22px rgba(0,0,0,.35); }
+  &:active  { transform: scale(.96);       box-shadow:0 4px 14px rgba(0,0,0,.35); }
 }

@@ -3,7 +3,7 @@ import styles from './index.less';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
 import api from '@/utils/api'; // <-- percorso reale del tuo file api
 import { loadStripe } from '@stripe/stripe-js';
-import { LogOut, LockKeyhole, Sun, Moon } from 'lucide-react';
+import { LogOut,LockKeyhole,BadgeDollarSign, Sun, Moon } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 const CLIENT_ID =
@@ -427,7 +427,7 @@ const PresentationPage: React.FC = () => {
           </div>
 
           {/* upgrade */}
-          {userData.plan !== 'premium' && (
+          {!showGoogleModal && userData?.plan !== 'premium' && (
             <button
               onClick={() => handleCheckout('premium')}
               className={`${styles.glassBtn} ${styles.upgradeBtn}`}
@@ -476,54 +476,36 @@ const PresentationPage: React.FC = () => {
       {/* Google auth modal popup */}
       {showGoogleModal && (
         <div
-          onClick={() => setShowGoogleModal(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(255, 255, 255, 0.85)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1200,
-          }}
+          className={styles.modalBackdrop}
           aria-modal="true"
           role="dialog"
           tabIndex={-1}
+          onClick={() => setShowGoogleModal(false)}
         >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              backgroundColor: '#fff',
-              padding: '2rem 2.5rem 2.5rem',
-              borderRadius: 'var(--border-radius)',
-              boxShadow: 'var(--shadow)',
-              width: '320px',
-              textAlign: 'center',
-              color: '#000',
-              userSelect: 'none',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1.25rem',
-            }}
-          >
-            <h2>Accedi con Google</h2>
+          <div className={styles.authModal} onClick={e => e.stopPropagation()}>
+            <h2 style={{margin:0}}>Accedi con Google</h2>
+
+            {/* bottone Google reso dallo script */}
             <div ref={googleButtonRef} />
-            <button onClick={() => setShowGoogleModal(false)} style={{ marginTop: '1rem' }} aria-label="Chiudi">
-              Annulla
-            </button>
 
             {/* upgrade diretto */}
             <button
               onClick={() => handleCheckout('premium')}
-              className={styles.upgradeBtn}
+              className={styles.premiumInModal}
               aria-label="Acquista Premium"
-              style={{ marginTop: 12 }}
             >
-              🔓 Passa direttamente a Premium
+              <BadgeDollarSign size={18} aria-hidden />
+              Passa direttamente a&nbsp;Premium
             </button>
+
+            <button onClick={() => setShowGoogleModal(false)}>Annulla</button>
           </div>
         </div>
       )}
+
+          
+           
+
 
       {/* LOGO SGAI */}
       <div
