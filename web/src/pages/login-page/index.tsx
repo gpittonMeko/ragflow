@@ -374,52 +374,32 @@ const PresentationPage: React.FC = () => {
             Accedi con&nbsp;Google
           </button>
 
-         {/* --- pillola contatore --- */}
-        {quota?.scope === 'anon' && (
-          <div className={styles.freeCounter}>
-            {quota.remainingTotal} / {quota.totalLimit}
-          </div>
-        )}
+         {/* ---------- PILLOLA CONTATORE ---------- */}
+          {/* 1️⃣  ANONIMO  */}
+          {!userData && (
+            <div className={styles.freeCounter}>
+              {quota?.scope === 'anon'
+                ? `${quota.remainingTotal} / ${quota.totalLimit}`
+                : `${Math.max(FREE_LIMIT - genCount, 0)} / ${FREE_LIMIT}` /* fallback */}
+            </div>
+          )}
 
-        {quota?.scope === 'user' && quota.plan === 'free' && (
-          <div
-            className={styles.userCounter}
-            title={`Si azzera a mezzanotte (${quota.day})`}
-          >
-            {quota.remainingToday} / {quota.dailyLimit}
-          </div>
-        )}
-        </>
-        ) : (
-        <>
-          <div
-            style={{
-              position: 'fixed',
-              right: 80,
-              top: 26,
-              zIndex: 1100,
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-            }}
-          >
-            {userData.email} ({userData.plan})
-            {/* pillquota se l’utente è FREE (non premium) */}
-            {quota?.scope === 'user' && quota.plan !== 'premium' && (
-              <span
-                style={{
-                  marginLeft: 8,
-                  background: 'linear-gradient(135deg,#4285F4,#34A853)',
-                  color: '#fff',
-                  padding: '2px 8px',
-                  borderRadius: 999,
-                  fontSize: 12,
-                }}
-                title={`Si azzera a mezzanotte (${quota.day})`}
-              >
-                {quota.remainingToday} / {quota.dailyLimit}
-              </span>
-            )}
-          </div>
+          {/* 2️⃣  USER FREE (dopo il login) */}
+          {userData && userData.plan === 'free' && (
+            <span
+              className={styles.userCounter}
+              title={
+                quota?.scope === 'user'
+                  ? `Si azzera a mezzanotte (${quota.day})`
+                  : undefined
+              }
+            >
+              {quota?.scope === 'user'
+                ? `${quota.remainingToday} / ${quota.dailyLimit}`
+                : `${Math.max(FREE_LIMIT - genCount, 0)} / ${FREE_LIMIT}` /* fallback */}
+            </span>
+          )}
+
 
 
           {/* upgrade */}
