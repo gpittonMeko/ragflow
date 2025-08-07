@@ -141,6 +141,7 @@ const PresentationPage: React.FC = () => {
 
       const res = await fetch(`${baseURL}/api/quota`, { headers });
       const data = await res.json();
+      console.log('[QUOTA]', data); 
       if (res.ok) {
         setQuota(data);
         // decidi overlay in base alla quota
