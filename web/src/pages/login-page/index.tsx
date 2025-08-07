@@ -375,20 +375,20 @@ const PresentationPage: React.FC = () => {
           </button>
 
           {/* --- pillola contatore --- */}
-          {quota?.scope === 'anon' && (
-            <div className={styles.freeCounter}>
-              {quota.remainingTotal} / {quota.totalLimit}
-            </div>
-          )}
+        {quota?.scope === 'anon' && (
+          <div className={styles.freeCounter}>
+            {quota.remainingTotal} / {quota.totalLimit}
+          </div>
+        )}
 
-          {quota?.scope === 'user' && quota.plan === 'free' && (
-            <div
-              className={styles.userCounter}
-              title={`Si azzera a mezzanotte (${quota.day})`}
-            >
-              {quota.remainingToday} / {quota.dailyLimit}
-            </div>
-          )}
+        {quota?.scope === 'user' && quota.plan === 'free' && (
+          <div
+            className={styles.userCounter}
+            title={`Si azzera a mezzanotte (${quota.day})`}
+          >
+            {quota.remainingToday} / {quota.dailyLimit}
+          </div>
+        )}
         </>
       ) : (
         <>
