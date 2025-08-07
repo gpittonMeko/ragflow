@@ -374,27 +374,21 @@ const PresentationPage: React.FC = () => {
             Accedi con&nbsp;Google
           </button>
 
-          {/* --- “pill” del contatore --- */}
-          <div
-            style={{
-              position: 'fixed',
-              right: 80,
-              top: 70,
-              zIndex: 1100,
-              background: 'linear-gradient(135deg,#4285F4,#34A853)',
-              color: '#fff',
-              padding: '3px 12px',
-              borderRadius: 999,
-              fontSize: 13,
-              fontWeight: 600,
-              boxShadow: '0 0 6px rgba(0,0,0,.25)',
-            }}
-          >
-            {/* Se quota anon nota: usa server; altrimenti fallback locale */}
-            {quota?.scope === 'anon'
-              ? `${Math.max((quota as QuotaAnon).remainingTotal, 0)} / ${(quota as QuotaAnon).totalLimit}`
-              : `${Math.max(FREE_LIMIT - genCount, 0)} / ${FREE_LIMIT}`}
-          </div>
+          {/* --- pillola contatore --- */}
+          {quota?.scope === 'anon' && (
+            <div className={styles.freeCounter}>
+              {quota.remainingTotal} / {quota.totalLimit}
+            </div>
+          )}
+
+          {quota?.scope === 'user' && quota.plan === 'free' && (
+            <div
+              className={styles.userCounter}
+              title={`Si azzera a mezzanotte (${quota.day})`}
+            >
+              {quota.remainingToday} / {quota.dailyLimit}
+            </div>
+          )}
         </>
       ) : (
         <>
