@@ -405,18 +405,7 @@ const PresentationPage: React.FC = () => {
             {userData.email} ({userData.plan})
             {/* pillquota se non premium */}
             {quota?.scope === 'user' && quota.plan !== 'premium' && (
-              <span
-                style={{
-                  marginLeft: 8,
-                  background: 'linear-gradient(135deg,#4285F4,#34A853)',
-                  color: '#fff',
-                  padding: '2px 8px',
-                  borderRadius: 999,
-                  fontSize: 12,
-                }}
-              >
-                {quota.remainingToday} / {quota.dailyLimit}
-              </span>
+              
             )}
           </div>
 
