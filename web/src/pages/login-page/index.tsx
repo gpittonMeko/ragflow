@@ -143,6 +143,13 @@ const overlayBody = !isUser
     : '';
 
 
+function postToIframe(msg: any) {
+  const iframe = document.querySelector<HTMLIFrameElement>('iframe[title="SGAI Chat Interface"]');
+  if (!iframe || !iframe.contentWindow) return;
+  let origin = '*';
+  try { origin = new URL(iframe.src).origin; } catch {}
+  iframe.contentWindow.postMessage(msg, origin);
+}
 
 
   // salva legacy contatore
@@ -154,26 +161,16 @@ const overlayBody = !isUser
 
   // comunica all’iframe se il limite è stato raggiunto
   useEffect(() => {
-    const iframe = document.querySelector<HTMLIFrameElement>(
-      'iframe[title="SGAI Chat Interface"]'
-    );
-    if (iframe && iframe.contentWindow) {
-      iframe.contentWindow.postMessage(
-        { type: 'limit-status', blocked: showLimitOverlay },
-        '*'
-      );
-    }
+    postToIframe({ type: 'limit-status', blocked: showLimitOverlay });
   }, [showLimitOverlay]);
 
-  // tema + sync a iframe
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('sgai-theme', theme);
-    const iframe = document.querySelector('iframe[title="SGAI Chat Interface"]');
-    if (iframe && iframe.contentWindow) {
-      iframe.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
-    }
+    postToIframe({ type: 'theme-change', theme });
   }, [theme]);
+
 
   useEffect(() => {
       if (showGoogleModal) setShowLimitOverlay(false);
@@ -189,7 +186,6 @@ const overlayBody = !isUser
   const [canExpandIframe, setCanExpandIframe] = useState(false);
   const expandTimeoutRef = useRef<any>(null);
 
-  // ======= FUNZIONI QUOTA =======
   async function refreshQuota() {
     try {
       const headers: Record<string, string> = {};
@@ -201,11 +197,16 @@ const overlayBody = !isUser
         credentials: 'include',
       });
       const data = await res.json();
-      console.log('[QUOTA]', data); 
+      console.log('[QUOTA]', data);
       if (res.ok) {
         setQuota(data);
-        // decidi overlay in base alla quota
-       
+
+        // decide subito se bloccare
+        let blocked = false;
+        if (data.scope === 'anon') blocked = data.remainingTotal <= 0;
+        else if (data.scope === 'user') blocked = data.plan !== 'premium' && data.remainingToday <= 0;
+
+        setShowLimitOverlay(blocked);
       } else {
         console.warn('quota error', data);
       }
@@ -213,6 +214,7 @@ const overlayBody = !isUser
       console.warn('quota network error', e);
     }
   }
+
 
     async function tickGeneration() {
     try {

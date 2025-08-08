@@ -42,7 +42,12 @@ def today_key() -> str:
 # APP & “DB” in RAM
 # ─────────────────────────────────────────────────────────────
 app = Flask(__name__)
-CORS(app)
+from urllib.parse import urlparse
+
+FRONT_ORIGIN = os.getenv("APP_URL", "http://localhost:5173")
+FRONT_ORIGIN = "{uri.scheme}://{uri.netloc}".format(uri=urlparse(FRONT_ORIGIN))
+CORS(app, supports_credentials=True, origins=[FRONT_ORIGIN])
+
 
 # users_db struttura:
 # - utenti loggati (chiave = email):
@@ -102,6 +107,19 @@ def google_auth():
         return jsonify(error="Email not present in token"), 400
 
     user = _get_user_logged(email)
+
+    # Porta sotto l'utente i consumi fatti da anonimo con quel client_id
+    client_id = (request.headers.get("X-Client-Id") or "").strip()
+    if client_id and user["plan"] != "premium":
+        anon_key = f"anon:{client_id}"
+        with db_lock:
+            anon = users_db.pop(anon_key, None)
+            if anon and anon.get("usedTotal", 0) > 0:
+                if user.get("day") != today_key():
+                    user["day"] = today_key()
+                    user["usedToday"] = 0
+                user["usedToday"] = min(FREE_DAILY_LIMIT, user["usedToday"] + anon["usedTotal"])
+
     limit = PREMIUM_LIMIT if user["plan"] == "premium" else FREE_DAILY_LIMIT
     remaining = max(limit - user["usedToday"], 0)
 
@@ -113,6 +131,7 @@ def google_auth():
         remainingToday=remaining,
         day=user["day"],
     )
+
 
 # ─────────────────────────────────────────────────────────────
 # QUOTA
