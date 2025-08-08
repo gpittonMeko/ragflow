@@ -108,6 +108,22 @@ const PresentationPage: React.FC = () => {
     (quota?.scope === 'user' ? (quota as QuotaUser).plan : (userData?.plan as 'free' | 'premium' | undefined)) ?? 'free';
   const isPremium = userPlan === 'premium';
 
+// derivati extra per l’overlay
+const isUser = quota?.scope === 'user' || !!userData;
+const isUserPremium = isUser && userPlan === 'premium';
+const isUserFree = isUser && !isUserPremium;
+
+const overlayTitle = !isUser
+  ? 'Hai esaurito le 5 generazioni gratuite'
+  : isUserFree
+    ? 'Hai esaurito le 5 generazioni giornaliere'
+    : 'Limite raggiunto';
+
+const overlayBody = !isUser
+  ? 'Per continuare effettua l’accesso con Google (5 al giorno).'
+  : isUserFree
+    ? 'Per continuare, passa a Premium.'
+    : '';
 
 
 
@@ -606,41 +622,34 @@ const PresentationPage: React.FC = () => {
               maxWidth: 420,
             }}
           >
-            <h2 style={{ marginTop: 0 }}>
-              {quota?.scope === 'anon'
-                ? 'Hai esaurito le 5 generazioni gratuite'
-                : quota?.scope === 'user' && (quota as QuotaUser).plan !== 'premium'
-                ? 'Hai esaurito le 5 generazioni giornaliere'
-                : 'Limite raggiunto'}
-            </h2>
-            <p>
-              {quota?.scope === 'anon'
-                ? 'Per continuare effettua l’accesso con Google (5 al giorno).'
-                : 'Per generazioni illimitate passa a Premium.'}
-            </p>
+            <h2 style={{ marginTop: 0 }}>{overlayTitle}</h2>
+            {overlayBody && <p>{overlayBody}</p>}
 
-            {!isLoggedIn ? (
+            {!isUser ? (
+              // Utente ANONIMO → mostra login Google
               <button
-                onClick={() => setShowGoogleModal(true)}
+                onClick={() => {
+                  setShowLimitOverlay(false);
+                  setShowGoogleModal(true);
+                }}
                 className={styles.glassBtn}
                 aria-label="Accedi con Google"
               >
                 <GoogleGIcon />
                 Accedi&nbsp;con&nbsp;Google
               </button>
-            ) : (
-              (quota as QuotaUser)?.plan !== 'premium' && (
-                <button
-                  onClick={() => handleCheckout('premium')}
-                  className={`${styles.glassBtn} ${styles.upgradeBtn}`}
-                  aria-label="Passa a Premium"
-                  style={{ marginTop: 12 }}
-                >
-                  <LockKeyhole size={18} className={styles.icon} />
-                  &nbsp;Passa&nbsp;a&nbsp;Premium
-                </button>
-              )
-            )}
+            ) : isUserFree ? (
+              // Utente FREE loggato → mostra upgrade
+              <button
+                onClick={() => handleCheckout('premium')}
+                className={`${styles.glassBtn} ${styles.upgradeBtn}`}
+                aria-label="Passa a Premium"
+                style={{ marginTop: 12 }}
+              >
+                <LockKeyhole size={18} className={styles.icon} />
+                &nbsp;Passa&nbsp;a&nbsp;Premium
+              </button>
+            ) : null}
           </div>
         </div>
       )}
