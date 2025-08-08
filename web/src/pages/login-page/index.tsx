@@ -144,13 +144,18 @@ const overlayBody = !isUser
 
 
 function postToIframe(msg: any) {
-  const iframe = document.querySelector<HTMLIFrameElement>('iframe[title="SGAI Chat Interface"]');
-  if (!iframe || !iframe.contentWindow) return;
-  let origin = '*';
-  try { origin = new URL(iframe.src).origin; } catch {}
-  iframe.contentWindow.postMessage(msg, origin);
+  try {
+    const iframe = document.querySelector<HTMLIFrameElement>('iframe[title="SGAI Chat Interface"]');
+    if (!iframe || !iframe.contentWindow) return;
+    const origin = new URL(iframe.src).origin;
+    iframe.contentWindow.postMessage(msg, origin);
+  } catch {
+    /* ignora: non ci affidiamo a questo per bloccare */
+  }
 }
 
+
+  useEffect(() => { void refreshQuota(); }, []);
 
   // salva legacy contatore
   useEffect(() => {
@@ -349,15 +354,33 @@ useEffect(() => {
       const data = await res.json();
 
       if (res.ok) {
-        // tieni solo info “anagrafiche” minime
         setUserData({ email: data.email, plan: data.plan });
         setShowGoogleModal(false);
         setGenCount(0);
         localStorage.removeItem('sgai-gen-count');
 
-        // prendi la verità dal server (usedToday, remainingToday, ecc.)
+        // 👇 Aggiorna SUBITO la quota in memoria
+        setQuota({
+          scope: 'user',
+          id: data.email,
+          plan: data.plan,
+          usedToday: data.usedToday,
+          dailyLimit: data.dailyLimit,
+          remainingToday: data.remainingToday,
+          day: data.day,
+        });
+
+        // 👇 Decidi subito se bloccare
+        const blockedNow = data.plan !== 'premium' && data.remainingToday <= 0;
+        setShowLimitOverlay(blockedNow);
+
+        // 👇 Notifica (se vuoi) l’iframe, ma NON affidarti a questo per bloccare
+        postToIframe({ type: 'limit-status', blocked: blockedNow });
+
+        // (facoltativo) poi allinei col server
         await refreshQuota();
       }
+
 
       else {
         alert(`Errore di autenticazione: ${data?.error || 'sconosciuto'}`);
