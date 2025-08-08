@@ -102,8 +102,12 @@ const PresentationPage: React.FC = () => {
   const clientIdRef = useRef<string>(getOrCreateClientId());
 
   // derivati UI
-  const isLoggedIn = quota?.scope === 'user';
-  const isPremium = quota?.scope === 'user' && (quota as QuotaUser).plan === 'premium';
+  // DOPO
+  const isLoggedIn = !!userData || quota?.scope === 'user';
+  const userPlan =
+    (quota?.scope === 'user' ? (quota as QuotaUser).plan : (userData?.plan as 'free' | 'premium' | undefined)) ?? 'free';
+  const isPremium = userPlan === 'premium';
+
 
 
 
@@ -293,35 +297,49 @@ const PresentationPage: React.FC = () => {
       const data = await res.json();
       if (res.ok) {
         setUserData(data);
+        // DOPO setUserData(data);
         setShowGoogleModal(false);
-        // reset legacy locale
         setGenCount(0);
         localStorage.removeItem('sgai-gen-count');
         setShowLimitOverlay(false);
-        await refreshQuota(); // <— sync quota loggato
-      } else {
-        alert(`Errore di autenticazione: ${data.error || 'sconosciuto'}`);
-        setGoogleToken(null);
-      }
-    } catch {
-      alert('Errore di rete durante autenticazione');
-      setGoogleToken(null);
-    }
+
+        // Optimistic: mostra subito stato "user/free" in UI
+        if (!quota || quota.scope !== 'user') {
+          setQuota({
+            scope: 'user',
+            id: data?.email ?? 'utente',
+            plan: (data?.plan === 'premium' ? 'premium' : 'free'),
+            usedToday: data?.usedGenerations ?? 0,
+            dailyLimit: 5,
+            remainingToday: Math.max(5 - (data?.usedGenerations ?? 0), 0),
+            day: new Date().toISOString().slice(0, 10),
+          } as QuotaUser);
+        }
+
+        // poi sincronizza dal server
+        await refreshQuota();
   };
 
   useEffect(() => {
     if (!showGoogleModal || !googleButtonRef.current || googleToken || !gsiReady) return;
+    // DOPO
     window.google.accounts.id.initialize({
       client_id: CLIENT_ID,
       callback: handleGoogleResponse,
       cancel_on_tap_outside: true,
+      // evitiamo FedCM auto-prompt: niente banner che genera il warning
+      // (se vuoi forzare ancora meno rumore: use_fedcm_for_prompt: true e NON chiamare prompt)
+      use_fedcm_for_prompt: true,
     });
+
     window.google.accounts.id.renderButton(googleButtonRef.current, {
       theme: theme === 'dark' ? 'filled_black' : 'outline',
       size: 'large',
       type: 'standard',
     });
-    window.google.accounts.id.prompt();
+
+    // niente prompt() automatico
+
   }, [showGoogleModal, gsiReady, googleToken, theme]);
 
   // all'avvio e quando cambia token → allinea quota
@@ -406,8 +424,7 @@ const PresentationPage: React.FC = () => {
           {/* Google login */}
           <button
             onClick={() => setShowGoogleModal(true)}
-            className={styles.glassBtn}
-            style={{ position: 'fixed', right: 80, top: 20, zIndex: 1100 }}
+            className={`${styles.glassBtn} ${styles.signInBtn}`}
             aria-label="Accedi con Google"
           >
             <GoogleGIcon />
@@ -513,23 +530,12 @@ const PresentationPage: React.FC = () => {
 
 
       {/* LOGO SGAI */}
-      <div
-        className={styles.heroSection}
-        style={{
-          paddingTop: 0,
-          marginBottom: '-1rem',
-          marginTop: 0,
-          paddingBottom: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-        }}
-      >
-        <div style={{ marginBottom: '2rem', width: '100%', maxWidth: '320px' }}>
-          <SvgLogoInteractive flipped />
+        <div className={styles.heroSection}>
+          <div className={styles.logoBox}>
+            <SvgLogoInteractive flipped />
+          </div>
         </div>
-      </div>
+
 
       {/* CHAT SOTTO IL LOGO */}
       <div className={styles.iframeSection}>
