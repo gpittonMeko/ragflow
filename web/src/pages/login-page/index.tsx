@@ -286,6 +286,7 @@ const PresentationPage: React.FC = () => {
   const handleGoogleResponse = async (response: any) => {
     if (!response.credential) return;
     setGoogleToken(response.credential);
+
     try {
       const res = await fetch(`${baseURL}/api/auth/google`, {
         method: 'POST',
@@ -295,15 +296,15 @@ const PresentationPage: React.FC = () => {
       });
 
       const data = await res.json();
+
       if (res.ok) {
         setUserData(data);
-        // DOPO setUserData(data);
         setShowGoogleModal(false);
         setGenCount(0);
         localStorage.removeItem('sgai-gen-count');
         setShowLimitOverlay(false);
 
-        // Optimistic: mostra subito stato "user/free" in UI
+        // Optimistic UI
         if (!quota || quota.scope !== 'user') {
           setQuota({
             scope: 'user',
@@ -316,9 +317,17 @@ const PresentationPage: React.FC = () => {
           } as QuotaUser);
         }
 
-        // poi sincronizza dal server
         await refreshQuota();
+      } else {
+        alert(`Errore di autenticazione: ${data?.error || 'sconosciuto'}`);
+        setGoogleToken(null);
+      }
+    } catch {
+      alert('Errore di rete durante autenticazione');
+      setGoogleToken(null);
+    }
   };
+
 
   useEffect(() => {
     if (!showGoogleModal || !googleButtonRef.current || googleToken || !gsiReady) return;
