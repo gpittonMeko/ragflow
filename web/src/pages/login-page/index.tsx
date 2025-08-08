@@ -448,59 +448,66 @@ const PresentationPage: React.FC = () => {
           </div>
         </>
       ) : (
-        /* ───── Ramo UTENTE LOGGATO ───── */
-        <>
-          {/* Email + piano */}
-          <div
-            style={{
-              position: 'fixed',
-              right: 80,
-              top: 26,
-              zIndex: 1100,
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-            }}
-          >
-            {(quota as QuotaUser)?.id} ({(quota as QuotaUser)?.plan})
-            {/* Contatore solo se è FREE */}
-            {quota?.scope === 'user' && (quota as QuotaUser).plan === 'free' && (
-              <span className={styles.userCounter} title={`Si azzera a mezzanotte (${quota.day})`}>
-                {quota.remainingToday} / {quota.dailyLimit}
-              </span>
+        {/* ───── Ramo UTENTE LOGGATO ───── */}
+          <>
+            {/* Top-right actions raggruppate e allineate */}
+            <div className={styles.topActions}>
+              <div className={styles.userChip}>
+                {/* mostra email da quota se è user, altrimenti da userData */}
+                {(quota?.scope === 'user' ? (quota as QuotaUser).id : userData?.email) ?? 'utente'}
+                &nbsp;(<strong>{userPlan}</strong>)
+                {/* Contatore se FREE */}
+                {userPlan === 'free' && quota?.scope === 'user' && (
+                  <span
+                    className={styles.userCounter}
+                    title={`Si azzera a mezzanotte (${(quota as QuotaUser).day})`}
+                  >
+                    {(quota as QuotaUser).remainingToday} / {(quota as QuotaUser).dailyLimit}
+                  </span>
+                )}
+              </div>
+
+              {/* Upgrade se non premium */}
+              {!isPremium && (
+                <button
+                  onClick={() => handleCheckout('premium')}
+                  className={`${styles.glassBtn} ${styles.upgradeBtn}`}
+                  aria-label="Passa a Premium"
+                >
+                  <LockKeyhole size={18} className={styles.icon} />
+                  &nbsp;Passa&nbsp;a&nbsp;Premium
+                </button>
+              )}
+
+              {/* Logout */}
+              <button
+                onClick={logout}
+                className={`${styles.glassBtn} ${styles.logoutBtn}`}
+                aria-label="Logout"
+              >
+                <LogOut size={18} className={styles.icon} />
+                &nbsp;Esci
+              </button>
+            </div>
+
+            {/* Banner FREE sotto al logo */}
+            {userPlan === 'free' && (
+              <div className={styles.freeBanner}>
+                Benvenuto in <strong>SGAI Free</strong> —&nbsp;
+                <strong>
+                  {quota?.scope === 'user'
+                    ? (quota as QuotaUser).remainingToday
+                    : Math.max(FREE_LIMIT - genCount, 0)}
+                  /{quota?.scope === 'user' ? (quota as QuotaUser).dailyLimit : FREE_LIMIT}
+                </strong>
+                &nbsp;oggi • Reset a mezzanotte
+                {quota?.scope === 'user' && (quota as QuotaUser).day ? (
+                  <> ({(quota as QuotaUser).day})</>
+                ) : null}
+              </div>
             )}
+          </>
 
-          </div>
-
-          {/* Upgrade se non premium */}
-          {!isPremium && (
-            <button
-              onClick={() => handleCheckout('premium')}
-              className={`${styles.glassBtn} ${styles.upgradeBtn}`}
-              style={{ position: 'fixed', right: 80, top: 110, zIndex: 1100 }}
-              aria-label="Passa a Premium"
-            >
-              <LockKeyhole size={18} className={styles.icon} />
-              &nbsp;Passa&nbsp;a&nbsp;Premium
-            </button>
-          )}
-
-          {/* Logout */}
-          <button
-            onClick={logout}
-            className={styles.glassBtn}
-            style={{
-              position: 'fixed',
-              right: 20,
-              top: 20,
-              zIndex: 1100,
-              background: 'rgba(255,80,80,.25)',
-            }}
-            aria-label="Logout"
-          >
-            <LogOut size={18} className={styles.icon} />
-            &nbsp;Esci
-          </button>
-        </>
       )}
 
 

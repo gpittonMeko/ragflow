@@ -479,17 +479,45 @@ body {
   background-color: #d9363e;
 }
 
+/* Bottoni allineati senza inline style */
 .upgradeBtn {
-  position: fixed;
-  right: 80px;
-  top: 110px;
-  z-index: 1100;
   border: none;
   cursor: pointer;
-  padding: 0;
-  background: transparent;
-  font: inherit;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
+
+.logoutBtn {
+  background: rgba(255,80,80,.25);
+}
+
+
+/* Banner FREE sotto al logo */
+.freeBanner {
+  margin: 8px auto 0;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  color: var(--text-primary);
+  padding: 10px 14px;
+  border-radius: 12px;
+  width: fit-content;
+  box-shadow: 0 8px 22px rgba(0,0,0,.25);
+  font-size: 0.95rem;
+}
+
+/* Mobile: non far sovrapporre nulla al logo */
+@media (max-width: 768px) {
+  .topActions {
+    position: static;
+    margin: 8px 0 0;
+    justify-items: center;
+  }
+}
+
 
 .upgradeGlow {
   position: absolute;
@@ -695,4 +723,27 @@ p, li, span {
 
   &:hover   { transform: translateY(-2px); box-shadow:0 8px 22px rgba(0,0,0,.35); }
   &:active  { transform: scale(.96);       box-shadow:0 4px 14px rgba(0,0,0,.35); }
+}
+
+
+/* Contenitore azioni in alto a destra */
+.topActions {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  display: grid;
+  grid-auto-rows: max-content;
+  gap: 10px;
+  justify-items: end;
+}
+
+/* Chip con email + piano */
+.userChip {
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(255 255 255 / 0.08);
+  padding: 6px 12px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
