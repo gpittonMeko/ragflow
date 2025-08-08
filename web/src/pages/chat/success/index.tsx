@@ -1,30 +1,29 @@
+// SuccessPage.tsx
 import React, { useEffect } from 'react';
 
-const baseURL =
-  (process.env.UMI_APP_API_BASE as string | undefined) ||
-  `${window.location.origin}/oauth`;
+// usa SEMPRE il dominio “ufficiale” dell’API
+const API_ORIGIN = 'https://sgailegal.com';
+const baseURL = `${API_ORIGIN}/oauth`;
 
 const SuccessPage: React.FC = () => {
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sid = params.get('session_id');
+    const sid = new URLSearchParams(window.location.search).get('session_id') || '';
 
     (async () => {
       try {
-        const res = await fetch(`${baseURL}/api/stripe/verify-session?session_id=${encodeURIComponent(sid ?? '')}`, {
-          credentials: 'include',
-        });
-        const data = await res.json().catch(() => ({}));
-        console.log('[verify-session]', res.status, data);
+        const res = await fetch(
+          `${baseURL}/api/stripe/verify-session?session_id=${encodeURIComponent(sid)}`,
+          { credentials: 'include' }
+        );
+        const json = await res.json().catch(() => ({}));
+        if (json?.email) localStorage.setItem('sgai-upgraded-email', json.email);
 
-        if (data?.ok) {
-          localStorage.setItem('sgai-upgraded', '1');
-          if (data.email) localStorage.setItem('sgai-upgraded-email', data.email);
-        }
-      } catch (e) {
-        console.warn('[verify-session] errore', e);
-      } finally {
-        window.location.replace('/');
+        // flag letta poi dalla home
+        localStorage.setItem('sgai-upgraded', '1');
+      } catch {}
+      finally {
+        // TORNA SEMPRE al dominio, NON all’IP
+        window.location.replace('https://sgailegal.com/');
       }
     })();
   }, []);
