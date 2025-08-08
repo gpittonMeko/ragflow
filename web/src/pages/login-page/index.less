@@ -756,11 +756,9 @@ p, li, span {
 }
 
 .chatFrozen {
-  filter: blur(2px) saturate(90%);
-  pointer-events: none;  /* niente click sulla chat sotto */
-  user-select: none;
+  pointer-events: none;       /* blocca click nella chat */
+  filter: grayscale(.6) blur(1px) opacity(.85);
 }
-
 .chatOverlay {
   position: absolute;
   inset: 0;
@@ -768,11 +766,18 @@ p, li, span {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  /* “liquid” + blur */
-  backdrop-filter: blur(6px) saturate(120%);
-  -webkit-backdrop-filter: blur(6px) saturate(120%);
-  overflow: hidden;
+  backdrop-filter: blur(4px);
+  background: rgba(0,0,0,.35);
+  pointer-events: auto;
+}
+
+.chatOverlayCard {
+  background: rgba(30,30,30,.92);
+  color: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 420px;
+  text-align: center;
 }
 
 .chatOverlay::before {
