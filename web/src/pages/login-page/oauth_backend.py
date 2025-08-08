@@ -121,6 +121,15 @@ def google_auth():
 def quota():
     auth_header = request.headers.get("Authorization", "")
     client_id = (request.headers.get("X-Client-Id") or "").strip()
+    if client_id:
+        anon_key = f"anon:{client_id}"
+        with db_lock:
+            anon = users_db.pop(anon_key, None)  # rimuovi bucket anonimo
+            if anon and anon.get("usedTotal", 0) > 0 and user["plan"] != "premium":
+                # somma i consumi anonimi al conteggio di oggi (cappati al daily)
+                user["day"] = today_key()
+                user["usedToday"] = min(FREE_DAILY_LIMIT, user["usedToday"] + anon["usedTotal"])
+
 
     if auth_header.startswith("Bearer "):
         token = auth_header.split(" ", 1)[1]
