@@ -44,9 +44,13 @@ def today_key() -> str:
 app = Flask(__name__)
 from urllib.parse import urlparse
 
-FRONT_ORIGIN = os.getenv("APP_URL", "http://localhost:5173")
-FRONT_ORIGIN = "{uri.scheme}://{uri.netloc}".format(uri=urlparse(FRONT_ORIGIN))
-CORS(app, supports_credentials=True, origins=[FRONT_ORIGIN])
+FRONT_ORIGIN = "{uri.scheme}://{uri.netloc}".format(uri=urlparse(os.getenv("APP_URL", "http://localhost:5173")))
+CORS(app, supports_credentials=True, origins=[
+    FRONT_ORIGIN,
+    "https://16.170.85.194",
+    "https://sgailegal.com",
+])
+
 
 
 # users_db struttura:
