@@ -11,18 +11,19 @@ const SuccessPage: React.FC = () => {
 
     (async () => {
       try {
-        // 1) Dì al backend di verificare la sessione e promuovere l’utente
-        // Sostituisci il path qui sotto con quello che hai (se diverso):
-        const res = await fetch(`${baseURL}/api/stripe/verify-session?session_id=${sid ?? ''}`, {
+        const res = await fetch(`${baseURL}/api/stripe/verify-session?session_id=${encodeURIComponent(sid ?? '')}`, {
           credentials: 'include',
         });
+        const data = await res.json().catch(() => ({}));
+        console.log('[verify-session]', res.status, data);
 
-        // 2) Metti un flag per forzare il refresh quota quando torniamo
-        localStorage.setItem('sgai-upgraded', '1');
+        if (data?.ok) {
+          localStorage.setItem('sgai-upgraded', '1');
+          if (data.email) localStorage.setItem('sgai-upgraded-email', data.email);
+        }
       } catch (e) {
-        // non bloccare il redirect anche se fallisce qui
+        console.warn('[verify-session] errore', e);
       } finally {
-        // 3) Torna alla pagina principale
         window.location.replace('/');
       }
     })();

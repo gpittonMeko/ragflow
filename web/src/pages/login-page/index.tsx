@@ -417,6 +417,23 @@ useEffect(() => {
     void refreshQuota();
   }, [googleToken]);
 
+  useEffect(() => {
+  const upgraded = localStorage.getItem('sgai-upgraded') === '1';
+  if (!upgraded) return;
+
+  localStorage.removeItem('sgai-upgraded');
+
+  // Se l’utente è già loggato → aggiorna quota subito
+  if (googleToken) {
+    void refreshQuota(googleToken); // usa la versione con forceToken che hai già
+  } else {
+    // se ha pagato da anonimo, chiedi il login per collegare l’email premium
+    const email = localStorage.getItem('sgai-upgraded-email') || '';
+    console.log('[upgrade] pagamento ok per', email, '— serve login per associarlo');
+    setShowGoogleModal(true);
+  }
+}, [googleToken]);
+
   const toggleTheme = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
 
   const logout = () => {
@@ -432,6 +449,11 @@ useEffect(() => {
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   const handleCheckout = async (plan: 'premium' = 'premium') => {
+  if (!userData?.email) {
+    alert('Accedi con Google prima di acquistare Premium.');
+    setShowGoogleModal(true);
+    return;
+  }
     setDebugInfo(null);
     try {
       const stripe = await stripePromise;
@@ -527,7 +549,7 @@ useEffect(() => {
               )}
             </div>
 
-            {!isPremium && (
+            {isLoggedIn && (
               <button
                 onClick={() => handleCheckout('premium')}
                 className={`${styles.glassBtn} ${styles.upgradeBtn}`}
