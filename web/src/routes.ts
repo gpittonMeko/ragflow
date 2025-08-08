@@ -152,10 +152,11 @@ const routes = [
   },
 
   {
-    path: '/success',
-    component: '@/pages/success',
-    layout: false,
+  path: '/success',
+  component: '@/pages/success',
+  layout: false,
   },
+
   {
     path: '/*',
     component: '@/pages/404',
