@@ -31,7 +31,9 @@ FREE_DAILY_LIMIT = 5          # ← User free: limite GIORNALIERO
 PREMIUM_LIMIT = 1_000_000_000 # ← illimitato di fatto
 
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-APP_URL = os.getenv("APP_URL", "http://localhost:5173")
+APP_URL = os.getenv("APP_URL", "https://sgailegal.com")  # <— NON mettere l’IP
+
+
 SUCCESS_URL = f"{APP_URL}/success?session_id={{CHECKOUT_SESSION_ID}}"
 CANCEL_URL = f"{APP_URL}/"
 
@@ -43,13 +45,9 @@ def today_key() -> str:
 # ─────────────────────────────────────────────────────────────
 app = Flask(__name__)
 from urllib.parse import urlparse
-
-FRONT_ORIGIN = "{uri.scheme}://{uri.netloc}".format(uri=urlparse(os.getenv("APP_URL", "http://localhost:5173")))
-CORS(app, supports_credentials=True, origins=[
-    FRONT_ORIGIN,
-    "https://16.170.85.194",
-    "https://sgailegal.com",
-])
+FRONT_ORIGIN = os.getenv("APP_URL", "https://sgailegal.com")
+FRONT_ORIGIN = "{uri.scheme}://{uri.netloc}".format(uri=urlparse(FRONT_ORIGIN))
+CORS(app, supports_credentials=True, origins=[FRONT_ORIGIN])
 
 
 
