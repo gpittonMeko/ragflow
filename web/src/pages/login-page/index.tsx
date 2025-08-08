@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import styles from './index.less';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
-import api from '@/utils/api'; // <-- percorso reale del tuo file api
 import { loadStripe } from '@stripe/stripe-js';
 import { LogOut,LockKeyhole,BadgeDollarSign, Sun, Moon } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,10 +14,12 @@ const FREE_LIMIT = 5; // fallback visuale
 const STRIPE_PK = 'pk_test_51RkiUbPZKD2mbdh6v8NVHrLCw5s3HCuP5CfMHn6xBJycK7YHo7L6IiwdZJPMhmuFc9nhHT6A9jbPmecxvFL7rWol00YV1QplUz';
 const stripePromise = loadStripe(STRIPE_PK);
 
+
+
 // --- base URL backend ---
 const baseURL =
-  (process.env.UMI_APP_API_BASE as string | undefined) ??
-  window.location.origin;
+  (process.env.UMI_APP_API_BASE as string | undefined) ||
+  `${window.location.origin}/oauth`;
 
 /* --- mini-component per la “G” trasparente --- */
 const GoogleGIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
@@ -94,16 +95,25 @@ const PresentationPage: React.FC = () => {
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [showLimitOverlay, setShowLimitOverlay] = useState(false);
 
+
+
   // quota server-side
   const [quota, setQuota] = useState<QuotaAnon | QuotaUser | null>(null);
   const clientIdRef = useRef<string>(getOrCreateClientId());
 
+  // derivati UI
+  const isLoggedIn = quota?.scope === 'user';
+  const isPremium = quota?.scope === 'user' && (quota as QuotaUser).plan === 'premium';
+
+
+
+
   // salva legacy contatore
   useEffect(() => {
     localStorage.setItem('sgai-gen-count', String(genCount));
-    // overlay legacy (fallback) — resta, ma ora la logica principale usa quota
-    if (!userData && genCount >= FREE_LIMIT) setShowLimitOverlay(true);
-  }, [genCount, userData]);
+    if (!isLoggedIn && genCount >= FREE_LIMIT) setShowLimitOverlay(true);
+  }, [genCount, isLoggedIn]);
+
 
   // comunica all’iframe se il limite è stato raggiunto
   useEffect(() => {
@@ -139,7 +149,10 @@ const PresentationPage: React.FC = () => {
       if (googleToken) headers['Authorization'] = `Bearer ${googleToken}`;
       else headers['X-Client-Id'] = clientIdRef.current;
 
-      const res = await fetch(`${baseURL}/api/quota`, { headers });
+      const res = await fetch(`${baseURL}/api/quota`, {
+        headers,
+        credentials: 'include',
+      });
       const data = await res.json();
       console.log('[QUOTA]', data); 
       if (res.ok) {
@@ -165,7 +178,11 @@ const PresentationPage: React.FC = () => {
       if (googleToken) headers['Authorization'] = `Bearer ${googleToken}`;
       else headers['X-Client-Id'] = clientIdRef.current;
 
-      const res = await fetch(`${baseURL}/api/generate`, { method: 'POST', headers });
+      const res = await fetch(`${baseURL}/api/generate`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+      });
       const data = await res.json();
       if (!res.ok) {
         await refreshQuota();
@@ -245,15 +262,34 @@ const PresentationPage: React.FC = () => {
     document.body.appendChild(script);
   }, []);
 
+  useEffect(() => {
+  const onFocus = () => { void refreshQuota(); };
+  window.addEventListener('focus', onFocus);
+  return () => window.removeEventListener('focus', onFocus);
+  }, []);
+
+  useEffect(() => {
+  console.log('[API_BASE]', baseURL, {
+    quotaURL: `${baseURL}/api/quota`,
+    genURL: `${baseURL}/api/generate`,
+    authURL: `${baseURL}/api/auth/google`,
+    stripeURL: `${baseURL}/api/stripe/create-checkout-session`,
+  });
+}, []);
+
+
+
   const handleGoogleResponse = async (response: any) => {
     if (!response.credential) return;
     setGoogleToken(response.credential);
     try {
-      const res = await fetch(api.googleAuth, {
+      const res = await fetch(`${baseURL}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ token: response.credential }),
       });
+
       const data = await res.json();
       if (res.ok) {
         setUserData(data);
@@ -316,8 +352,10 @@ const PresentationPage: React.FC = () => {
       const res = await fetch(`${baseURL}/api/stripe/create-checkout-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email: userData?.email ?? null, selected_plan: plan }),
       });
+
 
       console.log('[Stripe] status', res.status, res.statusText);
       console.log('[Stripe] content-type', res.headers.get('content-type'));
@@ -362,7 +400,7 @@ const PresentationPage: React.FC = () => {
       </button>
 
       {/* Pulsante login + contatore oppure dati utente */}
-      {!userData ? (
+      {!isLoggedIn ? (
         /* ───── Ramo ANONIMO ───── */
         <>
           {/* Google login */}
@@ -397,20 +435,18 @@ const PresentationPage: React.FC = () => {
               color: 'var(--text-primary)',
             }}
           >
-            {userData.email} ({userData.plan})
+            {(quota as QuotaUser)?.id} ({(quota as QuotaUser)?.plan})
             {/* Contatore solo se è FREE */}
-            {quota?.scope === 'user' && quota.plan === 'free' && (
-              <span
-                className={styles.userCounter}
-                title={`Si azzera a mezzanotte (${quota.day})`}
-              >
+            {quota?.scope === 'user' && (quota as QuotaUser).plan === 'free' && (
+              <span className={styles.userCounter} title={`Si azzera a mezzanotte (${quota.day})`}>
                 {quota.remainingToday} / {quota.dailyLimit}
               </span>
             )}
+
           </div>
 
           {/* Upgrade se non premium */}
-          {userData.plan !== 'premium' && (
+          {!isPremium && (
             <button
               onClick={() => handleCheckout('premium')}
               className={`${styles.glassBtn} ${styles.upgradeBtn}`}
@@ -551,7 +587,7 @@ const PresentationPage: React.FC = () => {
                 : 'Per generazioni illimitate passa a Premium.'}
             </p>
 
-            {!userData ? (
+            {!isLoggedIn ? (
               <button
                 onClick={() => setShowGoogleModal(true)}
                 className={styles.glassBtn}
