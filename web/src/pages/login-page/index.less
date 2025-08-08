@@ -574,7 +574,7 @@ body {
 }
 
 /* “upgradeBtn” esistente → eredita il look glass */
-.upgradeBtn { composes: glassBtn; position:fixed; right:80px; top:110px; }
+.upgradeBtn { composes: glassBtn; }
 
 /* Google modal centrato meglio */
 .googleModal {
@@ -727,16 +727,19 @@ p, li, span {
 
 
 /* Contenitore azioni in alto a destra */
-.topActions {
+.topActions{
   position: fixed;
   top: 20px;
-  right: 20px;
+  right: 76px;             /* 20 (margine) + 44 (toggle) + 12 (spazio) */
   z-index: 1100;
-  display: grid;
-  grid-auto-rows: max-content;
+  display: flex;
+  flex-direction: column;  /* colonna pulita */
+  align-items: flex-end;
   gap: 10px;
-  justify-items: end;
 }
+
+/* assicurati che i bottoni dentro non siano fixed */
+.topActions .glassBtn{ position: static; }
 
 /* Chip con email + piano */
 .userChip {
