@@ -142,6 +142,16 @@ const PresentationPage: React.FC = () => {
     }
   }, [theme]);
 
+  useEffect(() => {
+      if (showGoogleModal) setShowLimitOverlay(false);
+    }, [showGoogleModal]);
+
+    useEffect(() => {
+      document.body.style.overflow = (showGoogleModal || showLimitOverlay) ? 'hidden' : '';
+      return () => { document.body.style.overflow = ''; };
+    }, [showGoogleModal, showLimitOverlay]);
+
+
   // espansione iframe
   const [canExpandIframe, setCanExpandIframe] = useState(false);
   const expandTimeoutRef = useRef<any>(null);
@@ -431,13 +441,17 @@ const PresentationPage: React.FC = () => {
         <>
           {/* ───── Ramo ANONIMO ───── */}
           <button
-            onClick={() => setShowGoogleModal(true)}
-            className={`${styles.glassBtn} ${styles.signInBtn}`}
+            onClick={() => {
+              setShowLimitOverlay(false);   // <-- chiudi l’overlay
+              setShowGoogleModal(true);     // <-- apri la modale Google
+            }}
+            className={styles.glassBtn}
             aria-label="Accedi con Google"
           >
             <GoogleGIcon />
-            Accedi con&nbsp;Google
+            Accedi&nbsp;con&nbsp;Google
           </button>
+
 
           <div className={styles.freeCounter}>
             {quota?.scope === 'anon'
