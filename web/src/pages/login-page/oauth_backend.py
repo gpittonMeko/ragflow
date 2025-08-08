@@ -230,6 +230,9 @@ def generate():
 # ─────────────────────────────────────────────────────────────
 # STRIPE – Create Checkout Session
 # ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# STRIPE – Create Checkout Session
+# ─────────────────────────────────────────────────────────────
 @app.post("/api/stripe/create-checkout-session")
 def create_checkout_session():
     if not stripe.api_key:
@@ -248,8 +251,8 @@ def create_checkout_session():
         session = stripe.checkout.Session.create(
             mode="subscription",
             payment_method_types=["card"],
-            success_url=SUCCESS_URL,
-            cancel_url=CANCEL_URL,
+            success_url=SUCCESS_URL,   # es: https://TUO_HOST/success?session_id={CHECKOUT_SESSION_ID}
+            cancel_url=CANCEL_URL,     # es: https://TUO_HOST/
             line_items=[{"price": price_id, "quantity": 1}],
             metadata={"selected_plan": "premium", **({"email": email} if email else {})},
             customer_email=email or None,
@@ -259,6 +262,48 @@ def create_checkout_session():
     except Exception as exc:
         print("\033[91mStripe error:\033[0m", exc)
         return jsonify(error="Stripe exception", debug=str(exc)), 500
+
+
+# ─────────────────────────────────────────────────────────────
+# STRIPE – Verify Session (chiamata dalla pagina /success)
+# ─────────────────────────────────────────────────────────────
+@app.get("/api/stripe/verify-session")
+def stripe_verify_session():
+    if not stripe.api_key:
+        return jsonify(error="Stripe secret key missing"), 500
+
+    sid = request.args.get("session_id")
+    if not sid:
+        return jsonify(error="Missing session_id"), 400
+
+    try:
+        s = stripe.checkout.Session.retrieve(sid, expand=["customer_details"])
+        if s.get("payment_status") != "paid":
+            return jsonify(ok=False, status=s.get("payment_status", "")), 200
+
+        email = (
+            s.get("customer_email")
+            or (s.get("customer_details") or {}).get("email")
+            or (s.get("metadata") or {}).get("email")
+        )
+
+        if email:
+            with db_lock:
+                u = users_db.setdefault(email, {
+                    "plan": "free",
+                    "usedToday": 0,
+                    "day": today_key(),
+                    "email": email,
+                })
+                u["plan"] = "premium"
+                u["usedToday"] = 0
+                u["day"] = today_key()
+
+        return jsonify(ok=True, email=email, plan=users_db.get(email, {}).get("plan", "free"))
+    except Exception as exc:
+        return jsonify(error=str(exc)), 500
+
+
 
 # ─────────────────────────────────────────────────────────────
 # STRIPE – Webhook
