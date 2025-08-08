@@ -214,7 +214,7 @@ const overlayBody = !isUser
     }
   }
 
-  async function tickGeneration() {
+    async function tickGeneration() {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (googleToken) headers['Authorization'] = `Bearer ${googleToken}`;
@@ -226,12 +226,14 @@ const overlayBody = !isUser
         credentials: 'include',
       });
       const data = await res.json();
+
       if (!res.ok) {
         await refreshQuota();
+        setShowLimitOverlay(true);          // <<— QUESTA RIGA MANCAVA
         alert(data?.error || 'Limite raggiunto');
         return false;
       }
-      // ok → sync quota
+
       await refreshQuota();
       return true;
     } catch (e) {
@@ -239,6 +241,7 @@ const overlayBody = !isUser
       return false;
     }
   }
+
 
   // ======= LISTENER postMessage (altezza + fine generazione) =======
   useEffect(() => {
@@ -331,11 +334,15 @@ useEffect(() => {
 
     try {
       const res = await fetch(`${baseURL}/api/auth/google`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ token: response.credential }),
-      });
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Id': clientIdRef.current,   // <<— aggiungi
+      },
+      credentials: 'include',
+      body: JSON.stringify({ token: response.credential }),
+    });
+
 
       const data = await res.json();
 
