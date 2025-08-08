@@ -108,10 +108,27 @@ const PresentationPage: React.FC = () => {
     (quota?.scope === 'user' ? (quota as QuotaUser).plan : (userData?.plan as 'free' | 'premium' | undefined)) ?? 'free';
   const isPremium = userPlan === 'premium';
 
+
+  
+
 // derivati extra per l’overlay
 const isUser = quota?.scope === 'user' || !!userData;
-const isUserPremium = isUser && userPlan === 'premium';
+
+
+const isAnon = quota?.scope === 'anon';
+const isUserScope = quota?.scope === 'user';
+const isUserPremium = isUserScope && (quota as QuotaUser)?.plan === 'premium';
+
+
 const isUserFree = isUser && !isUserPremium;
+
+const isBlocked =
+  isAnon
+    ? (quota as QuotaAnon)?.remainingTotal <= 0
+    : isUserScope
+      ? !isUserPremium && (quota as QuotaUser)?.remainingToday <= 0
+      : (!isLoggedIn && genCount >= FREE_LIMIT); // fallback prima che quota arrivi
+
 
 const overlayTitle = !isUser
   ? 'Hai esaurito le 5 generazioni gratuite'
@@ -188,12 +205,7 @@ const overlayBody = !isUser
       if (res.ok) {
         setQuota(data);
         // decidi overlay in base alla quota
-        if (data.scope === 'anon') {
-          setShowLimitOverlay((data as QuotaAnon).remainingTotal <= 0);
-        } else if (data.scope === 'user') {
-          const q = data as QuotaUser;
-          setShowLimitOverlay(q.plan !== 'premium' && q.remainingToday <= 0);
-        }
+       
       } else {
         console.warn('quota error', data);
       }
@@ -308,6 +320,10 @@ const overlayBody = !isUser
 }, []);
 
 
+useEffect(() => {
+  setShowLimitOverlay(!!isBlocked);
+}, [isBlocked]);
+
 
   const handleGoogleResponse = async (response: any) => {
     if (!response.credential) return;
@@ -324,27 +340,17 @@ const overlayBody = !isUser
       const data = await res.json();
 
       if (res.ok) {
-        setUserData(data);
+        // tieni solo info “anagrafiche” minime
+        setUserData({ email: data.email, plan: data.plan });
         setShowGoogleModal(false);
         setGenCount(0);
         localStorage.removeItem('sgai-gen-count');
-        setShowLimitOverlay(false);
 
-        // Optimistic UI
-        if (!quota || quota.scope !== 'user') {
-          setQuota({
-            scope: 'user',
-            id: data?.email ?? 'utente',
-            plan: (data?.plan === 'premium' ? 'premium' : 'free'),
-            usedToday: data?.usedGenerations ?? 0,
-            dailyLimit: 5,
-            remainingToday: Math.max(5 - (data?.usedGenerations ?? 0), 0),
-            day: new Date().toISOString().slice(0, 10),
-          } as QuotaUser);
-        }
-
+        // prendi la verità dal server (usedToday, remainingToday, ecc.)
         await refreshQuota();
-      } else {
+      }
+
+      else {
         alert(`Errore di autenticazione: ${data?.error || 'sconosciuto'}`);
         setGoogleToken(null);
       }
@@ -581,78 +587,54 @@ const overlayBody = !isUser
 
       {/* CHAT SOTTO IL LOGO */}
       <div className={styles.iframeSection}>
-        <iframe
-          src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm&visible_avatar=1"
-          title="SGAI Chat Interface"
-          style={{
-            borderRadius: 'var(--border-radius)',
-            width: '100%',
-            minHeight: 350,
-            maxHeight: 1600,
-            border: 'none',
-            display: 'block',
-            background: 'transparent',
-          }}
-          allow="clipboard-write"
-        />
-      </div>
+  <div className={styles.chatWrap}>
+    <iframe
+      src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm&visible_avatar=1"
+      title="SGAI Chat Interface"
+      className={showLimitOverlay ? styles.chatFrozen : ''}
+      style={{
+        borderRadius: 'var(--border-radius)',
+        width: '100%',
+        minHeight: 350,
+        maxHeight: 1600,
+        border: 'none',
+        display: 'block',
+        background: 'transparent',
+      }}
+      allow="clipboard-write"
+    />
+    {showLimitOverlay && (
+      <div className={styles.chatOverlay} role="dialog" aria-modal="true">
+        <div className={styles.chatOverlayCard}>
+          <h2>{overlayTitle}</h2>
+          {overlayBody && <p>{overlayBody}</p>}
 
-      {/* ─────────── overlay di blocco se superato il limite ─────────── */}
-      {showLimitOverlay && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1500,
-            color: '#fff',
-            textAlign: 'center',
-            padding: '2rem',
-          }}
-        >
-          <div
-            style={{
-              background: 'rgba(30,30,30,0.85)',
-              borderRadius: 12,
-              padding: '2rem',
-              maxWidth: 420,
-            }}
-          >
-            <h2 style={{ marginTop: 0 }}>{overlayTitle}</h2>
-            {overlayBody && <p>{overlayBody}</p>}
-
-            {!isUser ? (
-              // Utente ANONIMO → mostra login Google
-              <button
-                onClick={() => {
-                  setShowLimitOverlay(false);
-                  setShowGoogleModal(true);
-                }}
-                className={styles.glassBtn}
-                aria-label="Accedi con Google"
-              >
-                <GoogleGIcon />
-                Accedi&nbsp;con&nbsp;Google
-              </button>
-            ) : isUserFree ? (
-              // Utente FREE loggato → mostra upgrade
-              <button
-                onClick={() => handleCheckout('premium')}
-                className={`${styles.glassBtn} ${styles.upgradeBtn}`}
-                aria-label="Passa a Premium"
-                style={{ marginTop: 12 }}
-              >
-                <LockKeyhole size={18} className={styles.icon} />
-                &nbsp;Passa&nbsp;a&nbsp;Premium
-              </button>
-            ) : null}
-          </div>
+          {!isUser ? (
+            <button
+              onClick={() => {
+                setShowLimitOverlay(false);
+                setShowGoogleModal(true);
+              }}
+              className={styles.glassBtn}
+            >
+              <GoogleGIcon />&nbsp;Accedi con Google
+            </button>
+          ) : isUserFree ? (
+            <button
+              onClick={() => handleCheckout('premium')}
+              className={`${styles.glassBtn} ${styles.upgradeBtn}`}
+            >
+              <LockKeyhole size={18} className={styles.icon} />
+              &nbsp;Passa a Premium
+            </button>
+          ) : null}
         </div>
-      )}
+      </div>
+    )}
+  </div>
+</div>
+
+      
 
       {/* FEATURE */}
       <div className={styles.featuresSection}>
