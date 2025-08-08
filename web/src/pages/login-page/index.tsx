@@ -428,9 +428,8 @@ const PresentationPage: React.FC = () => {
 
       {/* Pulsante login + contatore oppure dati utente */}
       {!isLoggedIn ? (
-        /* ───── Ramo ANONIMO ───── */
         <>
-          {/* Google login */}
+          {/* ───── Ramo ANONIMO ───── */}
           <button
             onClick={() => setShowGoogleModal(true)}
             className={`${styles.glassBtn} ${styles.signInBtn}`}
@@ -440,75 +439,72 @@ const PresentationPage: React.FC = () => {
             Accedi con&nbsp;Google
           </button>
 
-          {/* Contatore ANON (5 totali) */}
           <div className={styles.freeCounter}>
             {quota?.scope === 'anon'
               ? `${quota.remainingTotal} / ${quota.totalLimit}`
-              : `${Math.max(FREE_LIMIT - genCount, 0)} / ${FREE_LIMIT}` /* fallback */}
+              : `${Math.max(FREE_LIMIT - genCount, 0)} / ${FREE_LIMIT}`}
           </div>
         </>
       ) : (
-        {/* ───── Ramo UTENTE LOGGATO ───── */}
-          <>
-            {/* Top-right actions raggruppate e allineate */}
-            <div className={styles.topActions}>
-              <div className={styles.userChip}>
-                {/* mostra email da quota se è user, altrimenti da userData */}
-                {(quota?.scope === 'user' ? (quota as QuotaUser).id : userData?.email) ?? 'utente'}
-                &nbsp;(<strong>{userPlan}</strong>)
-                {/* Contatore se FREE */}
-                {userPlan === 'free' && quota?.scope === 'user' && (
-                  <span
-                    className={styles.userCounter}
-                    title={`Si azzera a mezzanotte (${(quota as QuotaUser).day})`}
-                  >
-                    {(quota as QuotaUser).remainingToday} / {(quota as QuotaUser).dailyLimit}
-                  </span>
-                )}
-              </div>
-
-              {/* Upgrade se non premium */}
-              {!isPremium && (
-                <button
-                  onClick={() => handleCheckout('premium')}
-                  className={`${styles.glassBtn} ${styles.upgradeBtn}`}
-                  aria-label="Passa a Premium"
+        <>
+          {/* ───── Ramo UTENTE LOGGATO ───── */}
+          <div className={styles.topActions}>
+            <div className={styles.userChip}>
+              {(quota?.scope === 'user' ? (quota as QuotaUser).id : userData?.email) ?? 'utente'}
+              &nbsp;(<strong>{userPlan}</strong>)
+              {userPlan === 'free' && quota?.scope === 'user' && (
+                <span
+                  className={styles.userCounter}
+                  title={`Si azzera a mezzanotte (${(quota as QuotaUser).day})`}
                 >
-                  <LockKeyhole size={18} className={styles.icon} />
-                  &nbsp;Passa&nbsp;a&nbsp;Premium
-                </button>
+                  {(quota as QuotaUser).remainingToday} / {(quota as QuotaUser).dailyLimit}
+                </span>
               )}
-
-              {/* Logout */}
-              <button
-                onClick={logout}
-                className={`${styles.glassBtn} ${styles.logoutBtn}`}
-                aria-label="Logout"
-              >
-                <LogOut size={18} className={styles.icon} />
-                &nbsp;Esci
-              </button>
             </div>
 
-            {/* Banner FREE sotto al logo */}
-            {userPlan === 'free' && (
-              <div className={styles.freeBanner}>
-                Benvenuto in <strong>SGAI Free</strong> —&nbsp;
-                <strong>
-                  {quota?.scope === 'user'
-                    ? (quota as QuotaUser).remainingToday
-                    : Math.max(FREE_LIMIT - genCount, 0)}
-                  /{quota?.scope === 'user' ? (quota as QuotaUser).dailyLimit : FREE_LIMIT}
-                </strong>
-                &nbsp;oggi • Reset a mezzanotte
-                {quota?.scope === 'user' && (quota as QuotaUser).day ? (
-                  <> ({(quota as QuotaUser).day})</>
-                ) : null}
-              </div>
+            {!isPremium && (
+              <button
+                onClick={() => handleCheckout('premium')}
+                className={`${styles.glassBtn} ${styles.upgradeBtn}`}
+                aria-label="Passa a Premium"
+              >
+                <LockKeyhole size={18} className={styles.icon} />
+                &nbsp;Passa&nbsp;a&nbsp;Premium
+              </button>
             )}
-          </>
 
+            <button
+              onClick={logout}
+              className={`${styles.glassBtn} ${styles.logoutBtn}`}
+              aria-label="Logout"
+            >
+              <LogOut size={18} className={styles.icon} />
+              &nbsp;Esci
+            </button>
+          </div>
+
+          {/* Banner FREE sotto al logo */}
+          {userPlan === 'free' && (
+            <div className={styles.freeBanner}>
+              Benvenuto in <strong>SGAI Free</strong> —&nbsp;
+              <strong>
+                {quota?.scope === 'user'
+                  ? (quota as QuotaUser).remainingToday
+                  : Math.max(FREE_LIMIT - genCount, 0)}
+                /
+                {quota?.scope === 'user'
+                  ? (quota as QuotaUser).dailyLimit
+                  : FREE_LIMIT}
+              </strong>
+              &nbsp;oggi • Reset a mezzanotte
+              {quota?.scope === 'user' && (quota as QuotaUser).day ? (
+                <> ({(quota as QuotaUser).day})</>
+              ) : null}
+            </div>
+          )}
+        </>
       )}
+
 
 
       {/* Google auth modal popup */}
