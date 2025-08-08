@@ -191,10 +191,11 @@ function postToIframe(msg: any) {
   const [canExpandIframe, setCanExpandIframe] = useState(false);
   const expandTimeoutRef = useRef<any>(null);
 
-  async function refreshQuota() {
+  async function refreshQuota(forceToken?: string) {
     try {
       const headers: Record<string, string> = {};
-      if (googleToken) headers['Authorization'] = `Bearer ${googleToken}`;
+      const auth = forceToken ?? googleToken;
+      if (auth) headers['Authorization'] = `Bearer ${auth}`;
       else headers['X-Client-Id'] = clientIdRef.current;
 
       const res = await fetch(`${baseURL}/api/quota`, {
@@ -205,12 +206,9 @@ function postToIframe(msg: any) {
       console.log('[QUOTA]', data);
       if (res.ok) {
         setQuota(data);
-
-        // decide subito se bloccare
         let blocked = false;
         if (data.scope === 'anon') blocked = data.remainingTotal <= 0;
         else if (data.scope === 'user') blocked = data.plan !== 'premium' && data.remainingToday <= 0;
-
         setShowLimitOverlay(blocked);
       } else {
         console.warn('quota error', data);
@@ -219,6 +217,7 @@ function postToIframe(msg: any) {
       console.warn('quota network error', e);
     }
   }
+
 
 
     async function tickGeneration() {
@@ -354,32 +353,29 @@ useEffect(() => {
       const data = await res.json();
 
       if (res.ok) {
-        setUserData({ email: data.email, plan: data.plan });
-        setShowGoogleModal(false);
-        setGenCount(0);
-        localStorage.removeItem('sgai-gen-count');
+          setUserData({ email: data.email, plan: data.plan });
+          setShowGoogleModal(false);
+          setGenCount(0);
+          localStorage.removeItem('sgai-gen-count');
 
-        // 👇 Aggiorna SUBITO la quota in memoria
-        setQuota({
-          scope: 'user',
-          id: data.email,
-          plan: data.plan,
-          usedToday: data.usedToday,
-          dailyLimit: data.dailyLimit,
-          remainingToday: data.remainingToday,
-          day: data.day,
-        });
+          setQuota({
+            scope: 'user',
+            id: data.email,
+            plan: data.plan,
+            usedToday: data.usedToday,
+            dailyLimit: data.dailyLimit,
+            remainingToday: data.remainingToday,
+            day: data.day,
+          });
 
-        // 👇 Decidi subito se bloccare
-        const blockedNow = data.plan !== 'premium' && data.remainingToday <= 0;
-        setShowLimitOverlay(blockedNow);
+          const blockedNow = data.plan !== 'premium' && data.remainingToday <= 0;
+          setShowLimitOverlay(blockedNow);
+          postToIframe({ type: 'limit-status', blocked: blockedNow });
 
-        // 👇 Notifica (se vuoi) l’iframe, ma NON affidarti a questo per bloccare
-        postToIframe({ type: 'limit-status', blocked: blockedNow });
+          // 👇 QUI il punto: usa il token appena ricevuto, non lo state
+          await refreshQuota(response.credential);
+        }
 
-        // (facoltativo) poi allinei col server
-        await refreshQuota();
-      }
 
 
 
