@@ -114,8 +114,7 @@ body {
   font-weight: 400;
   text-align: center;
   line-height: 1.35;
-  margin-top: -50px;
-  margin-bottom: 60px;
+  margin: 10px 0 24px;
   letter-spacing: 0.02em;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   transition: font-size 0.2s;
@@ -159,10 +158,39 @@ body {
 }
 
 .heroSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: rem 1rem 3rem;
-  margin-bottom: 3rem;
-  animation: fadeIn 0.8s ease-out;
+  padding: 0 1rem 2rem;   /* leggermente meno spazio sotto */
+  margin: 0 0 1rem;
+}
+
+.logoBox {
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.signInBtn {
+  position: fixed;
+  right: 80px;
+  top: 20px;
+  z-index: 1100;
+}
+
+@media (max-width: 768px) {
+  .signInBtn {
+    position: static;
+    margin: 12px auto 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 .sgaiLogo {
@@ -453,8 +481,8 @@ body {
 
 .upgradeBtn {
   position: fixed;
-  right: 20px;
-  top: 70px;
+  right: 80px;
+  top: 110px;
   z-index: 1100;
   border: none;
   cursor: pointer;
