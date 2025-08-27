@@ -17,8 +17,9 @@ const stripePromise = loadStripe(STRIPE_PK);
 
 
 // --- base URL backend ---
-const baseURL = (process.env.UMI_APP_API_BASE as string | undefined) || window.location.origin;
-
+const baseURL =
+  (process.env.UMI_APP_API_BASE as string | undefined) ||
+  `${window.location.origin}/oauth`;
 
 /* --- mini-component per la “G” trasparente --- */
 const GoogleGIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
@@ -145,13 +146,12 @@ const overlayBody = !isUser
 function postToIframe(msg: any) {
   try {
     const iframe = document.querySelector<HTMLIFrameElement>('iframe[title="SGAI Chat Interface"]');
-    if (!iframe || !iframe.contentWindow) return;
+    if (!iframe?.contentWindow || !iframe.src) return;
     const origin = new URL(iframe.src).origin;
     iframe.contentWindow.postMessage(msg, origin);
-  } catch {
-    /* ignora: non ci affidiamo a questo per bloccare */
-  }
+  } catch {}
 }
+
 
 
   useEffect(() => { void refreshQuota(); }, []);
@@ -181,7 +181,7 @@ function postToIframe(msg: any) {
     }, [showGoogleModal]);
 
     useEffect(() => {
-      document.body.style.overflow = showGoogleModal ? 'hidden' : '';
+      document.body.style.overflow = (showGoogleModal || showLimitOverlay) ? 'hidden' : '';
       return () => { document.body.style.overflow = ''; };
     }, [showGoogleModal, showLimitOverlay]);
 
@@ -447,8 +447,9 @@ useEffect(() => {
   // Stripe
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
+  // SOSTITUISCI l’intera handleCheckout con questa
   const handleCheckout = async (plan: 'premium' = 'premium') => {
-    // prendo l’email dall’unica fonte certa disponibile
+    // prendo l’email da quota (se sei “user”) o da userData come fallback
     const emailForCheckout =
       quota?.scope === 'user' ? (quota as QuotaUser).id : userData?.email;
 
