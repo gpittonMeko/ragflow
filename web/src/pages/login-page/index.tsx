@@ -182,7 +182,7 @@ function postToIframe(msg: any) {
     }, [showGoogleModal]);
 
     useEffect(() => {
-      document.body.style.overflow = (showGoogleModal || showLimitOverlay) ? 'hidden' : '';
+      document.body.style.overflow = showGoogleModal ? 'hidden' : '';
       return () => { document.body.style.overflow = ''; };
     }, [showGoogleModal, showLimitOverlay]);
 
