@@ -158,22 +158,23 @@ body {
 }
 
 .heroSection {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  /* grid semplifica il centraggio su tutti i browser mobile */
+  display: grid;
+  place-items: center;
   text-align: center;
-  padding: 0 1rem 2rem;   /* leggermente meno spazio sotto */
-  margin: 0 0 1rem;
+  width: 100%;
+  margin: 0 auto;
 }
+
+
 
 .logoBox {
   width: 100%;
-  max-width: 340px;
-  margin: 0 auto 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  max-width: 340px;   /* puoi alzarlo a 520px se vuoi più grande */
+  margin: 0 auto;     /* niente bottom extra */
+  display: grid;
+  place-items: center;
+  text-align: center;
 }
 
 .signInBtn {
@@ -181,6 +182,15 @@ body {
   right: 80px;
   top: 20px;
   z-index: 1100;
+}
+
+/* il vero jolly per i mobile browser */
+.logoBox > svg {
+  display: block;
+  margin-inline: auto;
+  width: 100%;        /* il contenitore decide la misura */
+  height: auto;
+  max-width: 100%;
 }
 
 @media (max-width: 768px) {
@@ -248,7 +258,7 @@ body {
 }
 
 .iframeSection {
-  margin: 3rem 0;
+
   border-radius: var(--border-radius);
   overflow: hidden;
   box-shadow: var(--shadow);
