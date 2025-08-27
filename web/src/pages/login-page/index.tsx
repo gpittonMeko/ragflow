@@ -448,11 +448,16 @@ useEffect(() => {
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   const handleCheckout = async (plan: 'premium' = 'premium') => {
-  if (!userData?.email) {
-    alert('Accedi con Google prima di acquistare Premium.');
-    setShowGoogleModal(true);
-    return;
-  }
+    // prendo l’email dall’unica fonte certa disponibile
+    const emailForCheckout =
+      quota?.scope === 'user' ? (quota as QuotaUser).id : userData?.email;
+
+    if (!emailForCheckout) {
+      alert('Accedi con Google prima di acquistare Premium.');
+      setShowGoogleModal(true);
+      return;
+    }
+
     setDebugInfo(null);
     try {
       const stripe = await stripePromise;
@@ -462,40 +467,25 @@ useEffect(() => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email: userData?.email ?? null, selected_plan: plan }),
+        body: JSON.stringify({ email: emailForCheckout, selected_plan: plan }),
       });
 
-
-      console.log('[Stripe] status', res.status, res.statusText);
-      console.log('[Stripe] content-type', res.headers.get('content-type'));
-
-      let payload: any = null;
       const ct = res.headers.get('content-type') || '';
-      if (ct.includes('application/json')) {
-        payload = await res.json();
-      } else {
-        const text = await res.text();
-        throw new Error(`Backend ha restituito ${ct}:\n${text}`);
-      }
-      console.log('[Stripe] payload', payload);
-
-      if (!res.ok) {
-        throw new Error(payload?.error || 'Errore backend Stripe');
-      }
+      const payload = ct.includes('application/json') ? await res.json() : { error: await res.text() };
+      if (!res.ok) throw new Error(payload?.error || 'Errore backend Stripe');
 
       const { sessionId } = payload;
-      if (!sessionId) {
-        throw new Error(`sessionId assente nel payload: ${JSON.stringify(payload, null, 2)}`);
-      }
+      if (!sessionId) throw new Error('sessionId assente nel payload');
 
       const { error } = await stripe.redirectToCheckout({ sessionId });
       if (error) throw new Error(error.message);
     } catch (err: any) {
       console.error('[Stripe] catch', err);
       setDebugInfo(String(err));
-      alert(err.message || err);
+      alert(err.message || String(err));
     }
   };
+
 
   return (
     <div className={styles.pageContainer}>
