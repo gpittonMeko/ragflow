@@ -17,9 +17,8 @@ const stripePromise = loadStripe(STRIPE_PK);
 
 
 // --- base URL backend ---
-const baseURL =
-  (process.env.UMI_APP_API_BASE as string | undefined) ||
-  `${window.location.origin}/oauth`;
+const baseURL = (process.env.UMI_APP_API_BASE as string | undefined) || window.location.origin;
+
 
 /* --- mini-component per la “G” trasparente --- */
 const GoogleGIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
