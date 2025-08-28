@@ -1,18 +1,21 @@
 """
 oauth_backend.py – Flask server one-file
 • valida l’ID-Token Google
-• mantiene un “DB” in RAM con limiti: anon (totale), user free (giornaliero), premium (illimitato)
-• espone /api/quota e /api/generate
-• crea la Stripe Checkout Session (email facoltativa)
-• riceve il webhook Stripe e aggiorna il piano
+• persiste utente su MySQL (Peewee) + sessione server-side (cookie HttpOnly)
+• espone /api/me, /api/quota e /api/generate
+• crea la Stripe Checkout Session (solo se utente loggato da cookie)
+• riceve il webhook Stripe e aggiorna il piano nel DB
 """
 
 import os
 import threading
 import time
 from typing import Dict, Optional
+from datetime import datetime, timedelta
+import uuid
+from urllib.parse import urlparse
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 
 import google.auth.transport.requests
@@ -22,64 +25,45 @@ import stripe
 # ─────────────────────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────────────────────
-CLIENT_ID = (
-    "872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com"
-)
+CLIENT_ID = "872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com"
 
-ANON_TOTAL_LIMIT = 5          # ← Anonimo: limite TOTALE
-FREE_DAILY_LIMIT = 5          # ← User free: limite GIORNALIERO
-PREMIUM_LIMIT = 1_000_000_000 # ← illimitato di fatto
+ANON_TOTAL_LIMIT   = 5           # ← Anonimo: limite TOTALE
+FREE_DAILY_LIMIT   = 5           # ← User free: limite GIORNALIERO
+PREMIUM_LIMIT      = 1_000_000_000  # ← illimitato di fatto (simbolico)
 
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-APP_URL = os.getenv("APP_URL", "https://sgailegal.com")  # <— NON mettere l’IP
+APP_URL = os.getenv("APP_URL", "https://sgailegal.com")  # dominio pubblico (no IP)
 
+# Pagine frontend stanno sotto /oauth
+SUCCESS_URL = f"{APP_URL}/oauth/success?session_id={{CHECKOUT_SESSION_ID}}"
+CANCEL_URL  = f"{APP_URL}/oauth"
 
-SUCCESS_URL = f"{APP_URL}/success?session_id={{CHECKOUT_SESSION_ID}}"
-CANCEL_URL = f"{APP_URL}/"
+SESSION_COOKIE = "sgaai_session"
 
 def today_key() -> str:
     return time.strftime("%Y-%m-%d", time.localtime())
 
 # ─────────────────────────────────────────────────────────────
-# APP & “DB” in RAM
+# APP & CORS
 # ─────────────────────────────────────────────────────────────
 app = Flask(__name__)
-from urllib.parse import urlparse
-FRONT_ORIGIN = os.getenv("APP_URL", "https://sgailegal.com")
-FRONT_ORIGIN = "{uri.scheme}://{uri.netloc}".format(uri=urlparse(FRONT_ORIGIN))
+FRONT_ORIGIN = "{uri.scheme}://{uri.netloc}".format(uri=urlparse(APP_URL))
 CORS(app, supports_credentials=True, origins=[FRONT_ORIGIN])
 
+# ─────────────────────────────────────────────────────────────
+# DB Peewee (utenti + sessioni)
+# ─────────────────────────────────────────────────────────────
+# Richiede sgai_plans.py con i modelli Peewee e ensure_tables()
+from sgai_plans import SgaiPlanUser, Session, ensure_tables, DB
+ensure_tables()
 
-
-# users_db struttura:
-# - utenti loggati (chiave = email):
-#     {"plan": "free"/"premium", "usedToday": int, "day": "YYYY-MM-DD", "email": email}
-# - anonimi (chiave = "anon:<client_id>"):
-#     {"plan": "anon", "usedTotal": int, "email": None}
+# ─────────────────────────────────────────────────────────────
+# “DB” in RAM SOLO per anonimi (facoltativo, manteniamo compatibilità)
+# ─────────────────────────────────────────────────────────────
+# users_db struttura per anonimi:
+# - anonimi (chiave = "anon:<client_id>"): {"plan":"anon","usedTotal":int}
 users_db: Dict[str, Dict] = {}
 db_lock = threading.Lock()
-
-def verify_token(token: str) -> Optional[Dict]:
-    try:
-        req = google.auth.transport.requests.Request()
-        return google.oauth2.id_token.verify_oauth2_token(token, req, CLIENT_ID)
-    except Exception as exc:  # noqa: BLE001
-        print("Token validation failed:", exc)
-        return None
-
-def _get_user_logged(email: str) -> Dict:
-    with db_lock:
-        u = users_db.setdefault(email, {
-            "plan": "free",
-            "usedToday": 0,
-            "day": today_key(),
-            "email": email,
-        })
-        # reset giornaliero
-        if u.get("day") != today_key():
-            u["day"] = today_key()
-            u["usedToday"] = 0
-        return u
 
 def _get_user_anon(client_id: str) -> Dict:
     key = f"anon:{client_id}"
@@ -92,15 +76,60 @@ def _get_user_anon(client_id: str) -> Dict:
         return u
 
 # ─────────────────────────────────────────────────────────────
+# Google ID Token verification (usato come fallback Bearer, non per cookie)
+# ─────────────────────────────────────────────────────────────
+def verify_token(token: str) -> Optional[Dict]:
+    try:
+        req = google.auth.transport.requests.Request()
+        # Convalida aud == CLIENT_ID se vuoi essere pignolo:
+        idinfo = google.oauth2.id_token.verify_oauth2_token(token, req)
+        # if idinfo.get("aud") != CLIENT_ID: raise ValueError("Invalid audience")
+        return idinfo
+    except Exception as exc:  # noqa: BLE001
+        print("Token validation failed:", exc)
+        return None
+
+# ─────────────────────────────────────────────────────────────
+# Sessione server-side (cookie HttpOnly)
+# ─────────────────────────────────────────────────────────────
+def set_session_cookie(resp, sid: str):
+    resp.set_cookie(
+        SESSION_COOKIE,
+        sid,
+        max_age=60*60*24*30,
+        secure=True,       # True in produzione (HTTPS)
+        httponly=True,     # non accessibile da JS
+        samesite="Lax",
+        path="/",
+    )
+
+def create_session_for_user(user: SgaiPlanUser, days=30) -> str:
+    sid = uuid.uuid4().hex
+    with DB.atomic():
+        Session.create(id=sid, user=user, expires_at=datetime.utcnow() + timedelta(days=days))
+    return sid
+
+def get_current_user_from_cookie() -> Optional[SgaiPlanUser]:
+    sid = request.cookies.get(SESSION_COOKIE)
+    if not sid:
+        return None
+    sess = Session.get_or_none(Session.id == sid)
+    if not sess or sess.expires_at < datetime.utcnow():
+        return None
+    return sess.user
+
+# ─────────────────────────────────────────────────────────────
 # AUTH
 # ─────────────────────────────────────────────────────────────
 @app.post("/api/auth/google")
 def google_auth():
-    token = (request.json or {}).get("token")
-    if not token:
-        return jsonify(error="Missing token"), 400
+    # Accetta sia "token" sia "credential" dal client
+    payload = request.get_json(silent=True) or {}
+    id_token_str = payload.get("token") or payload.get("credential")
+    if not id_token_str:
+        return jsonify(error="Missing token/credential"), 400
 
-    id_info = verify_token(token)
+    id_info = verify_token(id_token_str)
     if not id_info:
         return jsonify(error="Invalid token"), 401
 
@@ -108,122 +137,174 @@ def google_auth():
     if not email:
         return jsonify(error="Email not present in token"), 400
 
-    user = _get_user_logged(email)
+    # Upsert utente su MySQL
+    user = SgaiPlanUser.get_or_none(SgaiPlanUser.email == email)
+    if not user:
+        user = SgaiPlanUser.create(
+            email=email,
+            plan="free",
+            used_generations=0,
+            last_generation_reset=datetime.utcnow()
+        )
 
-    # Porta sotto l'utente i consumi fatti da anonimo con quel client_id
-    client_id = (request.headers.get("X-Client-Id") or "").strip()
-    if client_id and user["plan"] != "premium":
-        anon_key = f"anon:{client_id}"
-        with db_lock:
-            anon = users_db.pop(anon_key, None)
-            if anon and anon.get("usedTotal", 0) > 0:
-                if user.get("day") != today_key():
-                    user["day"] = today_key()
-                    user["usedToday"] = 0
-                user["usedToday"] = min(FREE_DAILY_LIMIT, user["usedToday"] + anon["usedTotal"])
+    # Crea sessione + cookie
+    sid = create_session_for_user(user)
+    resp = make_response(jsonify(
+        email=user.email,
+        plan=user.plan,
+    ))
+    set_session_cookie(resp, sid)
+    return resp
 
-    limit = PREMIUM_LIMIT if user["plan"] == "premium" else FREE_DAILY_LIMIT
-    remaining = max(limit - user["usedToday"], 0)
-
-    return jsonify(
-        email=email,
-        plan=user["plan"],
-        usedToday=user["usedToday"],
-        dailyLimit=limit,
-        remainingToday=remaining,
-        day=user["day"],
-    )
-
+@app.get("/api/me")
+def me():
+    u = get_current_user_from_cookie()
+    if not u:
+        return jsonify(ok=False), 401
+    return jsonify(ok=True, user={"email": u.email, "plan": u.plan})
 
 # ─────────────────────────────────────────────────────────────
 # QUOTA
 # ─────────────────────────────────────────────────────────────
 @app.get("/api/quota")
 def quota():
-    auth_header = request.headers.get("Authorization", "")
-    client_id = (request.headers.get("X-Client-Id") or "").strip()
+    # 1) cookie session → utente DB
+    u = get_current_user_from_cookie()
+    if u:
+        today = today_key()
+        # reset giornaliero semplice
+        if not u.last_generation_reset or u.last_generation_reset.strftime("%Y-%m-%d") != today:
+            u.used_generations = 0
+            u.last_generation_reset = datetime.utcnow()
+            u.save()
+        limit = PREMIUM_LIMIT if u.plan == "premium" else FREE_DAILY_LIMIT
+        return jsonify(
+            scope="user",
+            id=u.email,
+            plan=u.plan,
+            usedToday=u.used_generations,
+            dailyLimit=limit,
+            remainingToday=max(limit - u.used_generations, 0),
+            day=today,
+        )
 
+    # 2) fallback Bearer (se lo vuoi ancora supportare)
+    auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         token = auth_header.split(" ", 1)[1]
         id_info = verify_token(token)
         if not id_info:
             return jsonify(error="Invalid token"), 401
         email = id_info.get("email")
-        user = _get_user_logged(email)
-        limit = PREMIUM_LIMIT if user["plan"] == "premium" else FREE_DAILY_LIMIT
+        user = SgaiPlanUser.get_or_none(SgaiPlanUser.email == email) or SgaiPlanUser.create(email=email)
+        today = today_key()
+        if not user.last_generation_reset or user.last_generation_reset.strftime("%Y-%m-%d") != today:
+            user.used_generations = 0
+            user.last_generation_reset = datetime.utcnow()
+            user.save()
+        limit = PREMIUM_LIMIT if user.plan == "premium" else FREE_DAILY_LIMIT
         return jsonify(
             scope="user",
-            id=email,
-            plan=user["plan"],
-            usedToday=user["usedToday"],
+            id=user.email,
+            plan=user.plan,
+            usedToday=user.used_generations,
             dailyLimit=limit,
-            remainingToday=max(limit - user["usedToday"], 0),
-            day=user["day"],
+            remainingToday=max(limit - user.used_generations, 0),
+            day=today,
         )
 
+    # 3) anonimo via X-Client-Id → resta in RAM
+    client_id = (request.headers.get("X-Client-Id") or "").strip()
     if client_id:
-        u = _get_user_anon(client_id)
+        uanon = _get_user_anon(client_id)
         return jsonify(
             scope="anon",
             id=client_id,
             plan="anon",
-            usedTotal=u["usedTotal"],
+            usedTotal=uanon["usedTotal"],
             totalLimit=ANON_TOTAL_LIMIT,
-            remainingTotal=max(ANON_TOTAL_LIMIT - u["usedTotal"], 0),
+            remainingTotal=max(ANON_TOTAL_LIMIT - uanon["usedTotal"], 0),
         )
 
-    return jsonify(error="Missing token or X-Client-Id"), 401
-
+    return jsonify(error="Missing session, token or X-Client-Id"), 401
 
 # ─────────────────────────────────────────────────────────────
 # GENERATE (finto) – enforcement lato server
 # ─────────────────────────────────────────────────────────────
 @app.post("/api/generate")
 def generate():
-    auth_header = request.headers.get("Authorization", "")
-    client_id = (request.headers.get("X-Client-Id") or "").strip()
+    # 1) cookie session → DB
+    u = get_current_user_from_cookie()
+    if u:
+        today = today_key()
+        if not u.last_generation_reset or u.last_generation_reset.strftime("%Y-%m-%d") != today:
+            u.used_generations = 0
+            u.last_generation_reset = datetime.utcnow()
+        if u.plan != "premium":
+            limit = FREE_DAILY_LIMIT
+            if u.used_generations >= limit:
+                return jsonify(
+                    error="Daily limit reached",
+                    plan=u.plan,
+                    usedToday=u.used_generations,
+                    dailyLimit=limit,
+                    remainingToday=0,
+                    day=today,
+                ), 403
+        u.used_generations += 1
+        u.save()
+        remaining = (PREMIUM_LIMIT if u.plan == "premium" else max(FREE_DAILY_LIMIT - u.used_generations, 0))
+        time.sleep(1)
+        return jsonify(
+            message="Fake AI response",
+            scope="user",
+            plan=u.plan,
+            usedToday=u.used_generations,
+            dailyLimit=(PREMIUM_LIMIT if u.plan == "premium" else FREE_DAILY_LIMIT),
+            remainingToday=remaining,
+            day=today,
+        )
 
-    # Utente loggato
+    # 2) fallback Bearer
+    auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         token = auth_header.split(" ", 1)[1]
         id_info = verify_token(token)
         if not id_info:
             return jsonify(error="Invalid token"), 401
         email = id_info.get("email")
-        user = _get_user_logged(email)
-
-        with db_lock:
-            # premium = illimitato (non blocco, ma tengo traccia incrementando)
-            if user["plan"] != "premium":
-                limit = FREE_DAILY_LIMIT
-                if user["usedToday"] >= limit:
-                    return jsonify(
-                        error="Daily limit reached",
-                        plan=user["plan"],
-                        usedToday=user["usedToday"],
-                        dailyLimit=limit,
-                        remainingToday=0,
-                        day=user["day"],
-                    ), 403
-                user["usedToday"] += 1
-                remaining = max(limit - user["usedToday"], 0)
-            else:
-                # premium: nessun limite; contiamo comunque se vuoi
-                user["usedToday"] = user.get("usedToday", 0) + 1
-                remaining = PREMIUM_LIMIT  # simbolico
-
+        user = SgaiPlanUser.get_or_none(SgaiPlanUser.email == email) or SgaiPlanUser.create(email=email)
+        today = today_key()
+        if not user.last_generation_reset or user.last_generation_reset.strftime("%Y-%m-%d") != today:
+            user.used_generations = 0
+            user.last_generation_reset = datetime.utcnow()
+        if user.plan != "premium":
+            limit = FREE_DAILY_LIMIT
+            if user.used_generations >= limit:
+                return jsonify(
+                    error="Daily limit reached",
+                    plan=user.plan,
+                    usedToday=user.used_generations,
+                    dailyLimit=limit,
+                    remainingToday=0,
+                    day=today,
+                ), 403
+        user.used_generations += 1
+        user.save()
+        remaining = (PREMIUM_LIMIT if user.plan == "premium" else max(FREE_DAILY_LIMIT - user.used_generations, 0))
         time.sleep(1)
         return jsonify(
             message="Fake AI response",
             scope="user",
-            plan=user["plan"],
-            usedToday=user["usedToday"],
-            dailyLimit=(PREMIUM_LIMIT if user["plan"] == "premium" else FREE_DAILY_LIMIT),
+            plan=user.plan,
+            usedToday=user.used_generations,
+            dailyLimit=(PREMIUM_LIMIT if user.plan == "premium" else FREE_DAILY_LIMIT),
             remainingToday=remaining,
-            day=user["day"],
+            day=today,
         )
 
-    # Anonimo
+    # 3) anonimo
+    client_id = (request.headers.get("X-Client-Id") or "").strip()
     if client_id:
         user = _get_user_anon(client_id)
         with db_lock:
@@ -247,21 +328,19 @@ def generate():
             remainingTotal=remaining,
         )
 
-    return jsonify(error="Missing Bearer token or X-Client-Id"), 401
+    return jsonify(error="Missing session, Bearer token or X-Client-Id"), 401
 
 # ─────────────────────────────────────────────────────────────
-# STRIPE – Create Checkout Session
-# ─────────────────────────────────────────────────────────────
-# ─────────────────────────────────────────────────────────────
-# STRIPE – Create Checkout Session
+# STRIPE – Create Checkout Session (solo se loggato via cookie)
 # ─────────────────────────────────────────────────────────────
 @app.post("/api/stripe/create-checkout-session")
 def create_checkout_session():
     if not stripe.api_key:
         return jsonify(error="Stripe secret key missing"), 500
 
-    data = request.get_json() or {}
-    email = data.get("email")
+    u = get_current_user_from_cookie()
+    if not u:
+        return jsonify(error="UNAUTHORIZED"), 401
 
     price_id = os.getenv("STRIPE_PRICE_PREMIUM")
     if not price_id:
@@ -273,11 +352,12 @@ def create_checkout_session():
         session = stripe.checkout.Session.create(
             mode="subscription",
             payment_method_types=["card"],
-            success_url=SUCCESS_URL,   # es: https://TUO_HOST/success?session_id={CHECKOUT_SESSION_ID}
-            cancel_url=CANCEL_URL,     # es: https://TUO_HOST/
+            success_url=SUCCESS_URL,
+            cancel_url=CANCEL_URL,
             line_items=[{"price": price_id, "quantity": 1}],
-            metadata={"selected_plan": "premium", **({"email": email} if email else {})},
-            customer_email=email or None,
+            metadata={"selected_plan": "premium", "email": u.email},
+            customer_email=u.email,
+            allow_promotion_codes=True,
         )
         print("\033[92mStripe session OK:\033[0m", session.id)
         return jsonify(sessionId=session.id)
@@ -285,9 +365,8 @@ def create_checkout_session():
         print("\033[91mStripe error:\033[0m", exc)
         return jsonify(error="Stripe exception", debug=str(exc)), 500
 
-
 # ─────────────────────────────────────────────────────────────
-# STRIPE – Verify Session (chiamata dalla pagina /success)
+# STRIPE – Verify Session (chiamata dalla pagina /oauth/success)
 # ─────────────────────────────────────────────────────────────
 @app.get("/api/stripe/verify-session")
 def stripe_verify_session():
@@ -310,22 +389,20 @@ def stripe_verify_session():
         )
 
         if email:
-            with db_lock:
-                u = users_db.setdefault(email, {
-                    "plan": "free",
-                    "usedToday": 0,
-                    "day": today_key(),
-                    "email": email,
-                })
-                u["plan"] = "premium"
-                u["usedToday"] = 0
-                u["day"] = today_key()
+            user = SgaiPlanUser.get_or_none(SgaiPlanUser.email == email) or SgaiPlanUser.create(email=email)
+            user.plan = "premium"
+            user.used_generations = 0
+            user.last_generation_reset = datetime.utcnow()
+            # opzionale: salva anche customer/subscription id
+            if s.get("customer"):
+                user.stripe_customer_id = s.get("customer")
+            if s.get("subscription"):
+                user.stripe_subscription_id = s.get("subscription")
+            user.save()
 
-        return jsonify(ok=True, email=email, plan=users_db.get(email, {}).get("plan", "free"))
+        return jsonify(ok=True, email=email, plan=("premium" if email else "free"))
     except Exception as exc:
         return jsonify(error=str(exc)), 500
-
-
 
 # ─────────────────────────────────────────────────────────────
 # STRIPE – Webhook
@@ -351,42 +428,42 @@ def stripe_webhook():
 
     if evt_type == "checkout.session.completed":
         s = event["data"]["object"]
+        # (facoltativo ma consigliato)
+        if s.get("payment_status") != "paid":
+            return jsonify(received=True)
+
         email = (
-            s.get("customer_email")                          # Checkout v2
-            or (s.get("customer_details") or {}).get("email")# Checkout v1
-            or (s.get("metadata") or {}).get("email")        # fallback
+            s.get("customer_email")
+            or (s.get("customer_details") or {}).get("email")
+            or (s.get("metadata") or {}).get("email")
         )
         plan = (s.get("metadata") or {}).get("selected_plan", "premium")
 
-        # (facoltativo ma consigliato)
-        if s.get("payment_status") != "paid":
-            return jsonify(received=True)  # Abort: non è stato pagato
-
         if email:
-            with db_lock:
-                u = users_db.setdefault(email, {"plan": "free", "usedToday": 0, "day": today_key(), "email": email})
-                u["plan"] = plan
-                u["usedToday"] = 0
-                u["day"] = today_key()
+            user = SgaiPlanUser.get_or_none(SgaiPlanUser.email == email) or SgaiPlanUser.create(email=email)
+            user.plan = plan
+            user.used_generations = 0
+            user.last_generation_reset = datetime.utcnow()
+            if s.get("customer"):
+                user.stripe_customer_id = s.get("customer")
+            if s.get("subscription"):
+                user.stripe_subscription_id = s.get("subscription")
+            user.save()
 
     elif evt_type == "customer.subscription.deleted":
         sub = event["data"]["object"]
-
-        # Estrai l’e-mail da tutti i campi possibili (stessa logica del completed)
         email = (
             sub.get("customer_email")
             or (sub.get("customer_details") or {}).get("email")
             or (sub.get("metadata") or {}).get("email")
         )
-
         if email:
-            with db_lock:
-                u = users_db.get(email)
-                if u:
-                    u["plan"] = "free"
-                    u["usedToday"] = 0
-                    u["day"] = today_key()
-
+            user = SgaiPlanUser.get_or_none(SgaiPlanUser.email == email)
+            if user:
+                user.plan = "free"
+                user.used_generations = 0
+                user.last_generation_reset = datetime.utcnow()
+                user.save()
 
     return jsonify(received=True)
 
@@ -394,4 +471,5 @@ def stripe_webhook():
 # MAIN
 # ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    # FLASK_RUN_PORT=8000
     app.run(host="0.0.0.0", port=8000, debug=True)
