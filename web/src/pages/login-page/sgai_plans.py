@@ -1,7 +1,12 @@
-from peewee import Model, CharField, IntegerField, DateTimeField
+# sgai_plans.py
+from peewee import Model, CharField, IntegerField, DateTimeField, ForeignKeyField
 from playhouse.pool import PooledMySQLDatabase
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
+
+# Usa PyMySQL come MySQLdb
+import pymysql  # type: ignore
+pymysql.install_as_MySQLdb()
 
 DB = PooledMySQLDatabase(
     os.environ.get("MYSQL_DBNAME", "rag_flow"),
@@ -10,10 +15,14 @@ DB = PooledMySQLDatabase(
     host=os.environ.get("MYSQL_HOST", "mysql"),
     port=int(os.environ.get("MYSQL_PORT", 5455)),
     max_connections=8,
-    stale_timeout=300
+    stale_timeout=300,
 )
 
-class SgaiPlanUser(Model):
+class BaseModel(Model):
+    class Meta:
+        database = DB
+
+class SgaiPlanUser(BaseModel):
     email = CharField(max_length=255, unique=True, index=True, null=False)
     plan = CharField(max_length=32, default='free', null=False)
     used_generations = IntegerField(default=0, null=False)
@@ -22,5 +31,17 @@ class SgaiPlanUser(Model):
     stripe_subscription_id = CharField(max_length=255, null=True)
 
     class Meta:
-        database = DB
-        db_table = "sgai_plan_user"
+        table_name = "sgai_plan_user"
+
+class Session(BaseModel):
+    id = CharField(primary_key=True, max_length=64)  # uuid hex
+    user = ForeignKeyField(SgaiPlanUser, backref='sessions', on_delete='CASCADE')
+    expires_at = DateTimeField(null=False)
+
+    class Meta:
+        table_name = "sgai_session"
+
+def ensure_tables():
+    DB.connect(reuse_if_open=True)
+    DB.create_tables([SgaiPlanUser, Session])
+    DB.close()

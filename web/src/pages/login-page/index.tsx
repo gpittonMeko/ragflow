@@ -152,6 +152,22 @@ function postToIframe(msg: any) {
   } catch {}
 }
 
+  // Bootstrap: se ho già il cookie di sessione, prendo l’utente
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${baseURL}/api/me`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setUserData({ email: data.user.email, plan: data.user.plan });
+        } else {
+          setUserData(null);
+        }
+      } catch {}
+      // in ogni caso aggiorno la quota
+      void refreshQuota();
+    })();
+  }, []);
 
 
   useEffect(() => { void refreshQuota(); }, []);
@@ -352,31 +368,18 @@ useEffect(() => {
       const data = await res.json();
 
       if (res.ok) {
+          // Il backend setta il cookie + restituisce {email, plan}
           setUserData({ email: data.email, plan: data.plan });
           setShowGoogleModal(false);
           setGenCount(0);
           localStorage.removeItem('sgai-gen-count');
 
-          setQuota({
-            scope: 'user',
-            id: data.email,
-            plan: data.plan,
-            usedToday: data.usedToday,
-            dailyLimit: data.dailyLimit,
-            remainingToday: data.remainingToday,
-            day: data.day,
-          });
-
-          const blockedNow = data.plan !== 'premium' && data.remainingToday <= 0;
-          setShowLimitOverlay(blockedNow);
-          postToIframe({ type: 'limit-status', blocked: blockedNow });
-
-          // 👇 QUI il punto: usa il token appena ricevuto, non lo state
+          // La quota ufficiale viene SEMPRE dal server
           await refreshQuota(response.credential);
+        } else {
+          alert(`Errore di autenticazione: ${data?.error || 'sconosciuto'}`);
+          setGoogleToken(null);
         }
-
-
-
 
       else {
         alert(`Errore di autenticazione: ${data?.error || 'sconosciuto'}`);
@@ -449,11 +452,7 @@ useEffect(() => {
 
   // SOSTITUISCI l’intera handleCheckout con questa
   const handleCheckout = async (plan: 'premium' = 'premium') => {
-    // prendo l’email da quota (se sei “user”) o da userData come fallback
-    const emailForCheckout =
-      quota?.scope === 'user' ? (quota as QuotaUser).id : userData?.email;
-
-    if (!emailForCheckout) {
+    if (!isLoggedIn) {
       alert('Accedi con Google prima di acquistare Premium.');
       setShowGoogleModal(true);
       return;
@@ -467,9 +466,15 @@ useEffect(() => {
       const res = await fetch(`${baseURL}/api/stripe/create-checkout-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email: emailForCheckout, selected_plan: plan }),
+        credentials: 'include',                     // <<— Manda il cookie HttpOnly
+        body: JSON.stringify({ selected_plan: plan }) // <<— NIENTE email nel body
       });
+
+      if (res.status === 401) {
+        alert('Devi accedere con Google prima di procedere.');
+        setShowGoogleModal(true);
+        return;
+      }
 
       const ct = res.headers.get('content-type') || '';
       const payload = ct.includes('application/json') ? await res.json() : { error: await res.text() };
@@ -486,6 +491,7 @@ useEffect(() => {
       alert(err.message || String(err));
     }
   };
+
 
 
   return (
