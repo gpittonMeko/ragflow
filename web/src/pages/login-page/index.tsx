@@ -104,30 +104,31 @@ const PresentationPage: React.FC = () => {
   // derivati UI
   // DOPO
   const isLoggedIn = !!userData || quota?.scope === 'user';
+  const quotaLoading = quota === null;
+
   const userPlan =
-    (quota?.scope === 'user' ? (quota as QuotaUser).plan : (userData?.plan as 'free' | 'premium' | undefined)) ?? 'free';
+    (quota?.scope === 'user'
+      ? (quota as QuotaUser).plan
+      : (userData?.plan as 'free' | 'premium' | undefined)) ?? 'free';
+
   const isPremium = userPlan === 'premium';
 
 
   
 
+
 // derivati extra per l’overlay
 const isUser = quota?.scope === 'user' || !!userData;
-
-
 const isAnon = quota?.scope === 'anon';
-const isUserScope = quota?.scope === 'user';
-const isUserPremium = isUserScope && (quota as QuotaUser)?.plan === 'premium';
-
-
-const isUserFree = isUser && !isUserPremium;
+const isUserFree = !quotaLoading && userPlan === 'free';
 
 const isBlocked =
-  isAnon
+  quota?.scope === 'anon'
     ? (quota as QuotaAnon)?.remainingTotal <= 0
-    : isUserScope
-      ? !isUserPremium && (quota as QuotaUser)?.remainingToday <= 0
+    : quota?.scope === 'user'
+      ? userPlan !== 'premium' && (quota as QuotaUser)?.remainingToday <= 0
       : (!isLoggedIn && genCount >= FREE_LIMIT); // fallback prima che quota arrivi
+
 
 
 const overlayTitle = !isUser
@@ -538,16 +539,22 @@ useEffect(() => {
               )}
             </div>
 
-            {isLoggedIn && (
-              <button
-                onClick={() => handleCheckout('premium')}
-                className={`${styles.glassBtn} ${styles.upgradeBtn}`}
-                aria-label="Passa a Premium"
-              >
-                <LockKeyhole size={18} className={styles.icon} />
-                &nbsp;Passa&nbsp;a&nbsp;Premium
-              </button>
-            )}
+              {/* upgrade diretto (solo se non premium e quota caricata) */}
+                {!quotaLoading && !isPremium && (
+                  <button
+                    onClick={() => handleCheckout('premium')}
+                    className={styles.premiumInModal}
+                    aria-label="Acquista Premium"
+                  >
+                    <BadgeDollarSign size={18} aria-hidden />
+                    Passa direttamente a&nbsp;Premium
+                  </button>
+                )}
+
+
+
+
+
 
             <button
               onClick={logout}
@@ -560,7 +567,7 @@ useEffect(() => {
           </div>
 
           {/* Banner FREE sotto al logo */}
-          {userPlan === 'free' && (
+          {!quotaLoading && userPlan === 'free' && (
             <div className={styles.freeBanner}>
               Benvenuto in <strong>SGAI Free</strong> —&nbsp;
               <strong>
@@ -659,7 +666,7 @@ useEffect(() => {
             >
               <GoogleGIcon />&nbsp;Accedi con Google
             </button>
-          ) : isUserFree ? (
+          ) : (!quotaLoading && isUserFree) ? (
             <button
               onClick={() => handleCheckout('premium')}
               className={`${styles.glassBtn} ${styles.upgradeBtn}`}
@@ -668,6 +675,8 @@ useEffect(() => {
               &nbsp;Passa a Premium
             </button>
           ) : null}
+
+
         </div>
       </div>
     )}
