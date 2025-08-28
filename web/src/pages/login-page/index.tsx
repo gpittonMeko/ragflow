@@ -350,40 +350,38 @@ useEffect(() => {
 
 
   const handleGoogleResponse = async (response: any) => {
-    if (!response.credential) return;
-    setGoogleToken(response.credential);
+  if (!response.credential) return;
+  setGoogleToken(response.credential);
 
-    try {
-      const res = await fetch(`${baseURL}/api/auth/google`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Client-Id': clientIdRef.current,
-        },
-        credentials: 'include',
-        body: JSON.stringify({ token: response.credential }),
-      });
+  try {
+    const res = await fetch(`${baseURL}/api/auth/google`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Id': clientIdRef.current,
+      },
+      credentials: 'include',
+      body: JSON.stringify({ token: response.credential }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (res.ok) {
-        // Il backend setta il cookie + restituisce {email, plan}
-        setUserData({ email: data.email, plan: data.plan });
-        setShowGoogleModal(false);
-        setGenCount(0);
-        localStorage.removeItem('sgai-gen-count');
-
-        // La quota ufficiale viene SEMPRE dal server
-        await refreshQuota(response.credential);
-      } else {
-        alert(`Errore di autenticazione: ${data?.error || 'sconosciuto'}`);
-        setGoogleToken(null);
-      }
-    } catch {
-      alert('Errore di rete durante autenticazione');
+    if (res.ok) {
+      setUserData({ email: data.email, plan: data.plan });
+      setShowGoogleModal(false);
+      setGenCount(0);
+      localStorage.removeItem('sgai-gen-count');
+      await refreshQuota(response.credential);
+    } else {
+      alert(`Errore di autenticazione: ${data?.error || 'sconosciuto'}`);
       setGoogleToken(null);
     }
-  };
+  } catch {
+    alert('Errore di rete durante autenticazione');
+    setGoogleToken(null);
+  }
+};
+
 
 
 
