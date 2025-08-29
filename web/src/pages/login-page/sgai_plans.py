@@ -20,7 +20,7 @@ DB = PooledMySQLDatabase(
     password=MYSQL_PASS,
     host=MYSQL_HOST,
     port=MYSQL_PORT,
-    max_connections=8,
+    max_connections=1000,
     stale_timeout=300,
 )
 
