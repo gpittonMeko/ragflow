@@ -497,7 +497,7 @@ def stripe_webhook():
 
     return jsonify(received=True)
 
-@app.get("/debug-cookie")
+@app.get("/oauth/debug-cookie")
 def debug_cookie():
     sid = request.cookies.get(SESSION_COOKIE)
     print("📦 Cookie ricevuto dal browser:", sid)
