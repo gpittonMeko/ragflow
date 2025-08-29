@@ -14,7 +14,7 @@ MYSQL_HOST   = os.environ.get("MYSQL_HOST",   "mysql")
 # ⚠️ In rete Docker la porta corretta è 3306 (NON la porta host mappata tipo 5455)
 MYSQL_PORT   = int(os.environ.get("MYSQL_PORT", 3306))
 
-DB = PooledMySQLDatabase(
+DB = PooledMySQLDatabase(famm
     MYSQL_DBNAME,
     user=MYSQL_USER,
     password=MYSQL_PASS,

@@ -160,7 +160,7 @@ services:
       - ragflow
     restart: on-failure
 
-    backendoauth:
+  backendoauth:
     container_name: ragflow-backend-oauth
     build:
       context: ../web/src/pages/login-page
