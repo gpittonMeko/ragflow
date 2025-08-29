@@ -424,16 +424,23 @@ def stripe_verify_session():
             user.plan = "premium"
             user.used_generations = 0
             user.last_generation_reset = datetime.utcnow()
-            # opzionale: salva anche customer/subscription id
             if s.get("customer"):
                 user.stripe_customer_id = s.get("customer")
             if s.get("subscription"):
                 user.stripe_subscription_id = s.get("subscription")
             user.save()
 
-        return jsonify(ok=True, email=email, plan=("premium" if email else "free"))
+            # 👇 AGGIUNGI QUESTO BLOCCO
+            sid_cookie = create_session_for_user(user)
+            resp = make_response(jsonify(ok=True, email=email, plan="premium"))
+            set_session_cookie(resp, sid_cookie)
+            return resp
+
+        return jsonify(ok=False, error="email non trovata"), 500
+
     except Exception as exc:
         return jsonify(error=str(exc)), 500
+
 
 # ─────────────────────────────────────────────────────────────
 # STRIPE – Webhook
