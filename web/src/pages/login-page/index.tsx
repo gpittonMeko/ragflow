@@ -432,11 +432,22 @@ useEffect(() => {
 
   const toggleTheme = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
 
-  const logout = () => {
+  const logout = async () => {
     setGoogleToken(null);
     setUserData(null);
     setGenCount(0);
     localStorage.removeItem('sgai-gen-count');
+
+    // chiama logout server per eliminare il cookie HttpOnly
+    try {
+      await fetch(`${baseURL}/api/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (e) {
+      console.warn('Errore logout backend', e);
+    }
+
     // dopo logout torni anonimo → ricalcola quota anon
     void refreshQuota();
   };
