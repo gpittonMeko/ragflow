@@ -129,7 +129,7 @@ def set_session_cookie(resp, sid: str):
         max_age=60*60*24*30,
         secure=True,       # True in produzione (HTTPS)
         httponly=True,     # non accessibile da JS
-        samesite="Lax",
+        samesite="None",
         path="/",
     )
 
