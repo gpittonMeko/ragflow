@@ -1,19 +1,25 @@
 # sgai_plans.py
 from peewee import Model, CharField, IntegerField, DateTimeField, ForeignKeyField
 from playhouse.pool import PooledMySQLDatabase
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
-
-# Usa PyMySQL come MySQLdb
 import pymysql  # type: ignore
+
 pymysql.install_as_MySQLdb()
 
+MYSQL_DBNAME = os.environ.get("MYSQL_DBNAME", "rag_flow")
+MYSQL_USER   = os.environ.get("MYSQL_USER",   "root")
+MYSQL_PASS   = os.environ.get("MYSQL_PASSWORD", "infini_rag_flow")
+MYSQL_HOST   = os.environ.get("MYSQL_HOST",   "mysql")
+# ⚠️ In rete Docker la porta corretta è 3306 (NON la porta host mappata tipo 5455)
+MYSQL_PORT   = int(os.environ.get("MYSQL_PORT", 3306))
+
 DB = PooledMySQLDatabase(
-    os.environ.get("MYSQL_DBNAME", "rag_flow"),
-    user=os.environ.get("MYSQL_USER", "root"),
-    password=os.environ.get("MYSQL_PASSWORD", "infini_rag_flow"),
-    host=os.environ.get("MYSQL_HOST", "mysql"),
-    port=int(os.environ.get("MYSQL_PORT", 5455)),
+    MYSQL_DBNAME,
+    user=MYSQL_USER,
+    password=MYSQL_PASS,
+    host=MYSQL_HOST,
+    port=MYSQL_PORT,
     max_connections=8,
     stale_timeout=300,
 )
@@ -34,7 +40,7 @@ class SgaiPlanUser(BaseModel):
         table_name = "sgai_plan_user"
 
 class Session(BaseModel):
-    id = CharField(primary_key=True, max_length=64)  # uuid hex
+    id = CharField(primary_key=True, max_length=64)
     user = ForeignKeyField(SgaiPlanUser, backref='sessions', on_delete='CASCADE')
     expires_at = DateTimeField(null=False)
 

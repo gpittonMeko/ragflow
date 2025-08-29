@@ -160,29 +160,41 @@ services:
       - ragflow
     restart: on-failure
 
-  backendoauth:
+    backendoauth:
     container_name: ragflow-backend-oauth
     build:
       context: ../web/src/pages/login-page
       dockerfile: Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
     env_file:
       - .env
       - .env.secrets
-    
-    ports:
-      - "8000:8000"
     environment:
       TZ: ${TIMEZONE}
+
+      # 🔴 IMPORTANTI: usa la porta interna Docker (3306), NON la porta host (5455)
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DBNAME: rag_flow
+
+      # opzionale: se il frontend la usa davvero da qui, ok; altrimenti toglila
       VITE_API_BASE: http://www.sgailegal.com:8000
 
-
-      # ⬇️ aggiungi queste:
+      # (solo se davvero ti servono nel backend oauth; altrimenti rimuovi)
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+    ports:
+      - "8000:8000"
     networks:
       - ragflow
     restart: on-failure
+
 
   
 
