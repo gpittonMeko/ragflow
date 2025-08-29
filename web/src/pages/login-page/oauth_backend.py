@@ -54,8 +54,38 @@ CORS(app, supports_credentials=True, origins=[FRONT_ORIGIN])
 # DB Peewee (utenti + sessioni)
 # ─────────────────────────────────────────────────────────────
 # Richiede sgai_plans.py con i modelli Peewee e ensure_tables()
+# DB Peewee (utenti + sessioni)
+# Richiede sgai_plans.py con i modelli Peewee e ensure_tables()
+import socket
+
+def wait_for_mysql(host: str, port: int | str, timeout: int = 60):
+    """Attende che MySQL sia raggiungibile (rete Docker: porta 3306)."""
+    start = time.time()
+    port = int(port)
+    delay = 0.5
+    while True:
+        try:
+            with socket.create_connection((host, port), timeout=2):
+                print(f"✅ MySQL raggiungibile su {host}:{port}")
+                return
+        except OSError:
+            if time.time() - start > timeout:
+                raise RuntimeError(f"MySQL non raggiungibile su {host}:{port} entro {timeout}s")
+            time.sleep(delay)
+            delay = min(delay * 1.5, 5)
+
 from sgai_plans import SgaiPlanUser, Session, ensure_tables, DB
+
+# Host/porta letti dalle ENV (docker-compose deve passare MYSQL_HOST=mysql e MYSQL_PORT=3306)
+MYSQL_HOST = os.getenv("MYSQL_HOST", "mysql")
+MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
+
+# Attendi MySQL prima di toccare le tabelle
+wait_for_mysql(MYSQL_HOST, MYSQL_PORT)
+
+# Crea/assicurati le tabelle dopo che MySQL è up
 ensure_tables()
+
 
 # ─────────────────────────────────────────────────────────────
 # “DB” in RAM SOLO per anonimi (facoltativo, manteniamo compatibilità)
