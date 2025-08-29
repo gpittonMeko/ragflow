@@ -436,21 +436,31 @@ useEffect(() => {
     setGoogleToken(null);
     setUserData(null);
     setGenCount(0);
-    localStorage.removeItem('sgai-gen-count');
 
-    // chiama logout server per eliminare il cookie HttpOnly
+    // Pulisci TUTTO il localStorage correlato
+    localStorage.removeItem('sgai-gen-count');
+    localStorage.removeItem('sgai-upgraded-email');
+    localStorage.removeItem('userInfo');
+    localStorage.removeItem('sgai-client-id');
+    localStorage.removeItem('sgai-upgraded');
+
     try {
-      await fetch(`${baseURL}/api/logout`, {
+      const res = await fetch(`${baseURL}/api/logout`, {
         method: 'POST',
         credentials: 'include',
       });
+      const data = await res.json();
+      console.log('[logout]', res.status, data);
     } catch (e) {
       console.warn('Errore logout backend', e);
     }
 
-    // dopo logout torni anonimo → ricalcola quota anon
-    void refreshQuota();
+    // forza un hard reset
+    window.location.href = '/';
   };
+
+
+
 
   // Stripe
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
