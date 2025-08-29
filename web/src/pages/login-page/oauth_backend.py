@@ -143,7 +143,8 @@ def get_current_user_from_cookie() -> Optional[SgaiPlanUser]:
     sid = request.cookies.get(SESSION_COOKIE)
     if not sid:
         return None
-    sess = Session.get_or_none(Session.id == sid)
+    with DB.atomic():
+        sess = Session.get_or_none(Session.id == sid)
     if not sess or sess.expires_at < datetime.utcnow():
         return None
     return sess.user
@@ -504,9 +505,13 @@ def debug_cookie():
     return jsonify(cookie_sid=sid or "NONE")
 
 @app.teardown_appcontext
-def close_db(exc):
+def close_db_connection(exc):
     if not DB.is_closed():
-        DB.close()
+        try:
+            DB.close()
+        except Exception as e:
+            print(f"Errore in chiusura DB: {e}")
+
 
 
 # ─────────────────────────────────────────────────────────────
