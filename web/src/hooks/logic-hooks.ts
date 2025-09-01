@@ -168,7 +168,9 @@ export const useSendMessageWithSse = (
   }, []);
 
   const resetAnswer = useCallback(() => {
-    if (timer.current) clearTimeout(timer.current);
+    if (timer.current) {
+      clearTimeout(timer.current);
+    }
     timer.current = setTimeout(() => {
       setAnswer({} as IAnswer);
       clearTimeout(timer.current);
@@ -183,8 +185,6 @@ export const useSendMessageWithSse = (
       initializeSseRef();
       try {
         setDone(false);
-        setIsGenerating(true);
-
         const response = await fetch(url, {
           method: 'POST',
           headers: {
@@ -195,99 +195,53 @@ export const useSendMessageWithSse = (
           signal: controller?.signal || sseRef.current?.signal,
         });
 
-        // tenta a leggere il JSON finale (se non è SSE puro)
-        let finalJson: ResponseType = {} as any;
-        try {
-          finalJson = await response.clone().json();
-        } catch {
-          // ok, è streaming puro
-        }
+        const res = response.clone().json();
 
-        const contentType = response.headers.get('content-type') || '';
-        let reader: ReadableStreamDefaultReader<any> | undefined;
+        const reader = response?.body
+          ?.pipeThrough(new TextDecoderStream())
+          .pipeThrough(new EventSourceParserStream())
+          .getReader();
 
-        if (contentType.includes('text/event-stream')) {
-          reader = response.body
-            ?.pipeThrough(new TextDecoderStream())
-            .pipeThrough(new EventSourceParserStream())
-            .getReader();
-        } else {
-          // fallback: stream di testo (righe "data:" ecc.)
-          reader = response.body?.pipeThrough(new TextDecoderStream()).getReader();
-        }
-
-        // parser di una singola linea/blocco "data:"
-        const processDataLine = (dataLine: string) => {
-          const trimmed = dataLine.trim();
-          if (!trimmed) return;
-
-          if (trimmed === '[DONE]' || trimmed.toLowerCase() === 'done') {
-            setIsGenerating(false);
-            return;
-          }
-
-          const jsonStr = trimmed.startsWith('data:')
-            ? trimmed.slice(5).trim()
-            : trimmed;
-
-          try {
-            const val = JSON.parse(jsonStr);
-
-            // alcuni backend annidano sotto "data"
-            const dRaw = (val && typeof val === 'object' && 'data' in val) ? (val as any).data : val;
-
-            if (typeof dRaw?.running_status === 'boolean') {
-              setIsGenerating(Boolean(dRaw.running_status));
-            }
-
-            // testo della risposta: preferisci dRaw.answer, altrimenti dRaw.content
-            const text =
-              (typeof dRaw?.answer === 'string' && dRaw.answer.length > 0)
-                ? dRaw.answer
-                : (typeof dRaw?.content === 'string' ? dRaw.content : '');
-
-            // normalizza: rimuovi "content" crudo per evitare collisioni
-            const normalized: IAnswer = {
-              ...(omit(dRaw, 'content') as any),
-              answer: text,
-              conversationId: body?.conversation_id,
-            };
-
-            setAnswer(normalized);
-          } catch {
-            // ignora keepalive/righe non-JSON
-          }
-        };
-
-        // loop di lettura
         while (true) {
           const x = await reader?.read();
-          if (!x) break;
-          const { done: streamDone, value } = x;
-          if (streamDone) break;
+          if (x) {
+            const { done, value } = x;
+            if (done) {
+              console.info('done');
+              resetAnswer();
+              break;
+            }
+            try {
+              const val = JSON.parse(value?.data || '');
+              const d = val?.data;
+              if (typeof d !== 'boolean') {
+                console.info('data:', d);
 
-          if (contentType.includes('text/event-stream')) {
-            const raw = typeof value === 'string' ? value : value?.data;
-            if (raw != null) processDataLine(String(raw));
-          } else {
-            const chunkText: string = String(value);
-            const blocks = chunkText.split(/\n\n/);
-            for (const block of blocks) {
-              const lines = block.split(/\r?\n/).filter(Boolean);
-              for (const line of lines) processDataLine(line);
+                // PATCH: Gestisci il vero stato di generazione
+                if (d.running_status === true) {
+                  setIsGenerating(true);   // Mostra loader/barra
+                } else {
+                  setIsGenerating(false);  // Nascondi loader/barra
+                }
+
+                setAnswer({
+                  ...d,
+                  conversationId: body?.conversation_id,
+                });
+              }
+            } catch (e) {
+              console.warn(e);
             }
           }
         }
-
+        console.info('done?');
         setDone(true);
-        setIsGenerating(false);
         resetAnswer();
-
-        return { data: finalJson, response };
+        return { data: await res, response };
       } catch (e) {
         setDone(true);
-        setIsGenerating(false);
         resetAnswer();
+
         console.warn(e);
       }
     },
@@ -296,20 +250,10 @@ export const useSendMessageWithSse = (
 
   const stopOutputMessage = useCallback(() => {
     sseRef.current?.abort();
-    setIsGenerating(false);
   }, []);
 
-  return {
-    send,
-    answer,
-    done,
-    setDone,
-    resetAnswer,
-    stopOutputMessage,
-    isGenerating,
-  };
+  return { send, answer, done, setDone, resetAnswer, stopOutputMessage, isGenerating, };
 };
-
 
 export const useSpeechWithSse = (url: string = api.tts) => {
   const read = useCallback(
@@ -375,6 +319,8 @@ export const useHandleMessageInputChange = () => {
 export const useSelectDerivedMessages = () => {
   const [derivedMessages, setDerivedMessages] = useState<IMessage[]>([]);
 
+  //const ref = useScrollToBottom(derivedMessages);
+
   const addNewestQuestion = useCallback(
     (message: Message, answer: string = '') => {
       setDerivedMessages((pre) => {
@@ -382,7 +328,9 @@ export const useSelectDerivedMessages = () => {
           ...pre,
           {
             ...message,
-            id: buildMessageUuid(message),
+            id: buildMessageUuid(message), // The message id is generated on the front end,
+            // and the message id returned by the back end is the same as the question id,
+            //  so that the pair of messages can be deleted together when deleting the message
           },
           {
             role: MessageType.Assistant,
@@ -395,22 +343,22 @@ export const useSelectDerivedMessages = () => {
     [],
   );
 
+  // Add the streaming message to the last item in the message list
   const addNewestAnswer = useCallback((answer: IAnswer) => {
     setDerivedMessages((pre) => {
-      const base = omit(answer, ['reference', 'content']); // ← evita collisioni col campo "content"
       return [
         ...(pre?.slice(0, -1) ?? []),
         {
           role: MessageType.Assistant,
+          content: answer.answer,
+          reference: answer.reference,
           id: buildMessageUuid({
             id: answer.id,
             role: MessageType.Assistant,
           }),
-          ...base,                                // metti prima il payload normalizzato
-          content: answer.answer ?? '',           // poi il testo definitivo
-          reference: answer.reference,
           prompt: answer.prompt,
           audio_binary: answer.audio_binary,
+          ...omit(answer, 'reference'),
         },
       ];
     });
@@ -460,6 +408,7 @@ export const useSelectDerivedMessages = () => {
   );
 
   return {
+    //ref,
     derivedMessages,
     setDerivedMessages,
     addNewestQuestion,
@@ -469,7 +418,6 @@ export const useSelectDerivedMessages = () => {
     removeMessagesAfterCurrentMessage,
   };
 };
-
 
 export interface IRemoveMessageById {
   removeMessageById(messageId: string): void;
