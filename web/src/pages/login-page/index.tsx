@@ -280,53 +280,7 @@ function postToIframe(msg: any) {
 
 
 
-  async function tickGeneration() {
-  console.log('[GENERATION] chiamata tickGeneration()');
-
-  try {
-    const res = await fetch(`https://sgailegal.com/api/component/run`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Client-Id': clientIdRef.current, // ok anche se loggato
-      },
-      credentials: 'include',
-      body: JSON.stringify({
-        canvas_id: 'sgai-homepage',       // <<< usa quello giusto se cambia
-        component_id: 'Generate',         // <<< stesso ID che usi in flow
-        params: {
-          prompt: 'Generazione anonima dal sito', // <<< metti qualcosa
-        },
-      }),
-    });
-
-    const contentType = res.headers.get('content-type');
-    let data;
-    if (contentType?.includes('application/json')) {
-      data = await res.json();
-    } else {
-      const text = await res.text();
-      console.warn('[GENERATION] response non-JSON:', text);
-      data = { raw: text };
-    }
-
-    console.log('[GENERATION] data ricevuti:', data);
-
-    if (!res.ok) {
-      await refreshQuota();
-      setShowLimitOverlay(true);
-      alert(data?.error || 'Limite raggiunto');
-      return false;
-    }
-
-    await refreshQuota();
-    return true;
-  } catch (e) {
-    console.error('[GENERATION] errore fetch:', e);
-    return false;
-  }
-}
-
+ 
 
 
 
@@ -368,7 +322,7 @@ function postToIframe(msg: any) {
 
       genTimeoutRef.current = window.setTimeout(() => {
         console.warn('[FALLBACK] generation-finished NON ricevuto dopo 120s. Chiamo tickGeneration()');
-        void tickGeneration();
+       
         genTimeoutRef.current = null;
       }, 120000); // 2 minuti
     }
