@@ -43,7 +43,7 @@ COOKIE_DOMAIN = "." + _COOKIE_HOST  # => ".sgailegal.com"
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "1") != "0"
 
 # Pagine frontend stanno sotto /oauth
-SUCCESS_URL = f"{APP_URL}/oauth/success?session_id={{CHECKOUT_SESSION_ID}}"
+SUCCESS_URL = f"{APP_URL}/oauth/success.html?session_id={{CHECKOUT_SESSION_ID}}"
 CANCEL_URL  = f"{APP_URL}/oauth"
 
 SESSION_COOKIE = "sgaai_session"
