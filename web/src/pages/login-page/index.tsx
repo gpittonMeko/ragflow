@@ -4,6 +4,7 @@ import { SvgLogoInteractive } from './SvgLogoInteractive';
 import { loadStripe } from '@stripe/stripe-js';
 import { LogOut,LockKeyhole,BadgeDollarSign, Sun, Moon } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'sonner';
 
 const CLIENT_ID =
   '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
@@ -322,6 +323,8 @@ function postToIframe(msg: any) {
 
   useEffect(() => {
   const handler = (event: MessageEvent) => {
+    console.log('[postMessage]', event.data); // <-- LOG COMPLETO
+
     if (event.data?.type === 'iframe-height') {
       const iframe = iframeRef.current;
       if (!iframe) return;
@@ -345,22 +348,27 @@ function postToIframe(msg: any) {
       iframe.style.height = `${nextHeight}px`;
     }
 
-    // ⬇️ NUOVO: quando la generazione PARTE, avvia un fallback timer
+    // FALLBACK TIMER se parte la generazione
     if (event.data?.type === 'generation-started') {
+      console.log('[GENERATION] STARTED');
+
       if (genTimeoutRef.current) {
-        clearTimeout(genTimeoutRef.current);
-        genTimeoutRef.current = null;
+        console.warn('[GENERATION] Timer già attivo, non reinizializzo');
+        return; // evita doppio timer
       }
+
       genTimeoutRef.current = window.setTimeout(() => {
-        console.warn('[fallback] generation-finished non arrivato: tickGeneration()');
+        console.warn('[FALLBACK] generation-finished NON ricevuto dopo 120s. Chiamo tickGeneration()');
         void tickGeneration();
         genTimeoutRef.current = null;
-      }, 120000); // 2 minuti: regola se vuoi
+      }, 120000); // 2 minuti
     }
 
-    // FINE GENERAZIONE → conteggio lato server
+    // FINE GENERAZIONE
     if (event.data?.type === 'generation-finished') {
-      // fallback legacy locale (non blocca mai da solo)
+      console.log('[GENERATION] FINISHED');
+
+      // fallback locale (anonimi)
       if (!userData) {
         setGenCount(prev => {
           const next = prev + 1;
@@ -368,12 +376,15 @@ function postToIframe(msg: any) {
           return next;
         });
       }
-      // ⬇️ CANCELLA il fallback se attivo
+
+      // CANCELLA il timer di fallback se presente
       if (genTimeoutRef.current) {
         clearTimeout(genTimeoutRef.current);
         genTimeoutRef.current = null;
+        console.log('[GENERATION] Timer di fallback annullato');
       }
-      // conteggio ufficiale lato server
+
+      // Chiede il conteggio aggiornato
       void tickGeneration();
     }
   };
@@ -382,13 +393,13 @@ function postToIframe(msg: any) {
   return () => {
     window.removeEventListener('message', handler);
     if (expandTimeoutRef.current) clearTimeout(expandTimeoutRef.current);
-    // ⬇️ pulizia del fallback timer
     if (genTimeoutRef.current) {
       clearTimeout(genTimeoutRef.current);
       genTimeoutRef.current = null;
     }
   };
 }, [canExpandIframe, userData, googleToken]);
+
 
 
   // ======= GOOGLE SDK =======
@@ -462,7 +473,12 @@ useEffect(() => {
 };
 
 
-
+genTimeoutRef.current = window.setTimeout(() => {
+  console.warn('[FALLBACK] generation-finished NON ricevuto dopo 120s. Chiamo tickGeneration()');
+  toast.warning('Timeout generazione — fallback attivato');
+  void tickGeneration();
+  genTimeoutRef.current = null;
+}, 120000);
 
   useEffect(() => {
     if (!showGoogleModal || !googleButtonRef.current || googleToken || !gsiReady) return;
