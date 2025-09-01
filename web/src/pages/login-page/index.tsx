@@ -170,6 +170,23 @@ function postToIframe(msg: any) {
     })();
   }, []);
 
+  useEffect(() => {
+  const handleScroll = () => {
+    const upgradeBtn = document.querySelector('.upgradeBtn');
+    if (!upgradeBtn) return;
+
+    if (window.scrollY < 50) {
+      upgradeBtn.classList.add('scrollTopActive');
+    } else {
+      upgradeBtn.classList.remove('scrollTopActive');
+    }
+  };
+
+  window.addEventListener('scroll', handleScroll);
+  handleScroll(); // inizializza all'apertura
+  return () => window.removeEventListener('scroll', handleScroll);
+}, []);
+
 
   useEffect(() => { void refreshQuota(); }, []);
 
