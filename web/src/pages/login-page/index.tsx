@@ -450,31 +450,40 @@ useEffect(() => {
   const toggleTheme = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
 
   const logout = async () => {
+    // ① Evita re-login automatico del Google Identity Services
+    if (window.google?.accounts?.id) {
+      try {
+        window.google.accounts.id.disableAutoSelect();
+        const hint =
+          (quota?.scope === 'user' ? (quota as QuotaUser).id : userData?.email) || '';
+        if (hint) window.google.accounts.id.revoke(hint, () => {});
+      } catch {}
+    }
+
+    // ② Pulisci lo stato client
     setGoogleToken(null);
     setUserData(null);
     setGenCount(0);
-
-    // Pulisci TUTTO il localStorage correlato
     localStorage.removeItem('sgai-gen-count');
     localStorage.removeItem('sgai-upgraded-email');
     localStorage.removeItem('userInfo');
     localStorage.removeItem('sgai-client-id');
     localStorage.removeItem('sgai-upgraded');
 
+    // ③ Logout server → invalida sessione e cookie HttpOnly
     try {
-      const res = await fetch(`${baseURL}/api/logout`, {
+      await fetch(`${baseURL}/api/logout`, {
         method: 'POST',
         credentials: 'include',
       });
-      const data = await res.json();
-      console.log('[logout]', res.status, data);
     } catch (e) {
       console.warn('Errore logout backend', e);
     }
 
-    // forza un hard reset
+    // ④ Hard refresh per ripartire anonimo
     window.location.href = '/';
   };
+
 
 
 

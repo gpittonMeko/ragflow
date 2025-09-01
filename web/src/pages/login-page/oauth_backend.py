@@ -149,6 +149,32 @@ def get_current_user_from_cookie() -> Optional[SgaiPlanUser]:
         return None
     return sess.user
 
+
+# ─────────────────────────────────────────────────────────────
+# LOGOUT – invalida la sessione e cancella il cookie
+# ─────────────────────────────────────────────────────────────
+@app.post("/api/logout")
+def logout():
+    sid = request.cookies.get(SESSION_COOKIE)
+    if sid:
+        with DB.atomic():
+            Session.delete().where(Session.id == sid).execute()
+
+    resp = jsonify({"ok": True})
+    # cancella il cookie HttpOnly
+    resp.set_cookie(
+        SESSION_COOKIE,
+        "",
+        expires=0,
+        max_age=0,
+        path="/",
+        httponly=True,
+        samesite="None",
+        secure=True,  # in locale senza HTTPS puoi mettere False
+    )
+    return resp
+
+
 # ─────────────────────────────────────────────────────────────
 # AUTH
 # ─────────────────────────────────────────────────────────────
