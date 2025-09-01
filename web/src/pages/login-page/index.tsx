@@ -280,30 +280,54 @@ function postToIframe(msg: any) {
 
 
 
-    async function tickGeneration() {
+   async function tickGeneration() {
+  console.log('[GENERATION] chiamata tickGeneration()');
+
   try {
     const tryOnce = async (useBearer: boolean) => {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (useBearer && googleToken) headers['Authorization'] = `Bearer ${googleToken}`;
-      if (!useBearer) headers['X-Client-Id'] = clientIdRef.current;
+      const auth = googleToken;
+
+      if (useBearer && auth) {
+        headers['Authorization'] = `Bearer ${auth}`;
+      }
+      if (!useBearer) {
+        headers['X-Client-Id'] = clientIdRef.current;
+      }
+
+      console.log('[GENERATION] tryOnce', {
+        useBearer,
+        headers,
+      });
 
       const res = await fetch(`${baseURL}/api/generate`, {
         method: 'POST',
         headers,
-        credentials: 'include',
+        credentials: 'include', // IMPORTANTE: serve per mandare il cookie HttpOnly
       });
+
+      console.log('[GENERATION] res.status', res.status);
       return res;
     };
 
-    // primo tentativo: Bearer se presente, altrimenti anonimo
     let res = await tryOnce(!!googleToken);
 
-    // se Bearer fallisce con 401 → riprova anonimo con X-Client-Id
     if (res.status === 401 && googleToken) {
+      console.warn('[GENERATION] 401 con Bearer → provo X-Client-Id');
       res = await tryOnce(false);
     }
 
-    const data = await res.json();
+    const contentType = res.headers.get('content-type');
+    let data;
+    if (contentType?.includes('application/json')) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      console.warn('[GENERATION] response non-JSON:', text);
+      data = { raw: text };
+    }
+
+    console.log('[GENERATION] data ricevuti:', data);
 
     if (!res.ok) {
       await refreshQuota();
@@ -315,10 +339,11 @@ function postToIframe(msg: any) {
     await refreshQuota();
     return true;
   } catch (e) {
-    console.error('generate error', e);
+    console.error('[GENERATION] errore fetch:', e);
     return false;
   }
 }
+
 
 
   useEffect(() => {
