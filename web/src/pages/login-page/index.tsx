@@ -20,7 +20,7 @@ const stripePromise = loadStripe(STRIPE_PK);
 
 // --- base URL backend ---
 const baseURL =
-  (process.env.UMI_APP_API_BASE as string | undefined) ||
+  (process.env.UMI_APP_API_BASE as string | undefined) ??
   `${window.location.origin}/oauth`;
 
 /* --- mini-component per la “G” trasparente --- */
@@ -177,22 +177,22 @@ function postToIframe(msg: any) {
     })();
   }, []);
 
-  useEffect(() => {
-  const handleScroll = () => {
-    const upgradeBtn = document.querySelector('.upgradeBtn');
-    if (!upgradeBtn) return;
-
-    if (window.scrollY < 50) {
-      upgradeBtn.classList.add('scrollTopActive');
-    } else {
-      upgradeBtn.classList.remove('scrollTopActive');
-    }
-  };
-
-  window.addEventListener('scroll', handleScroll);
-  handleScroll(); // inizializza all'apertura
-  return () => window.removeEventListener('scroll', handleScroll);
-}, []);
+//  useEffect(() => {
+//  const handleScroll = () => {
+//    const upgradeBtn = document.querySelector('.upgradeBtn');
+//    if (!upgradeBtn) return;
+//
+//    if (window.scrollY < 50) {
+//      upgradeBtn.classList.add('scrollTopActive');
+//    } else {
+//      upgradeBtn.classList.remove('scrollTopActive');
+//    }
+//  };
+//
+//  window.addEventListener('scroll', handleScroll);
+//  handleScroll(); // inizializza all'apertura
+//  return () => window.removeEventListener('scroll', handleScroll);
+//}, []);
 
 
   useEffect(() => { void refreshQuota(); }, []);
