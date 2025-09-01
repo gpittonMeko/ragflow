@@ -523,9 +523,11 @@ body {
 /* Mobile: non far sovrapporre nulla al logo */
 @media (max-width: 768px) {
   .topActions {
-    position: static;
-    margin: 8px 0 0;
-    justify-items: center;
+     position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 32px;
   }
 }
 
@@ -849,30 +851,25 @@ p, li, span {
 }
 
 
-@media (max-width: 480px) {
-  .logoutButton {
-    position: fixed;
-    top: 10px;             /* allineato con themeToggle */
-    right: 60px;           /* 10px di distanza dal toggle a destra (36px toggle + ~14px gap) */
-    z-index: 1100;
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    height: 36px;           /* stessa altezza del toggle */
-  }
+.logoutBtn {
+  position: absolute;
+  top: 12px;               // stesso `top` del tema toggle
+  right: 48px;             // a sinistra dell’icona tema
+  z-index: 100;
+  font-size: 12px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  background-color: rgba(0, 0, 0, 0.6); // o compatibile con il tema
 
-  .logoutButton svg {
+  svg {
     width: 16px;
     height: 16px;
   }
 }
+
 
 
