@@ -347,8 +347,6 @@ function postToIframe(msg: any) {
         console.log('[GENERATION] Timer di fallback annullato');
       }
 
-      // Chiede il conteggio aggiornato
-      void tickGeneration();
     }
   };
 
@@ -439,7 +437,7 @@ useEffect(() => {
 genTimeoutRef.current = window.setTimeout(() => {
   console.warn('[FALLBACK] generation-finished NON ricevuto dopo 120s. Chiamo tickGeneration()');
   toast.warning('Timeout generazione — fallback attivato');
-  void tickGeneration();
+
   genTimeoutRef.current = null;
 }, 120000);
 
