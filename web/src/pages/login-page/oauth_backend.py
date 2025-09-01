@@ -34,6 +34,14 @@ PREMIUM_LIMIT      = 1_000_000_000  # ← illimitato di fatto (simbolico)
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 APP_URL = os.getenv("APP_URL", "https://sgailegal.com")  # dominio pubblico (no IP)
 
+# Cookie valido su dominio e sottodomini (www / senza www)
+_COOKIE_HOST = urlparse(APP_URL).hostname or "sgailegal.com"
+COOKIE_DOMAIN = "." + _COOKIE_HOST  # => ".sgailegal.com"
+
+# SameSite=None richiede Secure=True in HTTPS.
+# Se sviluppi in locale HTTP, puoi forzare a False con ENV COOKIE_SECURE=0
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "1") != "0"
+
 # Pagine frontend stanno sotto /oauth
 SUCCESS_URL = f"{APP_URL}/oauth/success?session_id={{CHECKOUT_SESSION_ID}}"
 CANCEL_URL  = f"{APP_URL}/oauth"
@@ -127,10 +135,11 @@ def set_session_cookie(resp, sid: str):
         SESSION_COOKIE,
         sid,
         max_age=60*60*24*30,
-        secure=True,       # True in produzione (HTTPS)
-        httponly=True,     # non accessibile da JS
+        secure=COOKIE_SECURE,  # <-- usa la costante
+        httponly=True,
         samesite="None",
         path="/",
+        domain=COOKIE_DOMAIN,  # <-- AGGIUNTO
     )
 
 def create_session_for_user(user: SgaiPlanUser, days=30) -> str:
@@ -161,7 +170,6 @@ def logout():
             Session.delete().where(Session.id == sid).execute()
 
     resp = jsonify({"ok": True})
-    # cancella il cookie HttpOnly
     resp.set_cookie(
         SESSION_COOKIE,
         "",
@@ -170,9 +178,11 @@ def logout():
         path="/",
         httponly=True,
         samesite="None",
-        secure=True,  # in locale senza HTTPS puoi mettere False
+        secure=COOKIE_SECURE,   # <-- usa la costante
+        domain=COOKIE_DOMAIN,   # <-- STESSO DOMAIN DEL SET
     )
     return resp
+
 
 
 # ─────────────────────────────────────────────────────────────
