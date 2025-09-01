@@ -412,7 +412,7 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       chat: 'Chat',
       newChat: 'New chat',
       send: 'Send',
-      sendPlaceholder: 'Message the assistant...',
+      sendPlaceholder: 'Buongiorno sono SGAI, scrivi qui la tua domanda!...',
       chatConfiguration: 'Chat Configuration',
       chatConfigurationDescription:
         ' Set up a chat assistant for your selected datasets (knowledge bases) here! 💕',

@@ -224,111 +224,162 @@ function postToIframe(msg: any) {
   const [canExpandIframe, setCanExpandIframe] = useState(false);
   const expandTimeoutRef = useRef<any>(null);
 
+  const genTimeoutRef = useRef<number | null>(null);
+
   async function refreshQuota(forceToken?: string) {
-    try {
+  try {
+    const tryOnce = async (useBearer: boolean) => {
       const headers: Record<string, string> = {};
       const auth = forceToken ?? googleToken;
-      if (auth) headers['Authorization'] = `Bearer ${auth}`;
-      else headers['X-Client-Id'] = clientIdRef.current;
+      if (useBearer && auth) headers['Authorization'] = `Bearer ${auth}`;
+      if (!useBearer) headers['X-Client-Id'] = clientIdRef.current;
 
       const res = await fetch(`${baseURL}/api/quota`, {
         headers,
         credentials: 'include',
       });
-      const data = await res.json();
-      console.log('[QUOTA]', data);
-      if (res.ok) {
-        setQuota(data);
-        let blocked = false;
-        if (data.scope === 'anon') blocked = data.remainingTotal <= 0;
-        else if (data.scope === 'user') blocked = data.plan !== 'premium' && data.remainingToday <= 0;
-        setShowLimitOverlay(blocked);
-      } else {
-        console.warn('quota error', data);
-      }
-    } catch (e) {
-      console.warn('quota network error', e);
+      return res;
+    };
+
+    // primo tentativo: Bearer se presente, altrimenti anonimo
+    let res = await tryOnce(!!(forceToken ?? googleToken));
+
+    // se Bearer fallisce con 401 → riprova anonimo con X-Client-Id
+    if (res.status === 401 && (forceToken ?? googleToken)) {
+      res = await tryOnce(false);
     }
+
+    const data = await res.json();
+    console.log('[QUOTA]', data);
+
+    if (res.ok) {
+      setQuota(data);
+      let blocked = false;
+      if (data.scope === 'anon') blocked = data.remainingTotal <= 0;
+      else if (data.scope === 'user') blocked = data.plan !== 'premium' && data.remainingToday <= 0;
+      setShowLimitOverlay(blocked);
+    } else {
+      console.warn('quota error', data);
+    }
+  } catch (e) {
+    console.warn('quota network error', e);
   }
+}
+
 
 
 
     async function tickGeneration() {
-    try {
+  try {
+    const tryOnce = async (useBearer: boolean) => {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (googleToken) headers['Authorization'] = `Bearer ${googleToken}`;
-      else headers['X-Client-Id'] = clientIdRef.current;
+      if (useBearer && googleToken) headers['Authorization'] = `Bearer ${googleToken}`;
+      if (!useBearer) headers['X-Client-Id'] = clientIdRef.current;
 
       const res = await fetch(`${baseURL}/api/generate`, {
         method: 'POST',
         headers,
         credentials: 'include',
       });
-      const data = await res.json();
+      return res;
+    };
 
-      if (!res.ok) {
-        await refreshQuota();
-        setShowLimitOverlay(true);          // <<— QUESTA RIGA MANCAVA
-        alert(data?.error || 'Limite raggiunto');
-        return false;
-      }
+    // primo tentativo: Bearer se presente, altrimenti anonimo
+    let res = await tryOnce(!!googleToken);
 
+    // se Bearer fallisce con 401 → riprova anonimo con X-Client-Id
+    if (res.status === 401 && googleToken) {
+      res = await tryOnce(false);
+    }
+
+    const data = await res.json();
+
+    if (!res.ok) {
       await refreshQuota();
-      return true;
-    } catch (e) {
-      console.error('generate error', e);
+      setShowLimitOverlay(true);
+      alert(data?.error || 'Limite raggiunto');
       return false;
     }
+
+    await refreshQuota();
+    return true;
+  } catch (e) {
+    console.error('generate error', e);
+    return false;
   }
+}
 
 
-  // ======= LISTENER postMessage (altezza + fine generazione) =======
   useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      if (event.data?.type === 'iframe-height') {
-        const iframe = document.querySelector<HTMLIFrameElement>('iframe[title="SGAI Chat Interface"]');
-        if (!iframe) return;
-        const minHeight = 400;
-        const maxHeight = 1000;
-        let nextHeight = event.data.height;
+  const handler = (event: MessageEvent) => {
+    if (event.data?.type === 'iframe-height') {
+      const iframe = document.querySelector<HTMLIFrameElement>('iframe[title="SGAI Chat Interface"]');
+      if (!iframe) return;
+      const minHeight = 400;
+      const maxHeight = 1000;
+      let nextHeight = event.data.height;
 
-        if (!canExpandIframe) {
-          if (nextHeight > minHeight && !expandTimeoutRef.current) {
-            expandTimeoutRef.current = setTimeout(() => {
-              setCanExpandIframe(true);
-              expandTimeoutRef.current = null;
-            }, 10000);
-          }
-          nextHeight = minHeight;
-        } else {
-          nextHeight = Math.max(nextHeight, minHeight);
-          nextHeight = Math.min(nextHeight, maxHeight);
+      if (!canExpandIframe) {
+        if (nextHeight > minHeight && !expandTimeoutRef.current) {
+          expandTimeoutRef.current = setTimeout(() => {
+            setCanExpandIframe(true);
+            expandTimeoutRef.current = null;
+          }, 10000);
         }
-
-        iframe.style.height = `${nextHeight}px`;
+        nextHeight = minHeight;
+      } else {
+        nextHeight = Math.max(nextHeight, minHeight);
+        nextHeight = Math.min(nextHeight, maxHeight);
       }
 
-      // FINE GENERAZIONE → conteggio lato server
-      if (event.data?.type === 'generation-finished') {
-        // fallback legacy locale (non blocca mai da solo)
-        if (!userData) {
-          setGenCount(prev => {
-            const next = prev + 1;
-            if (next >= FREE_LIMIT) setShowLimitOverlay(true);
-            return next;
-          });
-        }
-        // conteggio ufficiale lato server
+      iframe.style.height = `${nextHeight}px`;
+    }
+
+    // ⬇️ NUOVO: quando la generazione PARTE, avvia un fallback timer
+    if (event.data?.type === 'generation-started') {
+      if (genTimeoutRef.current) {
+        clearTimeout(genTimeoutRef.current);
+        genTimeoutRef.current = null;
+      }
+      genTimeoutRef.current = window.setTimeout(() => {
+        console.warn('[fallback] generation-finished non arrivato: tickGeneration()');
         void tickGeneration();
-      }
-    };
+        genTimeoutRef.current = null;
+      }, 120000); // 2 minuti: regola se vuoi
+    }
 
-    window.addEventListener('message', handler);
-    return () => {
-      window.removeEventListener('message', handler);
-      if (expandTimeoutRef.current) clearTimeout(expandTimeoutRef.current);
-    };
-  }, [canExpandIframe, userData, googleToken]);
+    // FINE GENERAZIONE → conteggio lato server
+    if (event.data?.type === 'generation-finished') {
+      // fallback legacy locale (non blocca mai da solo)
+      if (!userData) {
+        setGenCount(prev => {
+          const next = prev + 1;
+          if (next >= FREE_LIMIT) setShowLimitOverlay(true);
+          return next;
+        });
+      }
+      // ⬇️ CANCELLA il fallback se attivo
+      if (genTimeoutRef.current) {
+        clearTimeout(genTimeoutRef.current);
+        genTimeoutRef.current = null;
+      }
+      // conteggio ufficiale lato server
+      void tickGeneration();
+    }
+  };
+
+  window.addEventListener('message', handler);
+  return () => {
+    window.removeEventListener('message', handler);
+    if (expandTimeoutRef.current) clearTimeout(expandTimeoutRef.current);
+    // ⬇️ pulizia del fallback timer
+    if (genTimeoutRef.current) {
+      clearTimeout(genTimeoutRef.current);
+      genTimeoutRef.current = null;
+    }
+  };
+}, [canExpandIframe, userData, googleToken]);
+
 
   // ======= GOOGLE SDK =======
   const [gsiReady, setGsiReady] = useState(false);
