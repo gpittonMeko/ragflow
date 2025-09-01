@@ -170,18 +170,34 @@ def logout():
             Session.delete().where(Session.id == sid).execute()
 
     resp = jsonify({"ok": True})
+
+    # 1) Variante con domain=.sgailegal.com + path=/
     resp.set_cookie(
-        SESSION_COOKIE,
-        "",
-        expires=0,
-        max_age=0,
-        path="/",
-        httponly=True,
-        samesite="None",
-        secure=COOKIE_SECURE,   # <-- usa la costante
-        domain=COOKIE_DOMAIN,   # <-- STESSO DOMAIN DEL SET
+        SESSION_COOKIE, "", expires=0, max_age=0,
+        path="/", httponly=True, samesite="None",
+        secure=COOKIE_SECURE, domain=COOKIE_DOMAIN
     )
+    # 2) Variante con domain=.sgailegal.com + path=/oauth
+    resp.set_cookie(
+        SESSION_COOKIE, "", expires=0, max_age=0,
+        path="/oauth", httponly=True, samesite="None",
+        secure=COOKIE_SECURE, domain=COOKIE_DOMAIN
+    )
+    # 3) Variante host-only (senza domain) + path=/
+    resp.set_cookie(
+        SESSION_COOKIE, "", expires=0, max_age=0,
+        path="/", httponly=True, samesite="None",
+        secure=COOKIE_SECURE
+    )
+    # 4) Variante host-only (senza domain) + path=/oauth
+    resp.set_cookie(
+        SESSION_COOKIE, "", expires=0, max_age=0,
+        path="/oauth", httponly=True, samesite="None",
+        secure=COOKIE_SECURE
+    )
+
     return resp
+
 
 
 
