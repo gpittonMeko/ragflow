@@ -852,8 +852,8 @@ p, li, span {
 @media (max-width: 480px) {
   .logoutButton {
     position: fixed;
-    top: 14px;
-    right: 66px; /* esattamente a sinistra del toggle (44px + ~10px gap) */
+    top: 10px;             /* allineato con themeToggle */
+    right: 60px;           /* 10px di distanza dal toggle a destra (36px toggle + ~14px gap) */
     z-index: 1100;
     background-color: rgba(255, 255, 255, 0.1);
     color: #fff;
@@ -866,6 +866,7 @@ p, li, span {
     align-items: center;
     gap: 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    height: 36px;           /* stessa altezza del toggle */
   }
 
   .logoutButton svg {
@@ -873,3 +874,4 @@ p, li, span {
     height: 16px;
   }
 }
+
