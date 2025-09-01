@@ -280,42 +280,25 @@ function postToIframe(msg: any) {
 
 
 
-   async function tickGeneration() {
+  async function tickGeneration() {
   console.log('[GENERATION] chiamata tickGeneration()');
 
   try {
-    const tryOnce = async (useBearer: boolean) => {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      const auth = googleToken;
-
-      if (useBearer && auth) {
-        headers['Authorization'] = `Bearer ${auth}`;
-      }
-      if (!useBearer) {
-        headers['X-Client-Id'] = clientIdRef.current;
-      }
-
-      console.log('[GENERATION] tryOnce', {
-        useBearer,
-        headers,
-      });
-
-      const res = await fetch(`${baseURL}/api/generate`, {
-        method: 'POST',
-        headers,
-        credentials: 'include', // IMPORTANTE: serve per mandare il cookie HttpOnly
-      });
-
-      console.log('[GENERATION] res.status', res.status);
-      return res;
-    };
-
-    let res = await tryOnce(!!googleToken);
-
-    if (res.status === 401 && googleToken) {
-      console.warn('[GENERATION] 401 con Bearer → provo X-Client-Id');
-      res = await tryOnce(false);
-    }
+    const res = await fetch(`https://sgailegal.com/api/component/run`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Id': clientIdRef.current, // ok anche se loggato
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        canvas_id: 'sgai-homepage',       // <<< usa quello giusto se cambia
+        component_id: 'Generate',         // <<< stesso ID che usi in flow
+        params: {
+          prompt: 'Generazione anonima dal sito', // <<< metti qualcosa
+        },
+      }),
+    });
 
     const contentType = res.headers.get('content-type');
     let data;
@@ -343,6 +326,7 @@ function postToIframe(msg: any) {
     return false;
   }
 }
+
 
 
 
