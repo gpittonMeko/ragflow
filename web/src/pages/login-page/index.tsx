@@ -595,14 +595,16 @@ useEffect(() => {
 
 
             <button
-              onClick={logout}
-              className={`${styles.glassBtn} ${styles.logoutBtn}`}
-              aria-label="Logout"
-            >
-              <LogOut className={styles.icon} />
-              Esci
-            </button>
+            onClick={logout}
+            className={`${styles.glassBtn} ${styles.logoutBtn}`}
+            aria-label="Logout"
+            title="Esci dal tuo account"
+          >
+            <LogOut className={styles.icon} />
+            Esci
+          </button>
 
+          </div>
 
           {/* Banner FREE sotto al logo */}
           {!quotaLoading && userPlan === 'free' && (
