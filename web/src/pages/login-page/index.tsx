@@ -394,38 +394,35 @@ function postToIframe(msg: any) {
   });
 }, []);
 
-// Ottieni un token guest valido da Ragflow
+
+
 useEffect(() => {
   const getGuestToken = async () => {
     try {
-      // Prima ottieni il token guest
       const response = await fetch('https://sgailegal.com/api/auth/guest_login', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({})
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       });
-      
       const data = await response.json();
-      
+
       if (data.code === 0 && data.data?.access_token) {
-        // Salva il token
+        // 1) salva token dove legge tutto l’SDK Ragflow
         localStorage.setItem('authorization', data.data.access_token);
-        
-        // Aggiorna l'iframe con il nuovo token
+
+        // 2) forza reload dell’iframe così il figlio prende il token da localStorage
         if (iframeRef.current) {
-          const newSrc = `https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=${data.data.access_token}&visible_avatar=1`;
-          iframeRef.current.src = newSrc;
+          const base = 'https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&visible_avatar=1';
+          iframeRef.current.src = `${base}&ts=${Date.now()}`; // cache-bust
         }
       }
     } catch (error) {
       console.error('Errore ottenendo token guest:', error);
     }
   };
-  
   getGuestToken();
 }, []);
+
 
 
 useEffect(() => {
@@ -467,12 +464,7 @@ useEffect(() => {
 };
 
 
-genTimeoutRef.current = window.setTimeout(() => {
-  console.warn('[FALLBACK] generation-finished NON ricevuto dopo 120s. Chiamo tickGeneration()');
-  toast.warning('Timeout generazione — fallback attivato');
 
-  genTimeoutRef.current = null;
-}, 120000);
 
   useEffect(() => {
     if (!showGoogleModal || !googleButtonRef.current || googleToken || !gsiReady) return;
