@@ -409,6 +409,16 @@ useEffect(() => {
       if (data.code === 0 && data.data?.access_token) {
         // 1) salva token dove legge tutto l’SDK Ragflow
         localStorage.setItem('authorization', data.data.access_token);
+        
+        // dopo aver salvato in LS:
+          postToIframe({ type: 'ragflow-token', token: data.data.access_token });
+
+          if (iframeRef.current) {
+            const base = 'https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&visible_avatar=1';
+            iframeRef.current.src = `${base}&ts=${Date.now()}`; // cache-bust
+          }
+
+
 
         // 2) forza reload dell’iframe così il figlio prende il token da localStorage
         if (iframeRef.current) {
@@ -750,8 +760,7 @@ useEffect(() => {
     <iframe
       ref={iframeRef}
       onLoad={() => {
-        // handshakes minimi appena l'iframe è pronto
-        postToIframe({ type: 'parent-ready' });
+        postToIframe({ type: 'request-height' });
         postToIframe({ type: 'theme-change', theme });
         postToIframe({ type: 'limit-status', blocked: quota !== null && showLimitOverlay });
       }}
