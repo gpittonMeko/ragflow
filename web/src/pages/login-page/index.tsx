@@ -394,6 +394,39 @@ function postToIframe(msg: any) {
   });
 }, []);
 
+// Ottieni un token guest valido da Ragflow
+useEffect(() => {
+  const getGuestToken = async () => {
+    try {
+      // Prima ottieni il token guest
+      const response = await fetch('https://sgailegal.com/api/auth/guest_login', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+      });
+      
+      const data = await response.json();
+      
+      if (data.code === 0 && data.data?.access_token) {
+        // Salva il token
+        localStorage.setItem('authorization', data.data.access_token);
+        
+        // Aggiorna l'iframe con il nuovo token
+        if (iframeRef.current) {
+          const newSrc = `https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=${data.data.access_token}&visible_avatar=1`;
+          iframeRef.current.src = newSrc;
+        }
+      }
+    } catch (error) {
+      console.error('Errore ottenendo token guest:', error);
+    }
+  };
+  
+  getGuestToken();
+}, []);
+
 
 useEffect(() => {
   setShowLimitOverlay(!!isBlocked);
