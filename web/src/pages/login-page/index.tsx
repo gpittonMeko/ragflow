@@ -291,38 +291,18 @@ function postToIframe(msg: any) {
     // AGGIUNGI QUESTO BLOCCO QUI DENTRO!
     if (event.data?.type === 'shared-needs-token') {
       console.log('[PARENT] Chat richiede token Ragflow');
-      
-      // Login con credenziali crittografate
-      fetch('/v1/user/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: 'giovanni.pitton@mekosrl.it',
-          password: 'L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag=='
-        })
-      })
-      .then(r => r.json())
-      .then(data => {
-        console.log('[PARENT] Ragflow login response:', data);
-        
-        if (data.code === 0 && data.data?.access_token) {
-          const token = `Bearer ${data.data.access_token}`;
-          console.log('[PARENT] Token ottenuto, invio a iframe');
-          
-          if (iframeRef.current?.contentWindow) {
-            iframeRef.current.contentWindow.postMessage({
-              type: 'ragflow-token',
-              token: token
-            }, '*');
-          }
-        } else {
-          console.error('[PARENT] Login fallito');
-        }
-      })
-      .catch(err => {
-        console.error('[PARENT] Errore:', err);
-      });
+
+      // usa direttamente la chiave beta dalla tabella api_token
+      const ragflowApiKey = "lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm";
+
+      if (iframeRef.current?.contentWindow) {
+        iframeRef.current.contentWindow.postMessage({
+          type: 'ragflow-token',
+          token: `Bearer ${ragflowApiKey}`,
+        }, '*');
+      }
     }
+
 
     if (event.data?.type === 'iframe-height') {
       const iframe = iframeRef.current;
