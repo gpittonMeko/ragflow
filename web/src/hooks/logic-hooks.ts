@@ -209,6 +209,8 @@ export const useSendMessageWithSse = (
             if (done) {
               console.info('done');
               resetAnswer();
+              window.parent?.postMessage({ type: 'generation-finished' }, '*');
+
               break;
             }
             try {

@@ -90,18 +90,11 @@ useEffect(() => {
     }, 200);
   } else {
     /*  la generazione è FINITA  */
-    if (isGeneratingRef.current) {               // ★ transizione true → false
-      window.parent?.postMessage(
-        { type: 'generation-finished' },
-        '*'
-      );
-    }
-    isGeneratingRef.current = false;             // ★ reset flag
-
     setProgress(100);
     setTimeout(() => setBarVisible(false), 650);
     setTimeout(() => setProgress(0), 1200);
-  }
+  }            // ★ reset flag
+
 
   return () => {
     if (interval) clearInterval(interval);
