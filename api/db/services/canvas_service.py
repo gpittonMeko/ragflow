@@ -177,6 +177,8 @@ def completion(tenant_id, agent_id, question, session_id=None, stream=True, **kw
     if stream:
         try:
             for ans in canvas.run(stream=stream):
+                print("DEBUG CANVAS:", ans, flush=True)
+
                 if ans.get("running_status"):
                     yield "data:" + json.dumps({"code": 0, "message": "",
                                                 "data": {"answer": ans["content"],
