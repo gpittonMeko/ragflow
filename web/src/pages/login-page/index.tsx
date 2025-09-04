@@ -369,7 +369,7 @@ useEffect(() => {
 //        genTimeoutRef.current = null;
 //        console.log('[GENERATION] Timer di fallback annullato');
 //      }
-//    }
+    }
   };
 
   window.addEventListener('message', handler);
