@@ -347,29 +347,29 @@ useEffect(() => {
         return;
       }
 
-      genTimeoutRef.current = window.setTimeout(() => {
-        console.warn('[FALLBACK] generation-finished NON ricevuto dopo 120s. Chiamo tickGeneration()');
-        genTimeoutRef.current = null;
-      }, 120000);
-    }
-
-    if (event.data?.type === 'generation-finished') {
-      console.log('[GENERATION] FINISHED');
-
-      if (!userData) {
-        setGenCount(prev => {
-          const next = prev + 1;
-          if (next >= FREE_LIMIT) setShowLimitOverlay(true);
-          return next;
-        });
-      }
-
-      if (genTimeoutRef.current) {
-        clearTimeout(genTimeoutRef.current);
-        genTimeoutRef.current = null;
-        console.log('[GENERATION] Timer di fallback annullato');
-      }
-    }
+//      genTimeoutRef.current = window.setTimeout(() => {
+//        console.warn('[FALLBACK] generation-finished NON ricevuto dopo 120s. Chiamo tickGeneration()');
+//        genTimeoutRef.current = null;
+//      }, 120000);
+//    }
+//
+//    if (event.data?.type === 'generation-finished') {
+//      console.log('[GENERATION] FINISHED');
+//
+//      if (!userData) {
+//        setGenCount(prev => {
+//          const next = prev + 1;
+//          if (next >= FREE_LIMIT) setShowLimitOverlay(true);
+//          return next;
+//        });
+//      }
+//
+//      if (genTimeoutRef.current) {
+//        clearTimeout(genTimeoutRef.current);
+//        genTimeoutRef.current = null;
+//        console.log('[GENERATION] Timer di fallback annullato');
+//      }
+//    }
   };
 
   window.addEventListener('message', handler);
