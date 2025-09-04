@@ -156,6 +156,8 @@ export const useFetchAppConf = () => {
 
 export const useSendMessageWithSse = (
   url: string = api.completeConversation,
+    fetchOptions: RequestInit = {}   // 👈 aggiungi questo parametro
+
 ) => {
   const [answer, setAnswer] = useState<IAnswer>({} as IAnswer);
   const [done, setDone] = useState(true);
@@ -187,7 +189,10 @@ export const useSendMessageWithSse = (
         setDone(false);
         const response = await fetch(url, {
           method: 'POST',
+          // Unisci i fetchOptions passati con i default
+          ...fetchOptions,
           headers: {
+            ...(fetchOptions.headers || {}),   // 👈 prendi headers custom se ci sono
             [Authorization]: getAuthorization(),
             'Content-Type': 'application/json',
           },
@@ -261,8 +266,9 @@ export const useSpeechWithSse = (url: string = api.tts) => {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          [Authorization]: getAuthorization(),
+          [Authorization]: getAuthorization(),   // default (se non passi niente)
           'Content-Type': 'application/json',
+          ...(fetchOptions.headers || {}),       // 👈 override se lo passi tu
         },
         body: JSON.stringify(body),
       });
