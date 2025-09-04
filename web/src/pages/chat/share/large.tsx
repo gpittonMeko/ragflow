@@ -1,37 +1,31 @@
 import MessageInput from '@/components/message-input';
 import MessageItem from '@/components/message-item';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
-import { MessageType, SharedFrom } from '@/constants/chat';
+import { MessageType } from '@/constants/chat';
 import { Flex, Spin } from 'antd';
-import React, { forwardRef, useMemo, useRef, useEffect, useState } from 'react';
-import {
-  useGetSharedChatSearchParams,
-  // useSendSharedMessage,   // ❌ non lo usiamo più
-} from '../shared-hooks';
-import { buildMessageItemReference } from '../utils';
+import React, { forwardRef, useRef, useEffect, useState } from 'react';
 
 import PdfDrawer from '@/components/pdf-drawer';
-import { useFetchNextConversationSSE } from '@/hooks/chat-hooks';
-import { useFetchFlowSSE } from '@/hooks/flow-hooks';
-import i18n from '@/locales/config';
+import { buildMessageItemReference } from '../utils';
 import { buildMessageUuidWithRole } from '@/utils/chat';
 import styles from './index.less';
 
-// ✅ usa l’hook di Flow (stesso comportamento che ti funziona)
+// ✅ usa l’hook di Flow (quello che funziona)
 import { useSendNextMessage } from '@/pages/flow/chat/hooks';
 
 const ChatContainer = ({ theme }) => {
-  const {
-    sharedId: conversationId,
-    from,
-    locale,
-    visibleAvatar,
-  } = useGetSharedChatSearchParams();
+  // --- leggiamo i parametri minimi dall’URL, senza usare shared-hooks ---
+  const params = new URLSearchParams(window.location.search);
+  const conversationId =
+    params.get('sharedId') ||
+    params.get('shared_id') ||
+    params.get('id') ||
+    ''; // opzionale, come in Flow puoi lasciarlo vuoto
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
     useClickDrawer();
 
-  // ✅ adotta l’hook di Flow
+  // ✅ hook di Flow: stessa logica di stream e stato
   const {
     handlePressEnter,
     handleInputChange,
@@ -40,45 +34,24 @@ const ChatContainer = ({ theme }) => {
     loading,
     ref,
     derivedMessages,
-    reference,            // <-- Flow lo fornisce
+    reference,            // <— lo fornisce Flow
     stopOutputMessage,
   } = useSendNextMessage();
 
-  // Manteniamo la barra come prima, ma guidata da sendLoading
+  // Barra “generazione in corso” (stessa UI, guidata da sendLoading)
   const SIMULATED_TOTAL_MS = 180000; // 3 minuti
-  const [barWidth, setBarWidth] = useState(370);
-  const messagesContainerRef = useRef(null);
-  const isGeneratingRef = useRef(false);
-  const lastMessageRef = useRef(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const lastMessageRef = useRef<HTMLDivElement | null>(null);
   const [progress, setProgress] = useState(0);
   const [barVisible, setBarVisible] = useState(false);
-
-  // ❌ non abbiamo più hasError/isGenerating dall’hook shared
-  // li ricaviamo qui per la sola UI
-  const hasError = false;
-  const isGenerating = sendLoading;
-
-  const [blocked, setBlocked] = useState(false);
-
-  const useFetchAvatar = useMemo(() => {
-    return from === SharedFrom.Agent ? useFetchFlowSSE : useFetchNextConversationSSE;
-  }, [from]);
-
-  useEffect(() => {
-    if (locale && i18n.language !== locale) {
-      i18n.changeLanguage(locale);
-    }
-  }, [locale, visibleAvatar]);
 
   useEffect(() => {
     let interval: any = null;
     const START = Date.now();
 
-    if (sendLoading || isGenerating) {
-      isGeneratingRef.current = true;
+    if (sendLoading) {
       setBarVisible(true);
       setProgress(0);
-
       interval = setInterval(() => {
         const elapsed = Date.now() - START;
         const target = Math.min(90, (elapsed / SIMULATED_TOTAL_MS) * 90);
@@ -93,56 +66,25 @@ const ChatContainer = ({ theme }) => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [sendLoading, isGenerating]);
+  }, [sendLoading]);
 
-  useEffect(() => {
-    const resize = () => {
-      if (window.innerWidth < 480) {
-        setBarWidth(Math.min(window.innerWidth * 0.85, 260));
-      } else if (window.innerWidth < 768) {
-        setBarWidth(300);
-      } else {
-        setBarWidth(370);
-      }
-    };
-    resize();
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, []);
-
-  const { data: avatarData } = useFetchAvatar();
-
-  if (!conversationId) {
-    return <div>empty</div>;
-  }
-
+  // autoscroll e resize iframe
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
 
     setTimeout(() => {
       container.scrollTop = container.scrollHeight;
-      window.parent &&
-        window.parent.postMessage(
-          { type: 'iframe-height', height: container.scrollHeight },
-          '*',
-        );
+      window.parent?.postMessage(
+        { type: 'iframe-height', height: container.scrollHeight },
+        '*',
+      );
     }, 120);
-  }, [derivedMessages.length, sendLoading, isGenerating]);
-
-  useEffect(() => {
-    function handleLimitMsg(e: MessageEvent) {
-      if (e.data?.type === 'limit-status') {
-        setBlocked(Boolean(e.data.blocked));
-      }
-    }
-    window.addEventListener('message', handleLimitMsg);
-    return () => window.removeEventListener('message', handleLimitMsg);
-  }, []);
+  }, [derivedMessages.length, sendLoading]);
 
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
 
-  // ✅ niente useSendButtonDisabled: replichiamo la logica essenziale
+  // Disabilita invio quando sta generando o input vuoto
   const sendDisabled = sendLoading || !String(value || '').trim();
 
   return (
@@ -210,19 +152,22 @@ const ChatContainer = ({ theme }) => {
                     key={buildMessageUuidWithRole(message)}
                   >
                     <MessageItem
-                      visibleAvatar={visibleAvatar}
-                      avatarDialog={avatarData?.avatar}
+                      // niente avatar/userinfo per evitare 401 su /oauth/api/me
+                      visibleAvatar={false}
+                      avatarDialog={undefined}
                       item={message}
                       nickname="You"
                       reference={buildMessageItemReference(
                         {
                           message: derivedMessages,
-                          reference, // ✅ usa la reference vera dell’hook di Flow
+                          reference: reference || [], // <-- sempre sicuro
                         },
                         message,
                       )}
                       loading={
-                        message.role === MessageType.Assistant && sendLoading && isLastMessage
+                        message.role === MessageType.Assistant &&
+                        sendLoading &&
+                        isLastMessage
                       }
                       index={i}
                       clickDocumentButton={clickDocumentButton}
@@ -237,29 +182,12 @@ const ChatContainer = ({ theme }) => {
           <div ref={ref} />
         </Flex>
 
-        {blocked && (
-          <div
-            style={{
-              margin: '0 0 8px',
-              padding: '6px 12px',
-              background: '#fff3cd',
-              color: '#664d03',
-              border: '1px solid #ffecb5',
-              borderRadius: 6,
-              fontSize: 13,
-              fontWeight: 600,
-            }}
-          >
-            Limite gratuito raggiunto - effettua il login per continuare
-          </div>
-        )}
-
         <MessageInput
           isShared
           value={value}
-          disabled={blocked /* hasError non serve qui */}
-          sendDisabled={sendDisabled || blocked}
-          conversationId={conversationId}
+          disabled={false}
+          sendDisabled={sendDisabled}
+          conversationId={conversationId || ''}  // come in Flow puoi usare anche ""
           onInputChange={handleInputChange}
           onPressEnter={handlePressEnter}
           sendLoading={sendLoading}
@@ -268,6 +196,7 @@ const ChatContainer = ({ theme }) => {
           stopOutputMessage={stopOutputMessage}
         />
       </Flex>
+
       {visible && (
         <PdfDrawer
           visible={visible}
