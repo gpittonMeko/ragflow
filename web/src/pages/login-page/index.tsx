@@ -291,7 +291,8 @@ function postToIframe(msg: any) {
     // AGGIUNGI QUESTO BLOCCO QUI DENTRO!
     if (event.data?.type === 'shared-needs-token') {
       console.log('[PARENT] Chat richiede token Ragflow');
-      const ragflowApiKey = "ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm"; // campo beta da MySQL
+      const ragflowApiKey = "ragflow-sgai-2025-production";
+ // campo beta da MySQL
 
       if (iframeRef.current?.contentWindow) {
         iframeRef.current.contentWindow.postMessage({
@@ -742,7 +743,8 @@ useEffect(() => {
           postToIframe({ type: 'limit-status', blocked: quota !== null && showLimitOverlay });
 
           // 👇 AGGIUNGI QUESTO BLOCCO
-          const ragflowApiKey = "ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm"; // <== QUI usa il token intero da api_token.token
+          const ragflowApiKey = "ragflow-sgai-2025-production";
+ // <== QUI usa il token intero da api_token.token
           postToIframe({
             type: 'ragflow-token',
             token: `Bearer ${ragflowApiKey}`,
