@@ -68,10 +68,16 @@ const SharedChat: React.FC = () => {
 
       // log completions
       if (/\/api\/v1\/agentbots\/[^/]+\/completions$/.test(path)) {
-        res.clone().json()
-          .then(d => console.log('[COMPLETIONS RESP JSON]', d))
-          .catch(() => res.clone().text().then(t => console.log('[COMPLETIONS RESP TEXT]', t.slice(0, 400))));
-      }
+          const clone = res.clone();
+          clone.text().then(t => {
+            try {
+              console.log('[COMPLETIONS RESP]', JSON.parse(t));
+            } catch {
+              console.log('[COMPLETIONS RESP RAW]', t.slice(0, 400));
+            }
+          });
+        }
+
 
       if (res.status === 401) {
         console.warn('[RF-FETCH-401]', { url: urlStr, method, status: res.status });
