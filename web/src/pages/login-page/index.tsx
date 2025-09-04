@@ -771,8 +771,9 @@ useEffect(() => {
           console.error('[IFRAME] Errore login iniziale:', err);
         }
       }}
-      src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&visible_avatar=1"
-      title="SGAI Chat Interface"
+        src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=sgai-2025-production&visible_avatar=1"
+
+        title="SGAI Chat Interface"
       className={quota !== null && showLimitOverlay ? styles.chatFrozen : ''}
       style={{
         borderRadius: 'var(--border-radius)',
