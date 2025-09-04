@@ -9,7 +9,8 @@ const MAX_CHAT_HEIGHT = 1600;
 const MIN_CHAT_HEIGHT = 350;
 
 // ⚠️ Inserisci qui il valore del campo `beta` preso da MySQL (tabella api_token)
-const RAGFLOW_API_KEY = "ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm";;
+const RAGFLOW_API_KEY = "ragflow-sgai-2025-production";
+
 
 const SharedChat: React.FC = () => {
   const [theme, setTheme] = useState(() => localStorage.getItem('sgai-theme') || 'dark');
