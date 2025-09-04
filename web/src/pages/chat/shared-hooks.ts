@@ -53,11 +53,11 @@ export const useSendSharedMessage = () => {
   `/v1/canvas/completion`,
   {
     headers: {
-      "Authorization": "ImY2ZDEzNmVhODljMjExZjBiNzEyMjI5ZGVjZWYwNWI1Ig.aLnkYg.FrttJPp1vQkMyAds0i72NOcC3n4",
-      "Content-Type": "application/json",
-      "Accept": "text/event-stream"
+      'Authorization': localStorage.getItem("Authorization") || "",
+      'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
     },
-    credentials: "include", // manda i cookie (session, stripe, ecc.)
+    credentials: 'include', // il browser penserà lui a mandare i cookie validi
   }
 );
 
