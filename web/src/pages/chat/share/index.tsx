@@ -68,16 +68,35 @@ const SharedChat: React.FC = () => {
       const res = await _fetch(input, init);
 
       // log completions
-      if (/\/api\/v1\/agentbots\/[^/]+\/completions$/.test(path)) {
-          const clone = res.clone();
-          clone.text().then(t => {
-            try {
-              console.log('[COMPLETIONS RESP]', JSON.parse(t));
-            } catch {
-              console.log('[COMPLETIONS RESP RAW]', t.slice(0, 400));
+      if (/\/api\/v1\/agentbots\/[^/]+\/completions$/.test(path) && init?.method === 'POST') {
+        if (init?.body && (init.body as string).includes('"stream":true')) {
+          // risposta SSE → consumala come stream
+          (async () => {
+            const reader = res.body?.getReader();
+            if (!reader) return;
+            const decoder = new TextDecoder();
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value, { stream: true });
+              chunk.split("\n\n").forEach(line => {
+                if (line.startsWith("data:")) {
+                  try {
+                    console.log("[COMPLETIONS STREAM]", JSON.parse(line.slice(5)));
+                  } catch {
+                    console.log("[COMPLETIONS STREAM RAW]", line.slice(5, 200));
+                  }
+                }
+              });
             }
-          });
+          })();
+        } else {
+          // non-stream → log normale
+          const clone = res.clone();
+          clone.json().then(j => console.log("[COMPLETIONS RESP]", j));
         }
+      }
+
 
 
       if (res.status === 401) {
