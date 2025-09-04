@@ -1,9 +1,11 @@
+// File: src/pages/chat/share/large.tsx
 import MessageInput from '@/components/message-input';
 import MessageItem from '@/components/message-item';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import { MessageType } from '@/constants/chat';
+import { Authorization } from '@/constants/authorization';
 import { Flex, Spin } from 'antd';
-import React, { forwardRef, useRef, useEffect, useState } from 'react';
+import React, { forwardRef, useEffect, useRef, useState } from 'react';
 
 import PdfDrawer from '@/components/pdf-drawer';
 import { buildMessageItemReference } from '../utils';
@@ -12,6 +14,18 @@ import styles from './index.less';
 
 // ✅ usa l’hook di Flow (quello che funziona)
 import { useSendNextMessage } from '@/pages/flow/chat/hooks';
+
+// ——— helper: reference sempre con la shape attesa ———
+const normalizeReference = (r: any) => {
+  if (r && typeof r === 'object' && !Array.isArray(r)) {
+    return {
+      ...r,
+      doc_aggs: Array.isArray(r.doc_aggs) ? r.doc_aggs : [],
+      chunks: Array.isArray(r.chunks) ? r.chunks : [],
+    };
+  }
+  return { doc_aggs: [], chunks: [] };
+};
 
 const ChatContainer = ({ theme }) => {
   // --- leggiamo i parametri minimi dall’URL, senza usare shared-hooks ---
@@ -37,6 +51,32 @@ const ChatContainer = ({ theme }) => {
     reference,            // <— lo fornisce Flow
     stopOutputMessage,
   } = useSendNextMessage();
+
+  // —— token handshake con il parent (usa Authorization come nel resto dell’app) ——
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (e.data?.type === 'ragflow-token' && typeof e.data.token === 'string') {
+        try {
+          localStorage.setItem(Authorization, e.data.token);
+          // opzionale: forza un tick per assicurare che le fetch successive lo leggano
+          // location.reload(); // se vuoi proprio forzare, altrimenti non serve
+        } catch {}
+      }
+    };
+    window.addEventListener('message', onMsg);
+
+    // se non ho token, chiedo al parent di inviarmelo
+    try {
+      const hasToken = !!localStorage.getItem(Authorization);
+      if (!hasToken) {
+        window.parent?.postMessage({ type: 'shared-needs-token' }, '*');
+      }
+    } catch {}
+
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const safeReference = normalizeReference(reference);
 
   // Barra “generazione in corso” (stessa UI, guidata da sendLoading)
   const SIMULATED_TOTAL_MS = 180000; // 3 minuti
@@ -160,7 +200,7 @@ const ChatContainer = ({ theme }) => {
                       reference={buildMessageItemReference(
                         {
                           message: derivedMessages,
-                          reference: reference || [], // <-- sempre sicuro
+                          reference: safeReference, // <-- shape sempre corretta
                         },
                         message,
                       )}
