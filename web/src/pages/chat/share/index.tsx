@@ -159,6 +159,49 @@ if (!(window as any).__rf_debug_fetch_installed) {
 }
 
 
+// ─────────────────────────────────────────────────────────
+// Patch EventSource: aggiunge il token in query per SSE
+// ─────────────────────────────────────────────────────────
+if (!(window as any).__rf_es_installed) {
+  (window as any).__rf_es_installed = true;
+
+  const OriginalES = (window as any).EventSource;
+
+  // @ts-ignore override globale
+  (window as any).EventSource = function(input: string, init?: EventSourceInit) {
+    try {
+      let urlStr = typeof input === 'string' ? input : String(input);
+      const u = new URL(urlStr, window.location.origin);
+
+      const path = u.pathname;
+      const isApiV1 = /^\/(api\/)?v1\//.test(path);
+      const lsAuth = localStorage.getItem('authorization') || '';
+
+      if (isApiV1 && lsAuth) {
+        // garantisci prefisso Bearer e passa sia authorization che token (per compatibilità)
+        const finalToken = lsAuth.startsWith('Bearer ') ? lsAuth : `Bearer ${lsAuth}`;
+        if (!u.searchParams.has('authorization')) {
+          u.searchParams.set('authorization', finalToken);
+        }
+        if (!u.searchParams.has('token')) {
+          u.searchParams.set('token', finalToken.replace(/^Bearer\s+/i, ''));
+        }
+        urlStr = u.toString();
+      }
+
+      return new OriginalES(urlStr, init);
+    } catch {
+      return new OriginalES(input as any, init);
+    }
+  } as any;
+
+  (window as any).EventSource.prototype = OriginalES.prototype;
+  (window as any).EventSource.CONNECTING = OriginalES.CONNECTING;
+  (window as any).EventSource.OPEN = OriginalES.OPEN;
+  (window as any).EventSource.CLOSED = OriginalES.CLOSED;
+}
+
+
   // ─────────────────────────────────────────────────────────
   // Init: tema + handshake parent + osservatori
   // ─────────────────────────────────────────────────────────
