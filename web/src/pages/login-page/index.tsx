@@ -278,31 +278,43 @@ function postToIframe(msg: any) {
 }
 
 
-
-
- 
-
-
-
-  useEffect(() => {
-  const handler = (event: MessageEvent) => {
+useEffect(() => {
+  const handler = async (event: MessageEvent) => {
     console.log('[postMessage]', event.data);
 
-    // AGGIUNGI QUESTO BLOCCO QUI DENTRO!
     if (event.data?.type === 'shared-needs-token') {
-      console.log('[PARENT] Chat richiede token Ragflow');
-      const ragflowApiKey = "ragflow-sgai-2025-production";
- // campo beta da MySQL
-
-      if (iframeRef.current?.contentWindow) {
-        iframeRef.current.contentWindow.postMessage({
-          type: 'ragflow-token',
-          token: `Bearer ${ragflowApiKey}`,
-        }, '*');
+      console.log('[PARENT] Chat richiede token - Login con password crittografata');
+      
+      try {
+        const loginRes = await fetch('/v1/user/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'giovanni.pitton@mekosrl.it',
+            password: 'L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag=='
+          })
+        });
+        
+        const loginData = await loginRes.json();
+        console.log('[PARENT] Login response:', loginData);
+        
+        if (loginData.code === 0 && loginData.data?.access_token) {
+          const token = `Bearer ${loginData.data.access_token}`;
+          
+          if (iframeRef.current?.contentWindow) {
+            iframeRef.current.contentWindow.postMessage({
+              type: 'ragflow-token',
+              token: token
+            }, '*');
+            console.log('[PARENT] Token inviato a iframe');
+          }
+        } else {
+          console.error('[PARENT] Login fallito:', loginData);
+        }
+      } catch (err) {
+        console.error('[PARENT] Errore login:', err);
       }
     }
-
-
 
     if (event.data?.type === 'iframe-height') {
       const iframe = iframeRef.current;
@@ -327,27 +339,23 @@ function postToIframe(msg: any) {
       iframe.style.height = `${nextHeight}px`;
     }
 
-    // FALLBACK TIMER se parte la generazione
     if (event.data?.type === 'generation-started') {
       console.log('[GENERATION] STARTED');
 
       if (genTimeoutRef.current) {
         console.warn('[GENERATION] Timer già attivo, non reinizializzo');
-        return; // evita doppio timer
+        return;
       }
 
       genTimeoutRef.current = window.setTimeout(() => {
         console.warn('[FALLBACK] generation-finished NON ricevuto dopo 120s. Chiamo tickGeneration()');
-       
         genTimeoutRef.current = null;
-      }, 120000); // 2 minuti
+      }, 120000);
     }
 
-    // FINE GENERAZIONE
     if (event.data?.type === 'generation-finished') {
       console.log('[GENERATION] FINISHED');
 
-      // fallback locale (anonimi)
       if (!userData) {
         setGenCount(prev => {
           const next = prev + 1;
@@ -356,13 +364,11 @@ function postToIframe(msg: any) {
         });
       }
 
-      // CANCELLA il timer di fallback se presente
       if (genTimeoutRef.current) {
         clearTimeout(genTimeoutRef.current);
         genTimeoutRef.current = null;
         console.log('[GENERATION] Timer di fallback annullato');
       }
-
     }
   };
 
@@ -736,24 +742,36 @@ useEffect(() => {
       <div className={styles.iframeSection}>
   <div className={styles.chatWrap}>
     <iframe
-        ref={iframeRef}
-        onLoad={() => {
-          postToIframe({ type: 'request-height' });
-          postToIframe({ type: 'theme-change', theme });
-          postToIframe({ type: 'limit-status', blocked: quota !== null && showLimitOverlay });
-
-          // 👇 AGGIUNGI QUESTO BLOCCO
-          const ragflowApiKey = "ragflow-sgai-2025-production";
- // <== QUI usa il token intero da api_token.token
-          postToIframe({
-            type: 'ragflow-token',
-            token: `Bearer ${ragflowApiKey}`,
-          });
-          console.log('[PARENT] Inviato subito token Ragflow a iframe');
-        }}
-        src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&visible_avatar=1"
+      ref={iframeRef}
+      onLoad={async () => {
+        console.log('[IFRAME] Caricato');
         
-
+        postToIframe({ type: 'request-height' });
+        postToIframe({ type: 'theme-change', theme });
+        postToIframe({ type: 'limit-status', blocked: quota !== null && showLimitOverlay });
+        
+        try {
+          const loginRes = await fetch('/v1/user/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: 'giovanni.pitton@mekosrl.it',
+              password: 'L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag=='
+            })
+          });
+          
+          const loginData = await loginRes.json();
+          
+          if (loginData.code === 0 && loginData.data?.access_token) {
+            const token = `Bearer ${loginData.data.access_token}`;
+            postToIframe({ type: 'ragflow-token', token });
+            console.log('[IFRAME] Token inviato all\'avvio');
+          }
+        } catch (err) {
+          console.error('[IFRAME] Errore login iniziale:', err);
+        }
+      }}
+      src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&visible_avatar=1"
       title="SGAI Chat Interface"
       className={quota !== null && showLimitOverlay ? styles.chatFrozen : ''}
       style={{
@@ -793,8 +811,6 @@ useEffect(() => {
               &nbsp;Passa a Premium
             </button>
           ) : null}
-
-
         </div>
       </div>
     )}
