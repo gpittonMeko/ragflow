@@ -2,10 +2,12 @@ import MessageInput from '@/components/message-input';
 import MessageItem from '@/components/message-item';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import { MessageType, SharedFrom } from '@/constants/chat';
-import { useSendButtonDisabled } from '@/pages/chat/hooks';
 import { Flex, Spin } from 'antd';
 import React, { forwardRef, useMemo, useRef, useEffect, useState } from 'react';
-import { useGetSharedChatSearchParams } from '../shared-hooks'; // <-- solo per URL params (sharedId/from/locale/visibleAvatar)
+import {
+  useGetSharedChatSearchParams,
+  // useSendSharedMessage,   // ❌ non lo usiamo più
+} from '../shared-hooks';
 import { buildMessageItemReference } from '../utils';
 
 import PdfDrawer from '@/components/pdf-drawer';
@@ -15,8 +17,8 @@ import i18n from '@/locales/config';
 import { buildMessageUuidWithRole } from '@/utils/chat';
 import styles from './index.less';
 
-// 👇 IMPORTA L’HOOK DI FLOW (stessa logica di invio/streaming)
-import { useSendNextMessage } from '@/pages/flow/hooks'; // <--- verifica il path esatto nel tuo repo
+// ✅ usa l’hook di Flow (stesso comportamento che ti funziona)
+import { useSendNextMessage } from '@/pages/flow/chat/hooks';
 
 const ChatContainer = ({ theme }) => {
   const {
@@ -29,51 +31,54 @@ const ChatContainer = ({ theme }) => {
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
     useClickDrawer();
 
-  // 👇 QUI usiamo lo stesso hook della chat Flow (niente logic-hooks edit)
+  // ✅ adotta l’hook di Flow
   const {
-    sendLoading,
-    handleInputChange,
     handlePressEnter,
+    handleInputChange,
     value,
+    sendLoading,
     loading,
     ref,
     derivedMessages,
-    reference,           // <— come in Flow
+    reference,            // <-- Flow lo fornisce
     stopOutputMessage,
   } = useSendNextMessage();
 
-  const sendDisabled = useSendButtonDisabled(value);
-  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
-  const lastMessageRef = useRef<HTMLDivElement | null>(null);
-
-  // Loader “a barra” (UI invariata)
-  const SIMULATED_TOTAL_MS = 180000;
+  // Manteniamo la barra come prima, ma guidata da sendLoading
+  const SIMULATED_TOTAL_MS = 180000; // 3 minuti
+  const [barWidth, setBarWidth] = useState(370);
+  const messagesContainerRef = useRef(null);
+  const isGeneratingRef = useRef(false);
+  const lastMessageRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [barVisible, setBarVisible] = useState(false);
 
-  // Blocco per limiti—resta identico
+  // ❌ non abbiamo più hasError/isGenerating dall’hook shared
+  // li ricaviamo qui per la sola UI
+  const hasError = false;
+  const isGenerating = sendLoading;
+
   const [blocked, setBlocked] = useState(false);
 
   const useFetchAvatar = useMemo(() => {
-    return from === SharedFrom.Agent
-      ? useFetchFlowSSE
-      : useFetchNextConversationSSE;
+    return from === SharedFrom.Agent ? useFetchFlowSSE : useFetchNextConversationSSE;
   }, [from]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (locale && i18n.language !== locale) {
       i18n.changeLanguage(locale);
     }
   }, [locale, visibleAvatar]);
 
-  // Gestione barra in base a sendLoading (come Flow: una sola fonte-verità)
   useEffect(() => {
     let interval: any = null;
     const START = Date.now();
 
-    if (sendLoading) {
+    if (sendLoading || isGenerating) {
+      isGeneratingRef.current = true;
       setBarVisible(true);
       setProgress(0);
+
       interval = setInterval(() => {
         const elapsed = Date.now() - START;
         const target = Math.min(90, (elapsed / SIMULATED_TOTAL_MS) * 90);
@@ -81,17 +86,29 @@ const ChatContainer = ({ theme }) => {
       }, 200);
     } else {
       setProgress(100);
-      const t1 = setTimeout(() => setBarVisible(false), 650);
-      const t2 = setTimeout(() => setProgress(0), 1200);
-      interval = { t1, t2 };
+      setTimeout(() => setBarVisible(false), 650);
+      setTimeout(() => setProgress(0), 1200);
     }
 
     return () => {
-      if (interval?.t1) clearTimeout(interval.t1);
-      if (interval?.t2) clearTimeout(interval.t2);
-      if (interval && typeof interval === 'number') clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
-  }, [sendLoading]);
+  }, [sendLoading, isGenerating]);
+
+  useEffect(() => {
+    const resize = () => {
+      if (window.innerWidth < 480) {
+        setBarWidth(Math.min(window.innerWidth * 0.85, 260));
+      } else if (window.innerWidth < 768) {
+        setBarWidth(300);
+      } else {
+        setBarWidth(370);
+      }
+    };
+    resize();
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, []);
 
   const { data: avatarData } = useFetchAvatar();
 
@@ -99,21 +116,20 @@ const ChatContainer = ({ theme }) => {
     return <div>empty</div>;
   }
 
-  // Scroll + resize postMessage verso il parent (come prima)
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
 
     setTimeout(() => {
       container.scrollTop = container.scrollHeight;
-      window.parent?.postMessage(
-        { type: 'iframe-height', height: container.scrollHeight },
-        '*',
-      );
+      window.parent &&
+        window.parent.postMessage(
+          { type: 'iframe-height', height: container.scrollHeight },
+          '*',
+        );
     }, 120);
-  }, [derivedMessages.length, sendLoading]);
+  }, [derivedMessages.length, sendLoading, isGenerating]);
 
-  // riceve dallo shell parent il “limit-status”
   useEffect(() => {
     function handleLimitMsg(e: MessageEvent) {
       if (e.data?.type === 'limit-status') {
@@ -125,6 +141,9 @@ const ChatContainer = ({ theme }) => {
   }, []);
 
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
+
+  // ✅ niente useSendButtonDisabled: replichiamo la logica essenziale
+  const sendDisabled = sendLoading || !String(value || '').trim();
 
   return (
     <>
@@ -197,23 +216,18 @@ const ChatContainer = ({ theme }) => {
                       nickname="You"
                       reference={buildMessageItemReference(
                         {
-                          // 👇 come in Flow: passa “reference” del hook
                           message: derivedMessages,
-                          reference,
+                          reference, // ✅ usa la reference vera dell’hook di Flow
                         },
                         message,
                       )}
                       loading={
-                        message.role === MessageType.Assistant &&
-                        sendLoading &&
-                        isLastMessage
+                        message.role === MessageType.Assistant && sendLoading && isLastMessage
                       }
                       index={i}
                       clickDocumentButton={clickDocumentButton}
                       showLikeButton={false}
                       showLoudspeaker={false}
-                      // opzionale: se il tuo MessageItem lo supporta, passa anche sendLoading
-                      sendLoading={sendLoading}
                     />
                   </div>
                 );
@@ -243,9 +257,9 @@ const ChatContainer = ({ theme }) => {
         <MessageInput
           isShared
           value={value}
-          disabled={false /* come Flow: niente hasError qui */}
+          disabled={blocked /* hasError non serve qui */}
           sendDisabled={sendDisabled || blocked}
-          conversationId={conversationId /* viene da query param */}
+          conversationId={conversationId}
           onInputChange={handleInputChange}
           onPressEnter={handlePressEnter}
           sendLoading={sendLoading}
@@ -254,7 +268,6 @@ const ChatContainer = ({ theme }) => {
           stopOutputMessage={stopOutputMessage}
         />
       </Flex>
-
       {visible && (
         <PdfDrawer
           visible={visible}
