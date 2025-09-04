@@ -735,13 +735,22 @@ useEffect(() => {
       <div className={styles.iframeSection}>
   <div className={styles.chatWrap}>
     <iframe
-      ref={iframeRef}
-      onLoad={() => {
-        postToIframe({ type: 'request-height' });
-        postToIframe({ type: 'theme-change', theme });
-        postToIframe({ type: 'limit-status', blocked: quota !== null && showLimitOverlay });
-      }}
-      src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&visible_avatar=1"
+        ref={iframeRef}
+        onLoad={() => {
+          postToIframe({ type: 'request-height' });
+          postToIframe({ type: 'theme-change', theme });
+          postToIframe({ type: 'limit-status', blocked: quota !== null && showLimitOverlay });
+
+          // 👇 AGGIUNGI QUESTO BLOCCO
+          const ragflowApiKey = "lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm"; // chiave beta
+          postToIframe({
+            type: 'ragflow-token',
+            token: `Bearer ${ragflowApiKey}`,
+          });
+          console.log('[PARENT] Inviato subito token Ragflow a iframe');
+        }}
+        src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&visible_avatar=1"
+        
 
       title="SGAI Chat Interface"
       className={quota !== null && showLimitOverlay ? styles.chatFrozen : ''}
