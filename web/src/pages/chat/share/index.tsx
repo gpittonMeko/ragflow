@@ -100,20 +100,21 @@ if (!(window as any).__rf_debug_fetch_installed) {
 
     const hasAuthHeader = headers.has('Authorization') || headers.has('authorization');
 
-    // Decidi se serve l'auth: /v1/* o /api/v1/* (tranne /v1/user/login)
+    // 1) decide se serve l'auth (escludi sia /v1/user/login che /api/v1/user/login)
     const u = new URL(urlStr, window.location.origin);
     const path = u.pathname;
-    const needsAuth =
-      /^\/(api\/)?v1\//.test(path) && !/\/v1\/user\/login$/.test(path);
+    const isLogin = /^(\/(api\/)?v1\/user\/login)$/.test(path);
+    const needsAuth = /^\/(api\/)?v1\//.test(path) && !isLogin;
 
-    // Inietta il token se serve e non c'è già
+    // 2) inietta il token (garantisci il prefisso Bearer)
     if (needsAuth && !hasAuthHeader && lsAuth) {
-      headers.set('Authorization', lsAuth);
+      const finalToken = lsAuth.startsWith('Bearer ') ? lsAuth : `Bearer ${lsAuth}`;
+      headers.set('Authorization', finalToken);
       init = { ...(init || {}), headers };
     } else if (init && headers !== init.headers) {
-      // Mantieni eventuali header già passati anche se non serviva auth
       init = { ...init, headers };
     }
+
 
     console.log(
       `%c[RF-FETCH] ${method} ${urlStr}`,
