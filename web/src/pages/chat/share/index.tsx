@@ -75,52 +75,88 @@ const SharedChat = () => {
   };
 
   // ─────────────────────────────────────────────────────────
-  // Debug wrapper fetch (mantieni il tuo esistente)
-  // ─────────────────────────────────────────────────────────
-  if (!(window as any).__rf_debug_fetch_installed) {
-    (window as any).__rf_debug_fetch_installed = true;
+// Debug wrapper fetch (aggiornato: inietta automaticamente Authorization)
+// ─────────────────────────────────────────────────────────
+if (!(window as any).__rf_debug_fetch_installed) {
+  (window as any).__rf_debug_fetch_installed = true;
 
-    const _fetch = window.fetch.bind(window);
-    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input : (input as Request).url;
-      const method = init?.method || 'GET';
-      const hdrs = (init?.headers as any) || {};
-      const hasAuthHeader = !!hdrs.Authorization || !!hdrs.authorization;
-      const lsAuth = localStorage.getItem('authorization');
+  const _fetch = window.fetch.bind(window);
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const urlStr = typeof input === 'string' ? input : (input as Request).url;
+    const method = init?.method || 'GET';
+    const lsAuth = localStorage.getItem('authorization') || '';
 
-      console.log(
-        `%c[RF-FETCH] ${method} ${url}`,
-        'color:#09f;font-weight:600',
-        {
-          hasAuthHeader,
-          lsAuthPresent: !!lsAuth,
-          authPreview: hasAuthHeader
-            ? String(hdrs.Authorization || hdrs.authorization).slice(0, 24) + '…'
-            : (lsAuth ? String(lsAuth).slice(0, 24) + '…' : '(none)'),
-        }
-      );
+    // Normalizza headers (gestisce object, Headers, Request)
+    let headers: Headers;
+    if (init?.headers instanceof Headers) {
+      headers = new Headers(init.headers);
+    } else if (init?.headers) {
+      headers = new Headers(init.headers as Record<string, string>);
+    } else if (input instanceof Request) {
+      headers = new Headers(input.headers || undefined);
+    } else {
+      headers = new Headers();
+    }
 
-      const res = await _fetch(input, init);
+    const hasAuthHeader = headers.has('Authorization') || headers.has('authorization');
 
-      if (res.status === 401) {
-        let body = '';
-        try { body = await res.clone().text(); } catch {}
-        console.warn('%c[RF-FETCH-401]', 'color:#f40;font-weight:700', {
-          url, method, status: res.status, body: body?.slice(0, 400),
+    // Decidi se serve l'auth: /v1/* o /api/v1/* (tranne /v1/user/login)
+    const u = new URL(urlStr, window.location.origin);
+    const path = u.pathname;
+    const needsAuth =
+      /^\/(api\/)?v1\//.test(path) && !/\/v1\/user\/login$/.test(path);
+
+    // Inietta il token se serve e non c'è già
+    if (needsAuth && !hasAuthHeader && lsAuth) {
+      headers.set('Authorization', lsAuth);
+      init = { ...(init || {}), headers };
+    } else if (init && headers !== init.headers) {
+      // Mantieni eventuali header già passati anche se non serviva auth
+      init = { ...init, headers };
+    }
+
+    console.log(
+      `%c[RF-FETCH] ${method} ${urlStr}`,
+      'color:#09f;font-weight:600',
+      {
+        hasAuthHeader: headers.has('Authorization') || headers.has('authorization'),
+        lsAuthPresent: !!lsAuth,
+        authPreview: (headers.get('Authorization') || headers.get('authorization') || lsAuth || '(none)')
+          .slice(0, 24) + '…',
+      }
+    );
+
+    const res = await _fetch(input, init);
+
+    if (res.status === 401) {
+      let body = '';
+      try { body = await res.clone().text(); } catch {}
+      console.warn('%c[RF-FETCH-401]', 'color:#f40;font-weight:700', {
+        url: urlStr, method, status: res.status, body: body?.slice(0, 400),
+      });
+
+      // Riprova l’autenticazione se fallisce
+      if (typeof setAuthAttempts === 'function') {
+        // @ts-ignore: setAuthAttempts è nello scope del componente
+        setAuthAttempts((prev: number) => {
+          const next = prev + 1;
+          if (next <= 3 && typeof authenticateWithRagflow === 'function') {
+            setTimeout(() => {
+              // @ts-ignore
+              authenticateWithRagflow();
+            }, 1000);
+          }
+          return next;
         });
-        
-        // Se ricevi 401, riprova l'autenticazione
-        if (authAttempts < 3) {
-          setAuthAttempts(prev => prev + 1);
-          setTimeout(() => authenticateWithRagflow(), 1000);
-        }
-        
-        window.parent?.postMessage({ type: 'rf-401', url, method }, '*');
       }
 
-      return res;
-    };
-  }
+      window.parent?.postMessage({ type: 'rf-401', url: urlStr, method }, '*');
+    }
+
+    return res;
+  };
+}
+
 
   // ─────────────────────────────────────────────────────────
   // Init: tema + handshake parent + osservatori
