@@ -1,6 +1,4 @@
 // File: SharedChat/index.tsx
-// Auto-autenticazione con Ragflow usando API token beta
-
 import React, { useState, useEffect, useRef } from 'react';
 import ChatContainer from './large';
 import styles from './index.less';
@@ -8,213 +6,102 @@ import styles from './index.less';
 const MAX_CHAT_HEIGHT = 1600;
 const MIN_CHAT_HEIGHT = 350;
 
-// ⚠️ Inserisci qui il valore del campo `beta` preso da MySQL (tabella api_token)
-const RAGFLOW_API_KEY = "ragflow-sgai-2025-production";
-
-
 const SharedChat: React.FC = () => {
-  const [theme, setTheme] = useState(() => localStorage.getItem('sgai-theme') || 'dark');
-  const [ready, setReady] = useState(false);
-  const [authAttempts, setAuthAttempts] = useState(0);
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('sgai-theme') || 'dark';
+  });
+
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // ──────────────────────────────
-  // Autenticazione con API token
-  // ──────────────────────────────
-  const authenticateWithRagflow = async (): Promise<boolean> => {
-    try {
-      console.log('[RAGFLOW AUTH] Inietto API key beta…');
-      const token = `Bearer ${RAGFLOW_API_KEY}`;
-      localStorage.setItem('authorization', token);
-      setReady(true);
-      return true;
-    } catch (err) {
-      console.error('[RAGFLOW AUTH] Errore:', err);
-      return false;
-    }
-  };
-
-  // ──────────────────────────────
-  // Patch fetch: aggiunge Authorization se manca
-  // ──────────────────────────────
-  if (!(window as any).__rf_debug_fetch_installed) {
-    (window as any).__rf_debug_fetch_installed = true;
-
-    const _fetch = window.fetch.bind(window);
-    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const urlStr = typeof input === 'string' ? input : (input as Request).url;
-      const method = init?.method || 'GET';
-      const lsAuth = localStorage.getItem('authorization') || '';
-
-      let headers = new Headers(init?.headers || (input instanceof Request ? input.headers : {}));
-      const hasAuthHeader = headers.has('Authorization') || headers.has('authorization');
-
-      const path = new URL(urlStr, window.location.origin).pathname;
-      const isLogin = /^(\/(api\/)?v1\/user\/login)$/.test(path);
-      const needsAuth = /^\/(api\/)?v1\//.test(path) && !isLogin;
-
-      if (needsAuth && !hasAuthHeader && lsAuth) {
-        const finalToken = lsAuth.startsWith('Bearer ') ? lsAuth : `Bearer ${lsAuth}`;
-        headers.set('Authorization', finalToken);
-        init = { ...(init || {}), headers };
+  // Fix input su mobile (scroll su iOS)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const activeElement = document.activeElement as HTMLElement | null;
+      if (activeElement && activeElement.tagName === 'TEXTAREA') {
+        window.scrollTo(0, 0);
+        setTimeout(() => {
+          activeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
       }
-
-      console.log(`[RF-FETCH] ${method} ${urlStr}`, {
-        hasAuthHeader,
-        lsAuthPresent: !!lsAuth,
-        authPreview: (headers.get('Authorization') || lsAuth || '(none)').slice(0, 24) + '…',
-      });
-
-      const res = await _fetch(input, init);
-
-      // log completions
-      if (/\/api\/v1\/agentbots\/[^/]+\/completions$/.test(path) && init?.method === 'POST') {
-        if (init?.body && (init.body as string).includes('"stream":true')) {
-          // risposta SSE → consumala come stream
-          (async () => {
-            const reader = res.body?.getReader();
-            if (!reader) return;
-            const decoder = new TextDecoder();
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              const chunk = decoder.decode(value, { stream: true });
-              chunk.split("\n\n").forEach(line => {
-                if (line.startsWith("data:")) {
-                  try {
-                    console.log("[COMPLETIONS STREAM]", JSON.parse(line.slice(5)));
-                  } catch {
-                    console.log("[COMPLETIONS STREAM RAW]", line.slice(5, 200));
-                  }
-                }
-              });
-            }
-          })();
-        } else {
-          // non-stream → log normale
-          const clone = res.clone();
-          clone.json().then(j => console.log("[COMPLETIONS RESP]", j));
-        }
-      }
-
-
-
-      if (res.status === 401) {
-        console.warn('[RF-FETCH-401]', { url: urlStr, method, status: res.status });
-        setAuthAttempts(prev => {
-          const next = prev + 1;
-          if (next <= 3) setTimeout(() => authenticateWithRagflow(), 1000);
-          return next;
-        });
-        window.parent?.postMessage({ type: 'rf-401', url: urlStr, method }, '*');
-      }
-
-      return res;
     };
-  }
 
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('resize', handleVisibilityChange);
 
-  
-  // ──────────────────────────────
-  // Patch EventSource: aggiunge token in query
-  // ──────────────────────────────
-  if (!(window as any).__rf_es_installed) {
-    (window as any).__rf_es_installed = true;
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('resize', handleVisibilityChange);
+    };
+  }, []);
 
-    const OriginalES = (window as any).EventSource;
-    (window as any).EventSource = function (input: string, init?: EventSourceInit) {
-      let urlStr = typeof input === 'string' ? input : String(input);
-      const u = new URL(urlStr, window.location.origin);
-      const lsAuth = localStorage.getItem('authorization') || '';
-
-      if (/^\/(api\/)?v1\//.test(u.pathname) && lsAuth) {
-        const finalToken = lsAuth.startsWith('Bearer ') ? lsAuth : `Bearer ${lsAuth}`;
-        u.searchParams.set('authorization', finalToken);
-        u.searchParams.set('token', finalToken.replace(/^Bearer\s+/i, ''));
-        urlStr = u.toString();
-      }
-
-      return new OriginalES(urlStr, init);
-    } as any;
-
-    (window as any).EventSource.prototype = OriginalES.prototype;
-    (window as any).EventSource.CONNECTING = OriginalES.CONNECTING;
-    (window as any).EventSource.OPEN = OriginalES.OPEN;
-    (window as any).EventSource.CLOSED = OriginalES.CLOSED;
-  }
-
-  // ──────────────────────────────
-  // Gestione messaggi dal parent
-  // ──────────────────────────────
+  // Gestione messaggi dal parent (altezza e tema)
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'request-height' && containerRef.current) {
         const rawHeight = containerRef.current.scrollHeight;
-        const boundedHeight = Math.max(MIN_CHAT_HEIGHT, Math.min(rawHeight, MAX_CHAT_HEIGHT));
-        window.parent.postMessage({ type: 'iframe-height', height: boundedHeight }, '*');
-      }
-
-      if (event.data?.type === 'ragflow-token' && event.data.token) {
-        localStorage.setItem('authorization', event.data.token);
-        console.log('[IFRAME] Token ricevuto dal parent:', event.data.token.slice(0, 20) + '…');
-        setReady(true);
+        const boundedHeight = Math.max(
+          MIN_CHAT_HEIGHT,
+          Math.min(rawHeight, MAX_CHAT_HEIGHT)
+        );
+        window.parent.postMessage(
+          { type: 'iframe-height', height: boundedHeight },
+          '*'
+        );
       }
 
       if (event.data?.type === 'theme-change') {
         setTheme(event.data.theme);
         document.documentElement.setAttribute('data-theme', event.data.theme);
       }
-
-      if (event.data?.type === 'ragflow-token' && event.data.token) {
-        localStorage.setItem('authorization', event.data.token);
-        setReady(true);
-      }
     };
 
+    // ResizeObserver → invia al parent se la chat cresce/diminuisce
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === containerRef.current) {
+          const boundedHeight = Math.max(
+            MIN_CHAT_HEIGHT,
+            Math.min(entry.target.scrollHeight, MAX_CHAT_HEIGHT)
+          );
+          window.parent.postMessage(
+            { type: 'iframe-height', height: boundedHeight },
+            '*'
+          );
+        }
+      }
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
     window.addEventListener('message', handleMessage);
+
+    // Tema iniziale
     document.documentElement.setAttribute('data-theme', theme);
 
+    // Listener per cambiamenti in localStorage (tema cambiato altrove)
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'sgai-theme' && event.newValue) {
+        setTheme(event.newValue);
+        document.documentElement.setAttribute('data-theme', event.newValue);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
     return () => {
+      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('message', handleMessage);
+      if (containerRef.current) resizeObserver.unobserve(containerRef.current);
+      resizeObserver.disconnect();
     };
   }, [theme]);
 
-  // ──────────────────────────────
-  // Init: auto-auth
-  // ──────────────────────────────
-  useEffect(() => {
-    const initialize = async () => {
-      const qpAuth = new URL(window.location.href).searchParams.get('auth');
-      if (qpAuth) {
-        localStorage.setItem('authorization', qpAuth);
-        setReady(true);
-        return;
-      }
-
-      const existingToken = localStorage.getItem('authorization');
-      if (existingToken) {
-        setReady(true);
-        return;
-      }
-
-      await authenticateWithRagflow();
-    };
-
-    initialize();
-  }, []);
-
-  if (!ready) {
-    return (
-      <div className={`${styles.chatWrapper} ${styles[theme]}`} ref={containerRef}
-           style={{ padding: 20, textAlign: 'center', fontSize: 14, color: theme === 'dark' ? '#999' : '#666' }}>
-        <div>Inizializzazione chat in corso…</div>
-        {authAttempts > 0 && <div style={{ fontSize: 12, opacity: 0.7 }}>Tentativo {authAttempts}/3</div>}
-      </div>
-    );
-  }
-
   return (
-    <div className={`${styles.chatWrapper} ${styles[theme]}`} ref={containerRef}>
+    <div
+      className={`${styles.chatWrapper} ${styles[theme]}`}
+      ref={containerRef}
+    >
       <ChatContainer theme={theme} />
     </div>
   );
