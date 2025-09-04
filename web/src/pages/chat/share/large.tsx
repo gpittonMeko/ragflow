@@ -5,10 +5,7 @@ import { MessageType, SharedFrom } from '@/constants/chat';
 import { useSendButtonDisabled } from '@/pages/chat/hooks';
 import { Flex, Spin } from 'antd';
 import React, { forwardRef, useMemo, useRef, useEffect, useState } from 'react';
-import {
-  useGetSharedChatSearchParams,
-  useSendSharedMessage,
-} from '../shared-hooks';
+import { useGetSharedChatSearchParams } from '../shared-hooks'; // <-- solo per URL params (sharedId/from/locale/visibleAvatar)
 import { buildMessageItemReference } from '../utils';
 
 import PdfDrawer from '@/components/pdf-drawer';
@@ -18,6 +15,9 @@ import i18n from '@/locales/config';
 import { buildMessageUuidWithRole } from '@/utils/chat';
 import styles from './index.less';
 
+// 👇 IMPORTA L’HOOK DI FLOW (stessa logica di invio/streaming)
+import { useSendNextMessage } from '@/pages/flow/hooks'; // <--- verifica il path esatto nel tuo repo
+
 const ChatContainer = ({ theme }) => {
   const {
     sharedId: conversationId,
@@ -25,37 +25,34 @@ const ChatContainer = ({ theme }) => {
     locale,
     visibleAvatar,
   } = useGetSharedChatSearchParams();
+
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
     useClickDrawer();
 
+  // 👇 QUI usiamo lo stesso hook della chat Flow (niente logic-hooks edit)
   const {
-    handlePressEnter,
-    handleInputChange,
-    value,
     sendLoading,
+    handleInputChange,
+    handlePressEnter,
+    value,
     loading,
     ref,
     derivedMessages,
-    hasError,
+    reference,           // <— come in Flow
     stopOutputMessage,
-    isGenerating   // <-- AGGIUNGI QUESTO!
+  } = useSendNextMessage();
 
-  } = useSendSharedMessage();
-  const SIMULATED_TOTAL_MS = 180000; // 3 minuti
-  const [barWidth, setBarWidth] = useState(370);
   const sendDisabled = useSendButtonDisabled(value);
-  const messagesContainerRef = useRef(null);
-  const isGeneratingRef = useRef(false);
-  const inputRef = useRef(null);
-  const inputContainerRef = useRef(null);
-  const lastMessageRef = useRef(null);
-  const [progress, setProgress] = useState(0);      // <-- AGGIUNGI QUESTA RIGA
-  const [barVisible, setBarVisible] = useState(false); // <-- E QUESTA
-  const [hasMounted, setHasMounted] = useState(false);
-  const [hasFocusedOnce, setHasFocusedOnce] = useState(false);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const lastMessageRef = useRef<HTMLDivElement | null>(null);
 
+  // Loader “a barra” (UI invariata)
+  const SIMULATED_TOTAL_MS = 180000;
+  const [progress, setProgress] = useState(0);
+  const [barVisible, setBarVisible] = useState(false);
+
+  // Blocco per limiti—resta identico
   const [blocked, setBlocked] = useState(false);
-
 
   const useFetchAvatar = useMemo(() => {
     return from === SharedFrom.Agent
@@ -69,189 +66,127 @@ const ChatContainer = ({ theme }) => {
     }
   }, [locale, visibleAvatar]);
 
+  // Gestione barra in base a sendLoading (come Flow: una sola fonte-verità)
   useEffect(() => {
-  setHasMounted(true);
-}, []);
+    let interval: any = null;
+    const START = Date.now();
 
-useEffect(() => {
-  let interval: any = null;
-  const START = Date.now();
-
-  if (sendLoading || isGenerating) {
-    /*  stiamo GENERANDO  */
-    isGeneratingRef.current = true;              // ★ salva stato precedente
-    setBarVisible(true);
-    setProgress(0);
-
-    interval = setInterval(() => {
-      const elapsed = Date.now() - START;
-      const target = Math.min(90, (elapsed / SIMULATED_TOTAL_MS) * 90);
-      setProgress(target);
-    }, 200);
-  } else {
-    /*  la generazione è FINITA  */
-    setProgress(100);
-    setTimeout(() => setBarVisible(false), 650);
-    setTimeout(() => setProgress(0), 1200);
-  }            // ★ reset flag
-
-
-  return () => {
-    if (interval) clearInterval(interval);
-  };
-}, [sendLoading, isGenerating]);
-
-useEffect(() => {
-  const resize = () => {
-    if (window.innerWidth < 480) {
-      setBarWidth(Math.min(window.innerWidth * 0.85, 260)); // 👈 massimo 260px su mobile
-    } else if (window.innerWidth < 768) {
-      setBarWidth(300);
+    if (sendLoading) {
+      setBarVisible(true);
+      setProgress(0);
+      interval = setInterval(() => {
+        const elapsed = Date.now() - START;
+        const target = Math.min(90, (elapsed / SIMULATED_TOTAL_MS) * 90);
+        setProgress(target);
+      }, 200);
     } else {
-      setBarWidth(370);
+      setProgress(100);
+      const t1 = setTimeout(() => setBarVisible(false), 650);
+      const t2 = setTimeout(() => setProgress(0), 1200);
+      interval = { t1, t2 };
     }
-  };
-  resize();
-  window.addEventListener('resize', resize);
-  return () => window.removeEventListener('resize', resize);
-}, []);
 
+    return () => {
+      if (interval?.t1) clearTimeout(interval.t1);
+      if (interval?.t2) clearTimeout(interval.t2);
+      if (interval && typeof interval === 'number') clearInterval(interval);
+    };
+  }, [sendLoading]);
 
-//  // Prevenzione focus durante digitazione
-//  useEffect(() => {
-//    const preventAutofocusScroll = (e) => {
-//      if (sendLoading || isGeneratingRef.current) return;
-//      if (inputRef.current && document.activeElement === inputRef.current) {
-//        if (e.type === 'scroll') {
-//          e.preventDefault();
-//          e.stopPropagation();
-//          return false;
-//        }
-//      }
-//    };
-//    document.addEventListener('scroll', preventAutofocusScroll, { passive: false });
-//    return () => {
-//      document.removeEventListener('scroll', preventAutofocusScroll);
-//    };
-//  }, [sendLoading]);
-  
   const { data: avatarData } = useFetchAvatar();
 
   if (!conversationId) {
     return <div>empty</div>;
   }
 
+  // Scroll + resize postMessage verso il parent (come prima)
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
 
-useEffect(() => {
-  const container = messagesContainerRef.current;
-  if (!container) return;
+    setTimeout(() => {
+      container.scrollTop = container.scrollHeight;
+      window.parent?.postMessage(
+        { type: 'iframe-height', height: container.scrollHeight },
+        '*',
+      );
+    }, 120);
+  }, [derivedMessages.length, sendLoading]);
 
-  // Scrolla sempre in fondo
-  setTimeout(() => {
-    container.scrollTop = container.scrollHeight;
-    // Invia la nuova height ogni generazione
-    window.parent && window.parent.postMessage({
-      type: 'iframe-height',
-      height: container.scrollHeight,
-    }, '*');
-  }, 120);
-}, [derivedMessages.length, sendLoading, isGenerating]);
-
-
-useEffect(() => {
-  function handleLimitMsg(e: MessageEvent) {
-    if (e.data?.type === 'limit-status') {
-      setBlocked(Boolean(e.data.blocked));
+  // riceve dallo shell parent il “limit-status”
+  useEffect(() => {
+    function handleLimitMsg(e: MessageEvent) {
+      if (e.data?.type === 'limit-status') {
+        setBlocked(Boolean(e.data.blocked));
+      }
     }
-  }
-  window.addEventListener('message', handleLimitMsg);
-  return () => window.removeEventListener('message', handleLimitMsg);
-}, []);
+    window.addEventListener('message', handleLimitMsg);
+    return () => window.removeEventListener('message', handleLimitMsg);
+  }, []);
 
-//
-//useEffect(() => {
-//  const scrollBox = messagesContainerRef.current;
-//  if (!scrollBox) return;
-//
-//  // Solo se sei già in fondo
-//  const isNearBottom = scrollBox.scrollHeight - scrollBox.scrollTop - scrollBox.clientHeight < 40;
-//
-//  if (isNearBottom) {
-//    setTimeout(() => {
-//      scrollBox.scrollTo({
-//        top: scrollBox.scrollHeight,
-//        behavior: 'smooth',
-//      });
-//    }, 230);
-//  }
-//}, [derivedMessages.length]);
-//
-//  // Ultimo messaggio
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
 
   return (
     <>
-        {barVisible && (
-          <div className={styles.loaderBarWrapper}>
-            <div className={styles.loaderGlass}>
-              <span className={styles.loaderGlassText}>Generazione in corso...</span>
+      {barVisible && (
+        <div className={styles.loaderBarWrapper}>
+          <div className={styles.loaderGlass}>
+            <span className={styles.loaderGlassText}>Generazione in corso...</span>
+            <div
+              className={styles.loaderBarLiquid}
+              style={{
+                width: '100%',
+                maxWidth: 600,
+                minWidth: 100,
+                margin: '0 auto',
+                height: 16,
+                background: 'rgba(155,255,255,0.07)',
+                borderRadius: 10,
+                padding: 2,
+                boxSizing: 'border-box',
+                boxShadow: '0 0 24px #12c7f333',
+                overflow: 'hidden',
+              }}
+            >
               <div
-                className={styles.loaderBarLiquid}
+                className={styles.loaderBarLiquidInner}
                 style={{
-                  width: '100%', // <-- QUESTA È LA CHIAVE!
-                  maxWidth: 600, // limite desktop
-                  minWidth: 100, // limite mobile
-                  margin: '0 auto',
-                  height: 16,
-                  background: 'rgba(155,255,255,0.07)',
-                  borderRadius: 10,
-                  padding: 2,
-                  boxSizing: 'border-box',
-                  boxShadow: '0 0 24px #12c7f333',
-                  overflow: 'hidden',
-                }}>
-                <div
-                  className={styles.loaderBarLiquidInner}
-                  style={{
-                    width: `${progress}%`,
-                    height: '100%',
-                    borderRadius: 7,
-                    background:
-                      'linear-gradient(270deg, #12dbffBB 0%, #22ffb899 70%, #0078f0CC 100%)',
-                    boxShadow: '0 0 16px #22cfff88',
-                    transition: 'width 0.3s cubic-bezier(.4,1.1,.3,.96)',
-                    willChange: 'width',
-                    backgroundSize: '200% 100%',
-                    animation: 'loader-wave-glass 1.3s infinite linear'
-                  }}>
-                </div>
-              </div>
+                  width: `${progress}%`,
+                  height: '100%',
+                  borderRadius: 7,
+                  background:
+                    'linear-gradient(270deg, #12dbffBB 0%, #22ffb899 70%, #0078f0CC 100%)',
+                  boxShadow: '0 0 16px #22cfff88',
+                  transition: 'width 0.3s cubic-bezier(.4,1.1,.3,.96)',
+                  willChange: 'width',
+                  backgroundSize: '200% 100%',
+                  animation: 'loader-wave-glass 1.3s infinite linear',
+                }}
+              />
             </div>
-            {/* CSS animation direttamente qui */}
-            <style>
-              {`@keyframes loader-wave-glass {
-                  0% { background-position: 0 0; }
-                  100% { background-position: 200% 0; }
-              }`}
-            </style>
           </div>
-        )}
+          <style>
+            {`@keyframes loader-wave-glass {
+              0% { background-position: 0 0; }
+              100% { background-position: 200% 0; }
+            }`}
+          </style>
+        </div>
+      )}
 
       <Flex flex={1} className={`${styles.chatContainer} ${styles[theme]}`} vertical>
-        <Flex 
-        flex={1} 
-        vertical 
-        className={styles.messageContainer}
-        ref={messagesContainerRef}
-      >
-
-          
+        <Flex
+          flex={1}
+          vertical
+          className={styles.messageContainer}
+          ref={messagesContainerRef}
+        >
           <div>
             <Spin spinning={loading}>
               {derivedMessages?.map((message, i) => {
                 const isLastMessage = i === lastMessageIndex;
                 return (
-                  <div 
+                  <div
                     ref={isLastMessage ? lastMessageRef : null}
                     key={buildMessageUuidWithRole(message)}
                   >
@@ -262,8 +197,9 @@ useEffect(() => {
                       nickname="You"
                       reference={buildMessageItemReference(
                         {
+                          // 👇 come in Flow: passa “reference” del hook
                           message: derivedMessages,
-                          reference: [],
+                          reference,
                         },
                         message,
                       )}
@@ -276,7 +212,9 @@ useEffect(() => {
                       clickDocumentButton={clickDocumentButton}
                       showLikeButton={false}
                       showLoudspeaker={false}
-                    ></MessageItem>
+                      // opzionale: se il tuo MessageItem lo supporta, passa anche sendLoading
+                      sendLoading={sendLoading}
+                    />
                   </div>
                 );
               })}
@@ -284,7 +222,6 @@ useEffect(() => {
           </div>
           <div ref={ref} />
         </Flex>
-
 
         {blocked && (
           <div
@@ -306,24 +243,25 @@ useEffect(() => {
         <MessageInput
           isShared
           value={value}
-          disabled={hasError || blocked}
+          disabled={false /* come Flow: niente hasError qui */}
           sendDisabled={sendDisabled || blocked}
-          conversationId={conversationId}
+          conversationId={conversationId /* viene da query param */}
           onInputChange={handleInputChange}
           onPressEnter={handlePressEnter}
           sendLoading={sendLoading}
           uploadMethod="external_upload_and_parse"
           showUploadIcon={false}
           stopOutputMessage={stopOutputMessage}
-        ></MessageInput>
+        />
       </Flex>
+
       {visible && (
         <PdfDrawer
           visible={visible}
           hideModal={hideModal}
           documentId={documentId}
           chunk={selectedChunk}
-        ></PdfDrawer>
+        />
       )}
     </>
   );
