@@ -50,7 +50,7 @@ export const useSendSharedMessage = () => {
     useCreateNextSharedConversation();
   const { handleInputChange, value, setValue } = useHandleMessageInputChange();
   const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
-    `/api/v1/${from === SharedFrom.Agent ? 'agentbots' : 'chatbots'}/${conversationId}/completions`,
+    `/v1/canvas/completion`,
   );
   const {
     derivedMessages,
@@ -64,11 +64,13 @@ export const useSendSharedMessage = () => {
   const sendMessage = useCallback(
     async (message: Message, id?: string) => {
       const res = await send({
-        conversation_id: id ?? conversationId,
-        quote: true,
-        question: message.content,
-        session_id: get(derivedMessages, '0.session_id'),
+        id: id ?? conversationId,
+        messages: [
+          { role: message.role, content: message.content }
+        ],
+        stream: true,
       });
+
 
       if (isCompletionError(res)) {
         // cancel loading
@@ -95,8 +97,12 @@ export const useSendSharedMessage = () => {
   );
 
   const fetchSessionId = useCallback(async () => {
-    const payload = { question: '' };
-    const ret = await send({ ...payload, ...data });
+    const payload = {
+      id: conversationId,
+      messages: [{ role: 'user', content: '' }],
+      stream: true,
+    };
+    const ret = await send(payload);
     if (isCompletionError(ret)) {
       message.error(ret?.data.message);
       setHasError(true);
