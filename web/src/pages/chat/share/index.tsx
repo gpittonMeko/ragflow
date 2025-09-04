@@ -129,6 +129,19 @@ if (!(window as any).__rf_debug_fetch_installed) {
 
     const res = await _fetch(input, init);
 
+    // 🔎 Logga la risposta delle completions per capire se l'errore arriva dal body
+    try {
+      const u2 = new URL(urlStr, window.location.origin);
+      if (/\/api\/v1\/agentbots\/[^/]+\/completions$/.test(u2.pathname)) {
+        // prova JSON, altrimenti testo
+        res.clone().json()
+          .then(d => console.log('%c[COMPLETIONS RESP JSON]', 'color:#0a0', d))
+          .catch(() => res.clone().text()
+            .then(t => console.log('%c[COMPLETIONS RESP TEXT]', 'color:#0a0', t.slice(0, 500)))
+          );
+      }
+    } catch {}
+
     if (res.status === 401) {
       let body = '';
       try { body = await res.clone().text(); } catch {}
