@@ -135,12 +135,14 @@ def set_session_cookie(resp, sid: str):
         SESSION_COOKIE,
         sid,
         max_age=60*60*24*30,
-        secure=COOKIE_SECURE,  # <-- usa la costante
+        secure=COOKIE_SECURE,   # True in produzione (HTTPS)
         httponly=True,
         samesite="None",
         path="/",
-        domain=COOKIE_DOMAIN,  # <-- AGGIUNTO
+        # 👇 RIMOSSO on purpose:
+        # domain=COOKIE_DOMAIN,
     )
+
 
 def create_session_for_user(user: SgaiPlanUser, days=30) -> str:
     sid = uuid.uuid4().hex
