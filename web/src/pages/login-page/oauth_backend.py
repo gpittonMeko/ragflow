@@ -248,6 +248,19 @@ def me():
         return jsonify(ok=False), 401
     return jsonify(ok=True, user={"email": u.email, "plan": u.plan})
 
+@app.get("/oauth/debug-cookie")
+def debug_cookie():
+    # Mostra tutto ciò che vede Flask
+    cookies_dict = dict(request.cookies)  # -> tutte le coppie chiave:valore
+    raw = request.headers.get("Cookie", "")
+    return jsonify({
+        "raw_cookie_header": raw,
+        "all_cookies": cookies_dict,          # es.: {"sgaai_session":"...", "sgai_session":"..."}
+        "sgaai_session": cookies_dict.get("sgaai_session"),
+        "sgai_session_legacy": cookies_dict.get("sgai_session"),
+    })
+
+
 # ─────────────────────────────────────────────────────────────
 # QUOTA
 # ─────────────────────────────────────────────────────────────
