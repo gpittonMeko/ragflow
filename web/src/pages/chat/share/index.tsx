@@ -11,7 +11,7 @@ const MIN_CHAT_HEIGHT = 350;
 // Configurazione account Ragflow di servizio
 const RAGFLOW_SERVICE_ACCOUNT = {
   email: 'giovanni.pitton@mekosrl.it',  // Account dedicato per la chat pubblica
-  password: 'L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag=='  // IMPORTANTE: usa variabili d'ambiente in produzione!
+  password: 'RobotMeko.22'  // IMPORTANTE: usa variabili d'ambiente in produzione!
 };
 
 const SharedChat = () => {
