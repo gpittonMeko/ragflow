@@ -742,7 +742,7 @@ useEffect(() => {
           postToIframe({ type: 'limit-status', blocked: quota !== null && showLimitOverlay });
 
           // 👇 AGGIUNGI QUESTO BLOCCO
-          const ragflowApiKey = "lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm"; // chiave beta
+          const ragflowApiKey = "ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm"; // <== QUI usa il token intero da api_token.token
           postToIframe({
             type: 'ragflow-token',
             token: `Bearer ${ragflowApiKey}`,
