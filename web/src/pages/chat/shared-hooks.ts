@@ -53,12 +53,14 @@ export const useSendSharedMessage = () => {
   `/v1/canvas/completion`,
   {
     headers: {
-      'Authorization': 'IjNmZGQ5NzE4ODljMTExZjA4OTE4MjI5ZGVjZWYwNWI1Ig.aLnhgg.XRN4ZlW4K5LR2h8IYcMT3bak2RA',
-      'Cookie': 'session=gTlp4N9gzpQJ2_1sMr04XUqodfgfe6je6IzwHf9V-lo; __stripe_mid=2c297f17-3257-4d85-9ba5-0ba66691b779ab7bdf; __stripe_sid=4c19e6b6-4672-49e9-95ec-5f3970cef63a68140a'
+      "Authorization": "ImY2ZDEzNmVhODljMjExZjBiNzEyMjI5ZGVjZWYwNWI1Ig.aLnkYg.FrttJPp1vQkMyAds0i72NOcC3n4",
+      "Content-Type": "application/json",
+      "Accept": "text/event-stream"
     },
-    credentials: 'include'  // importante per far mandare i cookie dal browser
+    credentials: "include", // manda i cookie (session, stripe, ecc.)
   }
 );
+
 
   const {
     derivedMessages,
