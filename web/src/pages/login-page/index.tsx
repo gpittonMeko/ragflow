@@ -291,7 +291,7 @@ function postToIframe(msg: any) {
     // AGGIUNGI QUESTO BLOCCO QUI DENTRO!
     if (event.data?.type === 'shared-needs-token') {
       console.log('[PARENT] Chat richiede token Ragflow');
-      const ragflowApiKey = "lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm"; // campo beta da MySQL
+      const ragflowApiKey = "ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm"; // campo beta da MySQL
 
       if (iframeRef.current?.contentWindow) {
         iframeRef.current.contentWindow.postMessage({
