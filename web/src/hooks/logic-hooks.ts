@@ -209,7 +209,6 @@ export const useSendMessageWithSse = (
             if (done) {
               console.info('done');
               resetAnswer();
-
               break;
             }
             try {
@@ -219,14 +218,11 @@ export const useSendMessageWithSse = (
                 console.info('data:', d);
 
                 // PATCH: Gestisci il vero stato di generazione
-                
-                       if (d.running_status === true) {
-                   setIsGenerating(true);
-                   window.parent?.postMessage({ type: 'generation-started' }, '*');
-                 }
-                 if (d.running_status === false) {
-                   setIsGenerating(false);
-                 }
+                if (d.running_status === true) {
+                  setIsGenerating(true);   // Mostra loader/barra
+                } else {
+                  setIsGenerating(false);  // Nascondi loader/barra
+                }
 
                 setAnswer({
                   ...d,
