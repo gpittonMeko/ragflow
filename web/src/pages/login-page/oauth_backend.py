@@ -248,8 +248,10 @@ def me():
         return jsonify(ok=False), 401
     return jsonify(ok=True, user={"email": u.email, "plan": u.plan})
 
+# --- DEBUG COOKIE (UNICA DEFINIZIONE, NIENTE DUPLICATI) ---
 @app.get("/debug-cookie")
-def debug_cookie():
+@app.get("/api/debug-cookie")
+def debug_cookie_probe():
     cookies_dict = dict(request.cookies)
     raw = request.headers.get("Cookie", "")
     return jsonify({
@@ -570,11 +572,7 @@ def stripe_webhook():
 
     return jsonify(received=True)
 
-@app.get("/oauth/debug-cookie")
-def debug_cookie():
-    sid = request.cookies.get(SESSION_COOKIE)
-    print("📦 Cookie ricevuto dal browser:", sid)
-    return jsonify(cookie_sid=sid or "NONE")
+
 
 @app.teardown_appcontext
 def close_db_connection(exc):
