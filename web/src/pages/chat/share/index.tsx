@@ -93,6 +93,8 @@ const SharedChat: React.FC = () => {
     };
   }
 
+
+  
   // ──────────────────────────────
   // Patch EventSource: aggiunge token in query
   // ──────────────────────────────
@@ -130,6 +132,12 @@ const SharedChat: React.FC = () => {
         const rawHeight = containerRef.current.scrollHeight;
         const boundedHeight = Math.max(MIN_CHAT_HEIGHT, Math.min(rawHeight, MAX_CHAT_HEIGHT));
         window.parent.postMessage({ type: 'iframe-height', height: boundedHeight }, '*');
+      }
+
+      if (event.data?.type === 'ragflow-token' && event.data.token) {
+        localStorage.setItem('authorization', event.data.token);
+        console.log('[IFRAME] Token ricevuto dal parent:', event.data.token.slice(0, 20) + '…');
+        setReady(true);
       }
 
       if (event.data?.type === 'theme-change') {
