@@ -118,10 +118,11 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
   async (message: Message, id?: string) => {
     console.log("[IFRAME] sendMessage con authToken:", authToken);
     const res = await send({
-      id: id ?? conversationId,
-      messages: [{ role: message.role, content: message.content }],
-      stream: true,
-    });
+        id: id ?? conversationId,
+        message: message.content,          // 👈 non array
+        message_id: message.id || uuid(),  // 👈 genera se non c’è
+        stream: true,
+      });
 
     if (isCompletionError(res)) {
       console.warn("[IFRAME] Errore SSE:", res);
