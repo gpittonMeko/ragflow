@@ -280,10 +280,9 @@ const AuthorizationKey = 'Authorization';
 async function refreshQuota(forceToken?: string) {
   try {
     const headers: Record<string, string> = {};
-    const auth = forceToken ?? googleToken ?? localStorage.getItem("Authorization");
 
-    if (auth) {
-      headers['Authorization'] = auth;
+    if (forceToken ?? googleToken) {
+      headers['Authorization'] = forceToken ?? googleToken;
     } else {
       headers['X-Client-Id'] = clientIdRef.current;
     }
@@ -309,6 +308,7 @@ async function refreshQuota(forceToken?: string) {
     console.warn('quota network error', e);
   }
 }
+
 
 
 useEffect(() => {
