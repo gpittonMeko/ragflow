@@ -81,7 +81,7 @@ const [authToken, setAuthToken] = useState<string>("");
 
 // inizializza quando arriva qualcosa
 useEffect(() => {
-  const initial = normalizeAuth(auth || localStorage.getItem("Authorization"));
+  const initial = normalizeAuth(localStorage.getItem("Authorization"));
   if (initial) {
     setAuthToken(initial);
     console.log("[IFRAME] authToken iniziale:", initial);
