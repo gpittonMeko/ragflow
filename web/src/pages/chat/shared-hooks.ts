@@ -81,10 +81,17 @@ const [authToken, setAuthToken] = useState<string>("");
 
 // inizializza quando arriva qualcosa
 useEffect(() => {
-  const initial = normalizeAuth(localStorage.getItem("Authorization"));
+  // prova prima con Authorization, se non c’è usa access_token guest
+  const initial = normalizeAuth(
+    localStorage.getItem("Authorization") ||
+    localStorage.getItem("access_token")
+  );
+
   if (initial) {
     setAuthToken(initial);
     console.log("[IFRAME] authToken iniziale:", initial);
+  } else {
+    console.warn("[IFRAME] Nessun token trovato in localStorage");
   }
 }, [auth]);
 
