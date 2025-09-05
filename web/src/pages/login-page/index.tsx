@@ -270,7 +270,7 @@ useEffect(() => {
     const tryOnce = async (useBearer: boolean) => {
       const headers: Record<string, string> = {};
       const auth = forceToken ?? googleToken;
-      if (useBearer && auth) headers['Authorization'] = `Bearer ${auth}`;
+      if (useBearer && auth) headers['Authorization'] = auth; // <-- SENZA Bearer
       if (!useBearer) headers['X-Client-Id'] = clientIdRef.current;
 
       const res = await fetch(`${baseURL}/api/quota`, {
@@ -332,18 +332,19 @@ useEffect(() => {
         console.log('[PARENT] Login response:', loginData);
         
         if (loginData.code === 0 && loginData.data?.access_token) {
-          const token = `Bearer ${loginData.data.access_token}`;
-          
-          if (iframeRef.current?.contentWindow) {
-            iframeRef.current.contentWindow.postMessage({
-              type: 'ragflow-token',
-              token: token
-            }, '*');
-            console.log('[PARENT] Token inviato a iframe');
-          }
-        } else {
-          console.error('[PARENT] Login fallito:', loginData);
-        }
+  const token = loginData.data.access_token; // <-- SENZA Bearer
+
+  if (iframeRef.current?.contentWindow) {
+    iframeRef.current.contentWindow.postMessage(
+      { type: 'ragflow-token', token },
+      '*'
+    );
+    console.log('[PARENT] Token inviato a iframe');
+  }
+} else {
+  console.error('[PARENT] Login fallito:', loginData);
+}
+
       } catch (err) {
         console.error('[PARENT] Errore login:', err);
       }
