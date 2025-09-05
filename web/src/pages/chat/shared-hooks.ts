@@ -51,17 +51,36 @@ export const useSendSharedMessage = () => {
   const { createSharedConversation: setConversation } =
     useCreateNextSharedConversation();
   const { handleInputChange, value, setValue } = useHandleMessageInputChange();
-  const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
+
+  const [authToken, setAuthToken] = useState<string>(
+  auth ? `Bearer ${auth}` : (localStorage.getItem("Authorization") || "")
+);
+
+useEffect(() => {
+  const handler = (event: MessageEvent) => {
+    if (event.data?.type === 'ragflow-token' && event.data.token) {
+      console.log('[IFRAME] Ricevuto token da parent', event.data.token);
+      localStorage.setItem("Authorization", event.data.token); // opzionale
+      setAuthToken(event.data.token); // usa subito in memoria
+    }
+  };
+  window.addEventListener("message", handler);
+  return () => window.removeEventListener("message", handler);
+}, []);
+
+
+const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
   `/v1/canvas/completion`,
   {
     headers: {
-      'Authorization': auth ? `Bearer ${auth}` : (localStorage.getItem("Authorization") || ""),
+      'Authorization': authToken,
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
     },
-    credentials: 'include', // il browser penserà lui a mandare i cookie validi
+    credentials: 'include',
   }
 );
+
 
 
   const {
