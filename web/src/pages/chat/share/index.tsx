@@ -34,68 +34,52 @@ const SharedChat: React.FC = () => {
     };
   }, []);
 
-  // Gestione messaggi dal parent (altezza e tema)
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'request-height' && containerRef.current) {
-        const rawHeight = containerRef.current.scrollHeight;
-        const boundedHeight = Math.max(
-          MIN_CHAT_HEIGHT,
-          Math.min(rawHeight, MAX_CHAT_HEIGHT)
-        );
-        window.parent.postMessage(
-          { type: 'iframe-height', height: boundedHeight },
-          '*'
-        );
-      }
-
-      if (event.data?.type === 'theme-change') {
-        setTheme(event.data.theme);
-        document.documentElement.setAttribute('data-theme', event.data.theme);
-      }
-    };
-
-    // ResizeObserver → invia al parent se la chat cresce/diminuisce
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target === containerRef.current) {
-          const boundedHeight = Math.max(
-            MIN_CHAT_HEIGHT,
-            Math.min(entry.target.scrollHeight, MAX_CHAT_HEIGHT)
-          );
-          window.parent.postMessage(
-            { type: 'iframe-height', height: boundedHeight },
-            '*'
-          );
-        }
-      }
-    });
-
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
+  const handleMessage = (event: MessageEvent) => {
+    // Altezza richiesta dal parent
+    if (event.data?.type === 'request-height' && containerRef.current) {
+      const rawHeight = containerRef.current.scrollHeight;
+      const boundedHeight = Math.max(
+        MIN_CHAT_HEIGHT,
+        Math.min(rawHeight, MAX_CHAT_HEIGHT)
+      );
+      window.parent.postMessage(
+        { type: 'iframe-height', height: boundedHeight },
+        '*'
+      );
     }
 
-    window.addEventListener('message', handleMessage);
+    // Tema dal parent
+    if (event.data?.type === 'theme-change') {
+      setTheme(event.data.theme);
+      document.documentElement.setAttribute('data-theme', event.data.theme);
+    }
 
-    // Tema iniziale
-    document.documentElement.setAttribute('data-theme', theme);
+    // 🔑 Token dal parent
+    if (event.data?.type === 'ragflow-token' && event.data.token) {
+      console.log('[IFRAME] SharedChat riceve token:', event.data.token);
+      localStorage.setItem('Authorization', event.data.token);
+      sessionStorage.setItem('Authorization', event.data.token); // extra sicurezza
+    }
 
-    // Listener per cambiamenti in localStorage (tema cambiato altrove)
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'sgai-theme' && event.newValue) {
-        setTheme(event.newValue);
-        document.documentElement.setAttribute('data-theme', event.newValue);
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
+    // 🔒 Stato limite dal parent
+    if (event.data?.type === 'limit-status') {
+      // puoi salvare in state e passarlo a ChatContainer come prop
+      console.log('[IFRAME] Ricevuto limit-status:', event.data.blocked);
+      // esempio: setBlocked(event.data.blocked);
+    }
+  };
 
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('message', handleMessage);
-      if (containerRef.current) resizeObserver.unobserve(containerRef.current);
-      resizeObserver.disconnect();
-    };
-  }, [theme]);
+  window.addEventListener('message', handleMessage);
+
+  // Tema iniziale
+  document.documentElement.setAttribute('data-theme', theme);
+
+  return () => {
+    window.removeEventListener('message', handleMessage);
+  };
+}, [theme]);
+
 
   return (
     <div
