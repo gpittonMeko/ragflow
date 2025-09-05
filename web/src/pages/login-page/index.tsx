@@ -130,12 +130,13 @@ const isUserFree = !quotaLoading && userPlan === 'free';
 
 const isBlocked =
   quota === null
-    ? false // ⬅️ finché non ho la quota certa NON blocco
+    ? false
     : quota.scope === 'anon'
       ? (quota as QuotaAnon).remainingTotal <= 0
       : quota.scope === 'user'
         ? userPlan !== 'premium' && (quota as QuotaUser).remainingToday <= 0
-        : (!isLoggedIn && genCount >= FREE_LIMIT);
+        : false;   // ⬅️ tolto il fallback genCount
+
 
 
 
