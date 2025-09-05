@@ -162,21 +162,16 @@ function postToIframe(msg: any) {
 }
 
   // Bootstrap: se ho già il cookie di sessione, prendo l’utente
+  // Bootstrap: NON chiamare /oauth/api/me
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${baseURL}/api/me`, { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          setUserData({ email: data.user.email, plan: data.user.plan });
-        } else {
-          setUserData(null);
-        }
+        // prova direttamente a prendere la quota (anon/user)
+        await refreshQuota();
       } catch {}
-      // in ogni caso aggiorno la quota
-      void refreshQuota();
     })();
   }, []);
+
 
 //  useEffect(() => {
 //  const handleScroll = () => {
@@ -382,6 +377,38 @@ useEffect(() => {
     }
   };
 }, [canExpandIframe, userData, googleToken]);
+
+
+// in cima al file
+const AuthorizationKey = 'Authorization';
+
+// sotto agli useState / useEffect iniziali
+useEffect(() => {
+  // se non c'è un token Ragflow valido, fai il login tecnico e salvalo
+  const ensureRagflowAuth = async () => {
+    try {
+      const existing = localStorage.getItem(AuthorizationKey);
+      if (existing) return;
+
+      const res = await fetch('/v1/user/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'giovanni.pitton@mekosrl.it',
+          password: 'L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag=='
+        }),
+      });
+      const data = await res.json();
+      if (data?.code === 0 && data?.data?.access_token) {
+        localStorage.setItem(AuthorizationKey, `Bearer ${data.data.access_token}`);
+      }
+    } catch (e) {
+      console.warn('[Ragflow] login tecnico fallito', e);
+    }
+  };
+
+  void ensureRagflowAuth();
+}, []);
 
 
 
