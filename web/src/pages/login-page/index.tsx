@@ -417,8 +417,6 @@ useEffect(() => {
 }, [canExpandIframe, userData, googleToken]);
 
 
-const AuthorizationKey = 'Authorization';
-
 useEffect(() => {
   const ensureRagflowAuth = async () => {
     try {
