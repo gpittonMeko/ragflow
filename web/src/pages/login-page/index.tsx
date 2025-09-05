@@ -835,7 +835,7 @@ useEffect(() => {
         
         
       }}
-        src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=sgai-2025-production&visible_avatar=1"
+      src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&visible_avatar=1"
 
         title="SGAI Chat Interface"
       className={quota !== null && showLimitOverlay ? styles.chatFrozen : ''}
