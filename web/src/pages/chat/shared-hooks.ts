@@ -161,10 +161,10 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
       setHasError(true);
     }
   }, [send]);
-
-  useEffect(() => {
-    fetchSessionId();
-  }, [fetchSessionId, send]);
+//
+//  useEffect(() => {
+//    fetchSessionId();
+//  }, [fetchSessionId, send]);
 
   useEffect(() => {
     if (answer.answer) {
@@ -173,26 +173,29 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
   }, [answer, addNewestAnswer]);
 
   const handlePressEnter = useCallback(
-    (documentIds: string[]) => {
-      if (trim(value) === '') return;
-      const id = uuid();
-      if (done) {
-        setValue('');
-        addNewestQuestion({
-          content: value,
-          doc_ids: documentIds,
-          id,
-          role: MessageType.User,
-        });
-        handleSendMessage({
-          content: value.trim(),
-          id,
-          role: MessageType.User,
-        });
-      }
-    },
-    [addNewestQuestion, done, handleSendMessage, setValue, value],
-  );
+  (documentIds: string[]) => {
+    if (trim(value) === '') return;
+    const id = uuid();
+    const content = value.trim();   // 👈 salva qui
+
+    if (done) {
+      setValue('');  // reset dopo
+      addNewestQuestion({
+        content,
+        doc_ids: documentIds,
+        id,
+        role: MessageType.User,
+      });
+      handleSendMessage({
+        content,     // 👈 usa la variabile
+        id,
+        role: MessageType.User,
+      });
+    }
+  },
+  [addNewestQuestion, done, handleSendMessage, setValue, value],
+);
+
 
   return {
     handlePressEnter,
