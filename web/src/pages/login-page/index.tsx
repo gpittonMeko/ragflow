@@ -822,7 +822,11 @@ useEffect(() => {
       ref={iframeRef}
       onLoad={async () => {
         console.log('[IFRAME] Caricato');
-        
+         const token = localStorage.getItem('Authorization');
+          if (token) {
+            postToIframe({ type: 'ragflow-token', token });
+            console.log('[PARENT] Token inviato onLoad:', token);
+          }
         postToIframe({ type: 'request-height' });
         postToIframe({ type: 'theme-change', theme });
         postToIframe({ type: 'limit-status', blocked: quota !== null && showLimitOverlay });
