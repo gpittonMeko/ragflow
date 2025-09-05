@@ -277,28 +277,21 @@ const AuthorizationKey = 'Authorization';
 
 
 
-  async function refreshQuota(forceToken?: string) {
+async function refreshQuota(forceToken?: string) {
   try {
-    const tryOnce = async (useBearer: boolean) => {
-      const headers: Record<string, string> = {};
-      const auth = forceToken ?? googleToken;
-      if (useBearer && auth) headers['Authorization'] = auth; // <-- SENZA Bearer
-      if (!useBearer) headers['X-Client-Id'] = clientIdRef.current;
+    const headers: Record<string, string> = {};
+    const auth = forceToken ?? googleToken ?? localStorage.getItem("Authorization");
 
-      const res = await fetch(`${baseURL}/api/quota`, {
-        headers,
-        credentials: 'include',
-      });
-      return res;
-    };
-
-    // primo tentativo: Bearer se presente, altrimenti anonimo
-    let res = await tryOnce(!!(forceToken ?? googleToken));
-
-    // se Bearer fallisce con 401 → riprova anonimo con X-Client-Id
-    if (res.status === 401 && (forceToken ?? googleToken)) {
-      res = await tryOnce(false);
+    if (auth) {
+      headers['Authorization'] = auth;
+    } else {
+      headers['X-Client-Id'] = clientIdRef.current;
     }
+
+    const res = await fetch(`${baseURL}/api/quota`, {
+      headers,
+      credentials: 'include',
+    });
 
     const data = await res.json();
     console.log('[QUOTA]', data);
@@ -316,6 +309,7 @@ const AuthorizationKey = 'Authorization';
     console.warn('quota network error', e);
   }
 }
+
 
 useEffect(() => {
   const token = localStorage.getItem('Authorization');
