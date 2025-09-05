@@ -33,6 +33,7 @@ export const useGetSharedChatSearchParams = () => {
     from: searchParams.get('from') as SharedFrom,
     sharedId: searchParams.get('shared_id'),
     locale: searchParams.get('locale'),
+    auth: searchParams.get('auth'),
     data: data,
     visibleAvatar: searchParams.get('visible_avatar')
       ? searchParams.get('visible_avatar') !== '1'
@@ -44,6 +45,7 @@ export const useSendSharedMessage = () => {
   const {
     from,
     sharedId: conversationId,
+    auth,
     data: data,
   } = useGetSharedChatSearchParams();
   const { createSharedConversation: setConversation } =
@@ -53,7 +55,7 @@ export const useSendSharedMessage = () => {
   `/v1/canvas/completion`,
   {
     headers: {
-      'Authorization': localStorage.getItem("Authorization") || "",
+      'Authorization': auth ? `Bearer ${auth}` : (localStorage.getItem("Authorization") || ""),
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
     },
