@@ -331,8 +331,9 @@ useEffect(() => {
         const loginData = await loginRes.json();
         console.log('[PARENT] Login response:', loginData);
         
-        if (loginData.code === 0 && loginData.data?.access_token) {
-  const token = loginData.data.access_token; // <-- SENZA Bearer
+        if (loginData.code === 0) {
+  const token = localStorage.getItem('Authorization'); // usa quello giusto
+
 
   if (iframeRef.current?.contentWindow) {
     iframeRef.current.contentWindow.postMessage(
