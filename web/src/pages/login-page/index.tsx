@@ -248,22 +248,21 @@ const AuthorizationKey = 'Authorization';
   async function ensureRagflowAuth() {
   try {
     const existing = localStorage.getItem("Authorization");
-    if (existing) return;
+    if (existing) return; // già loggato
 
     const res = await fetch("/v1/user/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
-        email: "guest",   // oppure la tua login
-        password: "guest" // dipende da come l’hai configurato su Ragflow
+        email: "giovanni.pitton@mekosrl.it", // <-- tua login valida
+        password: "L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag==" 
       }),
     });
 
     const data = await res.json();
     console.log("[LOGIN RESPONSE]", data);
 
-    // Header Authorization
     const token = res.headers.get("Authorization");
     if (token) {
       localStorage.setItem("Authorization", token);
@@ -275,6 +274,7 @@ const AuthorizationKey = 'Authorization';
     console.error("[ensureRagflowAuth] errore:", e);
   }
 }
+
 
 
   async function refreshQuota(forceToken?: string) {
@@ -431,30 +431,7 @@ useEffect(() => {
 }, [canExpandIframe, userData, googleToken]);
 
 
-useEffect(() => {
-  const ensureRagflowAuth = async () => {
-    try {
-      const existing = localStorage.getItem(AuthorizationKey);
-      if (existing) return;
 
-      const res = await fetch("https://sgailegal.com/v1/new_token", {
-  method: "POST",
-  credentials: "include",
-});
-const result = await res.json();
-if (res.ok && result.data?.token) {
-  localStorage.setItem("Authorization", result.data.token);
-  console.log("[Ragflow] nuovo token salvato:", result.data.token);
-} else {
-  console.warn("[Ragflow] new_token fallito:", result);
-}
-
-    } catch (e) {
-      console.error('[Ragflow] Errore new_token:', e);
-    }
-  };
-  void ensureRagflowAuth();
-}, []);
 
 useEffect(() => {
   void ensureRagflowAuth();
