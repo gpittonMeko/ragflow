@@ -93,24 +93,20 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
   const [hasError, setHasError] = useState(false);
 
   const sendMessage = useCallback(
-    async (message: Message, id?: string) => {
-      const res = await send({
-        id: id ?? conversationId,
-        messages: [
-          { role: message.role, content: message.content }
-        ],
-        stream: true,
-      });
+  async (message: Message, id?: string) => {
+    const res = await send({
+      id: id ?? conversationId,
+      messages: [{ role: message.role, content: message.content }],
+      stream: true,
+    });
 
-
-      if (isCompletionError(res)) {
-        // cancel loading
-        setValue(message.content);
-        removeLatestMessage();
-      }
-    },
-    [send, conversationId, derivedMessages, setValue, removeLatestMessage],
-  );
+    if (isCompletionError(res)) {
+      setValue(message.content);
+      removeLatestMessage();
+    }
+  },
+  [send, conversationId, derivedMessages, setValue, removeLatestMessage, authToken] // 👈 aggiungi authToken
+);
 
   const handleSendMessage = useCallback(
     async (message: Message) => {
