@@ -60,11 +60,6 @@ const normalizeAuth = (raw?: string | null) => {
   return `Bearer ${raw}`;                     // token Google/user → aggiungi Bearer
 };
 
-const [authToken, setAuthToken] = useState<string>(
-  normalizeAuth(auth || localStorage.getItem("Authorization"))
-);
-
-
 
 
 useEffect(() => {
@@ -81,16 +76,30 @@ useEffect(() => {
 
 
 
+const [authToken, setAuthToken] = useState<string>("");
+
+// inizializza quando arriva qualcosa
+useEffect(() => {
+  const initial = normalizeAuth(auth || localStorage.getItem("Authorization"));
+  if (initial) {
+    setAuthToken(initial);
+    console.log("[IFRAME] authToken iniziale:", initial);
+  }
+}, [auth]);
+
+
+
 const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
   `/v1/canvas/completion`,
   {
     headers: {
-      'Authorization': authToken,
-      'Content-Type': 'application/json',
-      'Accept': 'text/event-stream',
+      Authorization: authToken || "",
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
     },
-    credentials: 'include',
-  }
+    credentials: "include",
+  },
+  [authToken] // 👈 importante
 );
 
 
@@ -106,6 +115,7 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
 
   const sendMessage = useCallback(
   async (message: Message, id?: string) => {
+    console.log("[IFRAME] sendMessage con authToken:", authToken);
     const res = await send({
       id: id ?? conversationId,
       messages: [{ role: message.role, content: message.content }],
@@ -113,12 +123,14 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
     });
 
     if (isCompletionError(res)) {
+      console.warn("[IFRAME] Errore SSE:", res);
       setValue(message.content);
       removeLatestMessage();
     }
   },
-  [send, conversationId, derivedMessages, setValue, removeLatestMessage, authToken] // 👈 aggiungi authToken
+  [send, conversationId, derivedMessages, setValue, removeLatestMessage, authToken]
 );
+
 
   const handleSendMessage = useCallback(
     async (message: Message) => {
@@ -135,6 +147,7 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
     [conversationId, setConversation, sendMessage],
   );
 
+  
   const fetchSessionId = useCallback(async () => {
     const payload = {
       id: conversationId,
