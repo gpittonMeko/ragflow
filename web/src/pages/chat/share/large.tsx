@@ -109,6 +109,18 @@ useEffect(() => {
 }, [sendLoading, isGenerating]);
 
 useEffect(() => {
+  function handleParentMsg(e: MessageEvent) {
+    if (e.data?.type === 'ragflow-token' && e.data.token) {
+      console.log('[IFRAME] Ricevuto token dal parent:', e.data.token);
+      localStorage.setItem('Authorization', e.data.token);
+    }
+  }
+  window.addEventListener('message', handleParentMsg);
+  return () => window.removeEventListener('message', handleParentMsg);
+}, [])
+
+
+useEffect(() => {
   const resize = () => {
     if (window.innerWidth < 480) {
       setBarWidth(Math.min(window.innerWidth * 0.85, 260)); // 👈 massimo 260px su mobile
