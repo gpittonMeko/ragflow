@@ -192,28 +192,7 @@ function postToIframe(msg: any) {
 
 const AuthorizationKey = 'Authorization';
 
-useEffect(() => {
-  const ensureRagflowAuth = async () => {
-    try {
-      if (localStorage.getItem(AuthorizationKey)) return;
 
-      const res = await fetch('/v1/new_token', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      const json = await res.json();
-      if (res.ok && json.data?.token) {
-        localStorage.setItem(AuthorizationKey, json.data.token);
-        console.log('[Ragflow] token salvato:', json.data.token);
-      } else {
-        console.warn('[Ragflow] new_token fallito:', json);
-      }
-    } catch (e) {
-      console.error('[Ragflow] errore new_token:', e);
-    }
-  };
-  void ensureRagflowAuth();
-}, []);
 
 
 
@@ -264,6 +243,39 @@ useEffect(() => {
   const expandTimeoutRef = useRef<any>(null);
 
   const genTimeoutRef = useRef<number | null>(null);
+
+
+  async function ensureRagflowAuth() {
+  try {
+    const existing = localStorage.getItem("Authorization");
+    if (existing) return;
+
+    const res = await fetch("/v1/user/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        email: "guest",   // oppure la tua login
+        password: "guest" // dipende da come l’hai configurato su Ragflow
+      }),
+    });
+
+    const data = await res.json();
+    console.log("[LOGIN RESPONSE]", data);
+
+    // Header Authorization
+    const token = res.headers.get("Authorization");
+    if (token) {
+      localStorage.setItem("Authorization", token);
+      console.log("✅ Salvato Authorization:", token);
+    } else {
+      console.warn("⚠ Nessun Authorization negli header");
+    }
+  } catch (e) {
+    console.error("[ensureRagflowAuth] errore:", e);
+  }
+}
+
 
   async function refreshQuota(forceToken?: string) {
   try {
@@ -444,6 +456,9 @@ useEffect(() => {
   void ensureRagflowAuth();
 }, []);
 
+useEffect(() => {
+  void ensureRagflowAuth();
+}, []);
 
 useEffect(() => {
   const token = localStorage.getItem('Authorization');
