@@ -51,22 +51,34 @@ export const useSendSharedMessage = () => {
   const { createSharedConversation: setConversation } =
     useCreateNextSharedConversation();
   const { handleInputChange, value, setValue } = useHandleMessageInputChange();
+  
+// helper per normalizzare i token
+const normalizeAuth = (raw?: string | null) => {
+  if (!raw) return "";
+  if (raw.startsWith("ragflow-")) return raw; // token API → così com'è
+  if (raw.startsWith("Bearer ")) return raw;  // già con Bearer
+  return `Bearer ${raw}`;                     // token Google/user → aggiungi Bearer
+};
 
-  const [authToken, setAuthToken] = useState<string>(
-  auth ? `Bearer ${auth}` : (localStorage.getItem("Authorization") || "")
+const [authToken, setAuthToken] = useState<string>(
+  normalizeAuth(auth || localStorage.getItem("Authorization"))
 );
+
+
+
 
 useEffect(() => {
   const handler = (event: MessageEvent) => {
     if (event.data?.type === 'ragflow-token' && event.data.token) {
       console.log('[IFRAME] Ricevuto token da parent', event.data.token);
       localStorage.setItem("Authorization", event.data.token); // opzionale
-      setAuthToken(event.data.token); // usa subito in memoria
+      setAuthToken(normalizeAuth(event.data.token));           // 👈 AGGIORNA LO STATE
     }
   };
   window.addEventListener("message", handler);
   return () => window.removeEventListener("message", handler);
 }, []);
+
 
 
 const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
