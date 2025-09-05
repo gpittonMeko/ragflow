@@ -190,6 +190,33 @@ function postToIframe(msg: any) {
 //  return () => window.removeEventListener('scroll', handleScroll);
 //}, []);
 
+const AuthorizationKey = 'Authorization';
+
+useEffect(() => {
+  const ensureRagflowAuth = async () => {
+    try {
+      if (localStorage.getItem(AuthorizationKey)) return;
+
+      const res = await fetch('/v1/new_token', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const json = await res.json();
+      if (res.ok && json.data?.token) {
+        localStorage.setItem(AuthorizationKey, json.data.token);
+        console.log('[Ragflow] token salvato:', json.data.token);
+      } else {
+        console.warn('[Ragflow] new_token fallito:', json);
+      }
+    } catch (e) {
+      console.error('[Ragflow] errore new_token:', e);
+    }
+  };
+  void ensureRagflowAuth();
+}, []);
+
+
+
 
   useEffect(() => { void refreshQuota(); }, []);
 
@@ -215,6 +242,12 @@ function postToIframe(msg: any) {
     postToIframe({ type: 'theme-change', theme });
   }, [theme]);
 
+  useEffect(() => {
+  const token = localStorage.getItem('Authorization');
+  if (token) {
+    postToIframe({ type: 'ragflow-token', token });
+  }
+}, [quota, googleToken]);
 
   useEffect(() => {
       if (showGoogleModal) setShowLimitOverlay(false);
@@ -384,36 +417,40 @@ useEffect(() => {
 }, [canExpandIframe, userData, googleToken]);
 
 
-// in cima al file
 const AuthorizationKey = 'Authorization';
 
-// sotto agli useState / useEffect iniziali
 useEffect(() => {
-  // se non c'è un token Ragflow valido, fai il login tecnico e salvalo
   const ensureRagflowAuth = async () => {
     try {
       const existing = localStorage.getItem(AuthorizationKey);
       if (existing) return;
 
-      const res = await fetch('/v1/user/login', {
+      const res = await fetch('/v1/new_token', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: 'giovanni.pitton@mekosrl.it',
-          password: 'L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag=='
-        }),
+        credentials: 'include',
       });
-      const data = await res.json();
-      if (data?.code === 0 && data?.data?.access_token) {
-        localStorage.setItem(AuthorizationKey, `Bearer ${data.data.access_token}`);
+      const result = await res.json();
+      if (res.ok && result.data?.token) {
+        const token = result.data.token;
+        localStorage.setItem(AuthorizationKey, token);
+        console.log('[Ragflow] nuovo token salvato:', token);
+      } else {
+        console.warn('[Ragflow] new_token fallito:', result);
       }
     } catch (e) {
-      console.warn('[Ragflow] login tecnico fallito', e);
+      console.error('[Ragflow] Errore new_token:', e);
     }
   };
-
   void ensureRagflowAuth();
 }, []);
+
+
+useEffect(() => {
+  const token = localStorage.getItem('Authorization');
+  if (token) {
+    postToIframe({ type: 'ragflow-token', token });
+  }
+}, [quota, googleToken]);
 
 
 
@@ -782,26 +819,7 @@ useEffect(() => {
         postToIframe({ type: 'theme-change', theme });
         postToIframe({ type: 'limit-status', blocked: quota !== null && showLimitOverlay });
         
-        try {
-          const loginRes = await fetch('/v1/user/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: 'giovanni.pitton@mekosrl.it',
-              password: 'L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag=='
-            })
-          });
-          
-          const loginData = await loginRes.json();
-          
-          if (loginData.code === 0 && loginData.data?.access_token) {
-            const token = `Bearer ${loginData.data.access_token}`;
-            postToIframe({ type: 'ragflow-token', token });
-            console.log('[IFRAME] Token inviato all\'avvio');
-          }
-        } catch (err) {
-          console.error('[IFRAME] Errore login iniziale:', err);
-        }
+        
       }}
         src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=sgai-2025-production&visible_avatar=1"
 
