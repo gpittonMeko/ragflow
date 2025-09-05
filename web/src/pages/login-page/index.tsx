@@ -333,10 +333,12 @@ async function refreshQuota(forceToken?: string) {
 
 
 
-useEffect(() => {
-  const token = localStorage.getItem('Authorization');
-  if (token) postToIframe({ type: 'ragflow-token', token });
-}, [quota, googleToken]);
+// usa il guest token per Ragflow, non Authorization
+const ragToken = localStorage.getItem('access_token');
+if (ragToken) {
+  postToIframe({ type: 'ragflow-token', token: ragToken });
+  console.log('[PARENT] Token inviato onLoad (guest):', ragToken);
+}
 
 
 useEffect(() => {
