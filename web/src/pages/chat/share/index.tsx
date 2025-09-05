@@ -34,51 +34,54 @@ const SharedChat: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
   const handleMessage = (event: MessageEvent) => {
-    // Altezza richiesta dal parent
+    console.log('[IFRAME] Messaggio ricevuto:', event.data);
+
     if (event.data?.type === 'request-height' && containerRef.current) {
       const rawHeight = containerRef.current.scrollHeight;
       const boundedHeight = Math.max(
         MIN_CHAT_HEIGHT,
         Math.min(rawHeight, MAX_CHAT_HEIGHT)
       );
+      console.log('[IFRAME] Invio altezza al parent:', boundedHeight);
       window.parent.postMessage(
         { type: 'iframe-height', height: boundedHeight },
         '*'
       );
     }
 
-    // Tema dal parent
     if (event.data?.type === 'theme-change') {
+      console.log('[IFRAME] Cambio tema →', event.data.theme);
       setTheme(event.data.theme);
       document.documentElement.setAttribute('data-theme', event.data.theme);
     }
 
-    // 🔑 Token dal parent
     if (event.data?.type === 'ragflow-token' && event.data.token) {
-      console.log('[IFRAME] SharedChat riceve token:', event.data.token);
+      console.log('[IFRAME] Ricevuto token dal parent:', event.data.token);
       localStorage.setItem('Authorization', event.data.token);
-      sessionStorage.setItem('Authorization', event.data.token); // extra sicurezza
+      sessionStorage.setItem('Authorization', event.data.token);
+
+      // debug extra: conferma subito che sia salvato
+      console.log('[IFRAME] Token salvato in localStorage:', localStorage.getItem('Authorization'));
+      console.log('[IFRAME] Token salvato in sessionStorage:', sessionStorage.getItem('Authorization'));
     }
 
-    // 🔒 Stato limite dal parent
     if (event.data?.type === 'limit-status') {
-      // puoi salvare in state e passarlo a ChatContainer come prop
-      console.log('[IFRAME] Ricevuto limit-status:', event.data.blocked);
-      // esempio: setBlocked(event.data.blocked);
+      console.log('[IFRAME] Stato limite ricevuto:', event.data.blocked);
+      // TODO: passare a ChatContainer con prop o context
     }
   };
 
   window.addEventListener('message', handleMessage);
 
-  // Tema iniziale
   document.documentElement.setAttribute('data-theme', theme);
 
   return () => {
     window.removeEventListener('message', handleMessage);
   };
 }, [theme]);
+
 
 
   return (
