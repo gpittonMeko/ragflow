@@ -245,6 +245,27 @@ const AuthorizationKey = 'Authorization';
 
   const genTimeoutRef = useRef<number | null>(null);
 
+    // === Allinea i localStorage/cookie con Ragflow guest ===
+function ensureGuestLocalStorage() {
+  // se non esiste un access_token → crea guest_xxx
+  if (!localStorage.getItem("access_token")) {
+    const guest = "guest_" + uuidv4();
+    localStorage.setItem("access_token", guest);
+    document.cookie = `access_token=${guest}; path=/; SameSite=None; Secure`;
+  }
+
+  // se non esiste un Token → metti qualcosa (Ragflow lo usa anche vuoto)
+  if (!localStorage.getItem("Token")) {
+    const token = uuidv4().replace(/-/g, ""); // stringa casuale
+    localStorage.setItem("Token", token);
+    document.cookie = `Token=${token}; path=/; SameSite=None; Secure`;
+  }
+}
+
+useEffect(() => {
+  ensureGuestLocalStorage();
+}, []);
+
 
   async function ensureRagflowAuth() {
   try {
