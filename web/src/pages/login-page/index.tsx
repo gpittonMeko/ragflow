@@ -272,6 +272,11 @@ function postToIframe(msg: any) {
   }
 }
 
+useEffect(() => {
+  const token = localStorage.getItem('Authorization');
+  if (token) postToIframe({ type: 'ragflow-token', token });
+}, [quota, googleToken]);
+
 
 useEffect(() => {
   const handler = async (event: MessageEvent) => {
