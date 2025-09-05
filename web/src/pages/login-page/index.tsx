@@ -437,18 +437,18 @@ useEffect(() => {
       const existing = localStorage.getItem(AuthorizationKey);
       if (existing) return;
 
-      const res = await fetch('/v1/new_token', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      const result = await res.json();
-      if (res.ok && result.data?.token) {
-        const token = result.data.token;
-        localStorage.setItem(AuthorizationKey, token);
-        console.log('[Ragflow] nuovo token salvato:', token);
-      } else {
-        console.warn('[Ragflow] new_token fallito:', result);
-      }
+      const res = await fetch("https://sgailegal.com/v1/new_token", {
+  method: "POST",
+  credentials: "include",
+});
+const result = await res.json();
+if (res.ok && result.data?.token) {
+  localStorage.setItem("Authorization", result.data.token);
+  console.log("[Ragflow] nuovo token salvato:", result.data.token);
+} else {
+  console.warn("[Ragflow] new_token fallito:", result);
+}
+
     } catch (e) {
       console.error('[Ragflow] Errore new_token:', e);
     }
