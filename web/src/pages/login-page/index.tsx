@@ -223,7 +223,7 @@ const AuthorizationKey = 'Authorization';
   }, [theme]);
 
   useEffect(() => {
-  const token = localStorage.getItem('Authorization');
+  const token = localStorage.getItem('access_token');
   if (token) {
     postToIframe({ type: 'ragflow-token', token });
   }
@@ -474,7 +474,7 @@ useEffect(() => {
 }, []);
 
 useEffect(() => {
-  const token = localStorage.getItem('Authorization');
+const token = localStorage.getItem('access_token');
   if (token) {
     postToIframe({ type: 'ragflow-token', token });
   }
@@ -842,7 +842,7 @@ useEffect(() => {
       ref={iframeRef}
       onLoad={async () => {
         console.log('[IFRAME] Caricato');
-         const token = localStorage.getItem('Authorization');
+const token = localStorage.getItem('access_token');
           if (token) {
             postToIframe({ type: 'ragflow-token', token });
             console.log('[PARENT] Token inviato onLoad:', token);
