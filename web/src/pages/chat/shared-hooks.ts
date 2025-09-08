@@ -55,10 +55,12 @@ export const useSendSharedMessage = () => {
 // helper per normalizzare i token
 const normalizeAuth = (raw?: string | null) => {
   if (!raw) return "";
-  if (raw.startsWith("ragflow-") || raw.startsWith("guest_")) return raw; // ✅ accetta anche guest
+  if (raw.startsWith("guest_")) return raw;       // <-- lascia puro
+  if (raw.startsWith("ragflow-")) return `Bearer ${raw}`; 
   if (raw.startsWith("Bearer ")) return raw;
-  return `Bearer ${raw}`;
+  return raw;   // fallback: non aggiungere Bearer
 };
+
 
 
 
