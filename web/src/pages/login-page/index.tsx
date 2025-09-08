@@ -262,9 +262,8 @@ function ensureGuestLocalStorage() {
     document.cookie = `Token=${token}; path=/; SameSite=None; Secure`;
   }
 
-  // 👇 allinea sempre Authorization al guest (solo se non loggato con Google)
-  // 👎 qui mandi Authorization all’iframe
-const guest = localStorage.getItem("Authorization");
+// usa SEMPRE access_token come guest token
+const guest = localStorage.getItem("access_token");
 if (guest && iframeRef.current?.contentWindow) {
   iframeRef.current.contentWindow.postMessage(
     { type: "ragflow-token", token: guest },
@@ -272,22 +271,6 @@ if (guest && iframeRef.current?.contentWindow) {
   );
   console.log("[PARENT] Guest token inviato all’iframe:", guest);
 }
-
-}
-
-useEffect(() => {
-  ensureGuestLocalStorage();
-
-  // manda subito il token guest all’iframe
-  const guest = localStorage.getItem("Authorization");
-  if (guest && iframeRef.current?.contentWindow) {
-    iframeRef.current.contentWindow.postMessage(
-      { type: "ragflow-token", token: guest },
-      "*"
-    );
-    console.log("[PARENT] Guest token inviato all’iframe:", guest);
-  }
-}, []);
 
 
 
