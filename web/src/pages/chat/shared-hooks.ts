@@ -62,6 +62,15 @@ const normalizeAuth = (raw?: string | null) => {
 };
 
 
+// subito dopo l'useEffect che ascolta i postMessage
+useEffect(() => {
+  const updateHandler = (e: any) => {
+    console.log("[IFRAME] Aggiornato token via evento custom:", e.detail);
+    setAuthToken(normalizeAuth(e.detail));
+  };
+  window.addEventListener("ragflow-token-updated", updateHandler);
+  return () => window.removeEventListener("ragflow-token-updated", updateHandler);
+}, []);
 
 
 
@@ -83,15 +92,21 @@ const [authToken, setAuthToken] = useState<string>("");
 
 // inizializza quando arriva qualcosa
 useEffect(() => {
-  // prova prima con Authorization, se non c’è usa access_token guest
-  const initial = normalizeAuth(
-    localStorage.getItem("Authorization") ||
-    localStorage.getItem("access_token")
-  );
+  // se non c’è Authorization → copia da access_token (guest)
+  let initial = localStorage.getItem("Authorization");
+  if (!initial) {
+    const guest = localStorage.getItem("access_token");
+    if (guest) {
+      localStorage.setItem("Authorization", guest);
+      initial = guest;
+      console.log("[IFRAME] Allineato Authorization al guest:", guest);
+    }
+  }
 
-  if (initial) {
-    setAuthToken(initial);
-    console.log("[IFRAME] authToken iniziale:", initial);
+  const normalized = normalizeAuth(initial);
+  if (normalized) {
+    setAuthToken(normalized);
+    console.log("[IFRAME] authToken iniziale:", normalized);
   } else {
     console.warn("[IFRAME] Nessun token trovato in localStorage");
   }
@@ -134,16 +149,17 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
       });
 
     if (isCompletionError(res)) {
-      if (res?.data?.code === 102) {
-        console.warn("[IFRAME] Token guest non valido ma gestito come fallback");
-        // NON setto hasError → non mostra il toast
-        return;
+      if (res?.data?.code === 102 || res?.response?.status === 401) {
+        console.warn("[IFRAME] Ignoro errore auth 102/401 (guest).");
+        return; // non setto hasError → chat resta attiva
       }
       console.warn("[IFRAME] Errore SSE:", res);
       setValue(message.content);
       removeLatestMessage();
       setHasError(true);
     }
+
+
 
   },
   [send, conversationId, derivedMessages, setValue, removeLatestMessage, authToken]

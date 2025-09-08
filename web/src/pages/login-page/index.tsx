@@ -246,6 +246,7 @@ const AuthorizationKey = 'Authorization';
   const genTimeoutRef = useRef<number | null>(null);
 
     // === Allinea i localStorage/cookie con Ragflow guest ===
+// === Allinea i localStorage/cookie con Ragflow guest ===
 function ensureGuestLocalStorage() {
   // se non esiste un access_token → crea guest_xxx
   if (!localStorage.getItem("access_token")) {
@@ -256,15 +257,32 @@ function ensureGuestLocalStorage() {
 
   // se non esiste un Token → metti qualcosa (Ragflow lo usa anche vuoto)
   if (!localStorage.getItem("Token")) {
-    const token = uuidv4().replace(/-/g, ""); // stringa casuale
+    const token = uuidv4().replace(/-/g, "");
     localStorage.setItem("Token", token);
     document.cookie = `Token=${token}; path=/; SameSite=None; Secure`;
+  }
+
+  // 👇 allinea sempre Authorization al guest (solo se non loggato con Google)
+  if (!localStorage.getItem("Authorization")) {
+    const guest = localStorage.getItem("access_token")!;
+    localStorage.setItem("Authorization", guest);
   }
 }
 
 useEffect(() => {
   ensureGuestLocalStorage();
+
+  // manda subito il token guest all’iframe
+  const guest = localStorage.getItem("Authorization");
+  if (guest && iframeRef.current?.contentWindow) {
+    iframeRef.current.contentWindow.postMessage(
+      { type: "ragflow-token", token: guest },
+      "*"
+    );
+    console.log("[PARENT] Guest token inviato all’iframe:", guest);
+  }
 }, []);
+
 
 
   async function ensureRagflowAuth() {
