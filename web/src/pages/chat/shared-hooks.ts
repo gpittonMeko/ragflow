@@ -78,8 +78,9 @@ useEffect(() => {
   const handler = (event: MessageEvent) => {
     if (event.data?.type === 'ragflow-token' && event.data.token) {
       console.log('[IFRAME] Ricevuto token da parent', event.data.token);
-      localStorage.setItem("Authorization", event.data.token); // opzionale
-      setAuthToken(normalizeAuth(event.data.token));           // 👈 AGGIORNA LO STATE
+      localStorage.setItem("access_token", event.data.token); // salva come guest
+setAuthToken(normalizeAuth(event.data.token));          // aggiorna lo state
+         // 👈 AGGIORNA LO STATE
     }
   };
   window.addEventListener("message", handler);
@@ -92,24 +93,15 @@ const [authToken, setAuthToken] = useState<string>("");
 
 // inizializza quando arriva qualcosa
 useEffect(() => {
-  // se non c’è Authorization → copia da access_token (guest)
-  let initial = localStorage.getItem("Authorization");
-  if (!initial) {
-    const guest = localStorage.getItem("access_token");
-    if (guest) {
-      localStorage.setItem("Authorization", guest);
-      initial = guest;
-      console.log("[IFRAME] Allineato Authorization al guest:", guest);
-    }
-  }
+  const guest = localStorage.getItem("access_token");
+const normalized = normalizeAuth(guest);
+if (normalized) {
+  setAuthToken(normalized);
+  console.log("[IFRAME] authToken iniziale:", normalized);
+} else {
+  console.warn("[IFRAME] Nessun access_token trovato in localStorage");
+}
 
-  const normalized = normalizeAuth(initial);
-  if (normalized) {
-    setAuthToken(normalized);
-    console.log("[IFRAME] authToken iniziale:", normalized);
-  } else {
-    console.warn("[IFRAME] Nessun token trovato in localStorage");
-  }
 }, [auth]);
 
 
