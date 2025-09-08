@@ -246,7 +246,6 @@ const AuthorizationKey = 'Authorization';
   const genTimeoutRef = useRef<number | null>(null);
 
     // === Allinea i localStorage/cookie con Ragflow guest ===
-// === Allinea i localStorage/cookie con Ragflow guest ===
 function ensureGuestLocalStorage() {
   // se non esiste un access_token → crea guest_xxx
   if (!localStorage.getItem("access_token")) {
@@ -255,22 +254,22 @@ function ensureGuestLocalStorage() {
     document.cookie = `access_token=${guest}; path=/; SameSite=None; Secure`;
   }
 
-  // se non esiste un Token → metti qualcosa (Ragflow lo usa anche vuoto)
   if (!localStorage.getItem("Token")) {
     const token = uuidv4().replace(/-/g, "");
     localStorage.setItem("Token", token);
     document.cookie = `Token=${token}; path=/; SameSite=None; Secure`;
   }
 
-// usa SEMPRE access_token come guest token
-const guest = localStorage.getItem("access_token");
-if (guest && iframeRef.current?.contentWindow) {
-  iframeRef.current.contentWindow.postMessage(
-    { type: "ragflow-token", token: guest },
-    "*"
-  );
-  console.log("[PARENT] Guest token inviato all’iframe:", guest);
-}
+  const guest = localStorage.getItem("access_token");
+  if (guest && iframeRef.current?.contentWindow) {
+    iframeRef.current.contentWindow.postMessage(
+      { type: "ragflow-token", token: guest },
+      "*"
+    );
+    console.log("[PARENT] Guest token inviato all’iframe:", guest);
+  }
+} // 👈 questa graffa mancava
+
 
 
 
