@@ -134,10 +134,17 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
       });
 
     if (isCompletionError(res)) {
+      if (res?.data?.code === 102) {
+        console.warn("[IFRAME] Token guest non valido ma gestito come fallback");
+        // NON setto hasError → non mostra il toast
+        return;
+      }
       console.warn("[IFRAME] Errore SSE:", res);
       setValue(message.content);
       removeLatestMessage();
+      setHasError(true);
     }
+
   },
   [send, conversationId, derivedMessages, setValue, removeLatestMessage, authToken]
 );
