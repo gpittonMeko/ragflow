@@ -62,12 +62,11 @@ const SharedChat: React.FC = () => {
   // Bootstrap locale
   // subito dopo gli import / all'inizio del componente
 useEffect(() => {
-  // 1) prendi rf_key dalla URL e salvala (se presente)
   const url = new URL(window.location.href);
   const rfKey = url.searchParams.get('rf_key');
-  if (rfKey) {
-    localStorage.setItem('ragflow_api_key', rfKey);
-  }
+  if (rfKey) localStorage.setItem('ragflow_api_key', rfKey);
+}, []);
+
 
   // 2) opzionale: accetta la API key anche via postMessage
   const onMsg = (ev: MessageEvent) => {
