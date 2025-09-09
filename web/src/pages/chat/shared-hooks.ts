@@ -52,13 +52,25 @@ export const useSendSharedMessage = () => {
     useCreateNextSharedConversation();
   const { handleInputChange, value, setValue } = useHandleMessageInputChange();
   
-// helper per normalizzare i token
+// con QUESTO:
 const normalizeAuth = (raw?: string | null) => {
   if (!raw) return "";
-  if (raw.startsWith("guest_")) return raw;       // <-- lascia puro
-  if (raw.startsWith("ragflow-")) return `Bearer ${raw}`; 
   if (raw.startsWith("Bearer ")) return raw;
-  return raw;   // fallback: non aggiungere Bearer
+  if (raw.startsWith("ragflow-")) return `Bearer ${raw}`; // se mai ti arriva un token API vero
+  // per i guest_* NON ritorniamo nulla per Authorization
+  return "";
+};
+
+const buildSseHeaders = (authToken: string) => {
+  const h: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Accept": "text/event-stream",
+  };
+  // metti Authorization SOLO se è un Bearer valido
+  if (authToken && authToken.startsWith("Bearer ")) {
+    h.Authorization = authToken;
+  }
+  return h;
 };
 
 
@@ -93,30 +105,21 @@ const [authToken, setAuthToken] = useState<string>("");
 
 // inizializza quando arriva qualcosa
 useEffect(() => {
-  const guest = localStorage.getItem("access_token");
-const normalized = normalizeAuth(guest);
-if (normalized) {
-  setAuthToken(normalized);
-  console.log("[IFRAME] authToken iniziale:", normalized);
-} else {
-  console.warn("[IFRAME] Nessun access_token trovato in localStorage");
-}
-
-}, [auth]);
+  const guest = localStorage.getItem("access_token"); // cookie già settato dal parent
+  const normalized = normalizeAuth(guest);             // per guest ⇒ ""
+  setAuthToken(normalized);                            // "" => niente Authorization
+  console.log("[IFRAME] authToken iniziale (Authorization):", normalized || "(none)");
+}, []);
 
 
 
 const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
   `/v1/canvas/completion`,
   {
-    headers: {
-      Authorization: authToken || "",
-      "Content-Type": "application/json",
-      Accept: "text/event-stream",
-    },
-    credentials: "include",
+    headers: buildSseHeaders(authToken),
+    credentials: "include", // importante per inviare i cookie (access_token)
   },
-  [authToken] // 👈 importante
+  [authToken]
 );
 
 
@@ -133,12 +136,12 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
   const sendMessage = useCallback(
   async (message: Message, id?: string) => {
     console.log("[IFRAME] sendMessage con authToken:", authToken);
-    const res = await send({
-        id: id ?? conversationId,
-        message: message.content,          // 👈 non array
-        message_id: message.id || uuid(),  // 👈 genera se non c’è
-        stream: true,
-      });
+    // con QUESTO:
+const res = await send({
+  id: id ?? conversationId,
+  messages: [{ role: 'user', content: message.content }],
+  stream: true,
+});
 
     if (isCompletionError(res)) {
       if (res?.data?.code === 102 || res?.response?.status === 401) {
