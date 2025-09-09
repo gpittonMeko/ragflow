@@ -13,24 +13,32 @@ const SharedChat: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-
+  // Bootstrap locale: salva shared_id, NON toccare più access_token con ?auth
   useEffect(() => {
-  // 1) prendi eventuale ?auth= dall'URL e mettilo in access_token (se non già presente)
-  const url = new URL(window.location.href);
-  const qpAuth = url.searchParams.get('auth');
-  if (qpAuth && !localStorage.getItem('access_token')) {
-    localStorage.setItem('access_token', qpAuth);
-  }
+    const url = new URL(window.location.href);
 
-  // 2) assicurati che esista anche "Token" (uuid semplice)
-  if (!localStorage.getItem('Token')) {
-    const t = (crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`)
-      .replace(/[^a-zA-Z0-9]/g, '')
-      .slice(0, 32);
-    localStorage.setItem('Token', t);
-  }
-}, []);
+    // 1) salva lo shared_id per il hook (fallback se non è leggibile altrove)
+    const qpShared = url.searchParams.get('shared_id');
+    if (qpShared) {
+      localStorage.setItem('share_shared_id', qpShared);
+    }
 
+    // 2) NON importare più ?auth in access_token: non serve per la API key RAGFlow
+    // (se proprio vuoi conservarlo per debug, salvalo solo in share_auth)
+    const qpAuth = url.searchParams.get('auth');
+    if (qpAuth && !localStorage.getItem('share_auth')) {
+      localStorage.setItem('share_auth', qpAuth);
+      // nessuna scrittura su access_token / Authorization qui
+    }
+
+    // 3) assicurati che esista "Token" (uuid semplice)
+    if (!localStorage.getItem('Token')) {
+      const t = (crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`)
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .slice(0, 32);
+      localStorage.setItem('Token', t);
+    }
+  }, []);
 
   // Fix input su mobile (scroll su iOS)
   useEffect(() => {
@@ -76,20 +84,26 @@ const SharedChat: React.FC = () => {
         document.documentElement.setAttribute('data-theme', event.data.theme);
       }
 
+      // salvataggio sicuro del contesto condiviso (AGENT_ID)
+      if (event.data?.type === 'shared-ctx' && event.data.sharedId) {
+        localStorage.setItem('share_shared_id', event.data.sharedId);
+      }
+
+      // compat retro (NON sovrascrivere mai share_auth)
       if (event.data?.type === 'ragflow-token' && event.data.token) {
-  console.log('[IFRAME] Ricevuto token dal parent:', event.data.token);
-  // salva SOLO l'access_token nel localStorage dell'IFRAME
-  localStorage.setItem('access_token', event.data.token);
-
-  // assicurati che "Token" esista
-  if (!localStorage.getItem('Token')) {
-    const t = (crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`)
-      .replace(/[^a-zA-Z0-9]/g, '')
-      .slice(0, 32);
-    localStorage.setItem('Token', t);
-  }
-}
-
+        if (!localStorage.getItem('share_auth')) {
+          // mantieni solo compat locale, senza toccare share_auth
+          localStorage.setItem('access_token', event.data.token);
+          localStorage.setItem('Authorization', event.data.token);
+        }
+        // assicurati che "Token" esista
+        if (!localStorage.getItem('Token')) {
+          const t = (crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`)
+            .replace(/[^a-zA-Z0-9]/g, '')
+            .slice(0, 32);
+          localStorage.setItem('Token', t);
+        }
+      }
 
       if (event.data?.type === 'limit-status') {
         console.log('[IFRAME] Stato limite ricevuto:', event.data.blocked);
@@ -100,7 +114,7 @@ const SharedChat: React.FC = () => {
     window.addEventListener('message', handleMessage);
     document.documentElement.setAttribute('data-theme', theme);
 
-    // se manca il token, chiedilo subito al parent
+    // Se vuoi ancora chiedere il token al parent per retro-compat:
     if (!localStorage.getItem('access_token')) {
       window.parent?.postMessage({ type: 'shared-needs-token' }, '*');
     }

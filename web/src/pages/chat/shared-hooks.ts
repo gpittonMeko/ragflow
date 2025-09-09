@@ -32,38 +32,36 @@ export const useGetSharedChatSearchParams = () => {
   }, [searchParams]);
 };
 
-/* ---------------- Header auth ---------------- */
+/* ---------------- Util ---------------- */
+const API_HOST = window.location.origin;
+
+function getAgentId(): string {
+  // priorità: query param; fallback: localStorage (riempito dal parent all'onLoad)
+  const qp = new URL(window.location.href).searchParams.get('shared_id') || '';
+  return qp || localStorage.getItem('share_shared_id') || '';
+}
+
 function buildAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Accept': 'text/event-stream',
   };
 
-  // Leggi SIA access_token che Authorization (retro-compat dal tuo ChatContainer)
-  const tok =
-    localStorage.getItem('Authorization') ||
-    sessionStorage.getItem('Authorization') ||
-    localStorage.getItem('access_token') ||
-    sessionStorage.getItem('access_token') ||
-    '';
-
-  if (tok) {
-    // RAGFlow share accetta il token grezzo; NON prefixare 'Bearer '
-    headers['Authorization'] = tok;
+  // API key RAGFlow salvata dal test/setting (prefisso "ragflow-")
+  const apiKey = localStorage.getItem('ragflow_api_key') || '';
+  if (!apiKey) {
+    throw new Error('API key RAGFlow assente: salva localStorage.ragflow_api_key prima di usare la chat.');
   }
+  headers['Authorization'] = `Bearer ${apiKey}`;
 
-  // Mantieni anche X-Client-Id per il tracciamento lato quota/analytics
+  // client id stabile per quota/analytics lato server
   const KEY = 'sgai-client-id';
-  let cid = localStorage.getItem(KEY);
-  if (!cid) {
-    cid = localStorage.getItem('Token') || crypto.randomUUID();
-    localStorage.setItem(KEY, cid);
-  }
+  let cid = localStorage.getItem(KEY) || localStorage.getItem('Token');
+  if (!cid) { cid = crypto.randomUUID(); localStorage.setItem(KEY, cid); }
   headers['X-Client-Id'] = cid;
 
   return headers;
 }
-
 
 /* ---------------- SSE parser ---------------- */
 async function* sseLines(res: Response) {
@@ -86,7 +84,7 @@ async function* sseLines(res: Response) {
 
 /* ---------------- Hook principale ---------------- */
 export function useSendSharedMessage() {
-  const { sharedId, from } = useGetSharedChatSearchParams();
+  const { sharedId } = useGetSharedChatSearchParams();
 
   const [value, setValue] = useState('');
   const [sendLoading, setSendLoading] = useState(false);
@@ -138,7 +136,7 @@ export function useSendSharedMessage() {
     setSendLoading(false);
   }, []);
 
-  const runSSE = useCallback(async (payload: any) => {
+  const runSSE = useCallback(async (payload: { message: string }) => {
     setHasError(false);
     setIsGenerating(true);
     setSendLoading(true);
@@ -147,14 +145,21 @@ export function useSendSharedMessage() {
     stopRef.current = () => controller.abort();
 
     try {
-      // endpoint corretto per agent/canvas
-      const url = `${window.location.origin}/v1/canvas/completion`;
+      const agentId = getAgentId();
+      if (!agentId) throw new Error('AGENT_ID mancante (shared_id)');
+
+      const url = `${API_HOST}/api/v1/agents_openai/${agentId}/chat/completions`;
+      const headers = buildAuthHeaders();
 
       const res = await fetch(url, {
         method: 'POST',
-        headers: buildAuthHeaders(),
+        headers,
         credentials: 'include',
-        body: JSON.stringify({ ...payload, stream: true }),
+        body: JSON.stringify({
+          model: 'model', // RAGFlow lo ignora
+          messages: [{ role: 'user', content: payload.message }],
+          stream: true,
+        }),
         signal: controller.signal,
       });
 
@@ -168,11 +173,8 @@ export function useSendSharedMessage() {
       const ctype = res.headers.get('content-type') || '';
       if (!ctype.includes('text/event-stream')) {
         const data = await res.json().catch(() => ({}));
-        if (typeof data?.message === 'string') {
-          appendMsg(data.message);
-        } else {
-          appendMsg('[no stream available]');
-        }
+        const text = data?.choices?.[0]?.message?.content ?? data?.message ?? '[no stream available]';
+        appendMsg(text);
         return;
       }
 
@@ -182,9 +184,17 @@ export function useSendSharedMessage() {
         if (line.startsWith('data:')) {
           const chunk = line.slice(5).trimStart();
           if (chunk === '[DONE]' || chunk === '__SGAI_EOF__') break;
+
+          // OpenAI-like delta
           try {
             const j = JSON.parse(chunk);
-            const text = j?.delta ?? j?.content ?? j?.text ?? '';
+            const text =
+              j?.choices?.[0]?.delta?.content ??
+              j?.choices?.[0]?.message?.content ??
+              j?.delta ??
+              j?.content ??
+              j?.text ??
+              '';
             if (text) appendMsg(text);
           } catch {
             appendMsg(chunk);
@@ -212,12 +222,8 @@ export function useSendSharedMessage() {
     setValue('');
     scrollToBottom();
 
-    await runSSE({
-      id: sharedId || 'shared',
-      message: content,
-      message_id: uuid(),
-    });
-  }, [value, runSSE, sharedId]);
+    await runSSE({ message: content });
+  }, [value, runSSE]);
 
   useEffect(() => {
     const t = setTimeout(scrollToBottom, 50);
