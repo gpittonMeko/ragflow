@@ -1,7 +1,7 @@
 // src/pages/chat/share/shared-hooks.ts
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuid } from 'uuid';
-import { MessageType, SharedFrom } from '@/constants/chat';
+import { SharedFrom } from '@/constants/chat';
 import { useSearchParams } from 'umi';
 
 type ChatRole = 'user' | 'assistant' | 'system';
@@ -12,17 +12,17 @@ export interface IMessageLite {
   id?: string;
 }
 
-// ========= PARSING PARAMETRI URL (come stai già usando) =========
+/* ---------------- URL params ---------------- */
 export const useGetSharedChatSearchParams = () => {
   const [searchParams] = useSearchParams();
 
-  const data = useMemo(() => {
-    const getBool = (k: string, def = true) => {
-      const v = searchParams.get(k);
-      if (v == null) return def;
-      return v === '1' || v === 'true';
-    };
+  const getBool = (k: string, def = true) => {
+    const v = searchParams.get(k);
+    if (v == null) return def;
+    return v === '1' || v === 'true';
+  };
 
+  return useMemo(() => {
     return {
       sharedId: searchParams.get('shared_id') || '',
       from: (searchParams.get('from') as SharedFrom) || SharedFrom.Agent,
@@ -30,48 +30,37 @@ export const useGetSharedChatSearchParams = () => {
       visibleAvatar: getBool('visibleAvatar', true),
     };
   }, [searchParams]);
-
-  return data;
 };
 
-// ========= COSTANTI API =========
-const API_BASE = `${window.location.origin}/oauth`;
-const GEN_URL = `${API_BASE}/api/generate`;
-
-// ========= COSTRUTTORE HEADER COERENTE (guest vs user) =========
+/* ---------------- Header auth ---------------- */
 function buildAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Accept': 'text/event-stream',
   };
 
-  // token dal parent (vedi postMessage) – coerente con PresentationPage
   const tok =
     localStorage.getItem('access_token') ||
     sessionStorage.getItem('access_token') ||
-    localStorage.getItem('Authorization') ||
-    sessionStorage.getItem('Authorization') ||
     '';
 
   if (!tok || tok.startsWith('guest_')) {
-    // Anonimo → usa X-Client-Id stabile
+    // anonimo → usa un X-Client-Id stabile
     const KEY = 'sgai-client-id';
     let cid = localStorage.getItem(KEY);
     if (!cid) {
-      // riusa eventualmente il tuo Token random, altrimenti crea
       cid = localStorage.getItem('Token') || crypto.randomUUID();
       localStorage.setItem(KEY, cid);
     }
     headers['X-Client-Id'] = cid;
   } else {
-    // Utente (Google ID token) → Authorization
     headers['Authorization'] = tok.startsWith('Bearer ') ? tok : `Bearer ${tok}`;
   }
 
   return headers;
 }
 
-// ========= PARSER SEMPLICE SSE (gestisce anche JSON “non SSE”) =========
+/* ---------------- SSE parser ---------------- */
 async function* sseLines(res: Response) {
   const reader = res.body!.getReader();
   const decoder = new TextDecoder('utf-8');
@@ -90,18 +79,20 @@ async function* sseLines(res: Response) {
   if (buf) yield buf;
 }
 
-// ========= HOOK PRINCIPALE USATO DAL TUO COMPONENTE =========
+/* ---------------- Hook principale ---------------- */
 export function useSendSharedMessage() {
+  const { sharedId, from } = useGetSharedChatSearchParams();
+
   const [value, setValue] = useState('');
-  const [sendLoading, setSendLoading] = useState(false);   // “sto inviando” (UI)
-  const [loading, setLoading] = useState(false);           // caricamenti vari
+  const [sendLoading, setSendLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false); // ★ usato per la barra
+  const [isGenerating, setIsGenerating] = useState(false);
   const [derivedMessages, setDerivedMessages] = useState<IMessageLite[]>([]);
+
   const stopRef = useRef<() => void>(() => {});
   const endAnchorRef = useRef<HTMLDivElement | null>(null);
 
-  // per compat con il tuo componente
   const ref = useCallback((node: HTMLDivElement | null) => {
     endAnchorRef.current = node;
   }, []);
@@ -117,7 +108,6 @@ export function useSendSharedMessage() {
 
   const appendMsg = (partial: string) => {
     setDerivedMessages(prev => {
-      // trova l’ultimo assistant in generazione
       const lastIdx = [...prev].reverse().findIndex(m => m.role === 'assistant');
       const idx = lastIdx >= 0 ? prev.length - 1 - lastIdx : -1;
 
@@ -126,7 +116,6 @@ export function useSendSharedMessage() {
         clone[idx] = { ...clone[idx], content: (clone[idx].content || '') + partial };
         return clone;
       }
-      // altrimenti crea un nuovo assistant
       return [...prev, { role: 'assistant', content: partial }];
     });
   };
@@ -136,7 +125,6 @@ export function useSendSharedMessage() {
   };
 
   const stopOutputMessage = useCallback(() => {
-    // interrompi eventuale stream attivo
     const stopper = stopRef.current;
     if (stopper) {
       try { stopper(); } catch {}
@@ -154,7 +142,10 @@ export function useSendSharedMessage() {
     stopRef.current = () => controller.abort();
 
     try {
-      const res = await fetch(GEN_URL, {
+      // endpoint corretto per agent/canvas
+      const url = `${window.location.origin}/v1/canvas/completion`;
+
+      const res = await fetch(url, {
         method: 'POST',
         headers: buildAuthHeaders(),
         credentials: 'include',
@@ -162,7 +153,6 @@ export function useSendSharedMessage() {
         signal: controller.signal,
       });
 
-      // Backend può rispondere 403/401 per limiti o auth
       if (!res.ok || !res.body) {
         const body = await res.text().catch(() => '<no-body>');
         console.warn('[SSE] HTTP error', res.status, body.slice(0, 200));
@@ -172,7 +162,6 @@ export function useSendSharedMessage() {
 
       const ctype = res.headers.get('content-type') || '';
       if (!ctype.includes('text/event-stream')) {
-        // fallback JSON (es. backend demo)
         const data = await res.json().catch(() => ({}));
         if (typeof data?.message === 'string') {
           appendMsg(data.message);
@@ -182,16 +171,12 @@ export function useSendSharedMessage() {
         return;
       }
 
-      // SSE streaming
       startAssistantMsg();
       for await (const line of sseLines(res)) {
         if (!line) continue;
-        // formato minimo: "data: <chunk>"
         if (line.startsWith('data:')) {
           const chunk = line.slice(5).trimStart();
           if (chunk === '[DONE]' || chunk === '__SGAI_EOF__') break;
-
-          // alcuni backend inviano JSON per riga
           try {
             const j = JSON.parse(chunk);
             const text = j?.delta ?? j?.content ?? j?.text ?? '';
@@ -217,20 +202,18 @@ export function useSendSharedMessage() {
     const content = value.trim();
     if (!content) return;
 
-    // push messaggio utente
     const userMsg: IMessageLite = { role: 'user', content, id: uuid() };
     setDerivedMessages(prev => [...prev, userMsg]);
     setValue('');
     scrollToBottom();
 
-    // avvia generazione
     await runSSE({
-      conversation_id: 'shared',
-      messages: [{ role: 'user', content }],
+      id: sharedId || 'shared',
+      message: content,
+      message_id: uuid(),
     });
-  }, [value, runSSE]);
+  }, [value, runSSE, sharedId]);
 
-  // piccolo effetto per autoscroll quando arrivano messaggi
   useEffect(() => {
     const t = setTimeout(scrollToBottom, 50);
     return () => clearTimeout(t);
@@ -246,6 +229,6 @@ export function useSendSharedMessage() {
     derivedMessages,
     hasError,
     stopOutputMessage,
-    isGenerating, // ★ usato dal tuo loader
+    isGenerating,
   };
 }
