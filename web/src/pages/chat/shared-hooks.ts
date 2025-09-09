@@ -62,7 +62,7 @@ function buildAuthHeaders(): Record<string, string> {
   };
 
   const apiKey = getApiKey(); // ← sempre qui
-  headers['Authorization'] = `Bearer ${apiKey}`;
+  headers['Authorization'] = apiKey; // niente "Bearer "
 
   const KEY = 'sgai-client-id';
   let cid = localStorage.getItem(KEY) || localStorage.getItem('Token');
@@ -175,7 +175,7 @@ export function useSendSharedMessage() {
       setSendLoading(false);
       return;
     }
-    const url = `${API_HOST}/api/v1/agents_openai/${agentId}/chat/completions`;
+    const url = `${API_HOST}/v1/agents_openai/${agentId}/chat/completions`;
     const headers = buildAuthHeaders();
 
     // 2) tenta STREAM prima, con timeout di “sanity”
