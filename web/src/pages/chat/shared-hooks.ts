@@ -39,26 +39,31 @@ function buildAuthHeaders(): Record<string, string> {
     'Accept': 'text/event-stream',
   };
 
+  // Leggi SIA access_token che Authorization (retro-compat dal tuo ChatContainer)
   const tok =
+    localStorage.getItem('Authorization') ||
+    sessionStorage.getItem('Authorization') ||
     localStorage.getItem('access_token') ||
     sessionStorage.getItem('access_token') ||
     '';
 
-  if (!tok || tok.startsWith('guest_')) {
-    // anonimo → usa un X-Client-Id stabile
-    const KEY = 'sgai-client-id';
-    let cid = localStorage.getItem(KEY);
-    if (!cid) {
-      cid = localStorage.getItem('Token') || crypto.randomUUID();
-      localStorage.setItem(KEY, cid);
-    }
-    headers['X-Client-Id'] = cid;
-  } else {
-    headers['Authorization'] = tok.startsWith('Bearer ') ? tok : `Bearer ${tok}`;
+  if (tok) {
+    // RAGFlow share accetta il token grezzo; NON prefixare 'Bearer '
+    headers['Authorization'] = tok;
   }
+
+  // Mantieni anche X-Client-Id per il tracciamento lato quota/analytics
+  const KEY = 'sgai-client-id';
+  let cid = localStorage.getItem(KEY);
+  if (!cid) {
+    cid = localStorage.getItem('Token') || crypto.randomUUID();
+    localStorage.setItem(KEY, cid);
+  }
+  headers['X-Client-Id'] = cid;
 
   return headers;
 }
+
 
 /* ---------------- SSE parser ---------------- */
 async function* sseLines(res: Response) {
