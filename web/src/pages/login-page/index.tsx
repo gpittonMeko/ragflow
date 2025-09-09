@@ -80,6 +80,9 @@ const PresentationPage: React.FC = () => {
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  const [guestReady, setGuestReady] = useState(false);
+
+
 
   // contatore legacy locale (lo lasciamo ma ora fa solo da fallback UI)
   const [genCount, setGenCount] = useState<number>(() => {
@@ -162,6 +165,17 @@ function postToIframe(msg: any) {
   } catch {}
 }
 
+useEffect(() => {
+  // crea e propaga access_token guest + Token + cookie
+  ensureGuestLocalStorage();
+
+  // IMPORTANT: non usare più Authorization nel localStorage (scade e rompe la chat)
+  localStorage.removeItem('Authorization');
+  
+}, []);
+
+
+
   // Bootstrap: se ho già il cookie di sessione, prendo l’utente
   // Bootstrap: NON chiamare /oauth/api/me
   useEffect(() => {
@@ -191,7 +205,6 @@ function postToIframe(msg: any) {
 //  return () => window.removeEventListener('scroll', handleScroll);
 //}, []);
 
-const AuthorizationKey = 'Authorization';
 
 
 
@@ -268,40 +281,13 @@ function ensureGuestLocalStorage() {
     );
     console.log("[PARENT] Guest token inviato all’iframe:", guest);
   }
+
+    setGuestReady(true);
+
 } // 👈 questa graffa mancava
 
 
 
-
-  async function ensureRagflowAuth() {
-  try {
-    const existing = localStorage.getItem("Authorization");
-    if (existing) return; // già loggato
-
-    const res = await fetch("/v1/user/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        email: "giovanni.pitton@mekosrl.it", // <-- tua login valida
-        password: "L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag==" 
-      }),
-    });
-
-    const data = await res.json();
-    console.log("[LOGIN RESPONSE]", data);
-
-    const token = res.headers.get("Authorization");
-    if (token) {
-      localStorage.setItem("Authorization", token);
-      console.log("✅ Salvato Authorization:", token);
-    } else {
-      console.warn("⚠ Nessun Authorization negli header");
-    }
-  } catch (e) {
-    console.error("[ensureRagflowAuth] errore:", e);
-  }
-}
 
 
 
@@ -339,12 +325,7 @@ async function refreshQuota(forceToken?: string) {
 
 
 
-// usa il guest token per Ragflow, non Authorization
-const ragToken = localStorage.getItem('access_token');
-if (ragToken) {
-  postToIframe({ type: 'ragflow-token', token: ragToken });
-  console.log('[PARENT] Token inviato onLoad (guest):', ragToken);
-}
+
 
 
 useEffect(() => {
@@ -352,40 +333,14 @@ useEffect(() => {
     console.log('[postMessage]', event.data);
 
     if (event.data?.type === 'shared-needs-token') {
-      console.log('[PARENT] Chat richiede token - Login con password crittografata');
-      
-      try {
-        const loginRes = await fetch('/v1/user/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: 'giovanni.pitton@mekosrl.it',
-            password: 'L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag=='
-          })
-        });
-        
-        const loginData = await loginRes.json();
-        console.log('[PARENT] Login response:', loginData);
-        
-        if (loginData.code === 0) {
-  const token = localStorage.getItem('access_token'); // usa quello giusto
-
-
-  if (iframeRef.current?.contentWindow) {
-    iframeRef.current.contentWindow.postMessage(
-      { type: 'ragflow-token', token },
-      '*'
-    );
-    console.log('[PARENT] Token inviato a iframe');
-  }
-} else {
-  console.error('[PARENT] Login fallito:', loginData);
+  const token = localStorage.getItem('access_token') || "";
+  iframeRef.current?.contentWindow?.postMessage(
+    { type: 'ragflow-token', token },
+    '*'
+  );
+  console.log('[PARENT] Inviato guest access_token su richiesta iframe');
 }
 
-      } catch (err) {
-        console.error('[PARENT] Errore login:', err);
-      }
-    }
 
     if (event.data?.type === 'iframe-height') {
       const iframe = iframeRef.current;
@@ -456,10 +411,6 @@ useEffect(() => {
 
 
 
-
-useEffect(() => {
-  void ensureRagflowAuth();
-}, []);
 
 useEffect(() => {
 const token = localStorage.getItem('access_token');
@@ -826,36 +777,39 @@ useEffect(() => {
       {/* CHAT SOTTO IL LOGO */}
       <div className={styles.iframeSection}>
   <div className={styles.chatWrap}>
-    <iframe
-      ref={iframeRef}
-      onLoad={async () => {
-        console.log('[IFRAME] Caricato');
-const token = localStorage.getItem('access_token');
-          if (token) {
-            postToIframe({ type: 'ragflow-token', token });
-            console.log('[PARENT] Token inviato onLoad:', token);
-          }
-        postToIframe({ type: 'request-height' });
-        postToIframe({ type: 'theme-change', theme });
-        postToIframe({ type: 'limit-status', blocked: quota !== null && showLimitOverlay });
-        
-        
-      }}
-      src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&visible_avatar=1"
+    
+      {guestReady && (
+  <iframe
+    ref={iframeRef}
+    onLoad={async () => {
+      console.log('[IFRAME] Caricato');
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        postToIframe({ type: 'ragflow-token', token });
+        console.log('[PARENT] Token inviato onLoad:', token);
+      }
+      postToIframe({ type: 'request-height' });
+      postToIframe({ type: 'theme-change', theme });
+      postToIframe({ type: 'limit-status', blocked: quota !== null && showLimitOverlay });
+    }}
+    src="https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&auth=lmMmVjNjNhZWExNDExZWY4YTVkMDI0Mm"
+    title="SGAI Chat Interface"
+    className={quota !== null && showLimitOverlay ? styles.chatFrozen : ''}
+    style={{
+      borderRadius: 'var(--border-radius)',
+      width: '100%',
+      minHeight: 350,
+      maxHeight: 1600,
+      border: 'none',
+      display: 'block',
+      background: 'transparent',
+    }}
+    allow="clipboard-write"
+  />
+)}
 
-        title="SGAI Chat Interface"
-      className={quota !== null && showLimitOverlay ? styles.chatFrozen : ''}
-      style={{
-        borderRadius: 'var(--border-radius)',
-        width: '100%',
-        minHeight: 350,
-        maxHeight: 1600,
-        border: 'none',
-        display: 'block',
-        background: 'transparent',
-      }}
-      allow="clipboard-write"
-    />
+
+
 
     {showLimitOverlay && (
       <div className={styles.chatOverlay} role="dialog" aria-modal="true">
