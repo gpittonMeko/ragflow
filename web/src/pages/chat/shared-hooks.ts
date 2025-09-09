@@ -1,239 +1,251 @@
-import { MessageType, SharedFrom } from '@/constants/chat';
-import { useCreateNextSharedConversation } from '@/hooks/chat-hooks';
-import {
-  useSelectDerivedMessages,
-  useSendMessageWithSse,
-} from '@/hooks/logic-hooks';
-import { Message } from '@/interfaces/database/chat';
-import { message } from 'antd';
-import { get } from 'lodash';
-import trim from 'lodash/trim';
-import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'umi';
+// src/pages/chat/share/shared-hooks.ts
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuid } from 'uuid';
-import { useHandleMessageInputChange } from './hooks';
+import { MessageType, SharedFrom } from '@/constants/chat';
+import { useSearchParams } from 'umi';
 
-const isCompletionError = (res: any) =>
-  res && (res?.response.status !== 200 || res?.data?.code !== 0);
+type ChatRole = 'user' | 'assistant' | 'system';
 
-export const useSendButtonDisabled = (value: string) => {
-  return trim(value) === '';
-};
+export interface IMessageLite {
+  role: ChatRole;
+  content: string;
+  id?: string;
+}
 
+// ========= PARSING PARAMETRI URL (come stai già usando) =========
 export const useGetSharedChatSearchParams = () => {
   const [searchParams] = useSearchParams();
-  const data_prefix = 'data_';
-  const data = Object.fromEntries(
-    searchParams
-      .entries()
-      .filter(([key, value]) => key.startsWith(data_prefix))
-      .map(([key, value]) => [key.replace(data_prefix, ''), value]),
-  );
-  return {
-    from: searchParams.get('from') as SharedFrom,
-    sharedId: searchParams.get('shared_id'),
-    locale: searchParams.get('locale'),
-    auth: searchParams.get('auth'),
-    data: data,
-    visibleAvatar: searchParams.get('visible_avatar')
-      ? searchParams.get('visible_avatar') !== '1'
-      : true,
-  };
+
+  const data = useMemo(() => {
+    const getBool = (k: string, def = true) => {
+      const v = searchParams.get(k);
+      if (v == null) return def;
+      return v === '1' || v === 'true';
+    };
+
+    return {
+      sharedId: searchParams.get('shared_id') || '',
+      from: (searchParams.get('from') as SharedFrom) || SharedFrom.Agent,
+      locale: searchParams.get('locale') || undefined,
+      visibleAvatar: getBool('visibleAvatar', true),
+    };
+  }, [searchParams]);
+
+  return data;
 };
 
-export const useSendSharedMessage = () => {
-  const {
-    from,
-    sharedId: conversationId,
-    auth,
-    data: data,
-  } = useGetSharedChatSearchParams();
-  const { createSharedConversation: setConversation } =
-    useCreateNextSharedConversation();
-  const { handleInputChange, value, setValue } = useHandleMessageInputChange();
-  
-// con QUESTO:
-const normalizeAuth = (raw?: string | null) => {
-  if (!raw) return "";
-  if (raw.startsWith("Bearer ")) return raw;
-  if (raw.startsWith("ragflow-")) return `Bearer ${raw}`; // se mai ti arriva un token API vero
-  // per i guest_* NON ritorniamo nulla per Authorization
-  return "";
-};
+// ========= COSTANTI API =========
+const API_BASE = `${window.location.origin}/oauth`;
+const GEN_URL = `${API_BASE}/api/generate`;
 
-const buildSseHeaders = (authToken: string) => {
-  const h: Record<string, string> = {
-    "Content-Type": "application/json",
-    "Accept": "text/event-stream",
+// ========= COSTRUTTORE HEADER COERENTE (guest vs user) =========
+function buildAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'text/event-stream',
   };
-  // metti Authorization SOLO se è un Bearer valido
-  if (authToken && authToken.startsWith("Bearer ")) {
-    h.Authorization = authToken;
+
+  // token dal parent (vedi postMessage) – coerente con PresentationPage
+  const tok =
+    localStorage.getItem('access_token') ||
+    sessionStorage.getItem('access_token') ||
+    localStorage.getItem('Authorization') ||
+    sessionStorage.getItem('Authorization') ||
+    '';
+
+  if (!tok || tok.startsWith('guest_')) {
+    // Anonimo → usa X-Client-Id stabile
+    const KEY = 'sgai-client-id';
+    let cid = localStorage.getItem(KEY);
+    if (!cid) {
+      // riusa eventualmente il tuo Token random, altrimenti crea
+      cid = localStorage.getItem('Token') || crypto.randomUUID();
+      localStorage.setItem(KEY, cid);
+    }
+    headers['X-Client-Id'] = cid;
+  } else {
+    // Utente (Google ID token) → Authorization
+    headers['Authorization'] = tok.startsWith('Bearer ') ? tok : `Bearer ${tok}`;
   }
-  return h;
-};
 
+  return headers;
+}
 
-// subito dopo l'useEffect che ascolta i postMessage
-useEffect(() => {
-  const updateHandler = (e: any) => {
-    console.log("[IFRAME] Aggiornato token via evento custom:", e.detail);
-    setAuthToken(normalizeAuth(e.detail));
-  };
-  window.addEventListener("ragflow-token-updated", updateHandler);
-  return () => window.removeEventListener("ragflow-token-updated", updateHandler);
-}, []);
-
-
-
-useEffect(() => {
-  const handler = (event: MessageEvent) => {
-    if (event.data?.type === 'ragflow-token' && event.data.token) {
-      console.log('[IFRAME] Ricevuto token da parent', event.data.token);
-      localStorage.setItem("access_token", event.data.token); // salva come guest
-setAuthToken(normalizeAuth(event.data.token));          // aggiorna lo state
-         // 👈 AGGIORNA LO STATE
+// ========= PARSER SEMPLICE SSE (gestisce anche JSON “non SSE”) =========
+async function* sseLines(res: Response) {
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx: number;
+    while ((idx = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, idx).trimEnd();
+      buf = buf.slice(idx + 1);
+      yield line;
     }
-  };
-  window.addEventListener("message", handler);
-  return () => window.removeEventListener("message", handler);
-}, []);
+  }
+  if (buf) yield buf;
+}
 
-
-
-const [authToken, setAuthToken] = useState<string>("");
-
-// inizializza quando arriva qualcosa
-useEffect(() => {
-  const guest = localStorage.getItem("access_token"); // cookie già settato dal parent
-  const normalized = normalizeAuth(guest);             // per guest ⇒ ""
-  setAuthToken(normalized);                            // "" => niente Authorization
-  console.log("[IFRAME] authToken iniziale (Authorization):", normalized || "(none)");
-}, []);
-
-
-
-const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
-  `/v1/canvas/completion`,
-  {
-    headers: buildSseHeaders(authToken),
-    credentials: "include", // importante per inviare i cookie (access_token)
-  },
-  [authToken]
-);
-
-
-
-  const {
-    derivedMessages,
-    ref,
-    removeLatestMessage,
-    addNewestAnswer,
-    addNewestQuestion,
-  } = useSelectDerivedMessages();
+// ========= HOOK PRINCIPALE USATO DAL TUO COMPONENTE =========
+export function useSendSharedMessage() {
+  const [value, setValue] = useState('');
+  const [sendLoading, setSendLoading] = useState(false);   // “sto inviando” (UI)
+  const [loading, setLoading] = useState(false);           // caricamenti vari
   const [hasError, setHasError] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false); // ★ usato per la barra
+  const [derivedMessages, setDerivedMessages] = useState<IMessageLite[]>([]);
+  const stopRef = useRef<() => void>(() => {});
+  const endAnchorRef = useRef<HTMLDivElement | null>(null);
 
-  const sendMessage = useCallback(
-  async (message: Message, id?: string) => {
-    console.log("[IFRAME] sendMessage con authToken:", authToken);
-    // con QUESTO:
-const res = await send({
-  id: id ?? conversationId,
-  messages: [{ role: 'user', content: message.content }],
-  stream: true,
-});
+  // per compat con il tuo componente
+  const ref = useCallback((node: HTMLDivElement | null) => {
+    endAnchorRef.current = node;
+  }, []);
 
-    if (isCompletionError(res)) {
-      if (res?.data?.code === 102 || res?.response?.status === 401) {
-        console.warn("[IFRAME] Ignoro errore auth 102/401 (guest).");
-        return; // non setto hasError → chat resta attiva
+  const scrollToBottom = () => {
+    if (!endAnchorRef.current) return;
+    endAnchorRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  };
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setValue(e.target.value);
+  }, []);
+
+  const appendMsg = (partial: string) => {
+    setDerivedMessages(prev => {
+      // trova l’ultimo assistant in generazione
+      const lastIdx = [...prev].reverse().findIndex(m => m.role === 'assistant');
+      const idx = lastIdx >= 0 ? prev.length - 1 - lastIdx : -1;
+
+      if (idx >= 0) {
+        const clone = [...prev];
+        clone[idx] = { ...clone[idx], content: (clone[idx].content || '') + partial };
+        return clone;
       }
-      console.warn("[IFRAME] Errore SSE:", res);
-      setValue(message.content);
-      removeLatestMessage();
-      setHasError(true);
+      // altrimenti crea un nuovo assistant
+      return [...prev, { role: 'assistant', content: partial }];
+    });
+  };
+
+  const startAssistantMsg = () => {
+    setDerivedMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+  };
+
+  const stopOutputMessage = useCallback(() => {
+    // interrompi eventuale stream attivo
+    const stopper = stopRef.current;
+    if (stopper) {
+      try { stopper(); } catch {}
     }
+    setIsGenerating(false);
+    setSendLoading(false);
+  }, []);
 
+  const runSSE = useCallback(async (payload: any) => {
+    setHasError(false);
+    setIsGenerating(true);
+    setSendLoading(true);
 
+    const controller = new AbortController();
+    stopRef.current = () => controller.abort();
 
-  },
-  [send, conversationId, derivedMessages, setValue, removeLatestMessage, authToken]
-);
+    try {
+      const res = await fetch(GEN_URL, {
+        method: 'POST',
+        headers: buildAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ ...payload, stream: true }),
+        signal: controller.signal,
+      });
 
+      // Backend può rispondere 403/401 per limiti o auth
+      if (!res.ok || !res.body) {
+        const body = await res.text().catch(() => '<no-body>');
+        console.warn('[SSE] HTTP error', res.status, body.slice(0, 200));
+        setHasError(true);
+        return;
+      }
 
-  const handleSendMessage = useCallback(
-    async (message: Message) => {
-      if (conversationId !== '') {
-        sendMessage(message);
-      } else {
-        const data = await setConversation('user id');
-        if (data.code === 0) {
-          const id = data.data.id;
-          sendMessage(message, id);
+      const ctype = res.headers.get('content-type') || '';
+      if (!ctype.includes('text/event-stream')) {
+        // fallback JSON (es. backend demo)
+        const data = await res.json().catch(() => ({}));
+        if (typeof data?.message === 'string') {
+          appendMsg(data.message);
+        } else {
+          appendMsg('[no stream available]');
+        }
+        return;
+      }
+
+      // SSE streaming
+      startAssistantMsg();
+      for await (const line of sseLines(res)) {
+        if (!line) continue;
+        // formato minimo: "data: <chunk>"
+        if (line.startsWith('data:')) {
+          const chunk = line.slice(5).trimStart();
+          if (chunk === '[DONE]' || chunk === '__SGAI_EOF__') break;
+
+          // alcuni backend inviano JSON per riga
+          try {
+            const j = JSON.parse(chunk);
+            const text = j?.delta ?? j?.content ?? j?.text ?? '';
+            if (text) appendMsg(text);
+          } catch {
+            appendMsg(chunk);
+          }
+          scrollToBottom();
         }
       }
-    },
-    [conversationId, setConversation, sendMessage],
-  );
-
-  
-  const fetchSessionId = useCallback(async () => {
-    const payload = {
-      id: conversationId,
-      messages: [{ role: 'user', content: '' }],
-      stream: true,
-    };
-    const ret = await send(payload);
-    if (isCompletionError(ret)) {
-      message.error(ret?.data.message);
-      setHasError(true);
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') {
+        console.error('[SSE] exception', e);
+        setHasError(true);
+      }
+    } finally {
+      setIsGenerating(false);
+      setSendLoading(false);
     }
-  }, [send]);
-//
-//  useEffect(() => {
-//    fetchSessionId();
-//  }, [fetchSessionId, send]);
+  }, []);
 
+  const handlePressEnter = useCallback(async () => {
+    const content = value.trim();
+    if (!content) return;
+
+    // push messaggio utente
+    const userMsg: IMessageLite = { role: 'user', content, id: uuid() };
+    setDerivedMessages(prev => [...prev, userMsg]);
+    setValue('');
+    scrollToBottom();
+
+    // avvia generazione
+    await runSSE({
+      conversation_id: 'shared',
+      messages: [{ role: 'user', content }],
+    });
+  }, [value, runSSE]);
+
+  // piccolo effetto per autoscroll quando arrivano messaggi
   useEffect(() => {
-    if (answer.answer) {
-      addNewestAnswer(answer);
-    }
-  }, [answer, addNewestAnswer]);
-
-  const handlePressEnter = useCallback(
-  (documentIds: string[]) => {
-    if (trim(value) === '') return;
-    const id = uuid();
-    const content = value.trim();   // 👈 salva qui
-
-    if (done) {
-      setValue('');  // reset dopo
-      addNewestQuestion({
-        content,
-        doc_ids: documentIds,
-        id,
-        role: MessageType.User,
-      });
-      handleSendMessage({
-        content,     // 👈 usa la variabile
-        id,
-        role: MessageType.User,
-      });
-    }
-  },
-  [addNewestQuestion, done, handleSendMessage, setValue, value],
-);
-
+    const t = setTimeout(scrollToBottom, 50);
+    return () => clearTimeout(t);
+  }, [derivedMessages.length]);
 
   return {
     handlePressEnter,
     handleInputChange,
     value,
-    sendLoading: !done,
+    sendLoading,
+    loading,
     ref,
-    loading: false,
     derivedMessages,
     hasError,
     stopOutputMessage,
+    isGenerating, // ★ usato dal tuo loader
   };
-};
+}

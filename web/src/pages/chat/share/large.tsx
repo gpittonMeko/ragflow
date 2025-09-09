@@ -112,12 +112,22 @@ useEffect(() => {
   function handleParentMsg(e: MessageEvent) {
     if (e.data?.type === 'ragflow-token' && e.data.token) {
       console.log('[IFRAME] Ricevuto token dal parent:', e.data.token);
+      // ✅ salva su access_token (e mantieni anche Authorization per retro-compat)
+      localStorage.setItem('access_token', e.data.token);
       localStorage.setItem('Authorization', e.data.token);
     }
   }
   window.addEventListener('message', handleParentMsg);
+
+  // ✅ se manca, chiedilo
+  if (!localStorage.getItem('access_token')) {
+    window.parent?.postMessage({ type: 'shared-needs-token' }, '*');
+  }
+
   return () => window.removeEventListener('message', handleParentMsg);
-}, [])
+}, []);
+
+
 
 
 useEffect(() => {

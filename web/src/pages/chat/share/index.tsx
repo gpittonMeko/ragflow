@@ -59,12 +59,13 @@ useEffect(() => {
 
     if (event.data?.type === 'ragflow-token' && event.data.token) {
       console.log('[IFRAME] Ricevuto token dal parent:', event.data.token);
+      // ✅ usa access_token (coerente con il parent)
+      localStorage.setItem('access_token', event.data.token);
+      sessionStorage.setItem('access_token', event.data.token);
+
+      // (compat legacy, facoltativo)
       localStorage.setItem('Authorization', event.data.token);
       sessionStorage.setItem('Authorization', event.data.token);
-
-      // debug extra: conferma subito che sia salvato
-      console.log('[IFRAME] Token salvato in localStorage:', localStorage.getItem('Authorization'));
-      console.log('[IFRAME] Token salvato in sessionStorage:', sessionStorage.getItem('Authorization'));
     }
 
     if (event.data?.type === 'limit-status') {
@@ -72,6 +73,20 @@ useEffect(() => {
       // TODO: passare a ChatContainer con prop o context
     }
   };
+
+  window.addEventListener('message', handleMessage);
+  document.documentElement.setAttribute('data-theme', theme);
+
+  // ✅ se il token non c’è ancora, chiedilo esplicitamente al parent
+  if (!localStorage.getItem('access_token')) {
+    window.parent?.postMessage({ type: 'shared-needs-token' }, '*');
+  }
+
+  return () => {
+    window.removeEventListener('message', handleMessage);
+  };
+}, [theme]);
+
 
   window.addEventListener('message', handleMessage);
 
