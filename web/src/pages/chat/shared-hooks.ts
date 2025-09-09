@@ -62,7 +62,6 @@ function buildAuthHeaders(): Record<string, string> {
   };
 
   const apiKey = getApiKey(); // ← sempre qui
-  headers['Authorization'] = apiKey; // niente "Bearer "
   headers['X-API-Key'] = apiKey; 
 
   const KEY = 'sgai-client-id';
