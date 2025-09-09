@@ -13,6 +13,25 @@ const SharedChat: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
+
+  useEffect(() => {
+  // 1) prendi eventuale ?auth= dall'URL e mettilo in access_token (se non già presente)
+  const url = new URL(window.location.href);
+  const qpAuth = url.searchParams.get('auth');
+  if (qpAuth && !localStorage.getItem('access_token')) {
+    localStorage.setItem('access_token', qpAuth);
+  }
+
+  // 2) assicurati che esista anche "Token" (uuid semplice)
+  if (!localStorage.getItem('Token')) {
+    const t = (crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`)
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(0, 32);
+    localStorage.setItem('Token', t);
+  }
+}, []);
+
+
   // Fix input su mobile (scroll su iOS)
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -58,13 +77,19 @@ const SharedChat: React.FC = () => {
       }
 
       if (event.data?.type === 'ragflow-token' && event.data.token) {
-        console.log('[IFRAME] Ricevuto token dal parent:', event.data.token);
-        // ✅ salva in access_token (coerente con il parent) + mirror legacy
-        localStorage.setItem('access_token', event.data.token);
-        sessionStorage.setItem('access_token', event.data.token);
-        localStorage.setItem('Authorization', event.data.token);
-        sessionStorage.setItem('Authorization', event.data.token);
-      }
+  console.log('[IFRAME] Ricevuto token dal parent:', event.data.token);
+  // salva SOLO l'access_token nel localStorage dell'IFRAME
+  localStorage.setItem('access_token', event.data.token);
+
+  // assicurati che "Token" esista
+  if (!localStorage.getItem('Token')) {
+    const t = (crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`)
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(0, 32);
+    localStorage.setItem('Token', t);
+  }
+}
+
 
       if (event.data?.type === 'limit-status') {
         console.log('[IFRAME] Stato limite ricevuto:', event.data.blocked);
