@@ -60,30 +60,25 @@ const SharedChat: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Bootstrap locale
-  useEffect(() => {
-    const url = new URL(window.location.href);
+  // subito dopo gli import / all'inizio del componente
+useEffect(() => {
+  // 1) prendi rf_key dalla URL e salvala (se presente)
+  const url = new URL(window.location.href);
+  const rfKey = url.searchParams.get('rf_key');
+  if (rfKey) {
+    localStorage.setItem('ragflow_api_key', rfKey);
+  }
 
-    // 1) salva lo shared_id per i hook
-    const qpShared = url.searchParams.get('shared_id');
-    if (qpShared) {
-      localStorage.setItem('share_shared_id', qpShared);
+  // 2) opzionale: accetta la API key anche via postMessage
+  const onMsg = (ev: MessageEvent) => {
+    if (ev.data?.type === 'ragflow-api-key' && typeof ev.data.key === 'string' && ev.data.key.startsWith('ragflow-')) {
+      localStorage.setItem('ragflow_api_key', ev.data.key);
     }
+  };
+  window.addEventListener('message', onMsg);
+  return () => window.removeEventListener('message', onMsg);
+}, []);
 
-    // 2) accetta la key via query param rf_key (comodo nell'embed)
-    const rfKey = url.searchParams.get('rf_key');
-    if (rfKey && rfKey.startsWith('ragflow-')) {
-      localStorage.setItem('ragflow_api_key', rfKey);
-      setApiKeyReady(true);
-    }
-
-    // 3) token locale per compat
-    if (!localStorage.getItem('Token')) {
-      const t = (crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`)
-        .replace(/[^a-zA-Z0-9]/g, '')
-        .slice(0, 32);
-      localStorage.setItem('Token', t);
-    }
-  }, []);
 
   // Fix input su mobile (scroll su iOS)
   useEffect(() => {
