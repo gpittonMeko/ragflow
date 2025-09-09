@@ -145,7 +145,7 @@ export function useSendSharedMessage() {
     setSendLoading(false);
   }, []);
 
-  const runSSE = useCallback(async (payload: { message: string }) => {
+    const runSSE = useCallback(async (payload: { message: string }) => {
     setHasError(false);
     setIsGenerating(true);
     setSendLoading(true);
@@ -153,13 +153,37 @@ export function useSendSharedMessage() {
     const controller = new AbortController();
     stopRef.current = () => controller.abort();
 
+    // helper per estrarre testo dai JSON OpenAI-like
+    const extractText = (j: any): string => {
+      return (
+        j?.choices?.[0]?.delta?.content ??
+        j?.choices?.[0]?.message?.content ??
+        j?.delta?.content ??
+        j?.delta ??
+        j?.content ??
+        j?.text ??
+        ''
+      );
+    };
+
+    // 1) costanti
+    const agentId = getAgentId();
+    if (!agentId) {
+      console.error('[SSE] AGENT_ID (shared_id) mancante');
+      setHasError(true);
+      setIsGenerating(false);
+      setSendLoading(false);
+      return;
+    }
+    const url = `${API_HOST}/api/v1/agents_openai/${agentId}/chat/completions`;
+    const headers = buildAuthHeaders();
+
+    // 2) tenta STREAM prima, con timeout di “sanity”
+    let gotAnyChunk = false;
+    let timedOut = false;
+    const sanityTimer = setTimeout(() => { timedOut = true; try { controller.abort(); } catch {} }, 1500);
+
     try {
-      const agentId = getAgentId();
-      if (!agentId) throw new Error('AGENT_ID mancante (shared_id)');
-
-      const url = `${API_HOST}/api/v1/agents_openai/${agentId}/chat/completions`;
-      const headers = buildAuthHeaders();
-
       const res = await fetch(url, {
         method: 'POST',
         headers,
@@ -172,54 +196,92 @@ export function useSendSharedMessage() {
         signal: controller.signal,
       });
 
-      if (!res.ok || !res.body) {
+      clearTimeout(sanityTimer);
+
+      if (!res.ok) {
         const body = await res.text().catch(() => '<no-body>');
         console.warn('[SSE] HTTP error', res.status, body.slice(0, 200));
-        setHasError(true);
-        return;
+        throw new Error(`HTTP ${res.status}`);
       }
 
       const ctype = res.headers.get('content-type') || '';
-      if (!ctype.includes('text/event-stream')) {
-        const data = await res.json().catch(() => ({}));
-        const text = data?.choices?.[0]?.message?.content ?? data?.message ?? '[no stream available]';
-        appendMsg(text);
-        return;
+      if (!ctype.includes('text/event-stream') || timedOut) {
+        // niente SSE (o timeout) -> fallback sotto
+        throw new Error('NO_SSE');
       }
 
       startAssistantMsg();
       for await (const line of sseLines(res)) {
         if (!line) continue;
-        if (line.startsWith('data:')) {
-          const chunk = line.slice(5).trimStart();
-          if (chunk === '[DONE]' || chunk === '__SGAI_EOF__') break;
+        // accetta anche formati con "event: message"
+        if (!line.startsWith('data:')) continue;
 
-          try {
-            const j = JSON.parse(chunk);
-            const text =
-              j?.choices?.[0]?.delta?.content ??
-              j?.choices?.[0]?.message?.content ??
-              j?.delta ??
-              j?.content ??
-              j?.text ??
-              '';
-            if (text) appendMsg(text);
-          } catch {
+        const chunk = line.slice(5).trimStart();
+        if (chunk === '[DONE]' || chunk === '__SGAI_EOF__') break;
+
+        try {
+          const j = JSON.parse(chunk);
+          const text = extractText(j);
+          if (text) {
+            gotAnyChunk = true;
+            appendMsg(text);
+          }
+        } catch {
+          // se non è JSON, append raw
+          if (chunk) {
+            gotAnyChunk = true;
             appendMsg(chunk);
           }
-          scrollToBottom();
         }
+        scrollToBottom();
+      }
+
+      if (!gotAnyChunk) {
+        // stream avviato ma nessun chunk → fallback una tantum
+        throw new Error('EMPTY_STREAM');
       }
     } catch (e: any) {
-      if (e?.name !== 'AbortError') {
-        console.error('[SSE] exception', e);
+      clearTimeout(sanityTimer);
+
+      // 3) Fallback automatico: stream:false (risposta JSON intera)
+      try {
+        const res2 = await fetch(url, {
+          method: 'POST',
+          headers: { ...headers, Accept: 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            model: 'model',
+            messages: [{ role: 'user', content: payload.message }],
+            stream: false,
+          }),
+        });
+
+        const textAll = await res2.text();
+        // prova JSON
+        try {
+          const j = JSON.parse(textAll);
+          const txt =
+            extractText(j) ||
+            j?.choices?.map((c: any) => c?.message?.content || c?.delta?.content || '').join('') ||
+            j?.message ||
+            textAll;
+          if (!derivedMessages.some(m => m.role === 'assistant')) startAssistantMsg();
+          appendMsg(String(txt || ''));
+        } catch {
+          if (!derivedMessages.some(m => m.role === 'assistant')) startAssistantMsg();
+          appendMsg(textAll);
+        }
+        scrollToBottom();
+      } catch (e2) {
+        console.error('[SSE] fallback error', e2);
         setHasError(true);
       }
     } finally {
       setIsGenerating(false);
       setSendLoading(false);
     }
-  }, []);
+  }, [derivedMessages.length]);
+
 
   const handlePressEnter = useCallback(async () => {
     const content = value.trim();
