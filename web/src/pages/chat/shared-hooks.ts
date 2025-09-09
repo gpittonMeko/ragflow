@@ -1,4 +1,3 @@
-// src/pages/chat/share/shared-hooks.ts
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 import { SharedFrom } from '@/constants/chat';
@@ -36,9 +35,24 @@ export const useGetSharedChatSearchParams = () => {
 const API_HOST = window.location.origin;
 
 function getAgentId(): string {
-  // priorità: query param; fallback: localStorage (riempito dal parent all'onLoad)
   const qp = new URL(window.location.href).searchParams.get('shared_id') || '';
   return qp || localStorage.getItem('share_shared_id') || '';
+}
+
+function getApiKey(): string {
+  // Ordine: localStorage -> sessionStorage -> query param rf_key
+  const ls = localStorage.getItem('ragflow_api_key') || '';
+  if (ls) return ls;
+
+  const ss = sessionStorage.getItem('ragflow_api_key') || '';
+  if (ss) return ss;
+
+  const qp = new URL(window.location.href).searchParams.get('rf_key') || '';
+  if (qp) {
+    localStorage.setItem('ragflow_api_key', qp);
+    return qp;
+  }
+  throw new Error('API key RAGFlow assente (ragflow_api_key).');
 }
 
 function buildAuthHeaders(): Record<string, string> {
@@ -47,14 +61,9 @@ function buildAuthHeaders(): Record<string, string> {
     'Accept': 'text/event-stream',
   };
 
-  // API key RAGFlow salvata dal test/setting (prefisso "ragflow-")
-  const apiKey = localStorage.getItem('ragflow_api_key') || '';
-  if (!apiKey) {
-    throw new Error('API key RAGFlow assente: salva localStorage.ragflow_api_key prima di usare la chat.');
-  }
+  const apiKey = getApiKey(); // ← sempre qui
   headers['Authorization'] = `Bearer ${apiKey}`;
 
-  // client id stabile per quota/analytics lato server
   const KEY = 'sgai-client-id';
   let cid = localStorage.getItem(KEY) || localStorage.getItem('Token');
   if (!cid) { cid = crypto.randomUUID(); localStorage.setItem(KEY, cid); }
@@ -84,11 +93,11 @@ async function* sseLines(res: Response) {
 
 /* ---------------- Hook principale ---------------- */
 export function useSendSharedMessage() {
-  const { sharedId } = useGetSharedChatSearchParams();
+  useGetSharedChatSearchParams(); // keep parsing URL (sharedId già letto altrove)
 
   const [value, setValue] = useState('');
   const [sendLoading, setSendLoading] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [derivedMessages, setDerivedMessages] = useState<IMessageLite[]>([]);
@@ -156,7 +165,7 @@ export function useSendSharedMessage() {
         headers,
         credentials: 'include',
         body: JSON.stringify({
-          model: 'model', // RAGFlow lo ignora
+          model: 'model',
           messages: [{ role: 'user', content: payload.message }],
           stream: true,
         }),
@@ -185,7 +194,6 @@ export function useSendSharedMessage() {
           const chunk = line.slice(5).trimStart();
           if (chunk === '[DONE]' || chunk === '__SGAI_EOF__') break;
 
-          // OpenAI-like delta
           try {
             const j = JSON.parse(chunk);
             const text =

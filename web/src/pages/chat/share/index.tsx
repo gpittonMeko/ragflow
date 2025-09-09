@@ -1,4 +1,3 @@
-// File: src/pages/chat/share/index.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import ChatContainer from './large';
 import styles from './index.less';
@@ -6,32 +5,78 @@ import styles from './index.less';
 const MAX_CHAT_HEIGHT = 1600;
 const MIN_CHAT_HEIGHT = 350;
 
+const ApiKeyGate: React.FC<{ onSaved: () => void }> = ({ onSaved }) => {
+  const [value, setValue] = useState(localStorage.getItem('ragflow_api_key') || '');
+  const [error, setError] = useState<string | null>(null);
+
+  const save = () => {
+    const v = value.trim();
+    if (!v.startsWith('ragflow-')) {
+      setError('La API key deve iniziare con "ragflow-".');
+      return;
+    }
+    localStorage.setItem('ragflow_api_key', v);
+    setError(null);
+    onSaved();
+  };
+
+  return (
+    <div style={{
+      maxWidth: 520, margin: '40px auto', padding: 16,
+      border: '1px solid var(--border-color, #333)', borderRadius: 12
+    }}>
+      <h3 style={{ marginTop: 0 }}>Imposta API key RAGFlow</h3>
+      <p style={{ marginTop: 0, opacity: 0.8 }}>
+        Inserisci la tua API key (formato <code>ragflow-…</code>). Verrà salvata solo nel tuo browser.
+      </p>
+      <input
+        type="password"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        placeholder="ragflow-…"
+        style={{
+          width: '100%', padding: '10px 12px', borderRadius: 8,
+          border: '1px solid #666', background: 'transparent', color: 'inherit'
+        }}
+      />
+      {error && <div style={{ color: '#e66', marginTop: 8 }}>{error}</div>}
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        <button onClick={save} className={styles.glassBtn}>Salva</button>
+        <button onClick={() => { setValue(''); setError(null); }} className={styles.glassBtn}>Pulisci</button>
+      </div>
+    </div>
+  );
+};
+
 const SharedChat: React.FC = () => {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('sgai-theme') || 'dark';
   });
 
+  const [apiKeyReady, setApiKeyReady] = useState<boolean>(() => {
+    return !!localStorage.getItem('ragflow_api_key');
+  });
+
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Bootstrap locale: salva shared_id, NON toccare più access_token con ?auth
+  // Bootstrap locale
   useEffect(() => {
     const url = new URL(window.location.href);
 
-    // 1) salva lo shared_id per il hook (fallback se non è leggibile altrove)
+    // 1) salva lo shared_id per i hook
     const qpShared = url.searchParams.get('shared_id');
     if (qpShared) {
       localStorage.setItem('share_shared_id', qpShared);
     }
 
-    // 2) NON importare più ?auth in access_token: non serve per la API key RAGFlow
-    // (se proprio vuoi conservarlo per debug, salvalo solo in share_auth)
-    const qpAuth = url.searchParams.get('auth');
-    if (qpAuth && !localStorage.getItem('share_auth')) {
-      localStorage.setItem('share_auth', qpAuth);
-      // nessuna scrittura su access_token / Authorization qui
+    // 2) accetta la key via query param rf_key (comodo nell'embed)
+    const rfKey = url.searchParams.get('rf_key');
+    if (rfKey && rfKey.startsWith('ragflow-')) {
+      localStorage.setItem('ragflow_api_key', rfKey);
+      setApiKeyReady(true);
     }
 
-    // 3) assicurati che esista "Token" (uuid semplice)
+    // 3) token locale per compat
     if (!localStorage.getItem('Token')) {
       const t = (crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`)
         .replace(/[^a-zA-Z0-9]/g, '')
@@ -63,7 +108,18 @@ const SharedChat: React.FC = () => {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      console.log('[IFRAME] Messaggio ricevuto:', event.data);
+      // ricevi contesto shared-id
+      if (event.data?.type === 'shared-ctx' && event.data.sharedId) {
+        localStorage.setItem('share_shared_id', event.data.sharedId);
+      }
+
+      // ricevi API key dal parent (se vuoi gestirla esternamente)
+      if (event.data?.type === 'ragflow-api-key' && typeof event.data.key === 'string') {
+        if (event.data.key.startsWith('ragflow-')) {
+          localStorage.setItem('ragflow_api_key', event.data.key);
+          setApiKeyReady(true);
+        }
+      }
 
       if (event.data?.type === 'request-height' && containerRef.current) {
         const rawHeight = containerRef.current.scrollHeight;
@@ -71,32 +127,16 @@ const SharedChat: React.FC = () => {
           MIN_CHAT_HEIGHT,
           Math.min(rawHeight, MAX_CHAT_HEIGHT),
         );
-        console.log('[IFRAME] Invio altezza al parent:', boundedHeight);
-        window.parent.postMessage(
-          { type: 'iframe-height', height: boundedHeight },
-          '*',
-        );
+        window.parent.postMessage({ type: 'iframe-height', height: boundedHeight }, '*');
       }
 
       if (event.data?.type === 'theme-change') {
-        console.log('[IFRAME] Cambio tema →', event.data.theme);
         setTheme(event.data.theme);
         document.documentElement.setAttribute('data-theme', event.data.theme);
       }
 
-      // salvataggio sicuro del contesto condiviso (AGENT_ID)
-      if (event.data?.type === 'shared-ctx' && event.data.sharedId) {
-        localStorage.setItem('share_shared_id', event.data.sharedId);
-      }
-
-      // compat retro (NON sovrascrivere mai share_auth)
       if (event.data?.type === 'ragflow-token' && event.data.token) {
-        if (!localStorage.getItem('share_auth')) {
-          // mantieni solo compat locale, senza toccare share_auth
-          localStorage.setItem('access_token', event.data.token);
-          localStorage.setItem('Authorization', event.data.token);
-        }
-        // assicurati che "Token" esista
+        // compat: NON tocchiamo share_auth; non serve per la API key
         if (!localStorage.getItem('Token')) {
           const t = (crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`)
             .replace(/[^a-zA-Z0-9]/g, '')
@@ -106,18 +146,12 @@ const SharedChat: React.FC = () => {
       }
 
       if (event.data?.type === 'limit-status') {
-        console.log('[IFRAME] Stato limite ricevuto:', event.data.blocked);
-        // se serve, propagalo via context/prop a ChatContainer
+        // se serve, propagalo via prop/context a ChatContainer
       }
     };
 
     window.addEventListener('message', handleMessage);
     document.documentElement.setAttribute('data-theme', theme);
-
-    // Se vuoi ancora chiedere il token al parent per retro-compat:
-    if (!localStorage.getItem('access_token')) {
-      window.parent?.postMessage({ type: 'shared-needs-token' }, '*');
-    }
 
     return () => {
       window.removeEventListener('message', handleMessage);
@@ -125,11 +159,12 @@ const SharedChat: React.FC = () => {
   }, [theme]);
 
   return (
-    <div
-      className={`${styles.chatWrapper} ${styles[theme]}`}
-      ref={containerRef}
-    >
-      <ChatContainer theme={theme} />
+    <div className={`${styles.chatWrapper} ${styles[theme]}`} ref={containerRef}>
+      {apiKeyReady ? (
+        <ChatContainer theme={theme} />
+      ) : (
+        <ApiKeyGate onSaved={() => setApiKeyReady(true)} />
+      )}
     </div>
   );
 };
