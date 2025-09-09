@@ -175,7 +175,7 @@ export function useSendSharedMessage() {
       setSendLoading(false);
       return;
     }
-    const url = `${API_HOST}/v1/agents_openai/${agentId}/chat/completions`;
+    const url = `${API_HOST}/v1/canvas/completion`;
     const headers = buildAuthHeaders();
 
     // 2) tenta STREAM prima, con timeout di “sanity”
@@ -189,8 +189,8 @@ export function useSendSharedMessage() {
         headers,
         credentials: 'include',
         body: JSON.stringify({
-          model: 'model',
-          messages: [{ role: 'user', content: payload.message }],
+          id: agentId,
+          message: payload.message,
           stream: true,
         }),
         signal: controller.signal,
