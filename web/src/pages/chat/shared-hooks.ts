@@ -63,6 +63,7 @@ function buildAuthHeaders(): Record<string, string> {
 
   const apiKey = getApiKey(); // ← sempre qui
   headers['Authorization'] = apiKey; // niente "Bearer "
+  headers['X-API-Key'] = apiKey; 
 
   const KEY = 'sgai-client-id';
   let cid = localStorage.getItem(KEY) || localStorage.getItem('Token');
@@ -245,16 +246,16 @@ export function useSendSharedMessage() {
 
       // 3) Fallback automatico: stream:false (risposta JSON intera)
       try {
-        const res2 = await fetch(url, {
-          method: 'POST',
-          headers: { ...headers, Accept: 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            model: 'model',
-            messages: [{ role: 'user', content: payload.message }],
-            stream: false,
-          }),
-        });
+         const res2 = await fetch(url, {
+       method: 'POST',
+       headers: { ...headers, Accept: 'application/json' },
+       credentials: 'include',
+       body: JSON.stringify({
+         id: agentId,
+         message: payload.message,
+         stream: false,
+       }),
+     });
 
         const textAll = await res2.text();
         // prova JSON
