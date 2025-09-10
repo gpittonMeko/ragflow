@@ -5,7 +5,6 @@ import styles from './index.less';
 
 const MAX_CHAT_HEIGHT = 1600;
 
-const STEP_CHAT_HEIGHT = 200;   // crescita massima per volta
 
 const SharedChat: React.FC = () => {
   const [theme, setTheme] = useState(() => {
@@ -18,11 +17,7 @@ const SharedChat: React.FC = () => {
   useEffect(() => {
     const handleVisibilityChange = () => {
       const activeElement = document.activeElement as HTMLElement | null;
-      if (activeElement && activeElement.tagName === 'TEXTAREA') {
-        window.scrollTo(0, 0);
-        setTimeout(() => {
-        }, 300);
-      }
+      
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
