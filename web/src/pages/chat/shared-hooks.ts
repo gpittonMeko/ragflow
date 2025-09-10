@@ -3,6 +3,19 @@ import { v4 as uuid } from 'uuid';
 import { SharedFrom } from '@/constants/chat';
 import { useSearchParams } from 'umi';
 
+// AGGIUNGI QUESTO SUBITO DOPO GLI IMPORT (circa riga 5-6):
+
+// Pulizia automatica token scaduti
+if (typeof window !== 'undefined') {
+  // Rimuovi token problematici all'avvio
+  localStorage.removeItem('Authorization');
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('Token');
+  
+  // Mantieni solo quello che serve
+  console.log('[Auth] Pulizia token completata');
+}
+
 type ChatRole = 'user' | 'assistant' | 'system';
 
 export interface IMessageLite {
@@ -39,6 +52,19 @@ function getAgentId(): string {
   return qp || localStorage.getItem('share_shared_id') || '';
 }
 
+// AGGIUNGI QUESTO SUBITO DOPO GLI IMPORT (circa riga 5-6):
+
+// Pulizia automatica token scaduti
+if (typeof window !== 'undefined') {
+  // Rimuovi token problematici all'avvio
+  localStorage.removeItem('Authorization');
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('Token');
+  
+  // Mantieni solo quello che serve
+  console.log('[Auth] Pulizia token completata');
+}
+
 function getApiKey(): string {
   // Ordine: localStorage -> sessionStorage -> query param rf_key
   const ls = localStorage.getItem('ragflow_api_key') || '';
@@ -61,12 +87,21 @@ function buildAuthHeaders(): Record<string, string> {
     'Accept': 'text/event-stream',
   };
 
-  const apiKey = getApiKey(); // ← sempre qui
-  headers['X-API-Key'] = apiKey; 
+  // USA SOLO LA API KEY DALL'URL - NON USARE Authorization!
+  const url = new URL(window.location.href);
+  const rfKey = url.searchParams.get('rf_key') || 'ragflow-lmMmViZTA2ZWExNDExZWY4YTVkMDI0Mm';
+  
+  if (rfKey) {
+    headers['Authorization'] = rfKey;  // RAGFlow vuole Authorization, non X-API-Key
+  }
 
+  // Client ID per tracking
   const KEY = 'sgai-client-id';
-  let cid = localStorage.getItem(KEY) || localStorage.getItem('Token');
-  if (!cid) { cid = crypto.randomUUID(); localStorage.setItem(KEY, cid); }
+  let cid = localStorage.getItem(KEY);
+  if (!cid) { 
+    cid = crypto.randomUUID(); 
+    localStorage.setItem(KEY, cid);
+  }
   headers['X-Client-Id'] = cid;
 
   return headers;
