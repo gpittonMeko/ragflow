@@ -86,17 +86,24 @@ useEffect(() => {
   const sendHeight = () => {
     if (!containerRef.current) return;
     const raw = containerRef.current.scrollHeight;
-    const bounded = Math.min(raw, MAX_CHAT_HEIGHT);
+    const bounded = Math.max(MIN_CHAT_HEIGHT, raw);
     window.parent.postMessage({ type: 'iframe-height', height: bounded }, '*');
   };
 
-  sendHeight(); // invia subito al mount
+  sendHeight();
 
-  const ro = new ResizeObserver(() => sendHeight());
+  const ro = new ResizeObserver(sendHeight);
   ro.observe(containerRef.current);
 
-  return () => ro.disconnect();
+  const mo = new MutationObserver(sendHeight);
+  mo.observe(containerRef.current, { childList: true, subtree: true });
+
+  return () => {
+    ro.disconnect();
+    mo.disconnect();
+  };
 }, []);
+
 
 
 
