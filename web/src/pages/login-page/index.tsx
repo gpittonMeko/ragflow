@@ -302,35 +302,43 @@ useEffect(() => {
 
 
 
-  async function ensureRagflowAuth() {
+async function ensureRagflowAuth(): Promise<string | null> {
   try {
     const existing = localStorage.getItem("Authorization");
-    if (existing) return; // già loggato
+    if (existing) {
+      console.log("🔑 Authorization già presente:", existing);
+      return existing;
+    }
 
     const res = await fetch("/v1/user/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
-        email: "giovanni.pitton@mekosrl.it", // <-- tua login valida
-        password: "L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag==" 
+        email: "giovanni.pitton@mekosrl.it",
+        password: "L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag=="
       }),
     });
 
     const data = await res.json();
     console.log("[LOGIN RESPONSE]", data);
 
-    const token = res.headers.get("Authorization");
+    // Prendi token dagli header OPPURE dal body
+    const token = res.headers.get("Authorization") || data?.token;
     if (token) {
       localStorage.setItem("Authorization", token);
       console.log("✅ Salvato Authorization:", token);
+      return token;
     } else {
-      console.warn("⚠ Nessun Authorization negli header");
+      console.warn("⚠ Nessun Authorization trovato");
+      return null;
     }
   } catch (e) {
     console.error("[ensureRagflowAuth] errore:", e);
+    return null;
   }
 }
+
 
 
 
@@ -469,10 +477,26 @@ useEffect(() => {
 
 useEffect(() => {
   (async () => {
-    await ensureRagflowAuth();
-    setIframeReady(true);  // <-- Abilita iframe dopo login
+    const token = await ensureRagflowAuth();
+
+    if (token) {
+      console.log("🔑 Authorization disponibile al primo boot:", token);
+
+      // invia subito al child iframe
+      if (iframeRef.current?.contentWindow) {
+        iframeRef.current.contentWindow.postMessage(
+          { type: "ragflow-token", token },
+          "*"
+        );
+      }
+
+      setIframeReady(true); // iframe viene montato solo dopo che ho il token
+    } else {
+      console.warn("⚠ Nessun token al bootstrap");
+    }
   })();
 }, []);
+
 
 useEffect(() => {
 const token = localStorage.getItem('access_token');
