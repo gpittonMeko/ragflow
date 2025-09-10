@@ -850,11 +850,11 @@ useEffect(() => {
       style={{
         borderRadius: 'var(--border-radius)',
         width: '100%',
-        minHeight: 350,
-        maxHeight: 1600,
+        height: 'auto',         // 👈 togli minHeight fisso
         border: 'none',
         display: 'block',
         background: 'transparent',
+        overflow: 'hidden', 
       }}
       allow="clipboard-write"
     />
