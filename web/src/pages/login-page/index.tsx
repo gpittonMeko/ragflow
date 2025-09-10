@@ -281,12 +281,15 @@ useEffect(() => {
 useEffect(() => {
   const handler = (event: MessageEvent) => {
     if (event.data?.type === 'iframe-height') {
-    const newH = Number(event.data.height || 0);
+  const iframe = iframeRef.current;
+  if (iframe && event.data.height) {
+    const newH = Number(event.data.height);
     if (newH > 0) {
-   // Imposta l’altezza reale che arriva dall’iframe
-   iframe.style.height = `${newH}px`;
+      iframe.style.height = `${newH}px`;
     }
- }
+  }
+}
+
 
     if (event.data?.type === 'generation-started') {
       console.log('[GENERATION] STARTED');
@@ -426,10 +429,9 @@ useEffect(() => {
 
     if (event.data?.type === 'iframe-height') {
   const iframe = iframeRef.current;
-  if (!iframe) return;
-  const max = 1600;
-  const h = Math.max(0, Math.min(Number(event.data.height || 0), max));
-  iframe.style.height = `${h}px`;
+  if (iframe && event.data.height) {
+    iframe.style.height = `${event.data.height}px`;
+  }
 }
 
 
