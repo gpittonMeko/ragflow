@@ -75,11 +75,12 @@ function getOrCreateClientId(): string {
   return id;
 }
 
-const [iframeReady, setIframeReady] = useState(false);
+
 
 
 const PresentationPage: React.FC = () => {
   const googleButtonRef = useRef<HTMLDivElement>(null);
+  const [iframeReady, setIframeReady] = useState(false);  // <-- SPOSTATO QUI DENTRO!
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -461,7 +462,10 @@ useEffect(() => {
 
 
 useEffect(() => {
-  void ensureRagflowAuth();
+  (async () => {
+    await ensureRagflowAuth();
+    setIframeReady(true);  // <-- Abilita iframe dopo login
+  })();
 }, []);
 
 useEffect(() => {

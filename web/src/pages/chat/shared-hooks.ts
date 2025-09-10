@@ -110,13 +110,13 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
   `/v1/canvas/completion`,
   {
     headers: {
-      Authorization: authToken || "",
+      Authorization: localStorage.getItem('Authorization') || "",  // <-- USA DIRETTAMENTE
       "Content-Type": "application/json",
       Accept: "text/event-stream",
     },
     credentials: "include",
   },
-  [authToken] // 👈 importante
+  []  // <-- RIMUOVI DIPENDENZA
 );
 
 
