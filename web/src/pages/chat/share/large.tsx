@@ -264,7 +264,14 @@ useEffect(() => {
           </div>
         )}
 
-      <Flex flex={1} className={`${styles.chatContainer} ${styles[theme]}`} vertical>
+      <Flex
+        flex={1}
+        className={`${styles.chatContainer} ${styles[theme]}`}
+        vertical
+        style={{ maxWidth: "720px", margin: "0 auto", width: "100%" }} // 👈 aggiunto limite larghezza
+      >
+ 
+       
         <Flex 
         flex={1} 
         vertical 
@@ -342,6 +349,7 @@ useEffect(() => {
           uploadMethod="external_upload_and_parse"
           showUploadIcon={false}
           stopOutputMessage={stopOutputMessage}
+          autoFocus={false} 
         ></MessageInput>
       </Flex>
       {visible && (
