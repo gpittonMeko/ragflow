@@ -13,6 +13,57 @@ import { useSearchParams } from 'umi';
 import { v4 as uuid } from 'uuid';
 import { useHandleMessageInputChange } from './hooks';
 
+
+// Login automatico per l'iframe
+async function ensureIframeAuth() {
+  const existing = localStorage.getItem("Authorization");
+  if (existing) {
+    // Test se funziona ancora
+    try {
+      const testRes = await fetch("/v1/canvas/completion", {
+        method: "POST",
+        headers: {
+          "Authorization": existing,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          id: "a92b7464193811f09d527ebdee58e854",
+          message: "test",
+          stream: false
+        })
+      });
+      if (testRes.status === 200) return; // Token OK
+    } catch {}
+  }
+  
+  // Fai login
+  try {
+    const res = await fetch("/v1/user/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "giovanni.pitton@mekosrl.it",
+        password: "L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag=="
+      })
+    });
+    
+    const data = await res.json();
+    if (data.code === 0) {
+      const token = res.headers.get("Authorization");
+      if (token) {
+        localStorage.setItem("Authorization", token);
+        console.log("[IFRAME] Login OK, token salvato");
+      }
+    }
+  } catch (e) {
+    console.error("[IFRAME] Login fallito:", e);
+  }
+}
+
+// Esegui login all'avvio
+if (typeof window !== 'undefined') {
+  ensureIframeAuth();
+}
 const isCompletionError = (res: any) =>
   res && (res?.response.status !== 200 || res?.data?.code !== 0);
 
@@ -52,57 +103,12 @@ export const useSendSharedMessage = () => {
     useCreateNextSharedConversation();
   const { handleInputChange, value, setValue } = useHandleMessageInputChange();
   
-// helper per normalizzare i token
-const normalizeAuth = (raw?: string | null) => {
-  if (!raw) return "";
-  if (raw.startsWith("guest_")) return raw;       // <-- lascia puro
-  if (raw.startsWith("ragflow-")) return `Bearer ${raw}`; 
-  if (raw.startsWith("Bearer ")) return raw;
-  return raw;   // fallback: non aggiungere Bearer
-};
-
-
-// subito dopo l'useEffect che ascolta i postMessage
-useEffect(() => {
-  const updateHandler = (e: any) => {
-    console.log("[IFRAME] Aggiornato token via evento custom:", e.detail);
-    setAuthToken(normalizeAuth(e.detail));
-  };
-  window.addEventListener("ragflow-token-updated", updateHandler);
-  return () => window.removeEventListener("ragflow-token-updated", updateHandler);
-}, []);
 
 
 
-useEffect(() => {
-  const handler = (event: MessageEvent) => {
-    if (event.data?.type === 'ragflow-token' && event.data.token) {
-      console.log('[IFRAME] Ricevuto token da parent', event.data.token);
-      localStorage.setItem("access_token", event.data.token); // salva come guest
-setAuthToken(normalizeAuth(event.data.token));          // aggiorna lo state
-         // 👈 AGGIORNA LO STATE
-    }
-  };
-  window.addEventListener("message", handler);
-  return () => window.removeEventListener("message", handler);
-}, []);
 
 
 
-const [authToken, setAuthToken] = useState<string>("");
-
-// inizializza quando arriva qualcosa
-useEffect(() => {
-  const guest = localStorage.getItem("access_token");
-const normalized = normalizeAuth(guest);
-if (normalized) {
-  setAuthToken(normalized);
-  console.log("[IFRAME] authToken iniziale:", normalized);
-} else {
-  console.warn("[IFRAME] Nessun access_token trovato in localStorage");
-}
-
-}, [auth]);
 
 
 
@@ -110,13 +116,13 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
   `/v1/canvas/completion`,
   {
     headers: {
-      Authorization: localStorage.getItem('Authorization') || "",  // <-- USA DIRETTAMENTE
+      Authorization: localStorage.getItem('Authorization') || "",
       "Content-Type": "application/json",
       Accept: "text/event-stream",
     },
     credentials: "include",
   },
-  []  // <-- RIMUOVI DIPENDENZA
+  []
 );
 
 
@@ -168,8 +174,8 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
 
 
 
-  },
-  [send, conversationId, derivedMessages, setValue, removeLatestMessage, authToken]
+    },
+  [send, conversationId, derivedMessages, setValue, removeLatestMessage]
 );
 
 
