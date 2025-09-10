@@ -243,36 +243,26 @@ const AuthorizationKey = 'Authorization';
     }, [showGoogleModal, showLimitOverlay]);
 
 
-  // espansione iframe
-  const [canExpandIframe, setCanExpandIframe] = useState(false);
-  const expandTimeoutRef = useRef<any>(null);
+useEffect(() => {
+  const handler = (event: MessageEvent) => {
+    if (event.data?.type === 'iframe-height') {
+      const iframe = iframeRef.current;
+      if (!iframe) return;
+      // Niente min: usa solo un tetto massimo per sicurezza
+      const max = 1600;
+      const h = Math.max(0, Math.min(Number(event.data.height || 0), max));
+      iframe.style.height = `${h}px`;
+    }
 
-  const genTimeoutRef = useRef<number | null>(null);
+    if (event.data?.type === 'generation-started') {
+      console.log('[GENERATION] STARTED');
+    }
+  };
 
-    // === Allinea i localStorage/cookie con Ragflow guest ===
-function ensureGuestLocalStorage() {
-  // se non esiste un access_token → crea guest_xxx
-  if (!localStorage.getItem("access_token")) {
-    const guest = "guest_" + uuidv4();
-    localStorage.setItem("access_token", guest);
-    document.cookie = `access_token=${guest}; path=/; SameSite=None; Secure`;
-  }
+  window.addEventListener('message', handler);
+  return () => window.removeEventListener('message', handler);
+}, []);
 
-  if (!localStorage.getItem("Token")) {
-    const token = uuidv4().replace(/-/g, "");
-    localStorage.setItem("Token", token);
-    document.cookie = `Token=${token}; path=/; SameSite=None; Secure`;
-  }
-
-  const guest = localStorage.getItem("access_token");
-  if (guest && iframeRef.current?.contentWindow) {
-    iframeRef.current.contentWindow.postMessage(
-      { type: "ragflow-token", token: guest },
-      "*"
-    );
-    console.log("[PARENT] Guest token inviato all’iframe:", guest);
-  }
-} // 👈 questa graffa mancava
 
 
 
@@ -392,27 +382,13 @@ useEffect(() => {
     }
 
     if (event.data?.type === 'iframe-height') {
-      const iframe = iframeRef.current;
-      if (!iframe) return;
-      const minHeight = 400;
-      const maxHeight = 1000;
-      let nextHeight = event.data.height;
+  const iframe = iframeRef.current;
+  if (!iframe) return;
+  const max = 1600;
+  const h = Math.max(0, Math.min(Number(event.data.height || 0), max));
+  iframe.style.height = `${h}px`;
+}
 
-      if (!canExpandIframe) {
-        if (nextHeight > minHeight && !expandTimeoutRef.current) {
-          expandTimeoutRef.current = setTimeout(() => {
-            setCanExpandIframe(true);
-            expandTimeoutRef.current = null;
-          }, 10000);
-        }
-        nextHeight = minHeight;
-      } else {
-        nextHeight = Math.max(nextHeight, minHeight);
-        nextHeight = Math.min(nextHeight, maxHeight);
-      }
-
-      iframe.style.height = `${nextHeight}px`;
-    }
 
     if (event.data?.type === 'generation-started') {
       console.log('[GENERATION] STARTED');
@@ -850,7 +826,7 @@ useEffect(() => {
       style={{
         borderRadius: 'var(--border-radius)',
         width: '100%',
-        height: 'auto',         // 👈 togli minHeight fisso
+        height: '1px',         // 👈 togli minHeight fisso
         border: 'none',
         display: 'block',
         background: 'transparent',
