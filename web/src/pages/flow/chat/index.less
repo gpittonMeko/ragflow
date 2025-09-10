@@ -2,7 +2,9 @@
   padding: 0;
   height: 100%;
   .messageContainer {
-    overflow-y: auto;
-    padding-right: 24px;
-  }
+  overflow-y: auto;
+  padding-right: 24px;
+  max-height: 70vh;   // solo se vuoi limite quando ci sono tanti messaggi
+  flex: 0;            // non allungare quando vuota
+}
 }

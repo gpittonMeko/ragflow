@@ -55,7 +55,8 @@ const ChatContainer = ({ controller }: IProps) => {
   return (
     <>
       <Flex flex={1} className={styles.chatContainer} vertical>
-        <Flex flex={1} vertical className={styles.messageContainer}>
+        <Flex vertical className={styles.messageContainer}>
+
           <div>
             <Spin spinning={loading}>
               {derivedMessages?.map((message, i) => {
