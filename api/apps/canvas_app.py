@@ -94,19 +94,27 @@ def get(canvas_id):
         return get_data_error_result(message="canvas not found.")
     return get_json_result(data=c)
 
-@manager.route('/getsse/<canvas_id>', methods=['GET'])  # type: ignore # noqa: F821
+@manager.route('/getsse/<canvas_id>', methods=['GET'])
 def getsse(canvas_id):
-    token = request.headers.get('Authorization').split()
-    #if len(token) != 2:
-     #   return get_data_error_result(message='Authorization is not valid!"')
-    token = token[1]
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        return get_data_error_result(message="Missing Authorization header.")
+
+    parts = auth_header.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return get_data_error_result(message="Authorization header malformed.")
+
+    token = parts[1]
     objs = APIToken.query(beta=token)
     if not objs:
-        return get_data_error_result(message='Authentication error: API key is invalid!"')
+        return get_data_error_result(message="Authentication error: API key is invalid!")
+
     e, c = UserCanvasService.get_by_id(canvas_id)
     if not e:
         return get_data_error_result(message="canvas not found.")
+
     return get_json_result(data=c.to_dict())
+
 
 
 @manager.route('/completion', methods=['POST'])  # noqa: F821
