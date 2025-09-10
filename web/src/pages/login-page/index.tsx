@@ -260,31 +260,14 @@ useEffect(() => {
 
     // === Allinea i localStorage/cookie con Ragflow guest ===
 function ensureGuestLocalStorage() {
-  // se non esiste un access_token → crea guest_xxx
-  if (!localStorage.getItem("access_token")) {
-    const guest = "guest_" + uuidv4();
-    localStorage.setItem("access_token", guest);
-    document.cookie = `access_token=${guest}; path=/; SameSite=None; Secure`;
-  }
-
-  if (!localStorage.getItem("Token")) {
-    const token = uuidv4().replace(/-/g, "");
-    localStorage.setItem("Token", token);
-    document.cookie = `Token=${token}; path=/; SameSite=None; Secure`;
-  }
-
-  const guest = localStorage.getItem("access_token");
-  if (guest && iframeRef.current?.contentWindow) {
-    iframeRef.current.contentWindow.postMessage(
-      { type: "ragflow-token", token: guest },
-      "*"
-    );
-    console.log("[PARENT] Guest token inviato all’iframe:", guest);
-  }
-
-    setGuestReady(true);
-
-} // 👈 questa graffa mancava
+  // RIMUOVI tutti i token vecchi che causano problemi
+  localStorage.removeItem('Authorization');
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('Token');
+  
+  // NON creare nuovi token guest - usa solo la API key dall'URL
+  setGuestReady(true);
+}
 
 
 
