@@ -86,8 +86,7 @@ useEffect(() => {
   const sendHeight = () => {
     if (!containerRef.current) return;
     const raw = containerRef.current.scrollHeight;
-    const bounded = Math.max(MIN_CHAT_HEIGHT, raw);
-    window.parent.postMessage({ type: 'iframe-height', height: bounded }, '*');
+  window.parent.postMessage({ type: 'iframe-height', height: raw }, '*');
   };
 
   sendHeight();
