@@ -113,9 +113,15 @@ useEffect(() => {
     if (e.data?.type === 'ragflow-token' && e.data.token) {
       console.log('[IFRAME] Ricevuto token dal parent:', e.data.token);
       localStorage.setItem('Authorization', e.data.token);
+      
+      // Triggera un evento custom per notificare che il token è arrivato
+      window.dispatchEvent(new CustomEvent('token-ready'));
     }
   }
   window.addEventListener('message', handleParentMsg);
+  
+  // NON chiedere subito il token - aspetta che arrivi dal parent
+  
   return () => window.removeEventListener('message', handleParentMsg);
 }, [])
 

@@ -75,6 +75,9 @@ function getOrCreateClientId(): string {
   return id;
 }
 
+const [iframeReady, setIframeReady] = useState(false);
+
+
 const PresentationPage: React.FC = () => {
   const googleButtonRef = useRef<HTMLDivElement>(null);
 
@@ -826,15 +829,23 @@ useEffect(() => {
       {/* CHAT SOTTO IL LOGO */}
       <div className={styles.iframeSection}>
   <div className={styles.chatWrap}>
+    {iframeReady && (
     <iframe
       ref={iframeRef}
       onLoad={async () => {
-        console.log('[IFRAME] Caricato');
-const token = localStorage.getItem('access_token');
-          if (token) {
-            postToIframe({ type: 'ragflow-token', token });
-            console.log('[PARENT] Token inviato onLoad:', token);
-          }
+        console.log('[IFRAME] Caricato - Aspetto login...');
+        
+        // PRIMA fai il login
+        await ensureRagflowAuth();
+        
+        // POI invia il token Authorization (non access_token!)
+        const authToken = localStorage.getItem('Authorization');
+        if (authToken) {
+          postToIframe({ type: 'ragflow-token', token: authToken });
+          console.log('[PARENT] Authorization token inviato:', authToken.substring(0, 20) + '...');
+        } else {
+          console.error('[PARENT] Nessun Authorization dopo login!');
+        }
         postToIframe({ type: 'request-height' });
         postToIframe({ type: 'theme-change', theme });
         postToIframe({ type: 'limit-status', blocked: quota !== null && showLimitOverlay });
@@ -856,7 +867,7 @@ const token = localStorage.getItem('access_token');
       }}
       allow="clipboard-write"
     />
-
+      )}
     {showLimitOverlay && (
       <div className={styles.chatOverlay} role="dialog" aria-modal="true">
         <div className={styles.chatOverlayCard}>
