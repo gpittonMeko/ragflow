@@ -426,13 +426,8 @@ useEffect(() => {
   window.addEventListener('message', handler);
   return () => {
     window.removeEventListener('message', handler);
-    if (expandTimeoutRef.current) clearTimeout(expandTimeoutRef.current);
-    if (genTimeoutRef.current) {
-      clearTimeout(genTimeoutRef.current);
-      genTimeoutRef.current = null;
-    }
   };
-}, [canExpandIframe, userData, googleToken]);
+}, [userData, googleToken]);
 
 
 
