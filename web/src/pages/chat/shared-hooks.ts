@@ -132,7 +132,22 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
 
   const sendMessage = useCallback(
   async (message: Message, id?: string) => {
-    console.log("[IFRAME] sendMessage con authToken:", authToken);
+    // Aspetta che ci sia un token valido
+    let token = localStorage.getItem('Authorization');
+    let attempts = 0;
+    while (!token && attempts < 10) {
+      console.log(`[IFRAME] Aspetto token... tentativo ${attempts + 1}`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      token = localStorage.getItem('Authorization');
+      attempts++;
+    }
+    
+    if (!token) {
+      console.error('[IFRAME] Nessun token dopo 5 secondi!');
+      return;
+    }
+    
+    console.log("[IFRAME] sendMessage con token:", token.substring(0, 20) + '...');
     const res = await send({
         id: id ?? conversationId,
         message: message.content,          // 👈 non array
