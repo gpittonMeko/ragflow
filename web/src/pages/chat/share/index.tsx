@@ -40,10 +40,7 @@ useEffect(() => {
 
     if (event.data?.type === 'request-height' && containerRef.current) {
       const rawHeight = containerRef.current.scrollHeight;
-      const boundedHeight = Math.max(
-        MIN_CHAT_HEIGHT,
-        Math.min(rawHeight, MAX_CHAT_HEIGHT)
-      );
+      const boundedHeight = Math.min(rawHeight, MAX_CHAT_HEIGHT);
       console.log('[IFRAME] Invio altezza al parent:', boundedHeight);
       window.parent.postMessage(
         { type: 'iframe-height', height: boundedHeight },
