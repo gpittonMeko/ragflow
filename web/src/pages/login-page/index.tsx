@@ -281,10 +281,11 @@ useEffect(() => {
 useEffect(() => {
   const handler = (event: MessageEvent) => {
     if (event.data?.type === 'iframe-height') {
-       const newH = Number(event.data.height || 0);
- if (newH > 0) {
+    const newH = Number(event.data.height || 0);
+    if (newH > 0) {
    // Imposta l’altezza reale che arriva dall’iframe
    iframe.style.height = `${newH}px`;
+    }
  }
 
     if (event.data?.type === 'generation-started') {
