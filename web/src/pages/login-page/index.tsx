@@ -245,6 +245,41 @@ const AuthorizationKey = 'Authorization';
 
 useEffect(() => {
   const handler = (event: MessageEvent) => {
+    if (event.data?.type === 'generation-finished') {
+      console.log('[GENERATION] FINISHED');
+
+      if (!isLoggedIn) {
+        // fallback locale
+        setGenCount(prev => {
+          const next = prev + 1;
+          localStorage.setItem('sgai-gen-count', String(next));
+          if (next >= FREE_LIMIT) setShowLimitOverlay(true);
+          return next;
+        });
+      }
+
+      // 🔑 in ogni caso avvisa il backend di consumare 1 quota
+      fetch(`${baseURL}/api/generate`, {
+        method: 'POST',
+        headers: { 'X-Client-Id': clientIdRef.current },
+        credentials: 'include',
+      })
+        .then(r => r.json())
+        .then(d => {
+          console.log('[generate → quota]', d);
+          void refreshQuota(); // riallinea
+        })
+        .catch(err => console.warn('[generate err]', err));
+    }
+  };
+
+  window.addEventListener('message', handler);
+  return () => window.removeEventListener('message', handler);
+}, [isLoggedIn]);
+
+
+useEffect(() => {
+  const handler = (event: MessageEvent) => {
     if (event.data?.type === 'iframe-height') {
       const iframe = iframeRef.current;
       if (!iframe) return;
