@@ -281,12 +281,11 @@ useEffect(() => {
 useEffect(() => {
   const handler = (event: MessageEvent) => {
     if (event.data?.type === 'iframe-height') {
-      const iframe = iframeRef.current;
-      if (!iframe) return;
-      const max = 1600;
-      const h = Math.max(0, Math.min(Number(event.data.height || 0), max));
-      iframe.style.height = `${h}px`;
-    }
+       const newH = Number(event.data.height || 0);
+ if (newH > 0) {
+   // Imposta l’altezza reale che arriva dall’iframe
+   iframe.style.height = `${newH}px`;
+ }
 
     if (event.data?.type === 'generation-started') {
       console.log('[GENERATION] STARTED');
@@ -880,7 +879,7 @@ useEffect(() => {
       style={{
         borderRadius: 'var(--border-radius)',
         width: '100%',
-        height: '1px',         // 👈 togli minHeight fisso
+        height: '100px',         // 👈 togli minHeight fisso
         border: 'none',
         display: 'block',
         background: 'transparent',
