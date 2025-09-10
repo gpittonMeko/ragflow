@@ -101,10 +101,14 @@ def getsse(canvas_id):
         return get_data_error_result(message="Missing Authorization header.")
 
     parts = auth_header.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
+    # 👇 accetta sia "Bearer <token>" sia solo "<token>"
+    if len(parts) == 1:
+        token = parts[0]
+    elif len(parts) == 2 and parts[0].lower() == "bearer":
+        token = parts[1]
+    else:
         return get_data_error_result(message="Authorization header malformed.")
 
-    token = parts[1]
     objs = APIToken.query(beta=token)
     if not objs:
         return get_data_error_result(message="Authentication error: API key is invalid!")
@@ -114,6 +118,7 @@ def getsse(canvas_id):
         return get_data_error_result(message="canvas not found.")
 
     return get_json_result(data=c.to_dict())
+
 
 
 
