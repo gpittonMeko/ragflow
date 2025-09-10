@@ -248,7 +248,6 @@ useEffect(() => {
     if (event.data?.type === 'iframe-height') {
       const iframe = iframeRef.current;
       if (!iframe) return;
-      // Niente min: usa solo un tetto massimo per sicurezza
       const max = 1600;
       const h = Math.max(0, Math.min(Number(event.data.height || 0), max));
       iframe.style.height = `${h}px`;
@@ -262,6 +261,7 @@ useEffect(() => {
   window.addEventListener('message', handler);
   return () => window.removeEventListener('message', handler);
 }, []);
+
 
 
 
