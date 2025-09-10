@@ -53,66 +53,64 @@ const ChatContainer = ({ controller }: IProps) => {
     useCreateConversationBeforeUploadDocument();
 
   return (
-    <>
-      <Flex flex={1} className={styles.chatContainer} vertical>
+  <>
+    <Flex flex={1} className={styles.chatContainer} vertical>
+      {/* Mostra i messaggi solo se esistono */}
+      {derivedMessages && derivedMessages.length > 0 && (
         <Flex vertical className={styles.messageContainer}>
-
           <div>
             <Spin spinning={loading}>
-              {derivedMessages?.map((message, i) => {
-                return (
-                  <MessageItem
-                    loading={
-                      message.role === MessageType.Assistant &&
-                      sendLoading &&
-                      derivedMessages.length - 1 === i
-                    }
-                    key={buildMessageUuidWithRole(message)}
-                    item={message}
-                    nickname={userInfo.nickname}
-                    avatar={userInfo.avatar}
-                    avatarDialog={conversation.avatar}
-                    reference={buildMessageItemReference(
-                      {
-                        message: derivedMessages,
-                        reference: conversation.reference,
-                      },
-                      message,
-                    )}
-                    clickDocumentButton={clickDocumentButton}
-                    index={i}
-                    removeMessageById={removeMessageById}
-                    regenerateMessage={regenerateMessage}
-                    sendLoading={sendLoading}
-                  ></MessageItem>
-                );
-              })}
+              {derivedMessages.map((message, i) => (
+                <MessageItem
+                  loading={
+                    message.role === MessageType.Assistant &&
+                    sendLoading &&
+                    derivedMessages.length - 1 === i
+                  }
+                  key={buildMessageUuidWithRole(message)}
+                  nickname={userInfo.nickname}
+                  avatar={userInfo.avatar}
+                  avatarDialog={canvasInfo.avatar}
+                  item={message}
+                  reference={buildMessageItemReference(
+                    { message: derivedMessages, reference },
+                    message,
+                  )}
+                  clickDocumentButton={clickDocumentButton}
+                  index={i}
+                  showLikeButton={false}
+                  sendLoading={sendLoading}
+                />
+              ))}
             </Spin>
           </div>
           <div ref={ref} />
         </Flex>
-        <MessageInput
-          disabled={disabled}
-          sendDisabled={sendDisabled}
-          sendLoading={sendLoading}
-          value={value}
-          onInputChange={handleInputChange}
-          onPressEnter={handlePressEnter}
-          conversationId={conversationId}
-          createConversationBeforeUploadDocument={
-            createConversationBeforeUploadDocument
-          }
-          stopOutputMessage={stopOutputMessage}
-        ></MessageInput>
-      </Flex>
-      <PdfDrawer
-        visible={visible}
-        hideModal={hideModal}
-        documentId={documentId}
-        chunk={selectedChunk}
-      ></PdfDrawer>
-    </>
-  );
+      )}
+
+      {/* Input sempre visibile */}
+      <MessageInput
+        showUploadIcon={false}
+        value={value}
+        sendLoading={sendLoading}
+        disabled={false}
+        sendDisabled={sendLoading}
+        conversationId=""
+        onPressEnter={handlePressEnter}
+        onInputChange={handleInputChange}
+        stopOutputMessage={stopOutputMessage}
+      />
+    </Flex>
+
+    <PdfDrawer
+      visible={visible}
+      hideModal={hideModal}
+      documentId={documentId}
+      chunk={selectedChunk}
+    />
+  </>
+);
+
 };
 
 export default memo(ChatContainer);
