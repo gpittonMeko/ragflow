@@ -4,7 +4,6 @@ import ChatContainer from './large';
 import styles from './index.less';
 
 const MAX_CHAT_HEIGHT = 1600;
-const MIN_CHAT_HEIGHT = 350;
 
 const STEP_CHAT_HEIGHT = 200;   // crescita massima per volta
 
@@ -12,7 +11,6 @@ const SharedChat: React.FC = () => {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('sgai-theme') || 'dark';
   });
-  const lastHeightRef = useRef(MIN_CHAT_HEIGHT);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -23,7 +21,6 @@ const SharedChat: React.FC = () => {
       if (activeElement && activeElement.tagName === 'TEXTAREA') {
         window.scrollTo(0, 0);
         setTimeout(() => {
-          activeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 300);
       }
     };
@@ -86,23 +83,17 @@ useEffect(() => {
 useEffect(() => {
   if (!containerRef.current) return;
 
-  const sendHeight = () => {
+ const sendHeight = () => {
   if (!containerRef.current) return;
   const raw = containerRef.current.scrollHeight;
+  const bounded = Math.min(raw, MAX_CHAT_HEIGHT);
 
-  // Calcola la nuova altezza in modo progressivo
-  const nextHeight = Math.min(
-    MAX_CHAT_HEIGHT,
-    Math.max(
-      lastHeightRef.current,
-      Math.min(raw, lastHeightRef.current + STEP_CHAT_HEIGHT)
-    )
+  window.parent.postMessage(
+    { type: 'iframe-height', height: bounded },
+    '*'
   );
-
-  lastHeightRef.current = nextHeight;
-
-  window.parent.postMessage({ type: 'iframe-height', height: nextHeight }, '*');
 };
+
 
 
   sendHeight();
