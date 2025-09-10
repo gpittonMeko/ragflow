@@ -238,9 +238,9 @@ const MessageInput = ({
           border: 'none',
           boxShadow: 'none',
           padding: '0px 10px',
-          marginTop: 10,
+          marginTop: 2,              // prima era 10
         }}
-        autoSize={{ minRows: 2, maxRows: 10 }}
+        autoSize={{ minRows: 1, maxRows: 10 }}   // prima era minRows: 2
         onKeyDown={handleKeyDown}
         onChange={onInputChange}
       />

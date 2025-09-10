@@ -80,6 +80,26 @@ useEffect(() => {
 }, [theme]);
 
 
+useEffect(() => {
+  if (!containerRef.current) return;
+
+  const sendHeight = () => {
+    if (!containerRef.current) return;
+    const raw = containerRef.current.scrollHeight;
+    const bounded = Math.min(raw, MAX_CHAT_HEIGHT);
+    window.parent.postMessage({ type: 'iframe-height', height: bounded }, '*');
+  };
+
+  sendHeight(); // invia subito al mount
+
+  const ro = new ResizeObserver(() => sendHeight());
+  ro.observe(containerRef.current);
+
+  return () => ro.disconnect();
+}, []);
+
+
+
 
   return (
     <div
