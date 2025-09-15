@@ -84,6 +84,8 @@ const PresentationPage: React.FC = () => {
   const [hideExtras, setHideExtras] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const genTimeoutRef = useRef<number | null>(null);
+
 
 
   // contatore legacy locale (lo lasciamo ma ora fa solo da fallback UI)
@@ -730,7 +732,7 @@ useEffect(() => {
 
 
   return (
-    <div className={styles.pageContainer}>
+  <div className={`${styles.pageContainer} ${hideExtras ? styles.fullscreen : ''}`}>
       {/* Toggle tema */}
       <button
         onClick={toggleTheme}
