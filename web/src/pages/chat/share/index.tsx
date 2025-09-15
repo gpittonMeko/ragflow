@@ -34,45 +34,42 @@ useEffect(() => {
     console.log('[IFRAME] Messaggio ricevuto:', event.data);
 
     if (event.data?.type === 'request-height' && containerRef.current) {
-      const rawHeight = containerRef.current.scrollHeight;
-      const boundedHeight = Math.min(rawHeight, MAX_CHAT_HEIGHT);
-      console.log('[IFRAME] Invio altezza al parent:', boundedHeight);
+      // Altezza ridotta iniziale
       window.parent.postMessage(
-        { type: 'iframe-height', height: boundedHeight },
+        { type: 'iframe-height', height: 320 },
+        '*'
+      );
+    }
+
+    if (event.data?.type === 'generation-started') {
+      // Espandi a viewport
+      const h = window.innerHeight;
+      console.log('[IFRAME] Espando a viewport:', h);
+      window.parent.postMessage(
+        { type: 'iframe-height', height: h },
         '*'
       );
     }
 
     if (event.data?.type === 'theme-change') {
-      console.log('[IFRAME] Cambio tema →', event.data.theme);
       setTheme(event.data.theme);
       document.documentElement.setAttribute('data-theme', event.data.theme);
     }
 
     if (event.data?.type === 'ragflow-token' && event.data.token) {
-      console.log('[IFRAME] Ricevuto token dal parent:', event.data.token);
       localStorage.setItem('Authorization', event.data.token);
       sessionStorage.setItem('Authorization', event.data.token);
-
-      // debug extra: conferma subito che sia salvato
-      console.log('[IFRAME] Token salvato in localStorage:', localStorage.getItem('Authorization'));
-      console.log('[IFRAME] Token salvato in sessionStorage:', sessionStorage.getItem('Authorization'));
-    }
-
-    if (event.data?.type === 'limit-status') {
-      console.log('[IFRAME] Stato limite ricevuto:', event.data.blocked);
-      // TODO: passare a ChatContainer con prop o context
     }
   };
 
   window.addEventListener('message', handleMessage);
-
   document.documentElement.setAttribute('data-theme', theme);
 
   return () => {
     window.removeEventListener('message', handleMessage);
   };
 }, [theme]);
+
 
 
 useEffect(() => {
