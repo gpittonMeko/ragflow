@@ -749,15 +749,16 @@ useEffect(() => {
           {/* ───── Ramo ANONIMO ───── */}
           <button
             onClick={() => {
-              setShowLimitOverlay(false);   // <-- chiudi l’overlay
-              setShowGoogleModal(true);     // <-- apri la modale Google
+              setShowLimitOverlay(false);
+              setShowGoogleModal(true);
             }}
-            className={styles.glassBtn}
+            className={styles.googleBtnCustom}
             aria-label="Accedi con Google"
           >
-            <GoogleGIcon />
-            Accedi&nbsp;con&nbsp;Google
+            <GoogleGIcon size={18} />
+            <span>Accedi con Google</span>
           </button>
+
 
 
           <div className={styles.freeCounter}>
