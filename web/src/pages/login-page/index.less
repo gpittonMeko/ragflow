@@ -269,8 +269,16 @@ body {
   border: none;
   display: block;
   min-height: 200px;   /* parte compatta */
-  max-height: 100%;    /* non va oltre viewport */
+  max-height: 300px; 
+  height: auto;     /* non va oltre viewport */
+  transition: all 0.5s ease;
 }
+.pageContainer.fullscreen .iframeSection iframe {
+  min-height: 100vh !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+}
+
 
 .disclaimerSection {
   padding: 1.5rem;
@@ -404,7 +412,7 @@ body {
     /* height: 400px;  <<<< VIA! */
     min-height: 320px;    /* cambia a piacere */
     height: auto;         /* questa la fa crescere */
-    max-height: 75vh;     /* limita l’espansione */
+    max-height: none;    /* limita l’espansione */
     display: flex;
     flex-direction: column;
     overflow: hidden;     // ok: previene overflow
@@ -413,7 +421,7 @@ body {
   .messageContainer {
   overflow-y: auto;
   padding-right: 24px;
-  max-height: 70vh;   // solo se vuoi limite quando ci sono tanti messaggi
+  max-height: none;   // solo se vuoi limite quando ci sono tanti messaggi
   flex: 0;            // non allungare quando vuota
 }
   .chatWrapper {
