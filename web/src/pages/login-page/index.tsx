@@ -939,66 +939,72 @@ useEffect(() => {
 
       {/* FEATURE */}
       <div className={`${styles.extraBlocks} ${hideExtras ? styles.hidden : ''}`}>
-  <div className={styles.featuresSection}>
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
+        <div className={styles.featuresSection}>
+          <div className={styles.featureCard}>
+            <div className={styles.featureIcon}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <h3 className={styles.featureHighlight}>Tutela del Knowhow</h3>
+            <p className={styles.featureHighlight}>
+              Nessun dato viene acquisito.
+              <br />
+              Quel che viene discusso con SGAI è accessibile solo all&apos;utente.
+            </p>
           </div>
-          
-          <h3 className={styles.featureHighlight}>Tutela del Knowhow</h3>
-          <p className={styles.featureHighlight}>
-            Nessun dato viene acquisito.
-            <br />
-            Quel che viene discusso con SGAI è accessibile solo all&apos;utente.
-          </p>
-        </div>
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5z" />
-              <path d="M2 17l10 5 10-5" />
-              <path d="M2 12l10 5 10-5" />
-            </svg>
-          </div>
-          <h3 className={styles.featureHighlight}>Personalizzazione</h3>
-          <p className={styles.featureHighlight}>
-            SGAI può essere potenziato per il singolo Studio professionale:
-            <br />
-            addestralo con i tuoi atti e i tuoi documenti.
-          </p>
-        </div>
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8h1a4 4 0 010 8h-1" />
-              <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
-              <line x1="6" y1="1" x2="6" y2="4" />
-              <line x1="10" y1="1" x2="10" y2="4" />
-              <line x1="14" y1="1" x2="14" y2="4" />
-            </svg>
-          </div>
-          <h3 className={styles.featureHighlight}>Indipendenza e Imparzialità</h3>
-          <p className={styles.featureHighlight}>
-            SGAI non ha legami istituzionali per garantire la massima trasparenza
-          </p>
-        </div>
-      </div>
 
-      <div className={styles.disclaimerSection}>
-        <p><strong>Disclaimer:</strong></p>
-        <p>
-          SGAI è un sistema in fase di sviluppo, basato sull’intelligenza artificiale. Lo sappiamo: non è ancora completo, e talvolta può fornire risposte inesatte, parziali o incoerenti. Ma è proprio grazie all’uso quotidiano e al supporto degli utenti che il progetto può evolversi e migliorare.
-          Il sistema viene aggiornato costantemente, con l’integrazione progressiva di nuove fonti,
-          funzionalità e affinamenti della logica. Se oggi non trovi quello che cerchi, è possibile che domani ci sia.
-          Pur puntando alla massima accuratezza, invitiamo a verificare sempre i contenuti con fonti ufficiali e a consultare professionisti qualificati per ogni decisione rilevante.
-        </p>
+          <div className={styles.featureCard}>
+            <div className={styles.featureIcon}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
+              </svg>
+            </div>
+            <h3 className={styles.featureHighlight}>Personalizzazione</h3>
+            <p className={styles.featureHighlight}>
+              SGAI può essere potenziato per il singolo Studio professionale:
+              <br />
+              addestralo con i tuoi atti e i tuoi documenti.
+            </p>
+          </div>
+
+          <div className={styles.featureCard}>
+            <div className={styles.featureIcon}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8h1a4 4 0 010 8h-1" />
+                <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
+                <line x1="6" y1="1" x2="6" y2="4" />
+                <line x1="10" y1="1" x2="10" y2="4" />
+                <line x1="14" y1="1" x2="14" y2="4" />
+              </svg>
+            </div>
+            <h3 className={styles.featureHighlight}>Indipendenza e Imparzialità</h3>
+            <p className={styles.featureHighlight}>
+              SGAI non ha legami istituzionali per garantire la massima trasparenza
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.disclaimerSection}>
+          <p><strong>Disclaimer:</strong></p>
+          <p>
+            SGAI è un sistema in fase di sviluppo, basato sull’intelligenza artificiale. Lo sappiamo: non è ancora completo,
+            e talvolta può fornire risposte inesatte, parziali o incoerenti. Ma è proprio grazie all’uso quotidiano e al supporto
+            degli utenti che il progetto può evolversi e migliorare. Il sistema viene aggiornato costantemente, con
+            l’integrazione progressiva di nuove fonti, funzionalità e affinamenti della logica. Se oggi non trovi quello che cerchi,
+            è possibile che domani ci sia. Pur puntando alla massima accuratezza, invitiamo a verificare sempre i contenuti con
+            fonti ufficiali e a consultare professionisti qualificati per ogni decisione rilevante.
+          </p>
+        </div>
       </div>
     </div>
   );
 };
+
+
 
 export default PresentationPage;
