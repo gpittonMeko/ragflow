@@ -34,22 +34,21 @@ useEffect(() => {
     console.log('[IFRAME] Messaggio ricevuto:', event.data);
 
     if (event.data?.type === 'request-height' && containerRef.current) {
-      // Altezza ridotta iniziale
-      window.parent.postMessage(
-        { type: 'iframe-height', height: 320 },
-        '*'
-      );
-    }
+  // Altezza ridotta iniziale (compatto)
+  window.parent.postMessage(
+    { type: 'iframe-height', height: 320 },
+    '*'
+  );
+}
 
-    if (event.data?.type === 'generation-started') {
-      // Espandi a viewport
-      const h = window.innerHeight;
-      console.log('[IFRAME] Espando a viewport:', h);
-      window.parent.postMessage(
-        { type: 'iframe-height', height: h },
-        '*'
-      );
-    }
+if (event.data?.type === 'generation-started') {
+  // Espandi a viewport, non oltre
+  const h = window.innerHeight;
+  window.parent.postMessage(
+    { type: 'iframe-height', height: h },
+    '*'
+  );
+}
 
     if (event.data?.type === 'theme-change') {
       setTheme(event.data.theme);
@@ -75,11 +74,10 @@ useEffect(() => {
 useEffect(() => {
   if (!containerRef.current) return;
 
- const sendHeight = () => {
+const sendHeight = () => {
   if (!containerRef.current) return;
-  const raw = containerRef.current.scrollHeight;
-  const bounded = Math.min(raw, MAX_CHAT_HEIGHT);
-
+  // Clamp all’altezza della finestra → mai oltre viewport
+  const bounded = Math.min(containerRef.current.scrollHeight, window.innerHeight);
   window.parent.postMessage(
     { type: 'iframe-height', height: bounded },
     '*'
