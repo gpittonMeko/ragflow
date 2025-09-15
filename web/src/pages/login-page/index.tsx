@@ -590,9 +590,11 @@ useEffect(() => {
     if (event.data?.type === 'generation-started') {
       setHideExtras(true);
     }
-    if (event.data?.type === 'generation-finished') {
-      setHideExtras(false);
-    }
+    if (e.data?.type === 'generation-finished') {
+  // NON ripristinare subito i blocchi
+  // lasciali nascosti finché non ricarichi o resetti tu
+  console.log("Generazione finita, lascio i blocchi nascosti");
+}
   };
   window.addEventListener('message', handler);
   return () => window.removeEventListener('message', handler);
