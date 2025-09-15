@@ -57,11 +57,10 @@ body {
 
 
 .pageContainer {
-  max-width: 1200px;
-  margin: 0px auto;
-  padding: 20px;
-  min-height: calc(100vh - 80px);
-  position: relative;
+  height: 100vh;       /* tutta la viewport */
+  overflow: hidden;    /* blocca scroll della pagina */
+  display: flex;
+  flex-direction: column;
 }
 
 .themeToggle {
@@ -258,23 +257,19 @@ body {
 }
 
 .iframeSection {
-  border-radius: var(--border-radius);
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  box-shadow: var(--shadow);
-  background-color: var(--card-bg);
-  height: auto;
-  position: relative;
-   margin: 0 0 28px;  // 28px = “un pelo” di spazio
 }
 
 .iframeSection iframe {
+  flex: 1 1 auto;
   width: 100%;
   border: none;
-  /* RIMUOVI: */
-  /* height: 100%; */
-  /* position: absolute; */
-  /* top: 0; left: 0; right: 0; bottom: 0; */
-  display: block; /* se vuoi maggiore compatibilità */
+  display: block;
+  min-height: 200px;   /* parte compatta */
+  max-height: 100%;    /* non va oltre viewport */
 }
 
 .disclaimerSection {
@@ -868,6 +863,19 @@ p, li, span {
     width: 16px;
     height: 16px;
   }
+
+  .extraBlocks {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.extraBlocks.hidden {
+  opacity: 0;
+  transform: translateY(30px);
+  pointer-events: none;
+}
+
 }
 
 

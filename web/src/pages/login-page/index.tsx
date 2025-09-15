@@ -81,6 +81,7 @@ function getOrCreateClientId(): string {
 const PresentationPage: React.FC = () => {
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const [iframeReady, setIframeReady] = useState(false);  // <-- SPOSTATO QUI DENTRO!
+  const [hideExtras, setHideExtras] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -582,6 +583,18 @@ useEffect(() => {
 };
 
 
+useEffect(() => {
+  const handler = (event: MessageEvent) => {
+    if (event.data?.type === 'generation-started') {
+      setHideExtras(true);
+    }
+    if (event.data?.type === 'generation-finished') {
+      setHideExtras(false);
+    }
+  };
+  window.addEventListener('message', handler);
+  return () => window.removeEventListener('message', handler);
+}, []);
 
 
   useEffect(() => {
@@ -925,7 +938,8 @@ useEffect(() => {
       
 
       {/* FEATURE */}
-      <div className={styles.featuresSection}>
+      <div className={`${styles.extraBlocks} ${hideExtras ? styles.hidden : ''}`}>
+  <div className={styles.featuresSection}>
         <div className={styles.featureCard}>
           <div className={styles.featureIcon}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -934,6 +948,7 @@ useEffect(() => {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
+          
           <h3 className={styles.featureHighlight}>Tutela del Knowhow</h3>
           <p className={styles.featureHighlight}>
             Nessun dato viene acquisito.
