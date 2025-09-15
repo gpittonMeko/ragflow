@@ -82,6 +82,8 @@ useEffect(() => {
     isGeneratingRef.current = true;              // ★ salva stato precedente
     setBarVisible(true);
     setProgress(0);
+      window.parent?.postMessage({ type: 'generation-started' }, '*');
+
 
     interval = setInterval(() => {
       const elapsed = Date.now() - START;
