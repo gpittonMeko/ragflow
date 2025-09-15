@@ -252,16 +252,12 @@ useEffect(() => {
         )}
 
             <Flex flex={1} className={`${styles.chatContainer} ${styles[theme]}`} vertical>
-
- 
-       
-        <Flex 
-        flex={1} 
-        vertical 
-        className={styles.messageContainer}
-        ref={messagesContainerRef}
-      >
-
+  <Flex 
+    flex={1} 
+    vertical 
+    className={styles.messageContainer}
+    ref={messagesContainerRef}
+  >
           
           <div>
             <Spin spinning={loading}>
