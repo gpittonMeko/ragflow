@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ChatContainer from './large';
 import styles from './index.less';
 
-const COLLAPSED_H = 300; // altezza iniziale compatta
+const COLLAPSED_H = 200; // altezza iniziale compatta
 
 const SharedChat: React.FC = () => {
   const [theme, setTheme] = useState(() => localStorage.getItem('sgai-theme') || 'dark');
