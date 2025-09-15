@@ -414,13 +414,10 @@ useEffect(() => {
   const token = localStorage.getItem('access_token'); // usa quello giusto
 
 
-  if (iframeRef.current?.contentWindow) {
-    iframeRef.current.contentWindow.postMessage(
-      { type: 'ragflow-token', token },
-      '*'
-    );
-    console.log('[PARENT] Token inviato a iframe');
-  }
+  if (token) {
+  console.log("🔑 Authorization disponibile al primo boot:", token);
+  setIframeReady(true); // iframe viene montato solo dopo che ho il token
+}
 } else {
   console.error('[PARENT] Login fallito:', loginData);
 }

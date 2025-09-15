@@ -421,7 +421,11 @@ body {
   overflow-y: auto;
   padding-right: 24px;
   max-height: none;   // solo se vuoi limite quando ci sono tanti messaggi
-  flex: 0;            // non allungare quando vuota
+  flex: 1 1 auto;          // non allungare quando vuota
+}
+
+:global(.messageInputWrapper___nie1o) {
+  flex-shrink: 0;     /* resta sempre in basso */
 }
   .chatWrapper {
     max-height: 100vh;
@@ -876,15 +880,16 @@ p, li, span {
 }
 
 .extraBlocks {
-  opacity: 1;
+   opacity: 1;
   transform: translateY(0);
   transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 .extraBlocks.hidden {
-  opacity: 0;
+   opacity: 0;
   transform: translateY(30px);
-  pointer-events: none;
+  display: none;   /* 👈 così non occupano più spazio */
+  
 }
 
 
