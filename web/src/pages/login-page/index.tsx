@@ -591,11 +591,13 @@ useEffect(() => {
       setHideExtras(true);
     }
 
-   if (event.data?.type === 'generation-finished') {
-     console.log("Generazione finita, lascio i blocchi nascosti");
-     // se vuoi che torni compatto, rimetti:
-     // setHideExtras(false);
-   }
+    if (event.data?.type === 'generation-finished') {
+      console.log("Generazione finita, lascio i blocchi nascosti");
+      // se vuoi che torni compatto, rimetti:
+      // setHideExtras(false);
+    }
+  }; // 👈 MANCAVA QUESTA CHIUSURA
+
   window.addEventListener('message', handler);
   return () => window.removeEventListener('message', handler);
 }, []);
