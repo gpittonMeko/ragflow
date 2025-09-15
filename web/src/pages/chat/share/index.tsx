@@ -3,114 +3,65 @@ import React, { useState, useEffect, useRef } from 'react';
 import ChatContainer from './large';
 import styles from './index.less';
 
-const MAX_CHAT_HEIGHT = 1600;
-
+const COLLAPSED_H = 300; // altezza iniziale compatta
 
 const SharedChat: React.FC = () => {
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('sgai-theme') || 'dark';
-  });
-
+  const [theme, setTheme] = useState(() => localStorage.getItem('sgai-theme') || 'dark');
+  const [expanded, setExpanded] = useState(false); // stato chat: compatta/espansa
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Fix input su mobile (scroll su iOS)
+  // helper per inviare l'altezza al parent con clamp alla viewport
+  const postHeight = (h: number) => {
+    const safe = Math.min(h, window.innerHeight); // mai oltre la viewport dell'iframe
+    window.parent.postMessage({ type: 'iframe-height', height: safe }, '*');
+  };
+
+  // Eventi dal parent
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      const activeElement = document.activeElement as HTMLElement | null;
-      
+    const handleMessage = (event: MessageEvent) => {
+      const data = event.data;
+
+      if (data?.type === 'request-height') {
+        setExpanded(false);
+        postHeight(COLLAPSED_H);
+      }
+
+      if (data?.type === 'generation-started') {
+        setExpanded(true);
+        postHeight(window.innerHeight);
+      }
+
+      if (data?.type === 'theme-change') {
+        setTheme(data.theme);
+        document.documentElement.setAttribute('data-theme', data.theme);
+      }
+
+      if (data?.type === 'ragflow-token' && data.token) {
+        localStorage.setItem('Authorization', data.token);
+        sessionStorage.setItem('Authorization', data.token);
+      }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('resize', handleVisibilityChange);
+    window.addEventListener('message', handleMessage);
+    document.documentElement.setAttribute('data-theme', theme);
 
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('resize', handleVisibilityChange);
+    // Altezza iniziale di sicurezza anche se il parent non invia "request-height"
+    postHeight(COLLAPSED_H);
+
+    return () => window.removeEventListener('message', handleMessage);
+  }, [theme]);
+
+  // Mantieni la dimensione corretta al resize
+  useEffect(() => {
+    const onResize = () => {
+      postHeight(expanded ? window.innerHeight : COLLAPSED_H);
     };
-  }, []);
-
-useEffect(() => {
-  const handleMessage = (event: MessageEvent) => {
-    console.log('[IFRAME] Messaggio ricevuto:', event.data);
-
-if (event.data?.type === 'request-height' && containerRef.current) {
-  // Altezza iniziale più comoda: metà viewport, non 320px
-  const startH = Math.round(window.innerHeight * 0.3);
-  window.parent.postMessage(
-    { type: 'iframe-height', height: startH },
-    '*'
-  );
-}
-
-if (event.data?.type === 'generation-started') {
-  // Espandi a viewport, non oltre
-  const h = window.innerHeight;
-  window.parent.postMessage(
-    { type: 'iframe-height', height: h },
-    '*'
-  );
-}
-
-    if (event.data?.type === 'theme-change') {
-      setTheme(event.data.theme);
-      document.documentElement.setAttribute('data-theme', event.data.theme);
-    }
-
-    if (event.data?.type === 'ragflow-token' && event.data.token) {
-      localStorage.setItem('Authorization', event.data.token);
-      sessionStorage.setItem('Authorization', event.data.token);
-    }
-  };
-
-  window.addEventListener('message', handleMessage);
-  document.documentElement.setAttribute('data-theme', theme);
-
-  return () => {
-    window.removeEventListener('message', handleMessage);
-  };
-}, [theme]);
-
-
-
-useEffect(() => {
-  if (!containerRef.current) return;
-
-const sendHeight = () => {
-  if (!containerRef.current) return;
-  // Non usare scrollHeight: clamp a viewport
-  const bounded = window.innerHeight;
-  window.parent.postMessage(
-    { type: 'iframe-height', height: bounded },
-    '*'
-  );
-};
-
-
-
-
-  sendHeight();
-
-  const ro = new ResizeObserver(sendHeight);
-  ro.observe(containerRef.current);
-
-  const mo = new MutationObserver(sendHeight);
-  mo.observe(containerRef.current, { childList: true, subtree: true });
-
-  return () => {
-    ro.disconnect();
-    mo.disconnect();
-  };
-}, []);
-
-
-
-
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [expanded]);
 
   return (
-    <div
-      className={`${styles.chatWrapper} ${styles[theme]}`}
-      ref={containerRef}
-    >
+    <div className={`${styles.chatWrapper} ${styles[theme]}`} ref={containerRef}>
       <ChatContainer theme={theme} />
     </div>
   );
