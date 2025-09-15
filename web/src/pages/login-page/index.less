@@ -263,18 +263,23 @@ body {
   overflow: hidden;
 }
 
+/* Stato normale: fissa a 300px */
 .iframeSection iframe {
-  flex: 1 1 auto;
   width: 100%;
   border: none;
   display: block;
-
-  height: auto;     /* non va oltre viewport */
-  transition: all 0.5s ease;
+  height: 300px;           /* 👈 altezza fissa iniziale */
+  max-height: 300px;
+  min-height: 300px;
+  border-radius: var(--border-radius);
+  background: transparent;
+  transition: height 0.5s ease;
 }
+
+/* Stato fullscreen: quando pageContainer ha classe .fullscreen */
 .pageContainer.fullscreen .iframeSection iframe {
+  height: 100vh !important;     /* 👈 piena viewport */
   min-height: 100vh !important;
-  height: 100vh !important;
   max-height: 100vh !important;
 }
 
@@ -880,16 +885,12 @@ p, li, span {
 }
 
 .extraBlocks {
-   opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  flex: 1 1 auto;        /* prende lo spazio rimanente */
+  overflow-y: auto;      /* se servisse scroll interno */
 }
 
 .extraBlocks.hidden {
-   opacity: 0;
-  transform: translateY(30px);
-  display: none;   /* 👈 così non occupano più spazio */
-  
+  display: none;         /* quando hideExtras = true */
 }
 
 
