@@ -33,10 +33,11 @@ useEffect(() => {
   const handleMessage = (event: MessageEvent) => {
     console.log('[IFRAME] Messaggio ricevuto:', event.data);
 
-    if (event.data?.type === 'request-height' && containerRef.current) {
-  // Altezza ridotta iniziale (compatto)
+if (event.data?.type === 'request-height' && containerRef.current) {
+  // Altezza iniziale più comoda: metà viewport, non 320px
+  const startH = Math.round(window.innerHeight * 0.3);
   window.parent.postMessage(
-    { type: 'iframe-height', height: 320 },
+    { type: 'iframe-height', height: startH },
     '*'
   );
 }
@@ -76,13 +77,14 @@ useEffect(() => {
 
 const sendHeight = () => {
   if (!containerRef.current) return;
-  // Clamp all’altezza della finestra → mai oltre viewport
-  const bounded = Math.min(containerRef.current.scrollHeight, window.innerHeight);
+  // Non usare scrollHeight: clamp a viewport
+  const bounded = window.innerHeight;
   window.parent.postMessage(
     { type: 'iframe-height', height: bounded },
     '*'
   );
 };
+
 
 
 
