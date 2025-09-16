@@ -1,20 +1,20 @@
 @import '../../theme/vars.less';
 
 .messageInputWrapper {
-  margin: 0 8px 8px 8px;   /* tolto il margin-top, lasciato solo il bottom */
+  margin: 0 8px 230px 8px;   /* niente margin-top, solo bottom grande */
   padding: 10px 14px;
-  background-color: var(--card-bg, #1e1e1e);
+  background: rgba(255, 255, 255, .06);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  border-radius: 14px;
+  border-top: 1px solid var(--border-color);
+  transition: background-color var(--transition-time), border-color var(--transition-time);
   border: 1px solid var(--border-color, #333);
-  border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  transition: all 0.3s ease;
   overflow: visible;
-
-  /* queste due linee sono la chiave */
-  flex-shrink: 0;           /* impedisce che si “schiacci” */
-  position: sticky;         /* rimane attaccato al fondo del contenitore */
+  position: relative;
+  flex-shrink: 0;
   bottom: 0;
-
   z-index: 1;
 
   &:hover {
@@ -83,50 +83,28 @@
     }
   }
 
-  @media (max-width: 520px) {
-    margin: 6px 8px;
-    padding: 8px 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    z-index: 2;
-
-    &:hover {
-      box-shadow: 0 0 0 2px var(--accent-color, #40a9ff),
-                  0 4px 14px rgba(64, 169, 255, 0.3);
-      border-color: var(--accent-color, #40a9ff);
-      z-index: 4;
-    }
-
-    textarea.ant-input,
-    .ant-input-affix-wrapper textarea.ant-input {
-      font-size: 0.9rem !important;
-    }
-
-    :global(.ant-btn-primary) {
-      font-size: 0.9rem !important;
-    }
+  @media (max-width: 768px) {
+    padding: 4px 0px 200px 0px;
+    margin-bottom: 230px;
   }
 
-
+  @media (max-width: 520px) {
+    margin: 0px;
+    padding: 8px 12px 200px 12px;
+    box-shadow: 0 4px 10px #0000004d;
+    z-index: 2;
+    margin-bottom: 230px;
+  }
 
   @media (max-width: 480px) {
-
     padding: 6px;
-
     textarea.ant-input,
     .ant-input-affix-wrapper textarea.ant-input {
       font-size: 0.85rem !important;
     }
   }
-
-  @media (max-width: 768px) {
-    padding: 8px;
-
-    textarea.ant-input,
-    .ant-input-affix-wrapper textarea.ant-input {
-      font-size: 0.95rem !important;
-    }
-  }
 }
+
 
 .documentCard {
   :global(.ant-card-body) {
