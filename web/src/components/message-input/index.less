@@ -161,11 +161,13 @@
 
 
 @media (max-width: 480px) {
-    .messageInputWrapper___nie1o {
-        margin-top: 15px !important;
-    }
+.messageInputWrapper___nie1o {
+  margin-top: 8px;   /* default, prima della generazione */
+  margin-bottom: 150px;
 }
 
-.messageInputWrapper___nie1o {
-    margin-bottom: 15px !important;
+.pageContainer.firstGenStarted .messageInputWrapper___nie1o {
+  margin-top: 40px;  /* dopo la prima generazione partita */
+  margin-bottom: 220px;
+}
 }
