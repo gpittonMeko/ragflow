@@ -131,37 +131,7 @@
   }
 }
 
-/* Regolazioni extra per dispositivi molto piccoli */
-@media (max-width: 480px) {
-  .messageItem {
-    padding: 16px 0;
-    
-    .messageTextBase() {
-      font-size: 0.9rem;
-      padding: 8px 10px;
-    }
-    
-    .messageItemContent {
-      gap: 8px;
-    }
-    
-    .messageItemSectionLeft {
-      width: 100%; /* Massimizza lo spazio per il testo in schermi molto piccoli */
-    }
-  }
-  
-  /* Riduzione ulteriore spazio avatar */
-  :global(.ant-avatar) {
-    width: 28px !important;
-    height: 28px !important;
-    min-width: 28px !important;
-  }
-  
-  /* Riduzione margin e padding nei messaggi */
-  .messageItemSection {
-    padding: 6px !important;
-  }
-}
+
 
 .sourcesWrapper {
   margin-top: 16px;
