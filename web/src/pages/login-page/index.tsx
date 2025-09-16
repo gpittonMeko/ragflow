@@ -897,7 +897,7 @@ useEffect(() => {
         title="SGAI Chat Interface"
       className={quota !== null && showLimitOverlay ? styles.chatFrozen : ''}
       style={{
-        borderRadius: 'var(--border-radius)',
+        borderRadius: 6,
         width: '100%',
         border: 'none',
         display: 'block',
