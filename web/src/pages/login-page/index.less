@@ -211,43 +211,44 @@ body {
 }
 
 
-
 .featuresSection {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2rem;
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;  /* columns: 3 */
+  gap: 5px !important;                               /* gap: 5px   */
   margin-bottom: 3rem;
 }
 
+
 .featureCard {
   background-color: var(--card-bg);
-  padding: 2rem;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
+  padding: 8px !important;                /* cardPadding: 8 */
+  border-radius: 28px !important;         /* cardRadius: 28 */
+  box-shadow: 0 8px 30px rgba(0,0,0,.18); /* cardShadow: true */
   transition: var(--card-transition);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  
+
   &:hover {
     transform: translateY(-5px);
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
   }
-  
+
   h3 {
     font-size: 1.5rem;
     margin-bottom: 1rem;
     font-weight: 600;
     color: var(--feature-title-color);
   }
-  
+
   p {
     color: var(--feature-text-color);
     font-size: 1rem;
     line-height: 1.6;
   }
 }
+
 
 .featureIcon {
   width: 60px;
@@ -268,13 +269,14 @@ body {
   width: 100%;
   border: none;
   display: block;
-  height: 200px;           /* 👈 altezza fissa iniziale */
-  max-height: 300px;
-  min-height: 300px;
-  border-radius: var(--border-radius);
+  height: 100px;       /* fetch: height */
+  min-height: 218px;   /* fetch: minHeight */
+  max-height: 213px;   /* fetch: maxHeight */
+  border-radius: 6px;  /* fetch: borderRadius */
   background: transparent;
   transition: height 0.5s ease;
 }
+
 
 /* Stato fullscreen: quando pageContainer ha classe .fullscreen */
 .pageContainer.fullscreen .iframeSection iframe {
@@ -285,8 +287,8 @@ body {
 
 
 .disclaimerSection {
-  padding: 1.5rem;
-  border-radius: var(--border-radius);
+  padding: 8px !important;         /* disclaimerPadding: 8 */
+  border-radius: 15px !important;  /* disclaimerRadius: 15 */
   background-color: var(--disclaimer-bg);
   margin-top: 3rem;
   backdrop-filter: var(--nav-blur);
@@ -419,7 +421,7 @@ body {
     max-height: none;    /* limita l’espansione */
     display: flex;
     flex-direction: column;
-    overflow: hidden;     // ok: previene overflow
+    overflow: hidden;     /* ok: previene overflow */
   }
 }
   .messageContainer {
