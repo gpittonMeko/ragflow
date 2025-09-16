@@ -1,7 +1,7 @@
 @import '../../theme/vars.less';
 
 .messageInputWrapper {
-  margin: 4px 8px;
+  margin: 0 8px 8px 8px;   /* tolto il margin-top, lasciato solo il bottom */
   padding: 10px 14px;
   background-color: var(--card-bg, #1e1e1e);
   border: 1px solid var(--border-color, #333);
@@ -9,7 +9,12 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   transition: all 0.3s ease;
   overflow: visible;
-  position: relative;
+
+  /* queste due linee sono la chiave */
+  flex-shrink: 0;           /* impedisce che si “schiacci” */
+  position: sticky;         /* rimane attaccato al fondo del contenitore */
+  bottom: 0;
+
   z-index: 1;
 
   &:hover {
