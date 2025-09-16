@@ -872,11 +872,12 @@ useEffect(() => {
 
 
       {/* LOGO SGAI */}
-        <div className={styles.heroSection}>
+        <div className={`${styles.heroSection} ${hideExtras ? styles.heroShrink : ''}`}>
           <div className={styles.logoBox}>
             <SvgLogoInteractive flipped />
           </div>
         </div>
+
 
 
       {/* CHAT SOTTO IL LOGO */}
