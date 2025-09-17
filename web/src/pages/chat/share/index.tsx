@@ -16,6 +16,17 @@ const SharedChat: React.FC = () => {
     window.parent.postMessage({ type: 'iframe-height', height: safe }, '*');
   };
 
+  useEffect(() => {
+  const ta = containerRef.current?.querySelector(
+    'textarea.ant-input'
+  ) as HTMLTextAreaElement | null;
+
+  if (ta) {
+    ta.style.fontSize = '14px';   // <-- cambia qui: 12px, 13px, ecc.
+    ta.style.lineHeight = '1.4';
+  }
+}, [theme]);
+
   // Eventi dal parent
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
