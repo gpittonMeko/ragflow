@@ -976,33 +976,99 @@ p, li, span {
   justify-content: center;
   align-items: center;
 }
+
+
+/* Overlay full-screen veramente centrato */
 .bootOverlay {
-  position: fixed;        /* full screen overlay */
+  position: fixed;
   inset: 0;
   z-index: 9999;
-  overflow: visible;      /* niente clipping */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  background: transparent;
+  /* leggero alone dinamico dietro */
+  background-image:
+    radial-gradient(40% 30% at 20% 20%, rgba(0, 180, 255, .18), transparent 60%),
+    radial-gradient(35% 30% at 80% 30%, rgba(255, 0, 153, .14), transparent 60%),
+    radial-gradient(30% 25% at 50% 80%, rgba(255, 200, 0, .12), transparent 60%);
+  animation: bootGoo 8s ease-in-out infinite alternate;
 }
 
+/* stato uscita: fade del backdrop */
+.bootLeaving {
+  animation: bootOverlayOut .6s ease forwards;
+}
+
+/* contenitore dell’A (centrato) */
 .bootALogo {
-  position: absolute;
-  right: clamp(24px, 8vw, 140px);  /* spostata bene a destra */
-  top: 50%;                        /* centrata verticalmente */
-  transform: translateY(-50%);     /* vero centro verticale */
-  overflow: visible;               /* evita tagli */
-  pointer-events: none;            /* opzionale: non cattura click */
+  position: relative;
+  pointer-events: none;
+  will-change: transform, filter, opacity;
+  animation: bootPulse 1.7s ease-in-out infinite;
 }
 
-/* SVG della A nell’overlay */
+/* SVG dell’A: ruotata 180° ma puntata in alto con scaleY(-1) */
 .bootALogo svg {
   display: block;
-  width: clamp(56px, 10vw, 160px); /* responsive, più grande se vuoi */
+  width: clamp(92px, 12vw, 180px);
   height: auto;
-  transform: scaleX(-1);           /* CAPOVOLTA */
-  transform-origin: center;
-  overflow: visible;               /* niente cropping oltre il viewBox */
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  transform: rotate(180deg) scaleY(-1);
+  filter: drop-shadow(0 6px 20px rgba(0,0,0,.35));
+  overflow: visible;     /* niente clipping */
 }
 
-@keyframes sgaiPulse {
-  0%, 100% { transform: scale(1);   opacity: .95; }
-  50%      { transform: scale(1.06); opacity: 1; }
+/* quando l’overlay esce: l’A fa lift+shrink+blur */
+.bootLeaving .bootALogo {
+  animation: bootLogoOut .6s cubic-bezier(.2,.7,.2,1) forwards;
+}
+
+/* Animazioni */
+@keyframes bootPulse {
+  0%, 100% { transform: scale(1);   opacity: .96; }
+  50%      { transform: scale(1.06); opacity: 1;   }
+}
+
+@keyframes bootGoo {
+  0%   { transform: translate3d(0,0,0) scale(1); }
+  100% { transform: translate3d(0,-2%,0) scale(1.03); }
+}
+
+@keyframes bootLogoOut {
+  0%   { transform: rotate(180deg) scaleY(-1) scale(1);   filter: drop-shadow(0 6px 20px rgba(0,0,0,.35)); opacity:1; }
+  60%  { transform: rotate(180deg) scaleY(-1) scale(.85) translateY(-8px); filter: blur(.4px); opacity:.6; }
+  100% { transform: rotate(180deg) scaleY(-1) scale(.30) translateY(-24px); filter: blur(2.2px); opacity:0; }
+}
+
+@keyframes bootOverlayOut {
+  0%   { opacity: 1; backdrop-filter: blur(0px); }
+  100% { opacity: 0; backdrop-filter: blur(0px); }
+}
+
+
+/* --- Link "fonti" (nell'elenco Ant) --- */
+:root {
+  --source-link: #0f4faa;       /* light */
+  --source-link-hover: #0b62ff;
+}
+
+[data-theme="dark"] {
+  --source-link: #9ecbff;       /* leggibile su #0a0a0a */
+  --source-link-hover: #cfe3ff;
+}
+
+/* Target sicuro per quelle ancore nelle fonti.
+   Usiamo !important per battere lo style="color: ...".
+   Evita classi hash tipo .css-1wxecgq perché cambiano. */
+.ant-collapse-content-box .ant-list-items a {
+  color: var(--source-link) !important;
+  text-decoration: underline;
+}
+
+.ant-collapse-content-box .ant-list-items a:hover {
+  color: var(--source-link-hover) !important;
+  text-decoration: underline;
 }
