@@ -1134,12 +1134,13 @@ useEffect(() => {
           -3 37 -27z"
           fill="currentColor"
         />
-      </svg>
+      </svg>  
     </div>
-  </div>
-)}
+    </div> )}  {/* chiude .pageContainer */}
+          {/* chiude il return */}
+          {/* chiude la funzione componente */}
 
-
-
-
+  </div>    
+ 
+)} 
 export default PresentationPage;
