@@ -158,6 +158,12 @@ const routes = [
   },
 
   {
+  path: Routes.Login,                 // '/login'
+    component: '@/pages/login-iframe-bridge',
+    layout: false,
+  },
+
+  {
     path: '/*',
     component: '@/pages/404',
     layout: false,
