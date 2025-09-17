@@ -969,8 +969,8 @@ if (false) {
   // iframe ok → handshake e chiudo overlay
   postToIframe({ type: "request-height" });
   postToIframe({ type: "theme-change", theme });
-  const t = localStorage.getItem("access_token");
-  if (t) postToIframe({ type: "ragflow-token", token: t });
+  const t = localStorage.getItem("Authorization");
+if (t) postToIframe({ type: "ragflow-token", token: t });
   iframeReloadAttempts.current = 0;   // <-- reset tentativi se tutto ok
 
 
