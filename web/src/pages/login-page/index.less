@@ -976,3 +976,23 @@ p, li, span {
   justify-content: center;
   align-items: center;
 }
+.bootOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(2px);
+  display: grid;
+  place-items: center;
+}
+
+.bootALogo {
+  color: #ffffff; /* la <path> usa currentColor */
+  animation: sgaiPulse 1.2s ease-in-out infinite;
+  filter: drop-shadow(0 8px 24px rgba(0,0,0,.35));
+}
+
+@keyframes sgaiPulse {
+  0%, 100% { transform: scale(1);   opacity: .95; }
+  50%      { transform: scale(1.06); opacity: 1; }
+}
