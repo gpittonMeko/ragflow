@@ -79,23 +79,6 @@ function getOrCreateClientId(): string {
 
 
 const PresentationPage: React.FC = () => {
-
-    // HOTFIX: se c'è solo access_token, copialo anche in Authorization (e viceversa)
-  useEffect(() => {
-    try {
-      const raw =
-        localStorage.getItem('Authorization') ||
-        localStorage.getItem('access_token') ||
-        '';
-      const t = raw.replace(/^Bearer\s+/i, '').replace(/^"+|"+$/g, '');
-      if (t) {
-        localStorage.setItem('Authorization', t);
-        localStorage.setItem('access_token', t);
-      }
-    } catch {}
-  }, []);
-
-
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const [iframeReady, setIframeReady] = useState(false);  // <-- SPOSTATO QUI DENTRO!
   const [hideExtras, setHideExtras] = useState(false);
@@ -409,8 +392,6 @@ async function ensureRagflowAuth(): Promise<string | null> {
     const token = res.headers.get("Authorization") || data?.token;
     if (token) {
       localStorage.setItem("Authorization", token);
-      localStorage.setItem("access_token", token);
-
       console.log("✅ Salvato Authorization:", token);
       return token;
     } else {
