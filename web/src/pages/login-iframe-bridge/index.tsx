@@ -1,74 +1,68 @@
 // File: src/pages/login-iframe-bridge.tsx
-import React, { useEffect, useState } from 'react';
-
-const btnStyle: React.CSSProperties = {
-  border: '1px solid rgba(255,255,255,.18)',
-  background: 'rgba(255,255,255,.08)',
-  color: 'inherit',
-  borderRadius: 12,
-  padding: '10px 14px',
-  cursor: 'pointer'
-};
+import React, { useEffect, useMemo } from 'react';
 
 export default function LoginIframeBridge() {
-  const [insideIframe, setInsideIframe] = useState(false);
-
+  // Se non è in iframe → vai alla pagina di login “vera”
   useEffect(() => {
-    const inFrame = window.top !== window.self;
-    setInsideIframe(inFrame);
-
-    if (!inFrame) {
-      // fuori dall'iframe → usa la pagina di login reale
-      window.location.replace('/sgai-access-login'); // oppure '/login-next'
+    if (window.top === window.self) {
+      window.location.replace('/sgai-access-login');
       return;
     }
-
-    // dentro iframe → prova a usare un token locale o chiedilo al parent
-    const t =
-      localStorage.getItem('Authorization') ||
-      localStorage.getItem('access_token');
-    if (t) {
-      try { window.parent.postMessage({ type: 'ragflow-token', token: t }, '*'); } catch {}
-    } else {
-      try { window.parent.postMessage({ type: 'shared-needs-token' }, '*'); } catch {}
-    }
+    // Dentro iframe: invia token al parent o chiedilo
+    const t = localStorage.getItem('Authorization') || localStorage.getItem('access_token');
+    try {
+      if (t) window.parent.postMessage({ type: 'ragflow-token', token: t }, '*');
+      else window.parent.postMessage({ type: 'shared-needs-token' }, '*');
+    } catch {}
   }, []);
 
-  if (!insideIframe) return null;
+  // Mostra Authorization (o access_token) troncato
+  const token = useMemo(
+    () => localStorage.getItem('Authorization') || localStorage.getItem('access_token') || '',
+    []
+  );
+  const short = token ? `${token.slice(0, 6)}…${token.slice(-4)}` : '—';
 
-  const reloadHere = () => {
-    // Torna alla share (conserva eventuale shared_id nella query)
+  // Ricarica l’intera pagina (parent). Fallback: ricarica questa view /share
+  const reloadAll = () => {
+    try { window.top?.location.reload(); } catch {}
     const params = new URLSearchParams(window.location.search);
     const shared = params.get('shared_id');
-    const extra = shared ? `?shared_id=${shared}` : '';
-    window.location.replace(`/chat/share${extra}`);
+    window.location.replace(`/chat/share${shared ? `?shared_id=${shared}` : ''}`);
   };
-
-  const askAuthThenReload = () => {
-    try { window.parent.postMessage({ type: 'shared-needs-token' }, '*'); } catch {}
-    setTimeout(reloadHere, 700);
-  };
-
-  const toHome = () => { window.location.href = '/'; };
 
   return (
-    <div style={{
-      minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
-      padding:24, textAlign:'center'
-    }}>
+    <div style={{ display:'flex', justifyContent:'center', padding:6 }}>
       <div style={{
-        background:'rgba(255,255,255,0.08)', backdropFilter:'blur(8px)',
-        padding:24, borderRadius:16, maxWidth:560, width:'100%'
+        width:'min(180px, 100%)',  // 👈 pensato per iframe da ~200px
+        border:'1px solid rgba(255,255,255,.14)',
+        background:'rgba(255,255,255,.06)',
+        backdropFilter:'blur(4px)',
+        borderRadius:10,
+        padding:8,
+        textAlign:'center',
+        fontSize:12,
+        lineHeight:1.2
       }}>
-        <h1 style={{margin:'0 0 8px'}}>Serve l’autorizzazione</h1>
-        <p style={{margin:'0 0 16px', opacity:.85}}>
-          Non riusciamo a caricare la chat: proviamo a ricaricare o a ottenere il token dal sito principale.
-        </p>
-        <div style={{display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap'}}>
-          <button style={btnStyle} onClick={reloadHere}>Ricarica</button>
-          <button style={btnStyle} onClick={askAuthThenReload}>Acquisisci autorizzazione</button>
-          <button style={btnStyle} onClick={toHome}>Home</button>
+        <div style={{ opacity:.9, marginBottom:6 }}>
+          Authorization: <code style={{ fontSize:11 }}>{short}</code>
         </div>
+        <button
+          onClick={reloadAll}
+          style={{
+            border:'1px solid rgba(255,255,255,.2)',
+            background:'rgba(255,255,255,.1)',
+            color:'inherit',
+            borderRadius:10,
+            padding:'6px 10px',
+            cursor:'pointer',
+            fontSize:12,
+            width:'100%'
+          }}
+          aria-label="Ricarica tutta la pagina"
+        >
+          Ricarica tutta la pagina
+        </button>
       </div>
     </div>
   );
