@@ -1048,27 +1048,3 @@ p, li, span {
   100% { opacity: 0; backdrop-filter: blur(0px); }
 }
 
-
-/* --- Link "fonti" (nell'elenco Ant) --- */
-:root {
-  --source-link: #0f4faa;       /* light */
-  --source-link-hover: #0b62ff;
-}
-
-[data-theme="dark"] {
-  --source-link: #9ecbff;       /* leggibile su #0a0a0a */
-  --source-link-hover: #cfe3ff;
-}
-
-/* Target sicuro per quelle ancore nelle fonti.
-   Usiamo !important per battere lo style="color: ...".
-   Evita classi hash tipo .css-1wxecgq perché cambiano. */
-.ant-collapse-content-box .ant-list-items a {
-  color: var(--source-link) !important;
-  text-decoration: underline;
-}
-
-.ant-collapse-content-box .ant-list-items a:hover {
-  color: var(--source-link-hover) !important;
-  text-decoration: underline;
-}
