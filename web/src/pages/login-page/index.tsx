@@ -442,13 +442,14 @@ async function refreshQuota(forceToken?: string) {
 }
 
 
-
-// usa il guest token per Ragflow, non Authorization
-const ragToken = localStorage.getItem('access_token');
-if (ragToken) {
-  postToIframe({ type: 'ragflow-token', token: ragToken });
-  console.log('[PARENT] Token inviato onLoad (guest):', ragToken);
-}
+// ✅ Unico punto che invia il token al child, quando l’iframe è pronto
+useEffect(() => {
+  if (!iframeReady) return;
+  const token = localStorage.getItem('Authorization'); // <-- unificato
+  if (token) {
+    postToIframe({ type: 'ragflow-token', token });
+  }
+}, [iframeReady]);
 
 
 useEffect(() => {
