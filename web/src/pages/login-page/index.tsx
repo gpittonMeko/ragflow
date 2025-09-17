@@ -92,6 +92,7 @@ const IFRAME_SRC =
 
 const [bootOverlay, setBootOverlay] = useState(true);
 const iframeReloadAttempts = useRef(0);
+const bootCompletedRef = useRef(false);   // ⬅️ segna il boot come completato
 
 const reloadIframe = () => {
   if (!iframeRef.current) return;
@@ -112,10 +113,11 @@ const clearBootTimers = () => {
 // parte quando l'iframe viene montato
 useEffect(() => {
   if (!iframeReady) return;
+  if (bootCompletedRef.current) return;   // ⬅️ non riavviare watchdog se già “ok”
+
   setBootOverlay(true);
   clearBootTimers();
 
-  // 1° step: dopo 6s ricarico SOLO l'iframe
   bootTimers.current.soft = window.setTimeout(() => {
     if (bootOverlayRef.current && iframeReloadAttempts.current < 1) {
       iframeReloadAttempts.current += 1;
@@ -123,7 +125,6 @@ useEffect(() => {
     }
   }, 6000);
 
-  // 2° step: dopo 12s hard-reload della pagina (una sola volta)
   bootTimers.current.hard = window.setTimeout(() => {
     if (!bootOverlayRef.current) return;
     const K = "sgai-boot-retried";
@@ -131,15 +132,16 @@ useEffect(() => {
       localStorage.setItem(K, "1");
       window.location.reload();
     } else {
-      // evita loop infinito: tolgo overlay e lascio usare la pagina
       setBootOverlay(false);
-        clearBootTimers();       // <-- aggiungi questa riga
-
+      clearBootTimers();
+      bootCompletedRef.current = true;            // ⬅️ segnalo completato
+      sessionStorage.setItem('sgai-boot-ok','1'); // ⬅️ nota in sessione
     }
   }, 12000);
 
   return clearBootTimers;
 }, [iframeReady]);
+
 
 
   // contatore legacy locale (lo lasciamo ma ora fa solo da fallback UI)
@@ -945,24 +947,23 @@ useEffect(() => {
     <iframe
       ref={iframeRef}
       onLoad={() => {
-  try {
-    const p = iframeRef.current?.contentWindow?.location?.pathname || "";
-    if (p === "/login" || p.startsWith("/login")) {
-      // 1) provo la sola ricarica dell'iframe
-      if (iframeReloadAttempts.current < 1) {
-        iframeReloadAttempts.current += 1;
-        setBootOverlay(true);
-        reloadIframe();
+
+
+if (false) {
+    try {
+      const p = iframeRef.current?.contentWindow?.location?.pathname || "";
+      if (p === "/login" || p.startsWith("/login")) {
+        if (iframeReloadAttempts.current < 1) {
+          iframeReloadAttempts.current += 1;
+          setBootOverlay(true);
+          reloadIframe();
+          return;
+        }
+        window.location.reload();
         return;
       }
-      // 2) ricarico l'intera pagina
-      window.location.reload();
-      return;
-    }
-  } catch {
-    // cross-origin? ignora e continua con l'init
+    } catch {}
   }
-
   // iframe ok → handshake e chiudo overlay
   postToIframe({ type: "request-height" });
   postToIframe({ type: "theme-change", theme });
