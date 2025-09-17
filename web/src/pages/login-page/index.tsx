@@ -391,10 +391,12 @@ async function ensureRagflowAuth(): Promise<string | null> {
     // Prendi token dagli header OPPURE dal body
     const token = res.headers.get("Authorization") || data?.token;
     if (token) {
-      localStorage.setItem("Authorization", token);
-      console.log("✅ Salvato Authorization:", token);
-      return token;
-    } else {
+        localStorage.setItem("Authorization", token); // fonte di verità
+        localStorage.setItem("access_token", token);  // compat per l’iframe che legge da access_token
+        console.log("✅ Salvato Authorization + access_token:", token);
+        return token;
+      }
+  else {
       console.warn("⚠ Nessun Authorization trovato");
       return null;
     }
