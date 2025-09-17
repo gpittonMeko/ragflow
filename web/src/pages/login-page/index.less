@@ -977,19 +977,29 @@ p, li, span {
   align-items: center;
 }
 .bootOverlay {
-  position: fixed;
+  position: fixed;        /* full screen overlay */
   inset: 0;
   z-index: 9999;
-  background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(2px);
-  display: grid;
-  place-items: center;
+  overflow: visible;      /* niente clipping */
 }
 
 .bootALogo {
-  color: #ffffff; /* la <path> usa currentColor */
-  animation: sgaiPulse 1.2s ease-in-out infinite;
-  filter: drop-shadow(0 8px 24px rgba(0,0,0,.35));
+  position: absolute;
+  right: clamp(24px, 8vw, 140px);  /* spostata bene a destra */
+  top: 50%;                        /* centrata verticalmente */
+  transform: translateY(-50%);     /* vero centro verticale */
+  overflow: visible;               /* evita tagli */
+  pointer-events: none;            /* opzionale: non cattura click */
+}
+
+/* SVG della A nell’overlay */
+.bootALogo svg {
+  display: block;
+  width: clamp(56px, 10vw, 160px); /* responsive, più grande se vuoi */
+  height: auto;
+  transform: scaleX(-1);           /* CAPOVOLTA */
+  transform-origin: center;
+  overflow: visible;               /* niente cropping oltre il viewBox */
 }
 
 @keyframes sgaiPulse {
