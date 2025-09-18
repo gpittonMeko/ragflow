@@ -1094,7 +1094,7 @@ if (t) postToIframe({ type: "ragflow-token", token: t });
       {bootOverlay && (
   <div className={styles.bootOverlay} role="status" aria-live="polite">
     <div className={styles.bootALogo}>
-      <svg viewBox="9000 6000 4000 3000" width="56" height="56" aria-hidden>
+      <svg viewBox="7000 6000 4000 3000" width="56" height="56" aria-hidden>
         <path
           d="M8624 8339 c-8 -8 -14 -25 -14 -36 0 -11 -7 -26 -15 -33 -8 -7 -15
           -19 -15 -27 0 -8 -6 -27 -13 -41 -14 -26 -36 -77 -62 -137 -7 -16 -24 -55 -38
