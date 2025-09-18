@@ -13,6 +13,10 @@
   --transition-time: 0.3s;
   --input-text-color: #ffffff;
   --input-placeholder-color: rgba(255, 255, 255, 0.6);
+    --link-color: #8ab4ff;
+  --link-hover: #aecbfa;
+  --link-active: #d2e3ff;
+  --link-visited: #b58af9;
 }
 
 [data-theme="light"] {
@@ -28,7 +32,32 @@
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   --input-text-color: #333333;
   --input-placeholder-color: rgba(0, 0, 0, 0.4);
+    --link-color: #1677ff;
+  --link-hover: #4096ff;
+  --link-active: #95c2ff;
+  --link-visited: #7a5cff;
 }
+
+/* Link ben visibili nel tema scuro DENTRO l’iframe */
+.dark :global(a),
+.dark :global(.ant-typography) a,
+.dark :global(.ant-list) a,
+.dark :global(.ant-collapse) a,
+.dark :global(.ant-descriptions) a,
+.dark :global(.ant-table) a,
+.dark :global(a[style]) {         /* prende anche <a style="color: ..."> */
+  color: var(--link-color) !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.dark :global(a:hover)   { color: var(--link-hover)   !important; }
+.dark :global(a:active)  { color: var(--link-active)  !important; }
+.dark :global(a:visited) { color: var(--link-visited) !important; }
+
+/* Icone dentro al link ereditano il colore */
+.dark :global(a) svg { color: currentColor; stroke: currentColor; }
+
+
 
 .chatWrapper {
   height: 100%;
