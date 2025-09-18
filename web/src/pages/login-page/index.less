@@ -1017,17 +1017,8 @@ p, li, span {
 }
 
 
-/* Overlay full-screen veramente centrato */
-.bootOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
-  background: transparent;
-  /* leggero alone dinamico dietro */
+/* ---- MIXIN condiviso: alone/gradienti animati ---- */
+.overlayGoo() {
   background-image:
     radial-gradient(40% 30% at 20% 20%, rgba(0, 180, 255, .18), transparent 60%),
     radial-gradient(35% 30% at 80% 30%, rgba(255, 0, 153, .14), transparent 60%),
@@ -1035,55 +1026,74 @@ p, li, span {
   animation: bootGoo 8s ease-in-out infinite alternate;
 }
 
-/* stato uscita: fade del backdrop */
-.bootLeaving {
-  animation: bootOverlayOut .6s ease forwards;
+/* ===== BOOT OVERLAY (stessi nomi che già usi) ===== */
+.bootOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;              /* centraggio perfetto */
+  place-items: center;
+  overflow: visible;
+  background: rgba(8,8,12,.38);
+  backdrop-filter: blur(5px) saturate(130%);
+  .overlayGoo();              /* gradienti animati */
 }
 
-/* contenitore dell’A (centrato) */
-.bootALogo {
-  position: relative;
-  pointer-events: none;
-  will-change: transform, filter, opacity;
-  animation: bootPulse 1.7s ease-in-out infinite;
+/* ===== CHAT OVERLAY (quota/limite) riusa stile del boot ===== */
+.chatOverlay {
+  composes: bootOverlay;      /* eredita il look del boot */
+  position: absolute;         /* copre solo l’area chat */
+  inset: 0;
 }
 
-/* SVG dell’A: ruotata 180° ma puntata in alto con scaleY(-1) */
-.bootALogo svg {
-  display: block;
-  width: clamp(92px, 12vw, 180px);
-  height: auto;
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  transform: rotate(180deg) scaleY(-1);
-  filter: drop-shadow(0 6px 20px rgba(0,0,0,.35));
-  overflow: visible;     /* niente clipping */
+/* Card centrata al pixel (niente “un pelo a destra”) */
+.chatOverlayCard {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+
+  max-width: 480px;
+  width: min(92vw, 480px);
+  border-radius: 16px;
+  padding: 22px 20px;
+  text-align: center;
+  color: #fff;
+
+  background: linear-gradient(180deg, rgba(18,18,20,.92), rgba(10,10,12,.88));
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 14px 36px rgba(0,0,0,.45);
+  overflow: hidden;
 }
 
-/* quando l’overlay esce: l’A fa lift+shrink+blur */
-.bootLeaving .bootALogo {
-  animation: bootLogoOut .6s cubic-bezier(.2,.7,.2,1) forwards;
+/* bordo “neon” soffuso e animato */
+@keyframes spin { to { transform: rotate(360deg); } }
+.chatOverlayCard::before {
+  content: '';
+  position: absolute; inset: 0; padding: 1px; border-radius: inherit;
+  background: conic-gradient(from 0deg, #00d4ff, #7c4dff, #ff2d55, #ffd426, #00d4ff);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: spin 8s linear infinite;
+  opacity: .6; pointer-events: none;
 }
 
-/* Animazioni */
-@keyframes bootPulse {
-  0%, 100% { transform: scale(1);   opacity: .96; }
-  50%      { transform: scale(1.06); opacity: 1;   }
+/* tenue glow sotto la card */
+.chatOverlayCard::after {
+  content: '';
+  position: absolute;
+  inset: -30% -30% -60% -30%;
+  background: radial-gradient(60% 40% at 50% 0%, rgba(0, 212, 255, .12), transparent 60%),
+              radial-gradient(60% 40% at 50% 100%, rgba(255, 45, 85, .10), transparent 60%);
+  filter: blur(18px);
+  z-index: -1;
 }
 
+/* Wrapper della chat: necessario per l’assoluto dell’overlay */
+.chatWrap { position: relative; display: grid; box-sizing: border-box; }
+
+/* Animazioni usate dal mixin */
 @keyframes bootGoo {
   0%   { transform: translate3d(0,0,0) scale(1); }
   100% { transform: translate3d(0,-2%,0) scale(1.03); }
 }
-
-@keyframes bootLogoOut {
-  0%   { transform: rotate(180deg) scaleY(-1) scale(1);   filter: drop-shadow(0 6px 20px rgba(0,0,0,.35)); opacity:1; }
-  60%  { transform: rotate(180deg) scaleY(-1) scale(.85) translateY(-8px); filter: blur(.4px); opacity:.6; }
-  100% { transform: rotate(180deg) scaleY(-1) scale(.30) translateY(-24px); filter: blur(2.2px); opacity:0; }
-}
-
-@keyframes bootOverlayOut {
-  0%   { opacity: 1; backdrop-filter: blur(0px); }
-  100% { opacity: 0; backdrop-filter: blur(0px); }
-}
-
