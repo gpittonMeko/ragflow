@@ -34,64 +34,59 @@ const FlowChatBox = () => {
   const { data: canvasInfo } = useFetchFlow();
 
   return (
-  <>
-    <Flex flex={1} className={styles.chatContainer} vertical>
-      {/* Mostra i messaggi solo se esistono */}
-      {derivedMessages && derivedMessages.length > 0 && (
-        <Flex vertical className={styles.messageContainer}>
+    <>
+      <Flex flex={1} className={styles.chatContainer} vertical>
+        <Flex flex={1} vertical className={styles.messageContainer}>
           <div>
             <Spin spinning={loading}>
-              {derivedMessages.map((message, i) => (
-                <MessageItem
-                  loading={
-                    message.role === MessageType.Assistant &&
-                    sendLoading &&
-                    derivedMessages.length - 1 === i
-                  }
-                  key={buildMessageUuidWithRole(message)}
-                  nickname={userInfo.nickname}
-                  avatar={userInfo.avatar}
-                  avatarDialog={canvasInfo.avatar}
-                  item={message}
-                  reference={buildMessageItemReference(
-                    { message: derivedMessages, reference },
-                    message,
-                  )}
-                  clickDocumentButton={clickDocumentButton}
-                  index={i}
-                  showLikeButton={false}
-                  sendLoading={sendLoading}
-                />
-              ))}
+              {derivedMessages?.map((message, i) => {
+                return (
+                  <MessageItem
+                    loading={
+                      message.role === MessageType.Assistant &&
+                      sendLoading &&
+                      derivedMessages.length - 1 === i
+                    }
+                    key={buildMessageUuidWithRole(message)}
+                    nickname={userInfo.nickname}
+                    avatar={userInfo.avatar}
+                    avatarDialog={canvasInfo.avatar}
+                    item={message}
+                    reference={buildMessageItemReference(
+                      { message: derivedMessages, reference },
+                      message,
+                    )}
+                    clickDocumentButton={clickDocumentButton}
+                    index={i}
+                    showLikeButton={false}
+                    sendLoading={sendLoading}
+                  ></MessageItem>
+                );
+              })}
             </Spin>
           </div>
           <div ref={ref} />
         </Flex>
-      )}
-
-      {/* Input sempre visibile */}
-      <MessageInput
-        showUploadIcon={false}
-        value={value}
-        sendLoading={sendLoading}
-        disabled={false}
-        sendDisabled={sendLoading}
-        conversationId=""
-        onPressEnter={handlePressEnter}
-        onInputChange={handleInputChange}
-        stopOutputMessage={stopOutputMessage}
-      />
-    </Flex>
-
-    <PdfDrawer
-      visible={visible}
-      hideModal={hideModal}
-      documentId={documentId}
-      chunk={selectedChunk}
-    />
-  </>
-);
-
+        <MessageInput
+          showUploadIcon={false}
+          value={value}
+          sendLoading={sendLoading}
+          disabled={false}
+          sendDisabled={sendLoading}
+          conversationId=""
+          onPressEnter={handlePressEnter}
+          onInputChange={handleInputChange}
+          stopOutputMessage={stopOutputMessage}
+        />
+      </Flex>
+      <PdfDrawer
+        visible={visible}
+        hideModal={hideModal}
+        documentId={documentId}
+        chunk={selectedChunk}
+      ></PdfDrawer>
+    </>
+  );
 };
 
 export default FlowChatBox;
