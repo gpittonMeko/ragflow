@@ -40,6 +40,7 @@
 
 html {
   font-size: clamp(14px, 1.1vw, 18px);
+  overflow: hidden;
 }
 
 body {
@@ -49,8 +50,8 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
-  overflow-y: auto;
-  min-height: 100vh;
+  overflow: hidden;
+  height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -362,7 +363,7 @@ body {
 @media (max-width: 768px) {
   .pageContainer {
     padding: 1rem;
-    margin: 20px auto;
+    margin: 0;
   }
   
   .heroSection {
@@ -390,7 +391,7 @@ body {
 @media (max-width: 480px) {
   .pageContainer {
     padding: 0.8rem;
-    margin: 10px auto;
+    margin: 0;
   }
   
   .heroTitle {
