@@ -301,6 +301,30 @@ const AuthorizationKey = 'Authorization';
       return () => { document.body.style.overflow = ''; };
     }, [showGoogleModal, showLimitOverlay]);
 
+// Sync al login
+useEffect(() => {
+  if (!isLoggedIn) return;
+  
+  const syncOnLogin = async () => {
+    try {
+      const res = await fetch(`${baseURL}/api/stripe/sync`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      
+      const data = await res.json();
+      
+      if (data.changed && data.new_plan === 'premium') {
+        toast.success('Account Premium attivato!');
+        await refreshQuota();
+      }
+    } catch (err) {
+      console.warn('Sync error:', err);
+    }
+  };
+  
+  syncOnLogin();
+}, [isLoggedIn]);
 
 useEffect(() => {
   const handler = async (event: MessageEvent) => {

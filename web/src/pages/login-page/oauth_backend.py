@@ -262,6 +262,112 @@ def debug_cookie_probe():
     })
 
 # ─────────────────────────────────────────────────────────────
+# AUTO-SYNC STRIPE (controlla subscription attive)
+# ─────────────────────────────────────────────────────────────
+import threading
+
+def sync_user_with_stripe(user: SgaiPlanUser) -> bool:
+    """Sincronizza un singolo utente con Stripe. Ritorna True se cambiato."""
+    if not user.stripe_customer_id or not stripe.api_key:
+        return False
+    
+    try:
+        subs = stripe.Subscription.list(
+            customer=user.stripe_customer_id,
+            status='active',
+            limit=1
+        )
+        
+        should_be_premium = len(subs.data) > 0
+        
+        if should_be_premium and user.plan != "premium":
+            user.plan = "premium"
+            if subs.data:
+                user.stripe_subscription_id = subs.data[0].id
+            user.save()
+            print(f"✅ Sync: {user.email} → premium")
+            return True
+            
+        elif not should_be_premium and user.plan == "premium":
+            user.plan = "free"
+            user.save()
+            print(f"⬇️  Sync: {user.email} → free")
+            return True
+            
+    except Exception as exc:
+        print(f"❌ Sync error per {user.email}: {exc}")
+    
+    return False
+
+
+def auto_sync_all_users():
+    """Thread in background che sincronizza tutti gli utenti ogni 5 minuti"""
+    import time
+    
+    while True:
+        try:
+            time.sleep(5 * 60)  # 5 minuti
+            
+            if not stripe.api_key:
+                continue
+            
+            print(f"\n{'='*60}")
+            print(f"🔄 AUTO-SYNC STRIPE - {datetime.utcnow().strftime('%H:%M:%S')}")
+            print(f"{'='*60}")
+            
+            users = SgaiPlanUser.select().where(
+                SgaiPlanUser.stripe_customer_id.is_null(False)
+            )
+            
+            synced = 0
+            for user in users:
+                if sync_user_with_stripe(user):
+                    synced += 1
+            
+            print(f"✅ Sync completato: {synced} utenti aggiornati su {users.count()}")
+            
+        except Exception as exc:
+            print(f"❌ Auto-sync error: {exc}")
+
+
+# Avvia thread in background
+sync_thread = threading.Thread(target=auto_sync_all_users, daemon=True)
+sync_thread.start()
+print("✅ Auto-sync Stripe avviato (ogni 5 minuti)")
+
+@app.post("/api/stripe/sync")
+def sync_current_user():
+    """Sincronizza l'utente corrente con Stripe (chiamata manuale)"""
+    u = get_current_user_from_cookie()
+    if not u:
+        return jsonify(error="Not logged in"), 401
+    
+    if not stripe.api_key:
+        return jsonify(error="Stripe not configured"), 500
+    
+    # Se non ha customer_id, cerca su Stripe per email
+    if not u.stripe_customer_id:
+        try:
+            customers = stripe.Customer.list(email=u.email, limit=1)
+            if customers.data:
+                u.stripe_customer_id = customers.data[0].id
+                u.save()
+        except Exception as exc:
+            return jsonify(error=f"Customer not found: {exc}"), 404
+    
+    old_plan = u.plan
+    changed = sync_user_with_stripe(u)
+    
+    return jsonify(
+        synced=True,
+        changed=changed,
+        old_plan=old_plan,
+        new_plan=u.plan,
+        customer_id=u.stripe_customer_id,
+        subscription_id=u.stripe_subscription_id
+    )
+
+# ─────────────────────────────────────────────────────────────
 # QUOTA
 # ─────────────────────────────────────────────────────────────
 @app.get("/api/quota")
