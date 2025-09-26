@@ -163,38 +163,65 @@ class Generate(ComponentBase):
 
 
 
-         # ------------------------------------------------------------------ #
+        # ------------------------------------------------------------------ #
         # 4) Trova i marker effettivamente presenti nell'answer              #
         # ------------------------------------------------------------------ #
         cited_indices = set()
+        invalid_markers = []
+
         for m in re.finditer(r'##(\d+)\$\$', answer):
-            idx = int(m.group(1)) - 1            # marker ##N$$ -> indice N-1
-            if 0 <= idx < len(doc_aggs):
+            marker_num = int(m.group(1))
+            idx = marker_num - 1
+            
+            if 0 <= idx < len(chunks):
                 cited_indices.add(idx)
+            else:
+                invalid_markers.append(marker_num)
+                print(f"[set_cite WARNING] Marker ##${marker_num}$$ fuori range (max chunks: {len(chunks)})")
+
+        # Fallback: se nessun marker valido, usa tutti i chunks
+        if not cited_indices:
+            print(f"[set_cite WARNING] Nessun marker valido trovato. Usando tutti i {len(chunks)} chunks.")
+            cited_indices = set(range(len(chunks)))
 
         # ------------------------------------------------------------------ #
-        # 5) Legenda "Fonti" (una sola riga per documento)                   #
-        # ------------------------------------------------------------------ #
-        legend_lines = ["**Fonti:**"]
-        already = set()
-
-        for idx in sorted(cited_indices):       # SOLO indici citati
-            doc = doc_aggs[idx]
-            if doc["doc_id"] not in already:    # evita duplicati in legenda
-                legend_lines.append(f"- ##{idx+1}$$ {doc['doc_name']}")
-                already.add(doc["doc_id"])
-
-        if len(legend_lines) > 1:               # aggiungi solo se ci sono citazioni
-            answer += "\n\n" + "\n".join(legend_lines)
-
-        # ------------------------------------------------------------------ #
-        # 6) Filtra chunks e doc_aggs per il frontend                        #
+        # 5) Filtra chunks e doc_aggs                                        #
         # ------------------------------------------------------------------ #
         filtered_chunks = [chunks[i] for i in sorted(cited_indices)]
         filtered_doc_aggs = [doc_aggs[i] for i in sorted(cited_indices)]
 
         # ------------------------------------------------------------------ #
-        # 7) Pacchetto finale                                                #
+        # 6) Crea mapping vecchio_indice -> nuovo_indice                     #
+        # ------------------------------------------------------------------ #
+        old_to_new = {}
+        for new_idx, old_idx in enumerate(sorted(cited_indices), start=1):
+            old_to_new[old_idx + 1] = new_idx
+
+        # ------------------------------------------------------------------ #
+        # 7) Remap marker nel testo                                          #
+        # ------------------------------------------------------------------ #
+        def remap_marker(match):
+            old_num = int(match.group(1))
+            new_num = old_to_new.get(old_num)
+            if new_num is None:
+                print(f"[set_cite WARNING] Marker ##${old_num}$$ non trovato nel mapping, rimosso")
+                return ''
+            return f'##{new_num}$$'
+
+        answer = re.sub(r'##(\d+)\$\$', remap_marker, answer)
+
+        # ------------------------------------------------------------------ #
+        # 8) Legenda "Fonti" con indici remappati                            #
+        # ------------------------------------------------------------------ #
+        legend_lines = ["**Fonti:**"]
+        for new_idx, doc in enumerate(filtered_doc_aggs, start=1):
+            legend_lines.append(f"- ##{new_idx}$$ {doc['doc_name']}")
+
+        if len(legend_lines) > 1:
+            answer += "\n\n" + "\n".join(legend_lines)
+
+        # ------------------------------------------------------------------ #
+        # 9) Pacchetto finale                                                #
         # ------------------------------------------------------------------ #
         reference = {"chunks": filtered_chunks, "doc_aggs": filtered_doc_aggs}
         res = {"content": answer, "reference": reference}
