@@ -666,6 +666,16 @@ body {
   box-shadow: 0 0 6px rgba(0,0,0,.25);
 }
 
+/* Mobile: counter più compatto */
+@media (max-width: 768px) {
+  .freeCounter {
+    right: 60px;
+    top: 75px;
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+}
+
 /* pillola utente FREE – inline accanto all’e-mail */
 .userCounter {
   display: inline-flex;
@@ -683,6 +693,19 @@ body {
   content: "✓";
   font-weight: 700;
   margin-right: 4px;
+}
+
+/* Mobile: counter senza spunta */
+@media (max-width: 768px) {
+  .userCounter {
+    margin-left: 0;
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  
+  .userCounter::before {
+    display: none; /* rimuove la spunta ✓ */
+  }
 }
 
 
@@ -795,8 +818,26 @@ p, li, span {
   gap: 10px;
 }
 
+/* Mobile: topActions più compatto */
+@media (max-width: 768px) {
+  .topActions {
+    right: 55px;
+    gap: 6px;
+    top: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .topActions {
+    right: 50px;
+    gap: 4px;
+  }
+}
+
 /* assicurati che i bottoni dentro non siano fixed */
 .topActions .glassBtn{ position: static; }
+
+/* Chip con email + piano */
 
 /* Chip con email + piano */
 .userChip {
@@ -806,6 +847,24 @@ p, li, span {
   padding: 6px 12px;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Mobile: userChip solo icona */
+@media (max-width: 768px) {
+  .userChip {
+    padding: 8px;
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .userChip > span:not(:first-child) {
+    display: none; /* nasconde testo email/piano */
+  }
 }
 
 .chatWrap { position: relative; }
@@ -878,14 +937,20 @@ p, li, span {
 
 
 @media (max-width: 480px) {
+  /* Upgrade button: solo icona */
   .upgradeBtn .upgradeContent {
-    padding: 8px 14px;
-    font-size: 12px;
+    padding: 8px;
+    min-width: 36px;
+    height: 36px;
+    justify-content: center;
+    gap: 0;
     border-radius: 8px;
-    gap: 4px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    transform: scale(0.9); /* rimpicciolito */
     transition: all 0.2s ease;
+  }
+  
+  .upgradeBtn .upgradeContent span {
+    display: none; /* nasconde "Passa a Premium" */
   }
 
 
@@ -937,6 +1002,21 @@ p, li, span {
 
 
 
+}
+
+/* Mobile: logout solo icona */
+@media (max-width: 768px) {
+  .logoutBtn {
+    padding: 8px;
+    min-width: 36px;
+    height: 36px;
+    justify-content: center;
+    gap: 0;
+  }
+  
+  .logoutBtn span {
+    display: none; /* nasconde testo "Logout" */
+  }
 }
 
 .extraBlocks {
