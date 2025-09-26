@@ -303,38 +303,54 @@ const AuthorizationKey = 'Authorization';
 
 
 useEffect(() => {
-  const handler = (event: MessageEvent) => {
+  const handler = async (event: MessageEvent) => {
     if (event.data?.type === 'generation-finished') {
       console.log('[GENERATION] FINISHED');
 
-      if (!isLoggedIn) {
-        // fallback locale
-        setGenCount(prev => {
-          const next = prev + 1;
-          localStorage.setItem('sgai-gen-count', String(next));
-          if (next >= FREE_LIMIT) setShowLimitOverlay(true);
-          return next;
+      try {
+        // Chiama backend per scalare quota
+        const response = await fetch(`${baseURL}/api/generate`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Client-Id': clientIdRef.current 
+          },
+          credentials: 'include',
         });
-      }
 
-      // 🔑 in ogni caso avvisa il backend di consumare 1 quota
-      fetch(`${baseURL}/api/generate`, {
-        method: 'POST',
-        headers: { 'X-Client-Id': clientIdRef.current },
-        credentials: 'include',
-      })
-        .then(r => r.json())
-        .then(d => {
-          console.log('[generate → quota]', d);
-          void refreshQuota(); // riallinea
-        })
-        .catch(err => console.warn('[generate err]', err));
+        const data = await response.json();
+        console.log('[generate → quota]', data);
+
+        if (response.status === 403) {
+          // 🚨 LIMITE RAGGIUNTO!
+          console.warn('[QUOTA] Limite raggiunto:', data);
+          
+          // Blocca l'iframe
+          postToIframe({ type: 'limit-status', blocked: true });
+          
+          // Mostra overlay
+          setShowLimitOverlay(true);
+          
+          // Aggiorna quota per riflettere lo stato reale
+          await refreshQuota();
+          
+          return; // esci subito
+        }
+
+        // Se 200 OK, aggiorna quota normalmente
+        if (response.ok) {
+          await refreshQuota();
+        }
+
+      } catch (err) {
+        console.warn('[generate err]', err);
+      }
     }
   };
 
   window.addEventListener('message', handler);
   return () => window.removeEventListener('message', handler);
-}, [isLoggedIn]);
+}, []); // ⚠️ dipendenze vuote, usa solo ref
 
 
 useEffect(() => {
