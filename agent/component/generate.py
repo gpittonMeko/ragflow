@@ -163,25 +163,40 @@ class Generate(ComponentBase):
 
 
 
-         #------------------------------------------------------------------ #
-         #4) Legenda “Fonti” (una sola riga per documento)                   #
-         #------------------------------------------------------------------ #
-        legend_lines = ["**Fonti:**"]
-        already = set()
-
+         # ------------------------------------------------------------------ #
+        # 4) Trova i marker effettivamente presenti nell'answer              #
+        # ------------------------------------------------------------------ #
+        cited_indices = set()
         for m in re.finditer(r'##(\d+)\$\$', answer):
             idx = int(m.group(1)) - 1            # marker ##N$$ -> indice N-1
             if 0 <= idx < len(doc_aggs):
-                doc = doc_aggs[idx]
-                if doc["doc_id"] not in already: # evita duplicati in legenda
-                    legend_lines.append(f"- ##{idx+1}$$ {doc['doc_name']}")
-                    already.add(doc["doc_id"])
+                cited_indices.add(idx)
 
-        answer += "\n\n" + "\n".join(legend_lines)
         # ------------------------------------------------------------------ #
-        # 5) Pacchetto finale                                                #
+        # 5) Legenda "Fonti" (una sola riga per documento)                   #
         # ------------------------------------------------------------------ #
-        reference = {"chunks": chunks, "doc_aggs": doc_aggs}
+        legend_lines = ["**Fonti:**"]
+        already = set()
+
+        for idx in sorted(cited_indices):       # SOLO indici citati
+            doc = doc_aggs[idx]
+            if doc["doc_id"] not in already:    # evita duplicati in legenda
+                legend_lines.append(f"- ##{idx+1}$$ {doc['doc_name']}")
+                already.add(doc["doc_id"])
+
+        if len(legend_lines) > 1:               # aggiungi solo se ci sono citazioni
+            answer += "\n\n" + "\n".join(legend_lines)
+
+        # ------------------------------------------------------------------ #
+        # 6) Filtra chunks e doc_aggs per il frontend                        #
+        # ------------------------------------------------------------------ #
+        filtered_chunks = [chunks[i] for i in sorted(cited_indices)]
+        filtered_doc_aggs = [doc_aggs[i] for i in sorted(cited_indices)]
+
+        # ------------------------------------------------------------------ #
+        # 7) Pacchetto finale                                                #
+        # ------------------------------------------------------------------ #
+        reference = {"chunks": filtered_chunks, "doc_aggs": filtered_doc_aggs}
         res = {"content": answer, "reference": reference}
         return structure_answer(None, res, "", "")
 
