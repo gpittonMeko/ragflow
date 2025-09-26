@@ -231,7 +231,8 @@ const MarkdownContent = ({
       const documentId = doc.doc_id;
       const fileThumbnail = documentId ? fileThumbnails[documentId] : '';
       const fileExtension = documentId ? getExtension(doc.doc_name) : '';
-      const chunkItem = (reference?.chunks ?? []).find((ch) => ch.document_id === documentId);
+      // FIX: usa lo stesso indice per avere il chunk corretto
+      const chunkItem = reference?.chunks?.[chunkIndex - 1];
       const imageId = chunkItem?.image_id;
 
       if (DEBUG) {

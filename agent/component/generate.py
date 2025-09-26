@@ -147,19 +147,24 @@ class Generate(ComponentBase):
         # ------------------------------------------------------------------ #
         # 3) Costruisci doc_aggs 1-a-1 con i chunk (nessuna dedup)           #
         # ------------------------------------------------------------------ #
+        # ------------------------------------------------------------------ #
+        # 3) Costruisci doc_aggs con URL corretti                            #
+        # ------------------------------------------------------------------ #
         doc_aggs = []
         for ck in chunks:
+            doc_id = ck.get("doc_id")
+            # Costruisci URL se mancante
+            url = ck.get("url") or ""
+            if not url and doc_id:
+                url = f"/v1/document/get/{doc_id}"
+            
             doc_aggs.append({
-                "doc_id": ck.get("doc_id"),
+                "doc_id": doc_id,
                 "doc_name": ck.get("docnm_kwd") or ck.get("doc_name") or "",
-                "file_name": ck.get("file_name")                      # 👈 nuovo campo
-                            or ck.get("original_name")               # (scegli le chiavi che hai a DB)
-                            or ck.get("name")
-                            or "",
-                "url": ck.get("url") or "",
+                "file_name": ck.get("file_name") or ck.get("original_name") or ck.get("name") or "",
+                "url": url,
                 "chunk_preview": (ck.get("content_ltks") or ck.get("content") or "")[:300]
             })
-
 
 
 
