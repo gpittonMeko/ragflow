@@ -337,7 +337,12 @@ print("✅ Auto-sync Stripe avviato (ogni 5 minuti)")
 
 @app.post("/api/stripe/sync")
 def sync_current_user():
-    """Sincronizza l'utente corrente con Stripe (chiamata manuale)"""
+    """
+    Sincronizza l'utente corrente con Stripe cercando SEMPRE la migliore condizione:
+    - Cerca customer per email (non si fida del customer_id salvato)
+    - Trova la subscription attiva più recente
+    - Aggiorna il DB con i dati corretti
+    """
     u = get_current_user_from_cookie()
     if not u:
         return jsonify(error="Not logged in"), 401
@@ -345,28 +350,136 @@ def sync_current_user():
     if not stripe.api_key:
         return jsonify(error="Stripe not configured"), 500
     
-    # Se non ha customer_id, cerca su Stripe per email
-    if not u.stripe_customer_id:
-        try:
-            customers = stripe.Customer.list(email=u.email, limit=1)
-            if customers.data:
-                u.stripe_customer_id = customers.data[0].id
+    print(f"\n{'='*60}")
+    print(f"🔄 SYNC STRIPE per {u.email}")
+    print(f"   Piano attuale DB: {u.plan}")
+    print(f"   Customer ID DB: {u.stripe_customer_id or 'N/A'}")
+    print(f"{'='*60}")
+    
+    try:
+        # 1. Cerca TUTTI i customer con questa email
+        customers = stripe.Customer.list(email=u.email, limit=100)
+        
+        if not customers.data:
+            print(f"❌ Nessun customer trovato per {u.email}")
+            # Se aveva dati Stripe, li rimuoviamo
+            if u.plan == "premium":
+                u.plan = "free"
+                u.stripe_customer_id = None
+                u.stripe_subscription_id = None
                 u.save()
-        except Exception as exc:
-            return jsonify(error=f"Customer not found: {exc}"), 404
+                return jsonify(
+                    synced=True,
+                    changed=True,
+                    old_plan="premium",
+                    new_plan="free",
+                    message="Nessun customer Stripe trovato, downgrade a free"
+                )
+            return jsonify(
+                synced=False,
+                message="Nessun customer Stripe trovato per questa email"
+            )
+        
+        print(f"✅ Trovati {len(customers.data)} customer per {u.email}")
+        
+        # 2. Cerca la MIGLIORE subscription attiva tra tutti i customer
+        best_subscription = None
+        best_customer = None
+        
+        for customer in customers.data:
+            print(f"   Controllo customer {customer.id}...")
+            
+            # Cerca subscription attive per questo customer
+            subs = stripe.Subscription.list(
+                customer=customer.id,
+                status='active',
+                limit=10
+            )
+            
+            if subs.data:
+                # Ordina per data creazione (più recente prima)
+                subs_sorted = sorted(
+                    subs.data, 
+                    key=lambda s: s.created, 
+                    reverse=True
+                )
+                
+                for sub in subs_sorted:
+                    print(f"      → Subscription {sub.id} (status: {sub.status})")
+                    
+                    # Prendi la prima subscription attiva trovata
+                    if not best_subscription:
+                        best_subscription = sub
+                        best_customer = customer
+                        print(f"      ✅ MIGLIORE TROVATA!")
+        
+        # 3. Aggiorna il DB con i dati corretti
+        old_plan = u.plan
+        old_customer_id = u.stripe_customer_id
+        old_subscription_id = u.stripe_subscription_id
+        
+        if best_subscription and best_customer:
+            # Ha subscription attiva → premium
+            u.plan = "premium"
+            u.stripe_customer_id = best_customer.id
+            u.stripe_subscription_id = best_subscription.id
+            u.save()
+            
+            print(f"\n✅ AGGIORNATO A PREMIUM")
+            print(f"   Customer: {best_customer.id}")
+            print(f"   Subscription: {best_subscription.id}")
+            print(f"   Status: {best_subscription.status}")
+            print(f"{'='*60}\n")
+            
+            return jsonify(
+                synced=True,
+                changed=(old_plan != "premium" or old_customer_id != best_customer.id),
+                old_plan=old_plan,
+                new_plan="premium",
+                customer_id=best_customer.id,
+                subscription_id=best_subscription.id,
+                subscription_status=best_subscription.status,
+                message="Subscription attiva trovata"
+            )
+        else:
+            # Nessuna subscription attiva → free
+            if u.plan != "free":
+                u.plan = "free"
+                u.stripe_subscription_id = None
+                # Manteniamo il customer_id per riferimento
+                u.save()
+                
+                print(f"\n⬇️  DOWNGRADE A FREE")
+                print(f"   Nessuna subscription attiva trovata")
+                print(f"{'='*60}\n")
+                
+                return jsonify(
+                    synced=True,
+                    changed=True,
+                    old_plan=old_plan,
+                    new_plan="free",
+                    customer_id=u.stripe_customer_id,
+                    message="Nessuna subscription attiva, downgrade a free"
+                )
+            else:
+                print(f"\n✅ GIÀ FREE (corretto)")
+                print(f"{'='*60}\n")
+                
+                return jsonify(
+                    synced=True,
+                    changed=False,
+                    old_plan="free",
+                    new_plan="free",
+                    message="Nessuna subscription attiva"
+                )
     
-    old_plan = u.plan
-    changed = sync_user_with_stripe(u)
+    except stripe.error.StripeError as se:
+        print(f"❌ Stripe API Error: {se}")
+        return jsonify(error=f"Stripe error: {str(se)}"), 500
     
-    return jsonify(
-        synced=True,
-        changed=changed,
-        old_plan=old_plan,
-        new_plan=u.plan,
-        customer_id=u.stripe_customer_id,
-        subscription_id=u.stripe_subscription_id
-    )
-
+    except Exception as exc:
+        print(f"❌ Errore generico: {exc}")
+        return jsonify(error=str(exc)), 500
 # ─────────────────────────────────────────────────────────────
 # QUOTA
 # ─────────────────────────────────────────────────────────────
