@@ -815,16 +815,23 @@ p, li, span {
 
 
 /* Contenitore azioni in alto a destra */
-/* Contenitore azioni in alto a destra */
 .topActions {
   position: fixed;
   top: 20px;
-  right: 76px;
+  right: 76px;              /* 20px (toggle) + 44px (width) + 12px (gap) */
   z-index: 1100;
   display: flex;
-  flex-direction: row;      /* ← CAMBIATO: riga orizzontale */
-  align-items: center;      /* ← CAMBIATO: centra verticalmente */
+  flex-direction: row;
+  align-items: center;      /* ← CHIAVE: allinea verticalmente al centro */
   gap: 10px;
+  height: 44px;             /* ← AGGIUNGI: stessa altezza del toggle */
+}
+
+/* Forza altezza uniforme per tutti i figli */
+.topActions > * {
+  height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 /* Mobile: topActions più compatto */
