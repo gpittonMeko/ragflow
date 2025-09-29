@@ -1327,6 +1327,7 @@ p, li, span {
     width: 40px !important;
     font-size: 0 !important;
     justify-content: center !important;
+    position: relative !important;  /* ← AGGIUNGI QUESTO per contenere l'espansione */
   }
   
   /* Nascondi testo quando compatto */
@@ -1342,9 +1343,13 @@ p, li, span {
     font-size: 18px !important;
   }
   
-  /* ESPANSO: mostra tutto il contenuto */
+  /* ESPANSO: posizionato ASSOLUTAMENTE rispetto al chip */
   .userChipExpanded {
-    position: fixed !important;     /* ← AGGIUNGI QUESTA RIGA */
+    position: absolute !important;     /* absolute invece di fixed */
+    left: 50% !important;              /* centra orizzontalmente */
+    transform: translateX(-50%) !important;  /* perfetto centraggio */
+    top: 100% !important;              /* appena sotto il chip */
+    margin-top: 8px !important;        /* piccolo spazio */
     width: auto !important;
     min-width: 200px !important;
     max-width: 300px !important;
@@ -1352,9 +1357,8 @@ p, li, span {
     font-size: 13px !important;
     height: auto !important;
     white-space: normal !important;
-    z-index: 1200 !important;       /* ← AGGIUNGI ANCHE QUESTO */
-    right: 10px !important;         /* ← E QUESTO per allineamento */
-    top: 15px !important;           /* ← E QUESTO */
+    z-index: 1300 !important;          /* sopra tutto */
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;  /* ombra più pronunciata */
   }
   
   .userChipExpanded > span:not(.userIcon),
@@ -1371,19 +1375,19 @@ p, li, span {
   }
 }
 
-/* Mobile sotto 768px: allineamento fisso */
+/* Mobile sotto 768px: ancora più semplice */
 @media (max-width: 768px) {
   .userChip {
-    position: static !important;
-    margin: 0 !important;
+    position: relative !important;
   }
   
   .userChipExpanded {
     position: absolute !important;
+    left: auto !important;
     right: 0 !important;
-    top: 0 !important;
-    z-index: 1200 !important;
+    top: 100% !important;
+    margin-top: 8px !important;
+    transform: none !important;
   }
 }
-
 
