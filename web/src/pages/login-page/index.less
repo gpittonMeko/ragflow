@@ -1186,3 +1186,119 @@ p, li, span {
   0%   { transform: translate3d(0,0,0) scale(1); }
   100% { transform: translate3d(0,-2%,0) scale(1.03); }
 }
+
+/* ========== COMPRESSIONE EXTRA BLOCKS SU SCHERMI STRETTI ========== */
+
+/* Tablet e schermi medi (768px e sotto) */
+@media (max-width: 768px) {
+  .extraBlocks {
+    margin-top: 1rem;  /* ridotto da 2rem */
+  }
+  
+  .featuresSection {
+    gap: 3px !important;  /* ridotto da 5px */
+    margin-bottom: 1.5rem !important;  /* ridotto da 3rem */
+  }
+  
+  .featureCard {
+    padding: 6px !important;  /* ridotto da 8px */
+    border-radius: 20px !important;  /* ridotto da 28px */
+  }
+  
+  .featureCard h3 {
+    font-size: 1rem !important;
+    margin-bottom: 0.4rem !important;
+    line-height: 1.2 !important;
+  }
+  
+  .featureCard p {
+    font-size: 0.8rem !important;
+    line-height: 1.3 !important;
+    margin: 0 !important;
+  }
+  
+  .featureIcon {
+    width: 40px;  /* ridotto da 60px */
+    height: 40px;
+    margin-bottom: 0.6rem;  /* ridotto da 1.5rem */
+  }
+  
+  .disclaimerSection {
+    padding: 8px !important;
+    margin-top: 1.5rem !important;  /* ridotto da 3rem */
+  }
+  
+  .disclaimerSection strong {
+    font-size: 0.9rem !important;
+    margin-bottom: 0.3rem !important;
+  }
+  
+  .disclaimerSection p {
+    font-size: 0.75rem !important;
+    line-height: 1.25 !important;
+    margin: 0 !important;
+  }
+}
+
+/* Mobile piccoli (480px e sotto) */
+@media (max-width: 480px) {
+  .extraBlocks {
+    margin-top: 0.5rem;
+  }
+  
+  .featuresSection {
+    gap: 2px !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  .featureCard {
+    padding: 4px !important;
+    border-radius: 16px !important;
+  }
+  
+  .featureCard h3 {
+    font-size: 0.9rem !important;
+    margin-bottom: 0.3rem !important;
+  }
+  
+  .featureCard p {
+    font-size: 0.7rem !important;
+    line-height: 1.25 !important;
+  }
+  
+  .featureIcon {
+    width: 35px;
+    height: 35px;
+    margin-bottom: 0.4rem;
+  }
+  
+  .disclaimerSection {
+    margin-top: 1rem !important;
+    padding: 6px !important;
+  }
+  
+  .disclaimerSection strong {
+    font-size: 0.8rem !important;
+  }
+  
+  .disclaimerSection p {
+    font-size: 0.65rem !important;
+    line-height: 1.2 !important;
+  }
+}
+
+/* Extra small (400px e sotto) - Colonna singola */
+@media (max-width: 400px) {
+  .featuresSection {
+    grid-template-columns: 1fr !important;  /* una sola colonna */
+    gap: 4px !important;
+  }
+  
+  .featureCard h3 {
+    font-size: 0.85rem !important;
+  }
+  
+  .featureCard p {
+    font-size: 0.68rem !important;
+  }
+}
