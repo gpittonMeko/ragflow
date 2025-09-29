@@ -379,22 +379,54 @@ const MessageItem = ({
 
                             <Flex gap={6} align="center">
                               <Popover
-                                content={renderPreviewPopover(url)}
+                                content={(() => {
+                                  const chunk = allChunks.find((c) => c.doc_id === doc.doc_id);
+                                  if (!chunk) return <div style={{ padding: 8 }}>Chunk non trovato</div>;
+                                  
+                                  const fileExtension = getExtension(doc.doc_name);
+                                  const fileThumbnail = documentThumbnails[doc.doc_id];
+                                  
+                                  return (
+                                    <div style={{ display: 'flex', gap: 8, maxWidth: 500 }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        {chunk?.content && (
+                                          <div
+                                            dangerouslySetInnerHTML={{ __html: chunk.content }}
+                                            style={{ 
+                                              maxHeight: 200, 
+                                              overflow: 'auto', 
+                                              fontSize: 13,
+                                              padding: 8,
+                                              background: '#f5f5f5',
+                                              borderRadius: 4
+                                            }}
+                                          />
+                                        )}
+                                        <Flex gap={8} align="center">
+                                          {fileThumbnail ? (
+                                            <img src={fileThumbnail} alt="" style={{ width: 24, height: 24 }} />
+                                          ) : (
+                                            <FileIcon id={doc.doc_id} name={doc.doc_name} />
+                                          )}
+                                          <span style={{ fontSize: 12 }}>{prettyName}</span>
+                                        </Flex>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                                 trigger="hover"
                                 placement="right"
                                 mouseEnterDelay={0.15}
                                 getPopupContainer={() => document.body}
                               >
-                                <span style={{ display: 'inline-block' }}>
-                                  <Tooltip title="Anteprima (drawer)">
-                                    <Button
-                                      className={styles.sourceActionBtn}
-                                      icon={<EyeOutlined />}
-                                      onClick={() => openDrawer(doc.doc_id)}
-                                      size="small"
-                                    />
-                                  </Tooltip>
-                                </span>
+                                <Tooltip title="Anteprima (drawer)">
+                                  <Button
+                                    className={styles.sourceActionBtn}
+                                    icon={<EyeOutlined />}
+                                    onClick={() => openDrawer(doc.doc_id)}
+                                    size="small"
+                                  />
+                                </Tooltip>
                               </Popover>
 
                               <Tooltip title="Scarica PDF">
