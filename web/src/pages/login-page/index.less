@@ -841,7 +841,7 @@ p, li, span {
   .topActions {
     position: fixed;  /* CAMBIATO da relative a fixed */
     top: 15px;
-    right: 10px;
+    right: 10px !important;
     display: flex;
     flex-direction: column;
     align-items: flex-end;  /* AGGIUNTO per allineamento a destra */
@@ -852,12 +852,7 @@ p, li, span {
 
 
 
-@media (max-width: 480px) {
-  .topActions {
-    right: 50px;
-    gap: 4px;
-  }
-}
+
 
 /* assicurati che i bottoni dentro non siano fixed */
 .topActions .glassBtn{ position: static; }
