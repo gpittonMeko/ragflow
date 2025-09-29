@@ -86,6 +86,9 @@ const PresentationPage: React.FC = () => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const genTimeoutRef = useRef<number | null>(null);
 
+  const [userChipOpen, setUserChipOpen] = useState(false);
+
+
 // --- iframe src + overlay/watchdog ---
 const IFRAME_SRC =
   "https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&visible_avatar=1";
@@ -683,7 +686,19 @@ useEffect(() => {
     setGoogleToken(null);
   }
 };
-
+useEffect(() => {
+  if (!userChipOpen) return;
+  
+  const handleClickOutside = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest(`.${styles.userChip}`)) {
+      setUserChipOpen(false);
+    }
+  };
+  
+  document.addEventListener('click', handleClickOutside);
+  return () => document.removeEventListener('click', handleClickOutside);
+}, [userChipOpen]);
 
 useEffect(() => {
   const handler = (event: MessageEvent) => {
@@ -874,18 +889,29 @@ useEffect(() => {
         <>
           {/* ───── Ramo UTENTE LOGGATO ───── */}
           <div className={styles.topActions}>
-            <div className={styles.userChip}>
-              {(quota?.scope === 'user' ? (quota as QuotaUser).id : userData?.email) ?? 'utente'}
-              &nbsp;(<strong>{userPlan}</strong>)
-              {userPlan === 'free' && quota?.scope === 'user' && (
-                <span
-                  className={styles.userCounter}
-                  title={`Si azzera a mezzanotte (${(quota as QuotaUser).day})`}
-                >
-                  {(quota as QuotaUser).remainingToday} / {(quota as QuotaUser).dailyLimit}
-                </span>
-              )}
-            </div>
+
+          
+            <div 
+                className={`${styles.userChip} ${userChipOpen ? styles.userChipExpanded : ''}`}
+                onClick={() => setUserChipOpen(!userChipOpen)}
+              >
+                {userChipOpen ? (
+                  <>
+                    <span>{(quota?.scope === 'user' ? (quota as QuotaUser).id : userData?.email) ?? 'utente'}</span>
+                    &nbsp;(<strong>{userPlan}</strong>)
+                    {userPlan === 'free' && quota?.scope === 'user' && (
+                      <span
+                        className={styles.userCounter}
+                        title={`Si azzera a mezzanotte (${(quota as QuotaUser).day})`}
+                      >
+                        {(quota as QuotaUser).remainingToday} / {(quota as QuotaUser).dailyLimit}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className={styles.userIcon}>👤</span>
+                )}
+              </div>
 
               {/* upgrade diretto (solo se non premium e quota caricata) */}
                 {!quotaLoading && !isPremium && (
