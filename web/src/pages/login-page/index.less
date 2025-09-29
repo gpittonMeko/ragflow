@@ -815,14 +815,15 @@ p, li, span {
 
 
 /* Contenitore azioni in alto a destra */
-.topActions{
+/* Contenitore azioni in alto a destra */
+.topActions {
   position: fixed;
   top: 20px;
-  right: 76px;             /* 20 (margine) + 44 (toggle) + 12 (spazio) */
+  right: 76px;
   z-index: 1100;
   display: flex;
-  flex-direction: column;  /* colonna pulita */
-  align-items: flex-end;
+  flex-direction: row;      /* ← CAMBIATO: riga orizzontale */
+  align-items: center;      /* ← CAMBIATO: centra verticalmente */
   gap: 10px;
 }
 
@@ -1304,6 +1305,7 @@ p, li, span {
 }
 
 /* FORZA riduzione a icone anche su schermi medi/larghi */
+/* FORZA riduzione a icone anche su schermi medi/larghi */
 @media (max-width: 1200px) {
   /* UserChip: nascondi tutto il testo, mostra solo icona utente */
   .userChip {
@@ -1314,16 +1316,15 @@ p, li, span {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 0 !important;  /* nasconde tutto il testo */
+    font-size: 0 !important;
   }
   
   .userChip > * {
-    display: none !important;  /* nasconde TUTTO dentro userChip */
+    display: none !important;
   }
   
-  /* Mostra solo un'icona utente generica */
-  .userChip::before {
-    content: "👤" !important;
+  /* Mostra SOLO .userIcon (che già esiste nell'HTML) */
+  .userChip .userIcon {
     display: block !important;
     font-size: 18px !important;
   }
