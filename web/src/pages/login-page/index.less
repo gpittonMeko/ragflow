@@ -1372,3 +1372,96 @@ p, li, span {
     gap: 4px !important;
   }
 }
+
+/* UserChip base */
+.userChip {
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(255 255 255 / 0.08);
+  padding: 6px 12px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;  /* indica che è cliccabile */
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.userChip:hover {
+  background: rgba(255 255 255 / 0.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Icona utente nascosta di default */
+.userIcon {
+  display: none;
+}
+
+/* Stato espanso: mostra tutto */
+.userChipExpanded {
+  width: auto !important;
+  min-width: auto !important;
+  padding: 6px 12px !important;
+  font-size: 14px !important;
+}
+
+.userChipExpanded > * {
+  display: inline !important;
+}
+
+.userChipExpanded .userIcon {
+  display: none !important;
+}
+
+/* SCHERMI STRETTI: compatto di default, espandibile al click */
+@media (max-width: 1200px) {
+  .userChip {
+    padding: 8px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    width: 40px !important;
+    font-size: 0 !important;
+    justify-content: center;
+  }
+  
+  .userChip > span:not(.userIcon) {
+    display: none !important;
+  }
+  
+  .userChip > strong {
+    display: none !important;
+  }
+  
+  /* Mostra icona quando è compatto */
+  .userIcon {
+    display: block !important;
+    font-size: 18px !important;
+  }
+  
+  /* Quando espanso: full width e allineato */
+  .userChipExpanded {
+    width: auto !important;
+    min-width: 200px !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    height: auto !important;
+  }
+  
+  .userChipExpanded > span:not(.userIcon) {
+    display: inline !important;
+  }
+  
+  .userChipExpanded > strong {
+    display: inline !important;
+  }
+  
+  .userChipExpanded .userIcon {
+    display: none !important;
+  }
+  
+  .userChipExpanded .userCounter {
+    display: inline-flex !important;
+  }
+}
