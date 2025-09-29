@@ -65,10 +65,7 @@ body {
 }
 
 .themeToggle {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1100;
+  /* RIMUOVI position: fixed, top, right, z-index */
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -818,15 +815,14 @@ p, li, span {
 .topActions {
   position: fixed;
   top: 20px;
-  right: 76px;              /* 20px (toggle) + 44px (width) + 12px (gap) */
+  right: 20px;              /* ← allineato al margine destro */
   z-index: 1100;
   display: flex;
   flex-direction: row;
-  align-items: center;      /* ← CHIAVE: allinea verticalmente al centro */
+  align-items: center;
   gap: 10px;
-  height: 44px;             /* ← AGGIUNGI: stessa altezza del toggle */
+  height: 44px;
 }
-
 /* Forza altezza uniforme per tutti i figli */
 .topActions > * {
   height: 44px !important;
@@ -1382,20 +1378,6 @@ p, li, span {
     top: 0 !important;
     z-index: 1200 !important;
   }
-}
-
-.themeToggle {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1100;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--toggle-bg);
-  border: 1px solid var(--toggle-border);
-  
-  /* ... resto delle proprietà ... */
 }
 
 /* AGGIUNGI QUESTA SEZIONE */

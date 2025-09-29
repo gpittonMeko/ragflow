@@ -852,14 +852,7 @@ useEffect(() => {
 
   return (
   <div className={`${styles.pageContainer} ${hideExtras ? styles.fullscreen : ''}`}>
-      {/* Toggle tema */}
-      <button
-        onClick={toggleTheme}
-        className={styles.themeToggle}
-        aria-label={theme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
-      >
-        {theme === 'dark' ? <Sun size={20} aria-hidden /> : <Moon size={20} aria-hidden />}
-      </button>
+     
 
       {/* Pulsante login + contatore oppure dati utente */}
       {!isLoggedIn ? (
@@ -939,7 +932,18 @@ useEffect(() => {
             <LogOut className={styles.icon} />
             Esci
           </button>
+          
 
+           {/* Toggle tema */}
+      <button
+        onClick={toggleTheme}
+        className={styles.themeToggle}
+        aria-label={theme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
+      >
+        {theme === 'dark' ? <Sun size={20} aria-hidden /> : <Moon size={20} aria-hidden />}
+      </button>
+
+      
           </div>
 
           {/* Banner FREE sotto al logo */}
