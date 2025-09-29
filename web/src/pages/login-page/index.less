@@ -837,11 +837,18 @@ p, li, span {
 /* Mobile: topActions più compatto */
 @media (max-width: 768px) {
   .topActions {
-    right: 55px;
-    gap: 6px;
+    position: fixed;  /* CAMBIATO da relative a fixed */
     top: 15px;
+    right: 55px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;  /* AGGIUNTO per allineamento a destra */
+    gap: 6px;
+    padding-top: 0;  /* RIMOSSO il padding */
   }
 }
+
+
 
 @media (max-width: 480px) {
   .topActions {
@@ -855,33 +862,7 @@ p, li, span {
 
 /* Chip con email + piano */
 
-/* Chip con email + piano */
-.userChip {
-  font-weight: 600;
-  color: var(--text-primary);
-  background: rgba(255 255 255 / 0.08);
-  padding: 6px 12px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-/* Mobile: userChip solo icona */
-@media (max-width: 768px) {
-  .userChip {
-    padding: 8px;
-    min-width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .userChip > span:not(:first-child) {
-    display: none; /* nasconde testo email/piano */
-  }
-}
+
 
 .chatWrap { position: relative; }
 
@@ -1311,77 +1292,9 @@ p, li, span {
   }
 }
 
-/* FORZA riduzione a icone anche su schermi medi/larghi */
-/* FORZA riduzione a icone anche su schermi medi/larghi */
-@media (max-width: 1200px) {
-  /* UserChip: nascondi tutto il testo, mostra solo icona utente */
-  .userChip {
-    padding: 8px !important;
-    min-width: 40px !important;
-    height: 40px !important;
-    width: 40px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 0 !important;
-  }
-  
-  .userChip > * {
-    display: none !important;
-  }
-  
-  /* Mostra SOLO .userIcon (che già esiste nell'HTML) */
-  .userChip .userIcon {
-    display: block !important;
-    font-size: 18px !important;
-  }
-  
-  /* Logout button: solo icona */
-  .logoutBtn {
-    padding: 8px !important;
-    min-width: 36px !important;
-    height: 36px !important;
-    width: 36px !important;
-    justify-content: center !important;
-    gap: 0 !important;
-    font-size: 0 !important;
-  }
-  
-  .logoutBtn span {
-    display: none !important;
-  }
-  
-  /* Google button: solo icona G */
-  .googleBtnCustom {
-    padding: 8px !important;
-    min-width: 40px !important;
-    height: 40px !important;
-    width: 40px !important;
-    font-size: 0 !important;
-    gap: 0 !important;
-  }
-  
-  .googleBtnCustom span {
-    display: none !important;
-  }
-  
-  /* Counter più piccolo */
-  .freeCounter {
-    font-size: 10px !important;
-    padding: 3px 8px !important;
-  }
-  
-  .userCounter {
-    display: none !important;  /* nascondi completamente il counter accanto all'email */
-  }
-  
-  /* TopActions più compatto */
-  .topActions {
-    gap: 4px !important;
-  }
-}
+/* ========== USER CHIP: ESPANDIBILE AL CLICK ========== */
 
-/* UserChip base */
+/* Base: desktop normale */
 .userChip {
   font-weight: 600;
   color: var(--text-primary);
@@ -1392,7 +1305,7 @@ p, li, span {
   display: flex;
   align-items: center;
   gap: 8px;
-  cursor: pointer;  /* indica che è cliccabile */
+  cursor: pointer;
   transition: all 0.3s ease;
   white-space: nowrap;
 }
@@ -1402,28 +1315,12 @@ p, li, span {
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
-/* Icona utente nascosta di default */
+/* Icona utente: nascosta su desktop */
 .userIcon {
   display: none;
 }
 
-/* Stato espanso: mostra tutto */
-.userChipExpanded {
-  width: auto !important;
-  min-width: auto !important;
-  padding: 6px 12px !important;
-  font-size: 14px !important;
-}
-
-.userChipExpanded > * {
-  display: inline !important;
-}
-
-.userChipExpanded .userIcon {
-  display: none !important;
-}
-
-/* SCHERMI STRETTI: compatto di default, espandibile al click */
+/* Schermi sotto 1200px: compatto con icona */
 @media (max-width: 1200px) {
   .userChip {
     padding: 8px !important;
@@ -1431,36 +1328,34 @@ p, li, span {
     height: 40px !important;
     width: 40px !important;
     font-size: 0 !important;
-    justify-content: center;
+    justify-content: center !important;
   }
   
-  .userChip > span:not(.userIcon) {
+  /* Nascondi testo quando compatto */
+  .userChip > span:not(.userIcon),
+  .userChip > strong,
+  .userChip .userCounter {
     display: none !important;
   }
   
-  .userChip > strong {
-    display: none !important;
-  }
-  
-  /* Mostra icona quando è compatto */
-  .userIcon {
+  /* Mostra solo icona */
+  .userChip .userIcon {
     display: block !important;
     font-size: 18px !important;
   }
   
-  /* Quando espanso: full width e allineato */
+  /* ESPANSO: mostra tutto il contenuto */
   .userChipExpanded {
     width: auto !important;
     min-width: 200px !important;
+    max-width: 300px !important;
     padding: 8px 12px !important;
     font-size: 13px !important;
     height: auto !important;
+    white-space: normal !important;
   }
   
-  .userChipExpanded > span:not(.userIcon) {
-    display: inline !important;
-  }
-  
+  .userChipExpanded > span:not(.userIcon),
   .userChipExpanded > strong {
     display: inline !important;
   }
@@ -1471,5 +1366,20 @@ p, li, span {
   
   .userChipExpanded .userCounter {
     display: inline-flex !important;
+  }
+}
+
+/* Mobile sotto 768px: allineamento fisso */
+@media (max-width: 768px) {
+  .userChip {
+    position: static !important;
+    margin: 0 !important;
+  }
+  
+  .userChipExpanded {
+    position: absolute !important;
+    right: 0 !important;
+    top: 0 !important;
+    z-index: 1200 !important;
   }
 }
