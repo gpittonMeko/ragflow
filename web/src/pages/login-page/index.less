@@ -69,6 +69,7 @@ body {
   width: 44px;
   height: 44px;
   border-radius: 50%;
+  flex-shrink: 0; 
   background: var(--toggle-bg);
   border: 1px solid var(--toggle-border);
 
@@ -828,6 +829,8 @@ p, li, span {
   height: 44px !important;
   display: flex !important;
   align-items: center !important;
+  flex-shrink: 0 !important;       /* ← AGGIUNGI */
+
 }
 
 /* Mobile: topActions più compatto */
@@ -835,7 +838,7 @@ p, li, span {
   .topActions {
     position: fixed;  /* CAMBIATO da relative a fixed */
     top: 15px;
-    right: 55px;
+    right: 22px;
     display: flex;
     flex-direction: column;
     align-items: flex-end;  /* AGGIUNTO per allineamento a destra */
