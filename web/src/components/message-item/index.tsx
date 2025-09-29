@@ -360,22 +360,14 @@ const MessageItem = ({
                           <Flex gap={'small'} align="center" wrap="wrap">
                             <FileIcon id={doc.doc_id} name={doc.doc_name} />
 
-                            <Popover
-                              content={renderPreviewPopover(url)}
-                              trigger="hover"
-                              placement="right"
-                              mouseEnterDelay={0.15}
-                              getPopupContainer={() => document.body}
+                            <NewDocumentLink
+                              documentId={doc.doc_id}
+                              documentName={prettyName}
+                              prefix="document"
+                              link={doc.url}
                             >
-                              <NewDocumentLink
-                                documentId={doc.doc_id}
-                                documentName={prettyName}
-                                prefix="document"
-                                link={doc.url}
-                              >
-                                {prettyName}
-                              </NewDocumentLink>
-                            </Popover>
+                              {prettyName}
+                            </NewDocumentLink>
 
                             <Flex gap={6} align="center">
                               <Popover
