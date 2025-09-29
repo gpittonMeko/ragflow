@@ -1344,6 +1344,7 @@ p, li, span {
   
   /* ESPANSO: mostra tutto il contenuto */
   .userChipExpanded {
+    position: fixed !important;     /* ← AGGIUNGI QUESTA RIGA */
     width: auto !important;
     min-width: 200px !important;
     max-width: 300px !important;
@@ -1351,6 +1352,9 @@ p, li, span {
     font-size: 13px !important;
     height: auto !important;
     white-space: normal !important;
+    z-index: 1200 !important;       /* ← AGGIUNGI ANCHE QUESTO */
+    right: 10px !important;         /* ← E QUESTO per allineamento */
+    top: 15px !important;           /* ← E QUESTO */
   }
   
   .userChipExpanded > span:not(.userIcon),
