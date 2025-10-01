@@ -2,7 +2,7 @@ import { IModalProps } from '@/interfaces/common';
 import { IReferenceChunk } from '@/interfaces/database/chat';
 import { IChunk } from '@/interfaces/database/knowledge';
 import { Drawer } from 'antd';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DocumentPreviewer from '../pdf-previewer';
 
 interface IProps extends IModalProps<any> {
@@ -17,6 +17,33 @@ export const PdfDrawer = ({
   chunk,
 }: IProps) => {
   const drawerRef = useRef<HTMLDivElement>(null);
+
+const drawerRef = useRef<HTMLDivElement>(null);
+  
+  // AGGIUNGI QUESTE RIGHE ↓↓↓
+  const [drawerWidth, setDrawerWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth <= 768 ? '95vw' : 
+             window.innerWidth <= 1024 ? '80vw' : '50vw';
+    }
+    return '50vw';
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 768) {
+        setDrawerWidth('95vw');
+      } else if (window.innerWidth <= 1024) {
+        setDrawerWidth('80vw');
+      } else {
+        setDrawerWidth('50vw');
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  // FINE AGGIUNTE ↑↑↑
 
   // DEBUG: Monitor drawer state changes
   useEffect(() => {
@@ -67,7 +94,7 @@ export const PdfDrawer = ({
       title={`Document Previewer - ${documentId.slice(-8)}`}
       onClose={handleClose}
       open={visible}
-      width={window.innerWidth <= 768 ? '95vw' : window.innerWidth <= 1024 ? '80vw' : '50vw'}
+      width={drawerWidth}
       destroyOnClose={false} // Keep content mounted to avoid re-render issues
       mask={true}
       maskClosable={true}
