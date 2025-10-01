@@ -67,7 +67,7 @@ export const PdfDrawer = ({
       title={`Document Previewer - ${documentId.slice(-8)}`}
       onClose={handleClose}
       open={visible}
-      width={'50vw'}
+      width={window.innerWidth <= 768 ? '95vw' : window.innerWidth <= 1024 ? '80vw' : '50vw'}
       destroyOnClose={false} // Keep content mounted to avoid re-render issues
       mask={true}
       maskClosable={true}
