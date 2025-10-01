@@ -17,10 +17,7 @@ export const PdfDrawer = ({
   chunk,
 }: IProps) => {
   const drawerRef = useRef<HTMLDivElement>(null);
-
-const drawerRef = useRef<HTMLDivElement>(null);
   
-  // AGGIUNGI QUESTE RIGHE ↓↓↓
   const [drawerWidth, setDrawerWidth] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth <= 768 ? '95vw' : 
@@ -43,9 +40,7 @@ const drawerRef = useRef<HTMLDivElement>(null);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  // FINE AGGIUNTE ↑↑↑
 
-  // DEBUG: Monitor drawer state changes
   useEffect(() => {
     console.log('[PdfDrawer] State change:', {
       visible,
@@ -55,7 +50,6 @@ const drawerRef = useRef<HTMLDivElement>(null);
     });
 
     if (visible) {
-      // Check drawer mounting after a brief delay
       setTimeout(() => {
         const drawerElement = document.querySelector('.ant-drawer[style*="translateX(0"]');
         const drawerMask = document.querySelector('.ant-drawer-mask');
@@ -67,7 +61,6 @@ const drawerRef = useRef<HTMLDivElement>(null);
           drawerBody: !!drawerElement?.querySelector('.ant-drawer-body')
         });
 
-        // Force visibility if drawer has issues
         if (drawerElement && drawerElement.style.transform !== 'translateX(0px)') {
           console.warn('[PdfDrawer] Forcing drawer visibility');
           (drawerElement as HTMLElement).style.transform = 'translateX(0px)';
@@ -82,7 +75,6 @@ const drawerRef = useRef<HTMLDivElement>(null);
     }
   }, [visible, documentId]);
 
-  // Handle drawer close with debug
   const handleClose = () => {
     console.log('[PdfDrawer] Closing drawer');
     hideModal();
@@ -95,7 +87,7 @@ const drawerRef = useRef<HTMLDivElement>(null);
       onClose={handleClose}
       open={visible}
       width={drawerWidth}
-      destroyOnClose={false} // Keep content mounted to avoid re-render issues
+      destroyOnClose={false}
       mask={true}
       maskClosable={true}
       placement="right"
@@ -103,7 +95,7 @@ const drawerRef = useRef<HTMLDivElement>(null);
       styles={{
         body: {
           padding: '16px',
-          height: 'calc(100% - 55px)', // Account for header
+          height: 'calc(100% - 55px)',
           overflow: 'hidden'
         }
       }}
@@ -111,7 +103,6 @@ const drawerRef = useRef<HTMLDivElement>(null);
         console.log('[PdfDrawer] After open change:', open);
         
         if (open) {
-          // Additional safety check after drawer animation
           setTimeout(() => {
             const documentContainer = document.querySelector('[class*="documentContainer"]');
             console.log('[PdfDrawer] Content check:', {
