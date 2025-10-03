@@ -413,6 +413,7 @@ useEffect(() => {
 async function ensureRagflowAuth(): Promise<string | null> {
   try {
     const existing = localStorage.getItem("Authorization");
+
     if (existing) {
       console.log("🔑 Authorization già presente:", existing);
       return existing;
@@ -437,6 +438,8 @@ async function ensureRagflowAuth(): Promise<string | null> {
         localStorage.setItem("Authorization", token); // fonte di verità
         localStorage.setItem("access_token", token);  // compat per l’iframe che legge da access_token
         console.log("✅ Salvato Authorization + access_token:", token);
+        console.log("✅ [PARENT] Token salvato alle", new Date().toISOString(), token.substring(0, 20)); // ← AGGIUNGI SOLO QUESTA RIGA
+
         return token;
       }
   else {
