@@ -61,7 +61,10 @@ async function ensureIframeAuth() {
 }
 
 // Esegui login all'avvio
+// Esegui login all'avvio
 if (typeof window !== 'undefined') {
+  console.log('[IFRAME] shared-hooks caricato alle', new Date().toISOString());
+  console.log('[IFRAME] Token presente all\'avvio?', localStorage.getItem('Authorization') ? 'SI' : 'NO');
   ensureIframeAuth();
 }
 const isCompletionError = (res: any) =>
@@ -223,6 +226,11 @@ const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
     if (trim(value) === '') return;
     const id = uuid();
     const content = value.trim();   // 👈 salva qui
+
+        // ← AGGIUNGI QUESTE 3 RIGHE:
+    const token = localStorage.getItem('Authorization');
+    console.log('[IFRAME] handlePressEnter chiamato alle', new Date().toISOString());
+    console.log('[IFRAME] Token presente?', token ? 'SI: ' + token.substring(0, 20) : 'NO');
 
     if (done) {
       setValue('');  // reset dopo
