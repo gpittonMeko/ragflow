@@ -22,6 +22,7 @@
 header {
   text-align: center;
   margin-bottom: 10px;
+  position: relative;
 }
 
 .movingGradientLogo {
@@ -79,6 +80,26 @@ header {
   align-items: center;
   z-index: 9999;
   backdrop-filter: blur(10px);
+}
+
+.homeButton {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #6a11cb;
+  color: #6a11cb;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: #6a11cb;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  }
 }
 
 .overlayContent {

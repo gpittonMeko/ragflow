@@ -1,7 +1,9 @@
 // web/src/pages/login-page/login-page.tsx (o PresentationPage.tsx)
-import React, { memo, useRef } from 'react';
+import React, { memo, useRef, useState } from 'react';
 import AgentChatContainer from '@/components/agent-chat-container/AgentChatContainer'; // Importa il nuovo componente
-import { Flex, Spin } from 'antd';
+import { Flex, Spin, Button } from 'antd';
+import { HomeOutlined } from '@ant-design/icons';
+import { useNavigate } from 'umi';
 
 // Componenti e costanti (Rimuovi import superflui, mantieni solo PdfDrawer e relativi hook se usati in PresentationPage)
 import PdfDrawer from '@/components/pdf-drawer';
@@ -16,11 +18,27 @@ const AGENT_ID = 'a871ecb2eaba11efb3a10242ac120006'; // Sostituisci con l'ID cor
 
 const PresentationPage: React.FC = () => {
     const controllerRef = useRef(new AbortController());
+    const navigate = useNavigate();
+    const [showHomeButton, setShowHomeButton] = useState(false);
+
+    const handleHomeClick = () => {
+        navigate('/knowledge');
+    };
 
     return (
         <div className={styles.pageContainer}>
             <header className={styles.header}>
                 <h1 className={styles.movingGradientLogo}>SGAI</h1>
+                {showHomeButton && (
+                    <Button
+                        type="primary"
+                        icon={<HomeOutlined />}
+                        onClick={handleHomeClick}
+                        className={styles.homeButton}
+                    >
+                        Home
+                    </Button>
+                )}
             </header>
             <div className={styles.mainContent}>
                 <div className={styles.presentationContainer}>
@@ -45,7 +63,10 @@ const PresentationPage: React.FC = () => {
 
                     {/* Usa AgentChatContainer e passa agentId */}
                     <div className={styles.chatSection}>
-                        <AgentChatContainer agentId={AGENT_ID} /> {/* Passa agentId e RIMUOVI agentMode */}
+                        <AgentChatContainer 
+                            agentId={AGENT_ID} 
+                            onFirstGeneration={() => setShowHomeButton(true)}
+                        /> {/* Passa agentId e callback per mostrare home button */}
                     </div>
                 </div>
             </div>
