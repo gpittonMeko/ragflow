@@ -150,9 +150,9 @@ def run():
                     ans = {"answer": ans["content"], "reference": ans.get("reference", [])}
                     yield "data:" + json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
 
-                canvas.messages.append({"role": "assistant", "content": final_ans["content"], "id": message_id})
-                canvas.history.append(("assistant", final_ans["content"]))
-                if not canvas.path[-1]:
+                canvas.messages.append({"role": "assistant", "content": final_ans.get("content", ""), "id": message_id})
+                canvas.history.append(("assistant", final_ans.get("content", "")))
+                if canvas.path and not canvas.path[-1]:
                     canvas.path.pop(-1)
                 if final_ans.get("reference"):
                     canvas.reference.append(final_ans["reference"])
@@ -160,7 +160,7 @@ def run():
                 UserCanvasService.update_by_id(req["id"], cvs.to_dict())
             except Exception as e:
                 cvs.dsl = json.loads(str(canvas))
-                if not canvas.path[-1]:
+                if canvas.path and not canvas.path[-1]:
                     canvas.path.pop(-1)
                 UserCanvasService.update_by_id(req["id"], cvs.to_dict())
                 traceback.print_exc()
