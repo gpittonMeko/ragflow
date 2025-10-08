@@ -15,9 +15,10 @@ import { buildMessageUuidWithRole } from '@/utils/chat';
 
 interface IProps {
     agentId: string;
+    onFirstGeneration?: () => void;
 }
 
-const AgentChatContainer = ({ agentId }: IProps) => {
+const AgentChatContainer = ({ agentId, onFirstGeneration }: IProps) => {
     const ref = useRef(null);
     const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } = useClickDrawer();
 
@@ -30,12 +31,14 @@ const AgentChatContainer = ({ agentId }: IProps) => {
         handlePressEnter,
         regenerateMessage,
         removeMessageById,
-    } = useSendAgentMessage(agentId);
+    } = useSendAgentMessage(agentId, onFirstGeneration);
 
     const latestAssistantMessage = derivedMessages.slice(-1).find(msg => msg.role === MessageType.Assistant);
     console.log("latestAssistantMessage:", latestAssistantMessage); // AGGIUNGI QUESTO
-    const reference = latestAssistantMessage?.data?.reference;
+    const reference = latestAssistantMessage?.reference; // CORRETTO: reference è direttamente nel messaggio, non in data
     console.log("VERIFICA reference:", reference);
+    console.log("reference?.chunks:", reference?.chunks);
+    console.log("reference?.doc_aggs:", reference?.doc_aggs);
 
     const sendDisabled = useSendButtonDisabled(value);
     const { data: avatarData } = useFetchAgentAvatar(agentId);
@@ -57,7 +60,7 @@ const AgentChatContainer = ({ agentId }: IProps) => {
                                     nickname="You"
                                     avatarDialog={avatarData?.avatar}
                                     reference={buildMessageItemReference(
-                                        { message: derivedMessages, reference }, message
+                                        { message: derivedMessages, reference: reference || {} }, message
                                     )}
                                     loading={
                                         message.role === MessageType.Assistant &&

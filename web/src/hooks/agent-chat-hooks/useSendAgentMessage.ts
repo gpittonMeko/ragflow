@@ -1,5 +1,5 @@
 // web/src/hooks/agent-chat-hooks/useSendAgentMessage.ts
-import { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { MessageType } from '@/constants/chat';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -25,21 +25,28 @@ interface UseSendAgentMessage {
     removeMessageById: (messageId: string) => void;
 }
 
-export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
+export const useSendAgentMessage = (agentId: string, onFirstGeneration?: () => void): UseSendAgentMessage => {
     const [value, setValue] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
     const [sendLoading, setSendLoading] = useState<boolean>(false);
     const [derivedMessages, setDerivedMessages] = useState<Message[]>([]); // Stato per la history dei messaggi
     const ref = useRef<HTMLDivElement>(null);
     const [sessionId, setSessionId] = useState<string | null>(null); // Stato per session_id
+    const [hasGeneratedFirstMessage, setHasGeneratedFirstMessage] = useState<boolean>(false); // Flag per tracciare prima generazione
 
     // Funzione per creare la sessione agente (chiamata API)
-    const createAgentSession = useCallback(async () => {
+    const createAgentSession = useCallback(async (retryCount = 0): Promise<string | null> => {
         if (!agentId) {
             console.error("Agent ID non fornito.");
             return null;
         }
+        
+        const maxRetries = 3;
+        const retryDelay = 1000 * (retryCount + 1); // Delay incrementale: 1s, 2s, 3s
+        
         try {
+            console.log(`Tentativo creazione sessione agente (${retryCount + 1}/${maxRetries + 1})`);
+            
             const response = await fetch(`/api/v1/agents/${agentId}/sessions`, { // **ENDPOINT CORRETTO**
                 method: 'POST',
                 headers: {
@@ -48,7 +55,16 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
                 },
                 body: JSON.stringify({}) // Body vuoto o con parametri "Begin" se necessari
             });
+            
+            console.log("Session creation response status:", response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
+            console.log("Session creation response data:", data);
+            
             if (data.code === 0 && data.data && (data.data.id || data.data.session_id)) {
                 const newSessionId = data.data.id || data.data.session_id;
                 setSessionId(newSessionId);
@@ -64,17 +80,27 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
                 return newSessionId;
             } else {
                 console.error("Errore nella creazione sessione agente:", data);
+                if (retryCount < maxRetries) {
+                    console.log(`Retry in ${retryDelay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    return createAgentSession(retryCount + 1);
+                }
                 return null;
             }
         } catch (error) {
             console.error("Errore chiamata API creazione sessione:", error);
+            if (retryCount < maxRetries) {
+                console.log(`Retry in ${retryDelay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+                return createAgentSession(retryCount + 1);
+            }
             return null;
         }
     }, [agentId]);
 
 
     // Funzione per inviare il messaggio utente e ottenere la completion (chiamata API) - **DEFINIZIONE CORRETTA (UNA SOLA VOLTA)**
-    const sendAgentCompletion = useCallback(async (messageContent: string, currentSessionId: string | null) => { // **ACCEPT session ID as argument**
+    const sendAgentCompletion = useCallback(async (messageContent: string, currentSessionId: string | null, retryCount = 0) => { // **ACCEPT session ID as argument**
         if (!agentId) {
             console.error("Agent ID non disponibile per la completion.");
             return;
@@ -84,6 +110,9 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
             return;
         }
 
+        const maxRetries = 2;
+        const retryDelay = 1000 * (retryCount + 1); // Delay incrementale: 1s, 2s
+
         setSendLoading(true);
         const newUserMessage: Message = {
             id: uuidv4(),
@@ -91,10 +120,31 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
             content: messageContent,
             doc_ids: [],
         };
-        setDerivedMessages(prevMessages => [...prevMessages, newUserMessage]);
+        
+        // Aggiungi il messaggio utente alla history
+        setDerivedMessages(prevMessages => {
+            const updatedMessages = [...prevMessages, newUserMessage];
+            return updatedMessages;
+        });
         setValue('');
 
         try {
+            // Prepara la history dei messaggi per l'API
+            const currentMessages = derivedMessages;
+            const messagesForAPI = [...currentMessages, newUserMessage].map(msg => ({
+                role: msg.role,
+                content: msg.content,
+                doc_ids: msg.doc_ids || []
+            }));
+
+            console.log(`Agent Completion Request (${retryCount + 1}/${maxRetries + 1}):`, {
+                agentId,
+                sessionId: currentSessionId,
+                messageContent,
+                messagesCount: messagesForAPI.length,
+                messages: messagesForAPI
+            });
+
             const response = await fetch(`/api/v1/agents/${agentId}/completions`, {
                 method: 'POST',
                 headers: {
@@ -105,9 +155,18 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
                     question: messageContent,
                     stream: false,
                     session_id: currentSessionId, // **USE currentSessionId here**
+                    messages: messagesForAPI, // **INVIA LA HISTORY DEI MESSAGGI**
                 }),
             });
+            
+            console.log("Agent Completion Response Status:", response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
+            console.log("Agent Completion Response Data:", data);
             setSendLoading(false);
 
             if (data.code === 0 && data.data) {
@@ -118,8 +177,20 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
                     reference: data.data.reference,
                 };
                 setDerivedMessages(prevMessages => [...prevMessages, assistantMessage]);
+                
+                // Chiama il callback per la prima generazione
+                if (!hasGeneratedFirstMessage && onFirstGeneration) {
+                    setHasGeneratedFirstMessage(true);
+                    onFirstGeneration();
+                }
             } else {
                 console.error("Errore nella completion agente:", data);
+                if (retryCount < maxRetries) {
+                    console.log(`Retry completion in ${retryDelay}ms...`);
+                    setSendLoading(false);
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    return sendAgentCompletion(messageContent, currentSessionId, retryCount + 1);
+                }
                 const errorAssistantMessage: Message = {
                     id: uuidv4(),
                     role: MessageType.Assistant,
@@ -130,6 +201,12 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
             }
         } catch (error) {
             console.error("Errore chiamata API completion agente:", error);
+            if (retryCount < maxRetries) {
+                console.log(`Retry completion in ${retryDelay}ms...`);
+                setSendLoading(false);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+                return sendAgentCompletion(messageContent, currentSessionId, retryCount + 1);
+            }
             setSendLoading(false);
             const errorAssistantMessage: Message = {
                 id: uuidv4(),
@@ -139,7 +216,7 @@ export const useSendAgentMessage = (agentId: string): UseSendAgentMessage => {
             };
             setDerivedMessages(prevMessages => [...prevMessages, errorAssistantMessage]);
         }
-    }, [agentId]); // sessionId REMOVED from dependency array - we now pass it directly
+    }, [agentId, hasGeneratedFirstMessage, onFirstGeneration, derivedMessages]); // Aggiunto derivedMessages alle dipendenze
 
 
     // Gestione input change
