@@ -2,7 +2,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Button } from 'antd';
 import {
   BadgeDollarSign,
-  HomeOutlined,
+  Home,
   LockKeyhole,
   LogOut,
   Moon,
@@ -284,7 +284,7 @@ const PresentationPage: React.FC = () => {
     if (
       !isLoggedIn &&
       quota !== null &&
-      quota.scope !== 'user' &&
+      quota.scope === 'anon' &&
       genCount >= FREE_LIMIT
     ) {
       setShowLimitOverlay(true);
@@ -476,7 +476,7 @@ const PresentationPage: React.FC = () => {
       const headers: Record<string, string> = {};
 
       if (forceToken ?? googleToken) {
-        headers['Authorization'] = forceToken ?? googleToken;
+        headers['Authorization'] = (forceToken ?? googleToken) as string;
       } else {
         headers['X-Client-Id'] = clientIdRef.current;
       }
@@ -1029,7 +1029,7 @@ const PresentationPage: React.FC = () => {
           {showHomeButton && (
             <Button
               type="primary"
-              icon={<HomeOutlined />}
+              icon={<Home />}
               onClick={handleHomeClick}
               className={styles.homeButton}
             >
