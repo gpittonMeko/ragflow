@@ -12,8 +12,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'umi';
 import { v4 as uuidv4 } from 'uuid';
-import ChatContainer from '../chat/share/large';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
+import EmbeddedChat from './embedded-chat';
 import styles from './index.less';
 
 const CLIENT_ID =
@@ -750,7 +750,7 @@ const PresentationPage: React.FC = () => {
               minHeight: '400px',
             }}
           >
-            <ChatContainer />
+            <EmbeddedChat agentId="a92b7464193811f09d527ebdee58e854" />
           </div>
           {showLimitOverlay && (
             <div className={styles.chatOverlay} role="dialog" aria-modal="true">
