@@ -159,7 +159,7 @@ export const useSendAgentMessage = (
           },
           body: JSON.stringify({
             question: messageContent,
-            stream: false,
+            stream: false, // Keep false for simplicity
             session_id: currentSessionId,
             messages: messagesForAPI, // Sending message history
           }),
@@ -169,7 +169,13 @@ export const useSendAgentMessage = (
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data = await response.json();
+
+        // Read the full response text first
+        const responseText = await response.text();
+        console.log('Agent Completion Response Text:', responseText);
+
+        // Parse as JSON
+        const data = JSON.parse(responseText);
         console.log('Agent Completion Response Data:', data);
         setSendLoading(false);
 
