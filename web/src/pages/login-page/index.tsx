@@ -14,6 +14,7 @@ import { useNavigate } from 'umi';
 import { v4 as uuidv4 } from 'uuid';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
 import styles from './index.less';
+import SimpleAgentChat from './simple-agent-chat';
 
 const CLIENT_ID =
   '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
@@ -1041,55 +1042,20 @@ const PresentationPage: React.FC = () => {
       {/* CHAT SOTTO IL LOGO */}
       <div className={styles.iframeSection}>
         <div className={styles.chatWrap}>
-          {iframeReady && (
-            <iframe
-              ref={iframeRef}
-              onLoad={() => {
-                if (false) {
-                  try {
-                    const p =
-                      iframeRef.current?.contentWindow?.location?.pathname ||
-                      '';
-                    if (p === '/login' || p.startsWith('/login')) {
-                      if (iframeReloadAttempts.current < 1) {
-                        iframeReloadAttempts.current += 1;
-                        setBootOverlay(true);
-                        reloadIframe();
-                        return;
-                      }
-                      window.location.reload();
-                      return;
-                    }
-                  } catch {}
-                }
-                // iframe ok → handshake e chiudo overlay
-                postToIframe({ type: 'request-height' });
-                postToIframe({ type: 'theme-change', theme });
-                const t = localStorage.getItem('Authorization');
-                if (t) postToIframe({ type: 'ragflow-token', token: t });
-                iframeReloadAttempts.current = 0; // <-- reset tentativi se tutto ok
-
-                setTimeout(() => {
-                  setBootOverlay(false);
-                  clearBootTimers();
-                }, 120);
-              }}
-              src={IFRAME_SRC}
-              title="SGAI Chat Interface"
-              className={
-                quota !== null && showLimitOverlay ? styles.chatFrozen : ''
-              }
-              style={{
-                borderRadius: 6,
-                width: '100%',
-                border: 'none',
-                display: 'block',
-                background: 'transparent',
-                overflow: 'hidden',
-              }}
-              allow="clipboard-write"
-            />
-          )}
+          <SimpleAgentChat
+            agentId="a92b7464193811f09d527ebdee58e854"
+            className={
+              quota !== null && showLimitOverlay ? styles.chatFrozen : ''
+            }
+            style={{
+              borderRadius: 6,
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              background: 'transparent',
+              minHeight: '400px',
+            }}
+          />
           {showLimitOverlay && (
             <div className={styles.chatOverlay} role="dialog" aria-modal="true">
               <div className={styles.chatOverlayCard}>
