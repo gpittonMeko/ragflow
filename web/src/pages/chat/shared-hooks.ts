@@ -51,22 +51,15 @@ async function ensureIframeAuth() {
       const token = res.headers.get('Authorization');
       if (token) {
         localStorage.setItem('Authorization', token);
-        console.log('[IFRAME] Login OK, token salvato');
       }
     }
   } catch (e) {
-    console.error('[IFRAME] Login fallito:', e);
+    // Login failed silently
   }
 }
 
 // Esegui login all'avvio
-// Esegui login all'avvio
 if (typeof window !== 'undefined') {
-  console.log('[IFRAME] shared-hooks caricato alle', new Date().toISOString());
-  console.log(
-    "[IFRAME] Token presente all'avvio?",
-    localStorage.getItem('Authorization') ? 'SI' : 'NO',
-  );
   ensureIframeAuth();
 }
 const isCompletionError = (res: any) =>
@@ -207,17 +200,6 @@ export const useSendSharedMessage = () => {
       if (trim(value) === '') return;
       const id = uuid();
       const content = value.trim(); // 👈 salva qui
-
-      // ← AGGIUNGI QUESTE 3 RIGHE:
-      const token = localStorage.getItem('Authorization');
-      console.log(
-        '[IFRAME] handlePressEnter chiamato alle',
-        new Date().toISOString(),
-      );
-      console.log(
-        '[IFRAME] Token presente?',
-        token ? 'SI: ' + token.substring(0, 20) : 'NO',
-      );
 
       if (done) {
         setValue(''); // reset dopo
