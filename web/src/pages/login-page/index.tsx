@@ -111,7 +111,7 @@ const PresentationPage: React.FC = () => {
 
   // --- iframe src + overlay/watchdog ---
   const IFRAME_SRC =
-    'https://sgailegal.com/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&visible_avatar=1';
+    '/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&visible_avatar=1';
 
   const [bootOverlay, setBootOverlay] = useState(true);
   const iframeReloadAttempts = useRef(0);
