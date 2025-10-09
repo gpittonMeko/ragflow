@@ -4,7 +4,7 @@ import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import { MessageType, SharedFrom } from '@/constants/chat';
 import { useSendButtonDisabled } from '@/pages/chat/hooks';
 import { Flex, Spin } from 'antd';
-import React, { forwardRef, useMemo, useRef, useEffect, useState } from 'react';
+import React, { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import {
   useGetSharedChatSearchParams,
   useSendSharedMessage,
@@ -38,8 +38,7 @@ const ChatContainer = ({ theme }) => {
     derivedMessages,
     hasError,
     stopOutputMessage,
-    isGenerating   // <-- AGGIUNGI QUESTO!
-
+    isGenerating, // <-- AGGIUNGI QUESTO!
   } = useSendSharedMessage();
   const SIMULATED_TOTAL_MS = 180000; // 3 minuti
   const [barWidth, setBarWidth] = useState(370);
@@ -49,15 +48,14 @@ const ChatContainer = ({ theme }) => {
   const inputRef = useRef(null);
   const inputContainerRef = useRef(null);
   const lastMessageRef = useRef(null);
-  const [progress, setProgress] = useState(0);      // <-- AGGIUNGI QUESTA RIGA
+  const [progress, setProgress] = useState(0); // <-- AGGIUNGI QUESTA RIGA
   const [barVisible, setBarVisible] = useState(false); // <-- E QUESTA
   const [hasMounted, setHasMounted] = useState(false);
   const [hasFocusedOnce, setHasFocusedOnce] = useState(false);
 
   const [blocked, setBlocked] = useState(false);
 
-
-  const useFetchAvatar = useMemo(() => {
+  const fetchAvatarHook = useMemo(() => {
     return from === SharedFrom.Agent
       ? useFetchFlowSSE
       : useFetchNextConversationSSE;
@@ -70,201 +68,198 @@ const ChatContainer = ({ theme }) => {
   }, [locale, visibleAvatar]);
 
   useEffect(() => {
-  setHasMounted(true);
-}, []);
+    setHasMounted(true);
+  }, []);
 
-useEffect(() => {
-  let interval: any = null;
-  const START = Date.now();
+  useEffect(() => {
+    let interval: any = null;
+    const START = Date.now();
 
-  if (sendLoading || isGenerating) {
-    /*  stiamo GENERANDO  */
-    isGeneratingRef.current = true;              // ★ salva stato precedente
-    setBarVisible(true);
-    setProgress(0);
+    if (sendLoading || isGenerating) {
+      /*  stiamo GENERANDO  */
+      isGeneratingRef.current = true; // ★ salva stato precedente
+      setBarVisible(true);
+      setProgress(0);
       window.parent?.postMessage({ type: 'generation-started' }, '*');
 
-
-    interval = setInterval(() => {
-      const elapsed = Date.now() - START;
-      const target = Math.min(90, (elapsed / SIMULATED_TOTAL_MS) * 90);
-      setProgress(target);
-    }, 200);
-  } else {
-    /*  la generazione è FINITA  */
-    if (isGeneratingRef.current) {               // ★ transizione true → false
-      window.parent?.postMessage(
-        { type: 'generation-finished' },
-        '*'
-      );
-    }
-    isGeneratingRef.current = false;             // ★ reset flag
-
-    setProgress(100);
-    setTimeout(() => setBarVisible(false), 650);
-    setTimeout(() => setProgress(0), 1200);
-  }
-
-  return () => {
-    if (interval) clearInterval(interval);
-  };
-}, [sendLoading, isGenerating]);
-
-useEffect(() => {
-  function handleParentMsg(e: MessageEvent) {
-    if (e.data?.type === 'ragflow-token' && e.data.token) {
-      console.log('[IFRAME] Ricevuto token dal parent:', e.data.token);
-      localStorage.setItem('Authorization', e.data.token);
-      
-      // Triggera un evento custom per notificare che il token è arrivato
-      window.dispatchEvent(new CustomEvent('token-ready'));
-    }
-  }
-  window.addEventListener('message', handleParentMsg);
-  
-  // NON chiedere subito il token - aspetta che arrivi dal parent
-  
-  return () => window.removeEventListener('message', handleParentMsg);
-}, [])
-
-
-useEffect(() => {
-  const resize = () => {
-    if (window.innerWidth < 480) {
-      setBarWidth(Math.min(window.innerWidth * 0.85, 260)); // 👈 massimo 260px su mobile
-    } else if (window.innerWidth < 768) {
-      setBarWidth(300);
+      interval = setInterval(() => {
+        const elapsed = Date.now() - START;
+        const target = Math.min(90, (elapsed / SIMULATED_TOTAL_MS) * 90);
+        setProgress(target);
+      }, 200);
     } else {
-      setBarWidth(370);
+      /*  la generazione è FINITA  */
+      if (isGeneratingRef.current) {
+        // ★ transizione true → false
+        window.parent?.postMessage({ type: 'generation-finished' }, '*');
+      }
+      isGeneratingRef.current = false; // ★ reset flag
+
+      setProgress(100);
+      setTimeout(() => setBarVisible(false), 650);
+      setTimeout(() => setProgress(0), 1200);
     }
-  };
-  resize();
-  window.addEventListener('resize', resize);
-  return () => window.removeEventListener('resize', resize);
-}, []);
 
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [sendLoading, isGenerating]);
 
-//  // Prevenzione focus durante digitazione
-//  useEffect(() => {
-//    const preventAutofocusScroll = (e) => {
-//      if (sendLoading || isGeneratingRef.current) return;
-//      if (inputRef.current && document.activeElement === inputRef.current) {
-//        if (e.type === 'scroll') {
-//          e.preventDefault();
-//          e.stopPropagation();
-//          return false;
-//        }
-//      }
-//    };
-//    document.addEventListener('scroll', preventAutofocusScroll, { passive: false });
-//    return () => {
-//      document.removeEventListener('scroll', preventAutofocusScroll);
-//    };
-//  }, [sendLoading]);
-  
-  const { data: avatarData } = useFetchAvatar();
+  useEffect(() => {
+    function handleParentMsg(e: MessageEvent) {
+      if (e.data?.type === 'ragflow-token' && e.data.token) {
+        console.log('[IFRAME] Ricevuto token dal parent:', e.data.token);
+        localStorage.setItem('Authorization', e.data.token);
+
+        // Triggera un evento custom per notificare che il token è arrivato
+        window.dispatchEvent(new CustomEvent('token-ready'));
+      }
+    }
+    window.addEventListener('message', handleParentMsg);
+
+    // NON chiedere subito il token - aspetta che arrivi dal parent
+
+    return () => window.removeEventListener('message', handleParentMsg);
+  }, []);
+
+  useEffect(() => {
+    const resize = () => {
+      if (window.innerWidth < 480) {
+        setBarWidth(Math.min(window.innerWidth * 0.85, 260)); // 👈 massimo 260px su mobile
+      } else if (window.innerWidth < 768) {
+        setBarWidth(300);
+      } else {
+        setBarWidth(370);
+      }
+    };
+    resize();
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, []);
+
+  //  // Prevenzione focus durante digitazione
+  //  useEffect(() => {
+  //    const preventAutofocusScroll = (e) => {
+  //      if (sendLoading || isGeneratingRef.current) return;
+  //      if (inputRef.current && document.activeElement === inputRef.current) {
+  //        if (e.type === 'scroll') {
+  //          e.preventDefault();
+  //          e.stopPropagation();
+  //          return false;
+  //        }
+  //      }
+  //    };
+  //    document.addEventListener('scroll', preventAutofocusScroll, { passive: false });
+  //    return () => {
+  //      document.removeEventListener('scroll', preventAutofocusScroll);
+  //    };
+  //  }, [sendLoading]);
+
+  const { data: avatarData } = fetchAvatarHook(conversationId);
 
   if (!conversationId) {
     return <div>empty</div>;
   }
 
-
-
-
-
-useEffect(() => {
-  function handleLimitMsg(e: MessageEvent) {
-    if (e.data?.type === 'limit-status') {
-      setBlocked(Boolean(e.data.blocked));
+  useEffect(() => {
+    function handleLimitMsg(e: MessageEvent) {
+      if (e.data?.type === 'limit-status') {
+        setBlocked(Boolean(e.data.blocked));
+      }
     }
-  }
-  window.addEventListener('message', handleLimitMsg);
-  return () => window.removeEventListener('message', handleLimitMsg);
-}, []);
+    window.addEventListener('message', handleLimitMsg);
+    return () => window.removeEventListener('message', handleLimitMsg);
+  }, []);
 
-//
-//useEffect(() => {
-//  const scrollBox = messagesContainerRef.current;
-//  if (!scrollBox) return;
-//
-//  // Solo se sei già in fondo
-//  const isNearBottom = scrollBox.scrollHeight - scrollBox.scrollTop - scrollBox.clientHeight < 40;
-//
-//  if (isNearBottom) {
-//    setTimeout(() => {
-//      scrollBox.scrollTo({
-//        top: scrollBox.scrollHeight,
-//        behavior: 'smooth',
-//      });
-//    }, 230);
-//  }
-//}, [derivedMessages.length]);
-//
-//  // Ultimo messaggio
+  //
+  //useEffect(() => {
+  //  const scrollBox = messagesContainerRef.current;
+  //  if (!scrollBox) return;
+  //
+  //  // Solo se sei già in fondo
+  //  const isNearBottom = scrollBox.scrollHeight - scrollBox.scrollTop - scrollBox.clientHeight < 40;
+  //
+  //  if (isNearBottom) {
+  //    setTimeout(() => {
+  //      scrollBox.scrollTo({
+  //        top: scrollBox.scrollHeight,
+  //        behavior: 'smooth',
+  //      });
+  //    }, 230);
+  //  }
+  //}, [derivedMessages.length]);
+  //
+  //  // Ultimo messaggio
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
 
   return (
     <>
-        {barVisible && (
-          <div className={styles.loaderBarWrapper}>
-            <div className={styles.loaderGlass}>
-              <span className={styles.loaderGlassText}>Generazione in corso...</span>
+      {barVisible && (
+        <div className={styles.loaderBarWrapper}>
+          <div className={styles.loaderGlass}>
+            <span className={styles.loaderGlassText}>
+              Generazione in corso...
+            </span>
+            <div
+              className={styles.loaderBarLiquid}
+              style={{
+                width: '100%', // <-- QUESTA È LA CHIAVE!
+                maxWidth: 600, // limite desktop
+                minWidth: 100, // limite mobile
+                margin: '0 auto',
+                height: 16,
+                background: 'rgba(155,255,255,0.07)',
+                borderRadius: 10,
+                padding: 2,
+                boxSizing: 'border-box',
+                boxShadow: '0 0 24px #12c7f333',
+                overflow: 'hidden',
+              }}
+            >
               <div
-                className={styles.loaderBarLiquid}
+                className={styles.loaderBarLiquidInner}
                 style={{
-                  width: '100%', // <-- QUESTA È LA CHIAVE!
-                  maxWidth: 600, // limite desktop
-                  minWidth: 100, // limite mobile
-                  margin: '0 auto',
-                  height: 16,
-                  background: 'rgba(155,255,255,0.07)',
-                  borderRadius: 10,
-                  padding: 2,
-                  boxSizing: 'border-box',
-                  boxShadow: '0 0 24px #12c7f333',
-                  overflow: 'hidden',
-                }}>
-                <div
-                  className={styles.loaderBarLiquidInner}
-                  style={{
-                    width: `${progress}%`,
-                    height: '100%',
-                    borderRadius: 7,
-                    background:
-                      'linear-gradient(270deg, #12dbffBB 0%, #22ffb899 70%, #0078f0CC 100%)',
-                    boxShadow: '0 0 16px #22cfff88',
-                    transition: 'width 0.3s cubic-bezier(.4,1.1,.3,.96)',
-                    willChange: 'width',
-                    backgroundSize: '200% 100%',
-                    animation: 'loader-wave-glass 1.3s infinite linear'
-                  }}>
-                </div>
-              </div>
+                  width: `${progress}%`,
+                  height: '100%',
+                  borderRadius: 7,
+                  background:
+                    'linear-gradient(270deg, #12dbffBB 0%, #22ffb899 70%, #0078f0CC 100%)',
+                  boxShadow: '0 0 16px #22cfff88',
+                  transition: 'width 0.3s cubic-bezier(.4,1.1,.3,.96)',
+                  willChange: 'width',
+                  backgroundSize: '200% 100%',
+                  animation: 'loader-wave-glass 1.3s infinite linear',
+                }}
+              ></div>
             </div>
-            {/* CSS animation direttamente qui */}
-            <style>
-              {`@keyframes loader-wave-glass {
+          </div>
+          {/* CSS animation direttamente qui */}
+          <style>
+            {`@keyframes loader-wave-glass {
                   0% { background-position: 0 0; }
                   100% { background-position: 200% 0; }
               }`}
-            </style>
-          </div>
-        )}
+          </style>
+        </div>
+      )}
 
-            <Flex flex={1} className={`${styles.chatContainer} ${styles[theme]}`} vertical>
-  <Flex 
-    flex={1} 
-    vertical 
-    className={styles.messageContainer}
-    ref={messagesContainerRef}
-  >
-          
+      <Flex
+        flex={1}
+        className={`${styles.chatContainer} ${styles[theme]}`}
+        vertical
+      >
+        <Flex
+          flex={1}
+          vertical
+          className={styles.messageContainer}
+          ref={messagesContainerRef}
+        >
           <div>
             <Spin spinning={loading}>
               {derivedMessages?.map((message, i) => {
                 const isLastMessage = i === lastMessageIndex;
                 return (
-                  <div 
+                  <div
                     ref={isLastMessage ? lastMessageRef : null}
                     key={buildMessageUuidWithRole(message)}
                   >
@@ -298,7 +293,6 @@ useEffect(() => {
           <div ref={ref} />
         </Flex>
 
-
         {blocked && (
           <div
             style={{
@@ -319,7 +313,7 @@ useEffect(() => {
         <MessageInput
           isShared
           value={value}
-          disabled={ blocked}
+          disabled={blocked}
           sendDisabled={sendDisabled || blocked}
           conversationId={conversationId}
           onInputChange={handleInputChange}
@@ -328,7 +322,7 @@ useEffect(() => {
           uploadMethod="external_upload_and_parse"
           showUploadIcon={false}
           stopOutputMessage={stopOutputMessage}
-          autoFocus={false} 
+          autoFocus={false}
         ></MessageInput>
       </Flex>
       {visible && (
@@ -343,4 +337,6 @@ useEffect(() => {
   );
 };
 
-export default forwardRef((props, ref) => <ChatContainer {...props} ref={ref} />);
+export default forwardRef((props, ref) => (
+  <ChatContainer {...props} ref={ref} />
+));
