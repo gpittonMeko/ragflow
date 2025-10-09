@@ -40,11 +40,6 @@ export const useSendAgentMessage = (
       const delay = (retryCount + 1) * 1000; // Incremental delay: 1s, 2s, 3s
 
       try {
-        console.log(
-          `Creating Agent Session (${retryCount + 1}/${maxRetries + 1}) for agent:`,
-          agentId,
-        );
-
         const response = await fetch(`/api/v1/agents/${agentId}/sessions`, {
           method: 'POST',
           headers: {
@@ -54,12 +49,10 @@ export const useSendAgentMessage = (
           body: JSON.stringify({}),
         });
 
-        console.log('Agent Session Response Status:', response.status);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        console.log('Agent Session Response Data:', data);
 
         if (
           data.code === 0 &&
@@ -67,7 +60,6 @@ export const useSendAgentMessage = (
           (data.data.id || data.data.session_id)
         ) {
           const newSessionId = data.data.id || data.data.session_id;
-          console.log('Session created successfully:', newSessionId);
           setSessionId(newSessionId);
           setDerivedMessages([
             {
@@ -84,17 +76,10 @@ export const useSendAgentMessage = (
           );
         }
       } catch (error) {
-        console.error(
-          `Session creation attempt ${retryCount + 1} failed:`,
-          error,
-        );
-
         if (retryCount < maxRetries) {
-          console.log(`Retrying in ${delay}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
           return createAgentSession(retryCount + 1);
         } else {
-          console.error('Max retries reached for session creation');
           setLoading(false);
           return null;
         }
@@ -140,17 +125,6 @@ export const useSendAgentMessage = (
           }),
         );
 
-        console.log(
-          `Agent Completion Request (${retryCount + 1}/${maxRetries + 1}):`,
-          {
-            agentId,
-            sessionId: currentSessionId,
-            messageContent,
-            messagesCount: messagesForAPI.length,
-            messages: messagesForAPI,
-          },
-        );
-
         const response = await fetch(`/api/v1/agents/${agentId}/completions`, {
           method: 'POST',
           headers: {
@@ -159,24 +133,21 @@ export const useSendAgentMessage = (
           },
           body: JSON.stringify({
             question: messageContent,
-            stream: false, // Keep false for simplicity
+            stream: false,
             session_id: currentSessionId,
-            messages: messagesForAPI, // Sending message history
+            messages: messagesForAPI,
           }),
         });
 
-        console.log('Agent Completion Response Status:', response.status);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         // Read the full response text first
         const responseText = await response.text();
-        console.log('Agent Completion Response Text:', responseText);
 
         // Parse as JSON
         const data = JSON.parse(responseText);
-        console.log('Agent Completion Response Data:', data);
         setSendLoading(false);
 
         if (data.code === 0 && data.data) {
@@ -201,10 +172,7 @@ export const useSendAgentMessage = (
           );
         }
       } catch (error) {
-        console.error(`Completion attempt ${retryCount + 1} failed:`, error);
-
         if (retryCount < maxRetries) {
-          console.log(`Retrying in ${delay}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
           return sendAgentCompletion(
             messageContent,
@@ -212,7 +180,6 @@ export const useSendAgentMessage = (
             retryCount + 1,
           );
         } else {
-          console.error('Max retries reached for completion');
           setSendLoading(false);
           // Remove the user message that failed
           setDerivedMessages((prevMessages) => prevMessages.slice(0, -1));
