@@ -96,11 +96,9 @@ function getOrCreateClientId(): string {
 
 const PresentationPage: React.FC = () => {
   const googleButtonRef = useRef<HTMLDivElement>(null);
-  const [iframeReady, setIframeReady] = useState(false); // <-- SPOSTATO QUI DENTRO!
   const [hideExtras, setHideExtras] = useState(false);
   const [showHomeButton, setShowHomeButton] = useState(false);
 
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   const genTimeoutRef = useRef<number | null>(null);
   const navigate = useNavigate();
 
@@ -109,71 +107,6 @@ const PresentationPage: React.FC = () => {
   const handleHomeClick = () => {
     navigate('/knowledge');
   };
-
-  // --- iframe src + overlay/watchdog ---
-  const IFRAME_SRC =
-    '/chat/share?shared_id=a92b7464193811f09d527ebdee58e854&from=agent&visible_avatar=1';
-
-  const [bootOverlay, setBootOverlay] = useState(true);
-  const iframeReloadAttempts = useRef(0);
-  const bootCompletedRef = useRef(false); // ⬅️ segna il boot come completato
-
-  const reloadIframe = () => {
-    if (!iframeRef.current) return;
-    const busted =
-      IFRAME_SRC + (IFRAME_SRC.includes('?') ? '&' : '?') + 'ts=' + Date.now();
-    iframeRef.current.src = busted;
-  };
-
-  // overlay watchdog (non resta mai appeso)
-  const bootOverlayRef = useRef(bootOverlay);
-  useEffect(() => {
-    bootOverlayRef.current = bootOverlay;
-  }, [bootOverlay]);
-
-  const bootTimers = useRef<{ soft?: number; hard?: number }>({});
-  const clearBootTimers = () => {
-    if (bootTimers.current.soft) {
-      clearTimeout(bootTimers.current.soft);
-      bootTimers.current.soft = undefined;
-    }
-    if (bootTimers.current.hard) {
-      clearTimeout(bootTimers.current.hard);
-      bootTimers.current.hard = undefined;
-    }
-  };
-
-  // parte quando l'iframe viene montato
-  useEffect(() => {
-    if (!iframeReady) return;
-    if (bootCompletedRef.current) return; // ⬅️ non riavviare watchdog se già “ok”
-
-    setBootOverlay(true);
-    clearBootTimers();
-
-    bootTimers.current.soft = window.setTimeout(() => {
-      if (bootOverlayRef.current && iframeReloadAttempts.current < 1) {
-        iframeReloadAttempts.current += 1;
-        reloadIframe();
-      }
-    }, 6000);
-
-    bootTimers.current.hard = window.setTimeout(() => {
-      if (!bootOverlayRef.current) return;
-      const K = 'sgai-boot-retried';
-      if (localStorage.getItem(K) !== '1') {
-        localStorage.setItem(K, '1');
-        window.location.reload();
-      } else {
-        setBootOverlay(false);
-        clearBootTimers();
-        bootCompletedRef.current = true; // ⬅️ segnalo completato
-        sessionStorage.setItem('sgai-boot-ok', '1'); // ⬅️ nota in sessione
-      }
-    }, 12000);
-
-    return clearBootTimers;
-  }, [iframeReady]);
 
   // contatore legacy locale (lo lasciamo ma ora fa solo da fallback UI)
   const [genCount, setGenCount] = useState<number>(() => {
@@ -237,20 +170,10 @@ const PresentationPage: React.FC = () => {
       ? 'Per continuare, passa a Premium.'
       : '';
 
-  function postToIframe(msg: any) {
-    try {
-      const iframe = iframeRef.current;
-      if (!iframe?.contentWindow) return;
-      iframe.contentWindow.postMessage(msg, '*');
-    } catch {}
-  }
-
-  // Bootstrap: se ho già il cookie di sessione, prendo l’utente
-  // Bootstrap: NON chiamare /oauth/api/me
+  // Bootstrap: prende quota all'avvio
   useEffect(() => {
     (async () => {
       try {
-        // prova direttamente a prendere la quota (anon/user)
         await refreshQuota();
       } catch {}
     })();
@@ -292,26 +215,10 @@ const PresentationPage: React.FC = () => {
     }
   }, [genCount, isLoggedIn, quota]);
 
-  // comunica all’iframe se il limite è stato raggiunto
-  useEffect(() => {
-    postToIframe({
-      type: 'limit-status',
-      blocked: quota !== null && showLimitOverlay,
-    });
-  }, [showLimitOverlay, quota]);
-
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('sgai-theme', theme);
-    postToIframe({ type: 'theme-change', theme });
   }, [theme]);
-
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      postToIframe({ type: 'ragflow-token', token });
-    }
-  }, [quota, googleToken]);
 
   useEffect(() => {
     if (showGoogleModal) setShowLimitOverlay(false);
@@ -349,82 +256,6 @@ const PresentationPage: React.FC = () => {
 
     syncOnLogin();
   }, [isLoggedIn]);
-
-  useEffect(() => {
-    const handler = async (event: MessageEvent) => {
-      if (event.data?.type === 'generation-finished') {
-        console.log('[GENERATION] FINISHED');
-
-        try {
-          // Chiama backend per scalare quota
-          const response = await fetch(`${baseURL}/api/generate`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Client-Id': clientIdRef.current,
-            },
-            credentials: 'include',
-          });
-
-          const data = await response.json();
-          console.log('[generate → quota]', data);
-
-          if (response.status === 403) {
-            // 🚨 LIMITE RAGGIUNTO!
-            console.warn('[QUOTA] Limite raggiunto:', data);
-
-            // Blocca l'iframe
-            postToIframe({ type: 'limit-status', blocked: true });
-
-            // Mostra overlay
-            setShowLimitOverlay(true);
-
-            // Aggiorna quota per riflettere lo stato reale
-            await refreshQuota();
-
-            return; // esci subito
-          }
-
-          // Se 200 OK, aggiorna quota normalmente
-          if (response.ok) {
-            await refreshQuota();
-          }
-        } catch (err) {
-          console.warn('[generate err]', err);
-        }
-      }
-    };
-
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, []); // ⚠️ dipendenze vuote, usa solo ref
-
-  useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      if (event.data?.type === 'iframe-height') {
-        const iframe = iframeRef.current;
-        if (iframe && event.data.height) {
-          const newH = Number(event.data.height);
-          if (newH > 0) {
-            iframe.style.height = `${newH}px`;
-          }
-        }
-        setBootOverlay(false); // ⬅️ aggiungi questa riga
-      }
-
-      if (event.data?.type === 'generation-started') {
-        console.log('[GENERATION] STARTED');
-      }
-
-      if (event.data?.type === 'generation-finished') {
-        console.log('[GENERATION] FINISHED - Showing home button');
-        setShowHomeButton(true);
-      }
-    };
-
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, []);
 
   async function ensureRagflowAuth(): Promise<string | null> {
     try {
@@ -505,131 +336,12 @@ const PresentationPage: React.FC = () => {
     }
   }
 
-  // ✅ Unico punto che invia il token al child, quando l’iframe è pronto
-  useEffect(() => {
-    if (!iframeReady) return;
-    const token = localStorage.getItem('Authorization'); // <-- unificato
-    if (token) {
-      postToIframe({ type: 'ragflow-token', token });
-    }
-  }, [iframeReady]);
-
-  useEffect(() => {
-    const handler = async (event: MessageEvent) => {
-      console.log('[postMessage]', event.data);
-
-      if (event.data?.type === 'shared-needs-token') {
-        console.log(
-          '[PARENT] Chat richiede token - Login con password crittografata',
-        );
-
-        try {
-          const loginRes = await fetch('/v1/user/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: 'giovanni.pitton@mekosrl.it',
-              password:
-                'L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag==',
-            }),
-          });
-
-          const loginData = await loginRes.json();
-          console.log('[PARENT] Login response:', loginData);
-
-          if (loginData.code === 0) {
-            const token = localStorage.getItem('access_token'); // usa quello giusto
-
-            if (token) {
-              console.log('🔑 Authorization disponibile al primo boot:', token);
-              setIframeReady(true); // iframe viene montato solo dopo che ho il token
-            }
-          } else {
-            console.error('[PARENT] Login fallito:', loginData);
-          }
-        } catch (err) {
-          console.error('[PARENT] Errore login:', err);
-        }
-      }
-
-      if (event.data?.type === 'iframe-height') {
-        const iframe = iframeRef.current;
-        if (iframe && event.data.height) {
-          iframe.style.height = `${event.data.height}px`;
-        }
-      }
-
-      if (event.data?.type === 'generation-started') {
-        console.log('[GENERATION] STARTED');
-
-        if (genTimeoutRef.current) {
-          console.warn('[GENERATION] Timer già attivo, non reinizializzo');
-          return;
-        }
-
-        //      genTimeoutRef.current = window.setTimeout(() => {
-        //        console.warn('[FALLBACK] generation-finished NON ricevuto dopo 120s. Chiamo tickGeneration()');
-        //        genTimeoutRef.current = null;
-        //      }, 120000);
-        //    }
-        //
-        //    if (event.data?.type === 'generation-finished') {
-        //      console.log('[GENERATION] FINISHED');
-        //
-        //      if (!userData) {
-        //        setGenCount(prev => {
-        //          const next = prev + 1;
-        //          if (next >= FREE_LIMIT) setShowLimitOverlay(true);
-        //          return next;
-        //        });
-        //      }
-        //
-        //      if (genTimeoutRef.current) {
-        //        clearTimeout(genTimeoutRef.current);
-        //        genTimeoutRef.current = null;
-        //        console.log('[GENERATION] Timer di fallback annullato');
-        //      }
-      }
-    };
-
-    window.addEventListener('message', handler);
-    return () => {
-      window.removeEventListener('message', handler);
-    };
-  }, [userData, googleToken]);
-
+  // Bootstrap auth for ragflow
   useEffect(() => {
     (async () => {
-      const token = await ensureRagflowAuth();
-      if (token) {
-        if (iframeRef.current?.contentWindow) {
-          iframeRef.current.contentWindow.postMessage(
-            { type: 'ragflow-token', token },
-            '*',
-          );
-        }
-        setIframeReady(true);
-      } else {
-        console.warn('⚠ Nessun token al bootstrap');
-        const K = 'sgai-boot-retried';
-        setTimeout(() => {
-          if (localStorage.getItem(K) !== '1') {
-            localStorage.setItem(K, '1');
-            window.location.reload();
-          } else {
-            setBootOverlay(false); // non bloccare l’utente in overlay
-          }
-        }, 4000);
-      }
+      await ensureRagflowAuth();
     })();
   }, []);
-
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      postToIframe({ type: 'ragflow-token', token });
-    }
-  }, [quota, googleToken]);
 
   // ======= GOOGLE SDK =======
   const [gsiReady, setGsiReady] = useState(false);
@@ -713,23 +425,6 @@ const PresentationPage: React.FC = () => {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [userChipOpen]);
-
-  useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      if (event.data?.type === 'generation-started') {
-        setHideExtras(true);
-      }
-
-      if (event.data?.type === 'generation-finished') {
-        console.log('Generazione finita, lascio i blocchi nascosti');
-        // se vuoi che torni compatto, rimetti:
-        // setHideExtras(false);
-      }
-    }; // 👈 MANCAVA QUESTA CHIUSURA
-
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, []);
 
   useEffect(() => {
     if (
@@ -1055,7 +750,7 @@ const PresentationPage: React.FC = () => {
               minHeight: '400px',
             }}
           >
-            <ChatContainer theme={theme} />
+            <ChatContainer />
           </div>
           {showLimitOverlay && (
             <div className={styles.chatOverlay} role="dialog" aria-modal="true">
@@ -1186,66 +881,8 @@ const PresentationPage: React.FC = () => {
           </p>
         </div>
       </div>
-      {bootOverlay && (
-        <div className={styles.bootOverlay} role="status" aria-live="polite">
-          <div className={styles.bootALogo}>
-            <svg
-              viewBox="7000 6000 4000 3000"
-              width="56"
-              height="56"
-              aria-hidden
-            >
-              <path
-                d="M8624 8339 c-8 -8 -14 -25 -14 -36 0 -11 -7 -26 -15 -33 -8 -7 -15
-          -19 -15 -27 0 -8 -6 -27 -13 -41 -14 -26 -36 -77 -62 -137 -7 -16 -24 -55 -38
-          -85 -13 -30 -44 -100 -67 -154 -23 -54 -45 -106 -49 -115 -5 -9 -15 -33 -24
-          -54 -9 -20 -23 -52 -31 -70 -8 -17 -21 -48 -30 -67 -18 -43 -60 -138 -92 -207
-          -13 -28 -24 -55 -24 -58 0 -3 -11 -30 -24 -58 -13 -29 -34 -74 -46 -102 -11
-          -27 -25 -59 -30 -70 -34 -77 -64 -144 -105 -240 -26 -60 -55 -128 -65 -150
-          -22 -49 -42 -95 -70 -160 -26 -61 -30 -70 -74 -168 -20 -42 -36 -79 -36 -82 0
-          -2 -14 -34 -31 -72 -40 -90 -44 -100 -69 -158 -12 -27 -25 -59 -30 -70 -5 -11
-          -18 -42 -30 -70 -12 -27 -27 -63 -35 -80 -7 -16 -21 -48 -30 -70 -9 -22 -23
-          -53 -30 -70 -8 -16 -26 -57 -40 -90 -15 -33 -33 -73 -41 -90 -25 -50 -4 -57
-          161 -51 77 3 172 5 210 5 l70 1 112 83 c62 45 155 109 208 142 53 33 126 79
-          163 103 37 24 182 113 324 198 298 179 299 179 405 116 66 -39 290 -177 329
-          -202 12 -8 67 -42 121 -74 94 -58 217 -137 238 -153 6 -5 28 -20 50 -33 22
-          -13 49 -32 59 -42 11 -10 38 -30 60 -45 23 -16 52 -38 66 -51 42 -38 83 -43
-          305 -40 l210 3 -2 26 c-1 14 -16 57 -34 95 -34 73 -48 105 -74 169 -9 22 -24
-          56 -32 75 -9 19 -22 49 -29 65 -6 17 -20 48 -30 70 -18 42 -31 73 -59 140 -9
-          22 -24 56 -32 75 -9 19 -22 49 -29 65 -6 17 -20 48 -30 70 -22 51 -44 102 -60
-          140 -17 43 -38 91 -72 165 -16 36 -37 83 -47 105 -23 56 -46 105 -62 137 -7
-          14 -13 33 -13 41 0 8 -7 20 -15 27 -8 7 -15 21 -15 30 0 10 -6 31 -14 47 -8
-          15 -21 44 -29 63 -19 45 -39 89 -76 173 -17 37 -31 71 -31 76 0 5 -6 22 -14
-          38 -42 82 -76 160 -76 174 0 9 -7 22 -15 29 -8 7 -15 23 -15 35 0 12 -7 28
-          -15 35 -8 7 -15 18 -15 25 0 8 -7 27 -15 44 -8 17 -22 45 -30 62 -8 17 -15 39
-          -15 49 0 9 -7 23 -15 30 -8 7 -15 18 -15 25 0 8 -7 27 -15 44 -8 17 -22 45
-          -30 62 -8 17 -15 39 -15 49 0 9 -7 23 -15 30 -8 7 -15 19 -15 27 0 8 -7 28
-          -15 44 -8 16 -22 42 -30 58 -8 16 -15 36 -15 44 0 8 -7 20 -15 27 -8 7 -15 23
-          -15 36 0 12 -4 26 -10 29 -5 3 -14 24 -20 45 -6 22 -16 40 -23 40 -7 0 -135 1
-          -285 3 -239 2 -275 0 -288 -14z m316 -788 c0 -9 4 -21 8 -26 4 -6 18 -37 31
-          -70 12 -33 27 -69 31 -80 5 -11 19 -45 31 -75 11 -30 27 -68 34 -85 37 -83 45
-          -104 45 -113 0 -6 6 -23 14 -39 8 -15 19 -39 25 -53 5 -14 19 -46 30 -72 12
-          -26 21 -51 21 -57 0 -5 6 -22 14 -38 23 -45 46 -100 46 -111 0 -6 6 -23 14
-          -39 8 -15 19 -39 25 -53 5 -14 19 -46 30 -72 12 -26 21 -51 21 -57 0 -5 6 -22
-          14 -38 8 -15 22 -46 31 -68 9 -22 23 -53 32 -68 13 -26 14 -31 1 -44 -13 -13
-          -17 -13 -31 1 -8 9 -19 16 -22 16 -4 0 -44 22 -89 49 -44 27 -106 62 -136 79
-          -30 16 -84 46 -120 66 -36 20 -77 41 -92 47 -16 6 -28 15 -28 20 0 12 -43 12
-          -56 0 -5 -5 -34 -22 -64 -39 -109 -58 -237 -130 -301 -170 -36 -22 -81 -48
-          -99 -57 l-33 -17 7 29 c4 15 14 42 21 58 8 17 23 55 35 85 11 30 25 64 30 75
-          5 11 18 43 30 70 12 28 25 59 30 70 5 11 18 43 30 70 11 28 25 58 30 67 6 10
-          10 23 10 29 0 10 14 45 45 114 12 27 32 73 67 155 5 14 16 39 23 55 7 17 29
-          71 49 120 21 50 42 101 48 115 5 14 16 39 22 55 20 48 49 109 59 123 12 16 37
-          -3 37 -27z"
-                fill="currentColor"
-              />
-            </svg>
-          </div>
-        </div>
-      )}{' '}
-      {/* chiude .pageContainer */}
-      {/* chiude il return */}
-      {/* chiude la funzione componente */}
     </div>
   );
 };
+
 export default PresentationPage;
