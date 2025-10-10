@@ -170,15 +170,18 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   box-sizing: border-box;
   background-color: var(--bg-secondary);
   transition: background-color var(--transition-time);
+  padding: 0;
+  margin: 0;
 
   .messageContainer {
     flex: 1 1 auto;
     overflow-y: auto;
     min-height: 0;
-    padding: 0 0px 0px 0;
+    padding: 8px;
     padding-bottom: 0px;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none; /* Firefox */
@@ -364,11 +367,14 @@ body {
   }
 }
 
-/* Fix input wrapper position */
+/* Fix input wrapper position - ALWAYS at bottom */
 :global(.messageInputWrapper___nie1o) {
   position: sticky !important;
   bottom: 0 !important;
   background: inherit !important;
   z-index: 10 !important;
   margin-top: auto !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
