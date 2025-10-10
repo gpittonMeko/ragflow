@@ -402,7 +402,12 @@ body {
 
   /* Reduce space above chat when not expanded */
   .iframeSection {
-    margin: 1rem 0 !important;
+    margin: 0.5rem 0 !important;
+  }
+
+  /* Reduce hero section padding on desktop */
+  .heroSection {
+    padding: 1rem 0 !important;
   }
 
   /* Ensure chat container has proper height and scroll */
@@ -416,6 +421,25 @@ body {
   .chatContainer___JkSeI {
     height: 100% !important;
     overflow: hidden !important;
+  }
+
+  /* Full screen optimizations */
+  .iframeSection[style*='position: fixed'] {
+    padding: 10px !important;
+  }
+
+  .iframeSection[style*='position: fixed'] .heroSection {
+    display: none !important;
+  }
+
+  .iframeSection[style*='position: fixed'] .chatWrap {
+    height: calc(100vh - 20px) !important;
+  }
+
+  .iframeSection[style*='position: fixed'] .chatWrap > div {
+    height: calc(100vh - 20px) !important;
+    min-height: calc(100vh - 20px) !important;
+    max-height: calc(100vh - 20px) !important;
   }
 }
 
@@ -434,7 +458,12 @@ body {
   }
 
   .iframeSection {
-    margin: 2rem 0;
+    margin: 1rem 0;
+  }
+
+  /* Reduce hero section padding on tablet */
+  .heroSection {
+    padding: 0.5rem 0 !important;
   }
 
   .themeToggle {
@@ -505,7 +534,12 @@ body {
   }
 
   .iframeSection {
-    margin: 1.5rem 0;
+    margin: 0.5rem 0;
+  }
+
+  /* Reduce hero section padding on mobile */
+  .heroSection {
+    padding: 0.3rem 0 !important;
   }
 
   .themeToggle {

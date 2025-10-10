@@ -720,6 +720,7 @@ const PresentationPage: React.FC = () => {
       {/* LOGO SGAI */}
       <div
         className={`${styles.heroSection} ${hideExtras ? styles.heroShrink : ''}`}
+        style={{ display: chatExpanded ? 'none' : 'block' }}
       >
         <div className={styles.logoBox}>
           <SvgLogoInteractive flipped />
@@ -843,6 +844,7 @@ const PresentationPage: React.FC = () => {
       {/* FEATURE */}
       <div
         className={`${styles.extraBlocks} ${hideExtras ? styles.hidden : ''}`}
+        style={{ display: chatExpanded ? 'none' : 'block' }}
       >
         <div className={styles.featuresSection}>
           <div className={styles.featureCard}>
