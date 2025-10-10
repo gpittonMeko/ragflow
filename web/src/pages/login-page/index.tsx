@@ -569,7 +569,7 @@ const PresentationPage: React.FC = () => {
 
   return (
     <div
-      className={`${styles.pageContainer} ${hideExtras ? styles.fullscreen : ''}`}
+      className={`${styles.pageContainer} ${hideExtras ? styles.fullscreen : ''} ${chatExpanded ? styles.chatExpandedMode : ''}`}
     >
       {/* Pulsante login + contatore oppure dati utente */}
       {!isLoggedIn ? (

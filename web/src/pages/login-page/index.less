@@ -64,6 +64,13 @@ body {
   overflow: hidden; /* blocca scroll della pagina */
   display: flex;
   flex-direction: column;
+  background-color: var(--bg-primary); /* default background */
+}
+
+/* Remove background when chat is expanded */
+.chatExpandedMode {
+  background-color: transparent !important;
+  background: transparent !important;
 }
 
 .themeToggle {
@@ -503,7 +510,7 @@ body {
 
   /* Remove black block below chat on mobile */
   .pageContainer {
-    background: transparent !important;
+    background-color: var(--bg-primary) !important;
   }
 }
 
