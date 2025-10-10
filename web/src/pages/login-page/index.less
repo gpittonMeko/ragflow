@@ -381,6 +381,24 @@ body {
   }
 }
 
+/* Desktop styles (above 768px) */
+@media (min-width: 769px) {
+  .chatWrap > div {
+    overflow: auto !important;
+  }
+
+  /* Fix placeholder text being cut off on desktop */
+  .ant-input {
+    padding: 14px !important;
+    min-height: 55px !important;
+  }
+
+  /* Reduce space above chat when not expanded */
+  .iframeSection {
+    margin: 1rem 0 !important;
+  }
+}
+
 @media (max-width: 768px) {
   .pageContainer {
     padding: 1rem;
@@ -415,6 +433,18 @@ body {
     min-height: 450px !important;
     height: 450px !important;
     max-height: 450px !important;
+    overflow: auto !important;
+  }
+
+  /* Fix placeholder text being cut off */
+  .ant-input {
+    padding: 12px !important;
+    min-height: 50px !important;
+  }
+
+  /* Remove black block below chat on mobile */
+  .pageContainer {
+    background: transparent !important;
   }
 }
 
@@ -466,11 +496,18 @@ body {
     min-height: 400px !important;
     height: 400px !important;
     max-height: 400px !important;
+    overflow: auto !important;
   }
 
   /* Reduce placeholder text on small screens */
   .ant-input::placeholder {
     font-size: 0.8rem !important;
+  }
+
+  /* Fix input padding on mobile */
+  .ant-input {
+    padding: 10px !important;
+    min-height: 45px !important;
   }
 
   /* Ensure input is always visible */
