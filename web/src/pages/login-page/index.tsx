@@ -13,8 +13,8 @@ import { toast } from 'sonner';
 import { useNavigate } from 'umi';
 import { v4 as uuidv4 } from 'uuid';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
-import AgentChat from './agent-chat';
 import styles from './index.less';
+import WorkingChat from './working-chat';
 
 const CLIENT_ID =
   '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
@@ -750,7 +750,7 @@ const PresentationPage: React.FC = () => {
               minHeight: '400px',
             }}
           >
-            <AgentChat agentId="9afb6a2267bf11f0a1f2fec73c0cd884" />
+            <WorkingChat agentId="9afb6a2267bf11f0a1f2fec73c0cd884" />
           </div>
           {showLimitOverlay && (
             <div className={styles.chatOverlay} role="dialog" aria-modal="true">

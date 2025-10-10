@@ -24,6 +24,15 @@ const AgentChat: React.FC<AgentChatProps> = ({ agentId, className, style }) => {
     stopOutputMessage,
   } = useSendAgentMessage(agentId);
 
+  // Se l'agent non esiste, mostra un messaggio
+  if (!agentId) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+        <p>Agent non configurato. Contatta l'amministratore.</p>
+      </div>
+    );
+  }
+
   return (
     <Flex flex={1} className={className} style={style} vertical>
       <Flex vertical style={{ flex: '1 1 0%', overflowY: 'auto' }}>
