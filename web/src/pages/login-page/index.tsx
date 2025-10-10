@@ -567,6 +567,17 @@ const PresentationPage: React.FC = () => {
     }
   };
 
+  // Change body background when chat is expanded
+  React.useEffect(() => {
+    if (chatExpanded) {
+      document.body.style.backgroundColor = 'transparent';
+      document.documentElement.style.backgroundColor = 'transparent';
+    } else {
+      document.body.style.backgroundColor = '';
+      document.documentElement.style.backgroundColor = '';
+    }
+  }, [chatExpanded]);
+
   return (
     <div
       className={`${styles.pageContainer} ${hideExtras ? styles.fullscreen : ''} ${chatExpanded ? styles.chatExpandedMode : ''}`}
@@ -793,9 +804,9 @@ const PresentationPage: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               background: 'transparent',
-              minHeight: chatExpanded ? 'calc(100vh - 20px)' : '500px',
-              height: chatExpanded ? 'calc(100vh - 20px)' : '500px',
-              maxHeight: chatExpanded ? 'calc(100vh - 20px)' : '500px',
+              minHeight: chatExpanded ? 'calc(100vh - 20px)' : '400px',
+              height: chatExpanded ? 'calc(100vh - 20px)' : '400px',
+              maxHeight: chatExpanded ? 'calc(100vh - 20px)' : '400px',
               overflow: 'auto',
             }}
             onClick={() => {
