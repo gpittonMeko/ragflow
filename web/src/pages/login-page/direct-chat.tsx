@@ -13,7 +13,7 @@ import { buildMessageItemReference } from '@/pages/chat/utils';
 import { buildMessageUuidWithRole } from '@/utils/chat';
 import { Flex, Spin } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'umi';
+import { useLocation } from 'umi';
 import styles from '../chat/share/index.less';
 
 interface DirectChatProps {
@@ -29,9 +29,8 @@ const DirectChat: React.FC<DirectChatProps> = ({
 }) => {
   const { theme } = useTheme();
   const location = useLocation();
-  const navigate = useNavigate();
 
-  // Imposta i parametri URL necessari per useSendSharedMessage
+  // Imposta i parametri URL necessari per useSendSharedMessage (solo query params, NON cambia pathname)
   useEffect(() => {
     const currentParams = new URLSearchParams(location.search);
     const needsUpdate =
@@ -40,20 +39,17 @@ const DirectChat: React.FC<DirectChatProps> = ({
       currentParams.get('visible_avatar') !== '1';
 
     if (needsUpdate) {
-      const newParams = new URLSearchParams({
-        shared_id: agentId,
-        from: 'agent',
-        visible_avatar: '1',
-      });
-      navigate(
-        {
-          pathname: location.pathname,
-          search: `?${newParams.toString()}`,
-        },
-        { replace: true },
-      );
+      // Mantieni tutti i parametri esistenti e aggiungi/sovrascrivi solo quelli necessari
+      const newParams = new URLSearchParams(location.search);
+      newParams.set('shared_id', agentId);
+      newParams.set('from', 'agent');
+      newParams.set('visible_avatar', '1');
+
+      // Usa replaceState direttamente per non triggerare navigazione
+      const newUrl = `${location.pathname}?${newParams.toString()}`;
+      window.history.replaceState({}, '', newUrl);
     }
-  }, [agentId, location.pathname, location.search, navigate]);
+  }, [agentId, location.pathname, location.search]);
 
   const {
     handlePressEnter,
