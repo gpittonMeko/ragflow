@@ -127,6 +127,7 @@ const PresentationPage: React.FC = () => {
 
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [showLimitOverlay, setShowLimitOverlay] = useState(false);
+  const [chatExpanded, setChatExpanded] = useState(false);
 
   // quota server-side
   const [quota, setQuota] = useState<QuotaAnon | QuotaUser | null>(null);
@@ -735,8 +736,56 @@ const PresentationPage: React.FC = () => {
         </div>
       </div>
       {/* CHAT SOTTO IL LOGO */}
-      <div className={styles.iframeSection}>
-        <div className={styles.chatWrap}>
+      <div
+        className={styles.iframeSection}
+        style={{
+          position: chatExpanded ? 'fixed' : 'relative',
+          top: chatExpanded ? 0 : 'auto',
+          left: chatExpanded ? 0 : 'auto',
+          right: chatExpanded ? 0 : 'auto',
+          bottom: chatExpanded ? 0 : 'auto',
+          zIndex: chatExpanded ? 9999 : 'auto',
+          background: chatExpanded
+            ? theme === 'dark'
+              ? '#000'
+              : '#fff'
+            : 'transparent',
+          transition: 'all 0.3s ease',
+          width: chatExpanded ? '100vw' : 'auto',
+          height: chatExpanded ? '100vh' : 'auto',
+          padding: chatExpanded ? '20px' : 0,
+        }}
+      >
+        {chatExpanded && (
+          <button
+            onClick={() => setChatExpanded(false)}
+            style={{
+              position: 'absolute',
+              top: 20,
+              right: 20,
+              zIndex: 10000,
+              background: 'rgba(0,0,0,0.5)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: 40,
+              height: 40,
+              cursor: 'pointer',
+              fontSize: 20,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            ×
+          </button>
+        )}
+        <div
+          className={styles.chatWrap}
+          style={{
+            height: chatExpanded ? '100%' : 'auto',
+          }}
+        >
           <div
             className={
               quota !== null && showLimitOverlay ? styles.chatFrozen : ''
@@ -747,28 +796,16 @@ const PresentationPage: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               background: 'transparent',
-              minHeight: '400px',
+              minHeight: chatExpanded ? '100%' : '400px',
+              height: chatExpanded ? '100%' : 'auto',
+            }}
+            onClick={() => {
+              if (!chatExpanded) {
+                setChatExpanded(true);
+              }
             }}
           >
-            <DirectChat
-              agentId="9afb6a2267bf11f0a1f2fec73c0cd884"
-              onMessageSent={() => {
-                // Incrementa il counter locale
-                const newCount = genCount + 1;
-                setGenCount(newCount);
-                localStorage.setItem('sgai-gen-count', String(newCount));
-
-                // Mostra overlay se raggiunto il limite (solo per utenti anonimi)
-                if (
-                  !isLoggedIn &&
-                  quota !== null &&
-                  quota.scope === 'anon' &&
-                  newCount >= FREE_LIMIT
-                ) {
-                  setShowLimitOverlay(true);
-                }
-              }}
-            />
+            <DirectChat agentId="9afb6a2267bf11f0a1f2fec73c0cd884" />
           </div>
           {showLimitOverlay && (
             <div className={styles.chatOverlay} role="dialog" aria-modal="true">
