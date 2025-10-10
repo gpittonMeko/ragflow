@@ -5,8 +5,10 @@ import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import { useTheme } from '@/components/theme-provider';
 import { MessageType } from '@/constants/chat';
 import { useFetchFlowSSE } from '@/hooks/flow-hooks';
-import { useSendButtonDisabled } from '@/pages/chat/share/shared-hooks';
-import { useSendSharedMessage } from '@/pages/chat/shared-hooks';
+import {
+  useSendButtonDisabled,
+  useSendSharedMessage,
+} from '@/pages/chat/shared-hooks';
 import { buildMessageItemReference } from '@/pages/chat/utils';
 import { buildMessageUuidWithRole } from '@/utils/chat';
 import { Flex, Spin } from 'antd';
