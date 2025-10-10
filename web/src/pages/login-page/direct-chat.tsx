@@ -36,14 +36,14 @@ const DirectChat: React.FC<DirectChatProps> = ({
     const needsUpdate =
       currentParams.get('shared_id') !== agentId ||
       currentParams.get('from') !== 'agent' ||
-      currentParams.get('visible_avatar') !== '1';
+      currentParams.get('visible_avatar') !== '0';
 
     if (needsUpdate) {
       // Mantieni tutti i parametri esistenti e aggiungi/sovrascrivi solo quelli necessari
       const newParams = new URLSearchParams(location.search);
       newParams.set('shared_id', agentId);
       newParams.set('from', 'agent');
-      newParams.set('visible_avatar', '1');
+      newParams.set('visible_avatar', '0');
 
       // Usa replaceState direttamente per non triggerare navigazione
       const newUrl = `${location.pathname}?${newParams.toString()}`;
@@ -170,7 +170,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
                 return (
                   <div key={buildMessageUuidWithRole(message)}>
                     <MessageItem
-                      visibleAvatar={true}
+                      visibleAvatar={false}
                       avatarDialog={avatarData?.avatar}
                       item={message}
                       nickname="You"
