@@ -758,9 +758,8 @@ const PresentationPage: React.FC = () => {
           bottom: chatExpanded ? 0 : 'auto',
           zIndex: chatExpanded ? 9999 : 'auto',
           background: 'transparent',
-          transition: 'all 0.3s ease',
           width: chatExpanded ? '100vw' : 'auto',
-          height: chatExpanded ? '100vh' : 'auto',
+          height: chatExpanded ? '100vh' : '150px',
           padding: chatExpanded ? '10px' : 0,
         }}
       >
@@ -780,9 +779,6 @@ const PresentationPage: React.FC = () => {
               height: 40,
               cursor: 'pointer',
               fontSize: 20,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
             }}
           >
             ×
@@ -791,23 +787,18 @@ const PresentationPage: React.FC = () => {
         <div
           className={styles.chatWrap}
           style={{
-            height: chatExpanded ? 'calc(100vh - 20px)' : 'auto',
+            height: '100%',
           }}
         >
           <div
-            className={
-              quota !== null && showLimitOverlay ? styles.chatFrozen : ''
-            }
             style={{
               borderRadius: 6,
               width: '100%',
+              height: '100%',
               display: 'flex',
               flexDirection: 'column',
               background: 'transparent',
-              minHeight: chatExpanded ? 'calc(100vh - 20px)' : '400px',
-              height: chatExpanded ? 'calc(100vh - 20px)' : '400px',
-              maxHeight: chatExpanded ? 'calc(100vh - 20px)' : '400px',
-              overflow: 'auto',
+              overflow: 'hidden',
             }}
             onClick={() => {
               if (!chatExpanded) {
