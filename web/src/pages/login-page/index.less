@@ -383,7 +383,14 @@ body {
 
 /* Desktop styles (above 768px) */
 @media (min-width: 769px) {
+  .chatWrap {
+    height: 500px !important;
+  }
+
   .chatWrap > div {
+    min-height: 500px !important;
+    height: 500px !important;
+    max-height: 500px !important;
     overflow: auto !important;
   }
 
@@ -397,16 +404,22 @@ body {
   .iframeSection {
     margin: 1rem 0 !important;
   }
+
+  /* Ensure chat container has proper height */
+  .messageContainer {
+    height: calc(100% - 120px) !important;
+    overflow-y: auto !important;
+  }
 }
 
 @media (max-width: 768px) {
   .pageContainer {
-    padding: 1rem;
+    padding: 0.5rem;
     margin: 0;
   }
 
   .heroSection {
-    padding: 1.5rem 0.5rem 1rem;
+    padding: 0.5rem 0.5rem 0.5rem;
   }
 
   .featureCard {
@@ -450,7 +463,7 @@ body {
 
 @media (max-width: 480px) {
   .pageContainer {
-    padding: 0.8rem;
+    padding: 0.3rem;
     margin: 0;
   }
 
