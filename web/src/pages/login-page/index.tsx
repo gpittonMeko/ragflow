@@ -799,7 +799,7 @@ const PresentationPage: React.FC = () => {
               minHeight: chatExpanded ? '100%' : '500px',
               height: chatExpanded ? '100%' : '500px',
               maxHeight: chatExpanded ? '100%' : '500px',
-              overflow: 'hidden',
+              overflow: 'auto',
             }}
             onClick={() => {
               if (!chatExpanded) {

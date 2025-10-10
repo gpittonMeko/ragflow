@@ -405,6 +405,17 @@ body {
     width: 40px;
     height: 40px;
   }
+
+  /* Chat responsive for tablets */
+  .chatWrap {
+    height: 450px !important;
+  }
+
+  .chatWrap > div {
+    min-height: 450px !important;
+    height: 450px !important;
+    max-height: 450px !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -444,6 +455,30 @@ body {
 
   .disclaimerSection {
     padding: 1rem;
+  }
+
+  /* Chat responsive improvements */
+  .chatWrap {
+    height: 400px !important;
+  }
+
+  .chatWrap > div {
+    min-height: 400px !important;
+    height: 400px !important;
+    max-height: 400px !important;
+  }
+
+  /* Reduce placeholder text on small screens */
+  .ant-input::placeholder {
+    font-size: 0.8rem !important;
+  }
+
+  /* Ensure input is always visible */
+  .messageInputWrapper {
+    position: sticky !important;
+    bottom: 0 !important;
+    background: inherit !important;
+    z-index: 10 !important;
   }
 }
 
