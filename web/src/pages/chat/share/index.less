@@ -91,6 +91,25 @@
   }
 }
 
+/* Responsive placeholder text size */
+@media (max-width: 768px) {
+  :global(.ant-input::placeholder) {
+    font-size: 0.85rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  :global(.ant-input::placeholder) {
+    font-size: 0.75rem !important;
+  }
+}
+
+@media (max-width: 360px) {
+  :global(.ant-input::placeholder) {
+    font-size: 0.7rem !important;
+  }
+}
+
 .loaderBarWrapper {
   position: sticky;
   top: 0;
