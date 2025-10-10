@@ -405,10 +405,17 @@ body {
     margin: 1rem 0 !important;
   }
 
-  /* Ensure chat container has proper height */
-  .messageContainer {
+  /* Ensure chat container has proper height and scroll */
+  .messageContainer___v6SB0 {
     height: calc(100% - 120px) !important;
     overflow-y: auto !important;
+    max-height: calc(100% - 120px) !important;
+  }
+
+  /* Fix chat container flex behavior */
+  .chatContainer___JkSeI {
+    height: 100% !important;
+    overflow: hidden !important;
   }
 }
 
@@ -447,6 +454,18 @@ body {
     height: 450px !important;
     max-height: 450px !important;
     overflow: auto !important;
+  }
+
+  /* Fix message container on tablet */
+  .messageContainer___v6SB0 {
+    height: calc(100% - 100px) !important;
+    overflow-y: auto !important;
+    max-height: calc(100% - 100px) !important;
+  }
+
+  .chatContainer___JkSeI {
+    height: 100% !important;
+    overflow: hidden !important;
   }
 
   /* Fix placeholder text being cut off */
@@ -510,6 +529,18 @@ body {
     height: 400px !important;
     max-height: 400px !important;
     overflow: auto !important;
+  }
+
+  /* Fix message container on mobile */
+  .messageContainer___v6SB0 {
+    height: calc(100% - 90px) !important;
+    overflow-y: auto !important;
+    max-height: calc(100% - 90px) !important;
+  }
+
+  .chatContainer___JkSeI {
+    height: 100% !important;
+    overflow: hidden !important;
   }
 
   /* Reduce placeholder text on small screens */
