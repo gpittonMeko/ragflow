@@ -327,45 +327,7 @@ body {
   }
 }
 
-/* Responsive heights for DirectChat */
-@media (min-width: 769px) {
-  .chatContainer {
-    height: 500px !important;
-    max-height: 500px !important;
-
-    .messageContainer {
-      height: calc(100% - 100px) !important;
-      max-height: calc(100% - 100px) !important;
-      overflow-y: auto !important;
-    }
-  }
-}
-
-@media (max-width: 768px) {
-  .chatContainer {
-    height: 450px !important;
-    max-height: 450px !important;
-
-    .messageContainer {
-      height: calc(100% - 90px) !important;
-      max-height: calc(100% - 90px) !important;
-      overflow-y: auto !important;
-    }
-  }
-}
-
-@media (max-width: 480px) {
-  .chatContainer {
-    height: 400px !important;
-    max-height: 400px !important;
-
-    .messageContainer {
-      height: calc(100% - 80px) !important;
-      max-height: calc(100% - 80px) !important;
-      overflow-y: auto !important;
-    }
-  }
-}
+/* REMOVED: Fixed heights causing white space - chat now inherits parent height */
 
 /* Fix input wrapper position - ALWAYS at bottom */
 :global(.messageInputWrapper___nie1o) {
