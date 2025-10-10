@@ -15,8 +15,8 @@ interface UseSendAgentMessage {
   loading: boolean;
   sendLoading: boolean;
   derivedMessages: Message[];
-  handleInputChange: (value: string) => void;
-  handlePressEnter: (e: any) => void;
+  handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  handlePressEnter: (documentIds: string[]) => void;
   regenerateMessage: (messageId: string) => void;
   removeMessageById: (messageId: string) => void;
   ref: React.RefObject<HTMLDivElement>;
@@ -192,14 +192,16 @@ export const useSendAgentMessage = (
     [agentId, hasGeneratedFirstMessage, onFirstGeneration, derivedMessages],
   );
 
-  const handleInputChange = useCallback((newValue: string) => {
-    setValue(newValue);
-  }, []);
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setValue(e.target.value);
+    },
+    [],
+  );
 
   const handlePressEnter = useCallback(
-    async (e: any) => {
-      if (e.key === 'Enter' && !e.shiftKey && value.trim()) {
-        e.preventDefault();
+    async (documentIds: string[]) => {
+      if (value.trim()) {
         setSendLoading(true);
 
         let currentSessionId = sessionId;
