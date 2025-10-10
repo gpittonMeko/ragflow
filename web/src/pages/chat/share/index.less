@@ -181,15 +181,28 @@
     flex: 1 1 auto;
     overflow-y: auto;
     min-height: 0;
-    padding: 8px 4px 0 4px; /* Reduced horizontal padding */
+    padding: 8px 4px 4px 4px; /* Reduced horizontal padding, added bottom padding */
+    margin-top: 8px; /* Aesthetic spacing at top */
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: thin !important; /* Show thin scrollbar on Firefox */
+    -ms-overflow-style: auto !important; /* Show scrollbar on IE and Edge */
     scroll-behavior: smooth;
     width: 100%;
     box-sizing: border-box;
     &::-webkit-scrollbar {
-      display: none;
+      display: block !important; /* Show scrollbar on Chrome/Safari */
+      width: 6px !important;
+    }
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.1) !important;
+      border-radius: 3px !important;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2) !important;
+      border-radius: 3px !important;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3) !important;
     }
 
     :global(.messageItem___OK1Zd) {
@@ -231,7 +244,7 @@
       background-color var(--transition-time),
       border-color var(--transition-time);
     margin-top: 4px;
-    margin-bottom: 8px;
+    margin-bottom: 4px; /* Reduced from 8px */
 
     :global(.ant-input) {
       background-color: var(--bg-input);
