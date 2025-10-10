@@ -746,11 +746,7 @@ const PresentationPage: React.FC = () => {
           right: chatExpanded ? 0 : 'auto',
           bottom: chatExpanded ? 0 : 'auto',
           zIndex: chatExpanded ? 9999 : 'auto',
-          background: chatExpanded
-            ? theme === 'dark'
-              ? '#000'
-              : '#fff'
-            : 'transparent',
+          background: 'transparent',
           transition: 'all 0.3s ease',
           width: chatExpanded ? '100vw' : 'auto',
           height: chatExpanded ? '100vh' : 'auto',
