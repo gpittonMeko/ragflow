@@ -13,13 +13,13 @@
   --transition-time: 0.3s;
   --input-text-color: #ffffff;
   --input-placeholder-color: rgba(255, 255, 255, 0.6);
-    --link-color: #8ab4ff;
+  --link-color: #8ab4ff;
   --link-hover: #aecbfa;
   --link-active: #d2e3ff;
   --link-visited: #b58af9;
 }
 
-[data-theme="light"] {
+[data-theme='light'] {
   --bg-primary: #f5f5f7;
   --bg-secondary: #ffffff;
   --bg-message: #f0f0f0;
@@ -32,7 +32,7 @@
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   --input-text-color: #333333;
   --input-placeholder-color: rgba(0, 0, 0, 0.4);
-    --link-color: #1677ff;
+  --link-color: #1677ff;
   --link-hover: #4096ff;
   --link-active: #95c2ff;
   --link-visited: #7a5cff;
@@ -45,25 +45,35 @@
 .dark :global(.ant-collapse) a,
 .dark :global(.ant-descriptions) a,
 .dark :global(.ant-table) a,
-.dark :global(a[style]) {         /* prende anche <a style="color: ..."> */
+.dark :global(a[style]) {
+  /* prende anche <a style="color: ..."> */
   color: var(--link-color) !important;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.dark :global(a:hover)   { color: var(--link-hover)   !important; }
-.dark :global(a:active)  { color: var(--link-active)  !important; }
-.dark :global(a:visited) { color: var(--link-visited) !important; }
+.dark :global(a:hover) {
+  color: var(--link-hover) !important;
+}
+.dark :global(a:active) {
+  color: var(--link-active) !important;
+}
+.dark :global(a:visited) {
+  color: var(--link-visited) !important;
+}
 
 /* Icone dentro al link ereditano il colore */
-.dark :global(a) svg { color: currentColor; stroke: currentColor; }
-
-
+.dark :global(a) svg {
+  color: currentColor;
+  stroke: currentColor;
+}
 
 .chatWrapper {
   height: 100%;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  transition: background-color var(--transition-time), color var(--transition-time);
+  transition:
+    background-color var(--transition-time),
+    color var(--transition-time);
   position: relative;
 }
 
@@ -72,8 +82,13 @@
 }
 .dark {
   background-color: var(--bg-secondary);
-  :global(.messageInputWrapper___nie1o .ant-input) { color: #ffffff !important; font-size: clamp(0.9rem, 1vw, 1rem);}
-  :global(.messageInputWrapper___nie1o .ant-input::placeholder) { color: rgba(255,255,255,0.6) !important; }
+  :global(.messageInputWrapper___nie1o .ant-input) {
+    color: #ffffff !important;
+    font-size: clamp(0.9rem, 1vw, 1rem);
+  }
+  :global(.messageInputWrapper___nie1o .ant-input::placeholder) {
+    color: rgba(255, 255, 255, 0.6) !important;
+  }
 }
 
 .loaderBarWrapper {
@@ -87,29 +102,31 @@
 }
 .loaderGlass {
   backdrop-filter: blur(13px) brightness(1.12);
-  background: rgba(40,47,92,0.21);
+  background: rgba(40, 47, 92, 0.21);
   border-radius: 22px;
   box-shadow: 0 2px 24px 3px rgba(0, 160, 255, 0.19);
   padding: 1.05em 1em;
   display: flex;
   align-items: center;
   gap: 1.2em;
-  border: 1.2px solid rgba(120,255,255,0.11);
+  border: 1.2px solid rgba(120, 255, 255, 0.11);
   min-width: 340px;
 }
 .loaderGlassText {
-  font-family: "Inter","Titillium Web",sans-serif;
+  font-family: 'Inter', 'Titillium Web', sans-serif;
   color: #e6ffff;
-  font-size: 1.10em;
-  letter-spacing: .02em;
+  font-size: 1.1em;
+  letter-spacing: 0.02em;
   font-weight: 500;
-  text-shadow: 0 2px 8px #00fff844,0 0px 1px #234191bb;
-  filter: blur(.25px);
+  text-shadow:
+    0 2px 8px #00fff844,
+    0 0px 1px #234191bb;
+  filter: blur(0.25px);
 }
 .loaderBarLiquid {
   display: flex;
   align-items: center;
-  transition: width 0.18s cubic-bezier(.68,-0.2,.21,1.04);
+  transition: width 0.18s cubic-bezier(0.68, -0.2, 0.21, 1.04);
   overflow: hidden;
   min-height: 16px;
 }
@@ -121,8 +138,12 @@
   animation: waveGlass 1.3s infinite linear alternate;
 }
 @keyframes waveGlass {
-  0%   { background-position: 0 0;   }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 /* --- CHAT - DESKTOP BASE --- */
@@ -144,7 +165,9 @@
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
     scroll-behavior: smooth;
-    &::-webkit-scrollbar { display: none; }
+    &::-webkit-scrollbar {
+      display: none;
+    }
 
     :global(.messageItem___OK1Zd) {
       background: rgba(255, 255, 255, 0.05);
@@ -153,23 +176,37 @@
       color: var(--text-primary);
       border-radius: 16px;
       margin-bottom: 12px;
-      transition: background-color var(--transition-time), color var(--transition-time);
+      transition:
+        background-color var(--transition-time),
+        color var(--transition-time);
     }
-    :global(.messageItemLeft___L270A) { background-color: var(--bg-message); }
-    :global(.messageItemRight___HA1z_) { background-color: var(--bg-user-message); }
-    :global(.messageItemSection___a_W_M) { padding: 12px; }
-    :global(.messageItemContent___j99sG) { color: var(--text-primary); }
-    :global(.ant-spin-nested-loading) { transition: background-color var(--transition-time); }
+    :global(.messageItemLeft___L270A) {
+      background-color: var(--bg-message);
+    }
+    :global(.messageItemRight___HA1z_) {
+      background-color: var(--bg-user-message);
+    }
+    :global(.messageItemSection___a_W_M) {
+      padding: 12px;
+    }
+    :global(.messageItemContent___j99sG) {
+      color: var(--text-primary);
+    }
+    :global(.ant-spin-nested-loading) {
+      transition: background-color var(--transition-time);
+    }
   }
 
   :global(.messageInputWrapper___nie1o) {
-    background: rgba(255,255,255,0.06);
+    background: rgba(255, 255, 255, 0.06);
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
     border-radius: 14px;
 
     border-top: 1px solid var(--border-color);
-    transition: background-color var(--transition-time), border-color var(--transition-time);
+    transition:
+      background-color var(--transition-time),
+      border-color var(--transition-time);
     margin-top: 4px;
     margin-bottom: 8px;
 
@@ -177,9 +214,13 @@
       background-color: var(--bg-input);
       color: var(--input-text-color) !important;
       border-radius: 12px;
-      transition: background-color var(--transition-time), color var(--transition-time);
+      transition:
+        background-color var(--transition-time),
+        color var(--transition-time);
     }
-    :global(.ant-input::placeholder) { color: var(--input-placeholder-color) !important; }
+    :global(.ant-input::placeholder) {
+      color: var(--input-placeholder-color) !important;
+    }
     :global(.ant-btn-primary) {
       background-color: var(--accent-color);
       border-color: var(--accent-color);
@@ -191,8 +232,12 @@
       border-color: var(--border-color);
       color: var(--text-secondary);
     }
-    :global(.ant-input-clear-icon) { color: var(--text-secondary); }
-    :global(.ant-divider) { border-color: var(--border-color); }
+    :global(.ant-input-clear-icon) {
+      color: var(--text-secondary);
+    }
+    :global(.ant-divider) {
+      border-color: var(--border-color);
+    }
   }
 }
 
@@ -203,28 +248,108 @@
 
     .messageContainer {
       padding-right: 2px;
-      :global(.messageItemSection___a_W_M) { padding: 10px; }
-      :global(.messageItem___OK1Zd) { margin-bottom: 10px; border-radius: 10px; }
+      :global(.messageItemSection___a_W_M) {
+        padding: 10px;
+      }
+      :global(.messageItem___OK1Zd) {
+        margin-bottom: 10px;
+        border-radius: 10px;
+      }
     }
   }
-  :global(.ant-avatar) { width: 32px !important; height: 32px !important; min-width: 32px !important; }
+  :global(.ant-avatar) {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+  }
 }
 
-
-
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+    'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: clamp(0.95rem, 1vw, 1.05rem);
   line-height: 1.5;
   margin: 0;
   padding: 0;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
   overflow-y: auto;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Fix for DirectChat component - show scrollbar and fix heights */
+.chatContainer {
+  .messageContainer {
+    scrollbar-width: thin !important; /* Show thin scrollbar on Firefox */
+    -ms-overflow-style: auto !important; /* Show scrollbar on IE and Edge */
+    &::-webkit-scrollbar {
+      display: block !important; /* Show scrollbar on Chrome/Safari */
+      width: 8px !important;
+    }
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.1) !important;
+      border-radius: 4px !important;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2) !important;
+      border-radius: 4px !important;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3) !important;
+    }
+  }
+}
 
+/* Responsive heights for DirectChat */
+@media (min-width: 769px) {
+  .chatContainer {
+    height: 500px !important;
+    max-height: 500px !important;
+
+    .messageContainer {
+      height: calc(100% - 100px) !important;
+      max-height: calc(100% - 100px) !important;
+      overflow-y: auto !important;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .chatContainer {
+    height: 450px !important;
+    max-height: 450px !important;
+
+    .messageContainer {
+      height: calc(100% - 90px) !important;
+      max-height: calc(100% - 90px) !important;
+      overflow-y: auto !important;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .chatContainer {
+    height: 400px !important;
+    max-height: 400px !important;
+
+    .messageContainer {
+      height: calc(100% - 80px) !important;
+      max-height: calc(100% - 80px) !important;
+      overflow-y: auto !important;
+    }
+  }
+}
+
+/* Fix input wrapper position */
+:global(.messageInputWrapper___nie1o) {
+  position: sticky !important;
+  bottom: 0 !important;
+  background: inherit !important;
+  z-index: 10 !important;
+  margin-top: auto !important;
+}
