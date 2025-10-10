@@ -20,15 +20,18 @@ interface DirectChatProps {
   agentId: string;
   className?: string;
   style?: React.CSSProperties;
+  onMessageSent?: () => void; // Callback per incrementare il counter
 }
 
 const DirectChat: React.FC<DirectChatProps> = ({
   agentId,
   className,
   style,
+  onMessageSent,
 }) => {
   const { theme } = useTheme();
   const location = useLocation();
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Imposta i parametri URL necessari per useSendSharedMessage (solo query params, NON cambia pathname)
   useEffect(() => {
@@ -52,7 +55,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
   }, [agentId, location.pathname, location.search]);
 
   const {
-    handlePressEnter,
+    handlePressEnter: originalHandlePressEnter,
     handleInputChange,
     value,
     sendLoading,
@@ -62,6 +65,25 @@ const DirectChat: React.FC<DirectChatProps> = ({
     hasError,
     stopOutputMessage,
   } = useSendSharedMessage();
+
+  // Wrapper per handlePressEnter che gestisce counter e espansione
+  const handlePressEnter = React.useCallback(
+    (documentIds: string[]) => {
+      if (value.trim()) {
+        // Espandi la chat al primo messaggio
+        if (!isExpanded) {
+          setIsExpanded(true);
+        }
+        // Incrementa il counter
+        if (onMessageSent) {
+          onMessageSent();
+        }
+      }
+      // Chiama l'handler originale
+      originalHandlePressEnter(documentIds);
+    },
+    [value, isExpanded, onMessageSent, originalHandlePressEnter],
+  );
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
     useClickDrawer();
@@ -159,9 +181,49 @@ const DirectChat: React.FC<DirectChatProps> = ({
       <Flex
         flex={1}
         className={`${styles.chatContainer} ${styles[theme]} ${className}`}
-        style={style}
+        style={{
+          ...style,
+          position: isExpanded ? 'fixed' : 'relative',
+          top: isExpanded ? 0 : 'auto',
+          left: isExpanded ? 0 : 'auto',
+          right: isExpanded ? 0 : 'auto',
+          bottom: isExpanded ? 0 : 'auto',
+          zIndex: isExpanded ? 9999 : 'auto',
+          background: isExpanded
+            ? theme === 'dark'
+              ? '#000'
+              : '#fff'
+            : 'transparent',
+          transition: 'all 0.3s ease',
+        }}
         vertical
       >
+        {/* Pulsante chiudi quando espanso */}
+        {isExpanded && (
+          <button
+            onClick={() => setIsExpanded(false)}
+            style={{
+              position: 'absolute',
+              top: 20,
+              right: 20,
+              zIndex: 10000,
+              background: 'rgba(0,0,0,0.5)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: 40,
+              height: 40,
+              cursor: 'pointer',
+              fontSize: 20,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            ×
+          </button>
+        )}
+
         <Flex flex={1} vertical className={styles.messageContainer}>
           <div>
             <Spin spinning={loading}>

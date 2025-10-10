@@ -750,7 +750,25 @@ const PresentationPage: React.FC = () => {
               minHeight: '400px',
             }}
           >
-            <DirectChat agentId="9afb6a2267bf11f0a1f2fec73c0cd884" />
+            <DirectChat
+              agentId="9afb6a2267bf11f0a1f2fec73c0cd884"
+              onMessageSent={() => {
+                // Incrementa il counter locale
+                const newCount = genCount + 1;
+                setGenCount(newCount);
+                localStorage.setItem('sgai-gen-count', String(newCount));
+
+                // Mostra overlay se raggiunto il limite (solo per utenti anonimi)
+                if (
+                  !isLoggedIn &&
+                  quota !== null &&
+                  quota.scope === 'anon' &&
+                  newCount >= FREE_LIMIT
+                ) {
+                  setShowLimitOverlay(true);
+                }
+              }}
+            />
           </div>
           {showLimitOverlay && (
             <div className={styles.chatOverlay} role="dialog" aria-modal="true">
