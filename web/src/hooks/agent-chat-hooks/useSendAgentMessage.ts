@@ -1,5 +1,5 @@
 import { MessageType } from '@/constants/chat';
-import { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 interface Message {
@@ -19,6 +19,8 @@ interface UseSendAgentMessage {
   handlePressEnter: (e: any) => void;
   regenerateMessage: (messageId: string) => void;
   removeMessageById: (messageId: string) => void;
+  ref: React.RefObject<HTMLDivElement>;
+  stopOutputMessage: () => void;
 }
 
 export const useSendAgentMessage = (
@@ -244,6 +246,10 @@ export const useSendAgentMessage = (
     );
   }, []);
 
+  const stopOutputMessage = useCallback(() => {
+    setSendLoading(false);
+  }, []);
+
   return {
     value,
     loading,
@@ -253,5 +259,7 @@ export const useSendAgentMessage = (
     handlePressEnter,
     regenerateMessage,
     removeMessageById,
+    ref,
+    stopOutputMessage,
   };
 };
