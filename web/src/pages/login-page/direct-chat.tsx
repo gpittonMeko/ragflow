@@ -6,13 +6,13 @@ import { useTheme } from '@/components/theme-provider';
 import { MessageType } from '@/constants/chat';
 import { useFetchFlowSSE } from '@/hooks/flow-hooks';
 import { useSendButtonDisabled } from '@/pages/chat/share/shared-hooks';
-import { buildMessageItemReference } from '@/pages/chat/share/utils';
+import { useSendSharedMessage } from '@/pages/chat/shared-hooks';
+import { buildMessageItemReference } from '@/pages/chat/utils';
 import { buildMessageUuidWithRole } from '@/utils/chat';
 import { Flex, Spin } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'umi';
 import styles from '../chat/share/index.less';
-import { useSendSharedMessage } from '../chat/shared-hooks';
 
 interface DirectChatProps {
   agentId: string;
