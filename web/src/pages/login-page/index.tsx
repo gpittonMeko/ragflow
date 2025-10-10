@@ -754,7 +754,7 @@ const PresentationPage: React.FC = () => {
           transition: 'all 0.3s ease',
           width: chatExpanded ? '100vw' : 'auto',
           height: chatExpanded ? '100vh' : 'auto',
-          padding: chatExpanded ? '20px' : 0,
+          padding: chatExpanded ? '10px' : 0,
         }}
       >
         {chatExpanded && (
@@ -784,7 +784,7 @@ const PresentationPage: React.FC = () => {
         <div
           className={styles.chatWrap}
           style={{
-            height: chatExpanded ? '100%' : 'auto',
+            height: chatExpanded ? 'calc(100vh - 20px)' : 'auto',
           }}
         >
           <div
@@ -797,9 +797,9 @@ const PresentationPage: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               background: 'transparent',
-              minHeight: chatExpanded ? '100%' : '500px',
-              height: chatExpanded ? '100%' : '500px',
-              maxHeight: chatExpanded ? '100%' : '500px',
+              minHeight: chatExpanded ? 'calc(100vh - 20px)' : '500px',
+              height: chatExpanded ? 'calc(100vh - 20px)' : '500px',
+              maxHeight: chatExpanded ? 'calc(100vh - 20px)' : '500px',
               overflow: 'auto',
             }}
             onClick={() => {

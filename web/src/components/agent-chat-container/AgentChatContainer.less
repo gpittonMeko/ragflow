@@ -9,3 +9,28 @@
   overflow-y: auto;
   padding: 16px;
 }
+
+/* Desktop styles (above 768px) */
+@media (min-width: 769px) {
+  .messageContainer {
+    height: calc(100% - 120px) !important;
+    overflow-y: auto !important;
+    max-height: calc(100% - 120px) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .messageContainer {
+    height: calc(100% - 100px) !important;
+    overflow-y: auto !important;
+    max-height: calc(100% - 100px) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .messageContainer {
+    height: calc(100% - 90px) !important;
+    overflow-y: auto !important;
+    max-height: calc(100% - 90px) !important;
+  }
+}
