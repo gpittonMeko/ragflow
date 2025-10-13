@@ -3,9 +3,9 @@ import SvgIcon from '@/components/svg-icon';
 import { IReference, IReferenceChunk } from '@/interfaces/database/chat';
 import { getExtension } from '@/utils/document-util';
 import { InfoCircleOutlined } from '@ant-design/icons';
-import { Button, Flex, Popover, Tag, Alert } from 'antd';
+import { Alert, Button, Flex, Popover, Tag } from 'antd';
 import DOMPurify from 'dompurify';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import Markdown from 'react-markdown';
 import reactStringReplace from 'react-string-replace';
 import SyntaxHighlighter from 'react-syntax-highlighter';
@@ -24,13 +24,12 @@ import { preprocessLaTeX, replaceThinkToSection } from '@/utils/chat';
 import { replaceTextByOldReg } from '../utils';
 
 import classNames from 'classnames';
-import { pipe } from 'lodash/fp';
 import styles from './index.less';
 
 // ─────────────────────────────────────────────────────────────
 // DEBUG SWITCH
 // ─────────────────────────────────────────────────────────────
-const DEBUG = true; // metti a false in produzione
+const DEBUG = false; // metti a false in produzione
 
 // ─────────────────────────────────────────────────────────────
 // Regex referencing
@@ -78,7 +77,8 @@ const MarkdownContent = ({
   clickDocumentButton?: (documentId: string, chunk: IReferenceChunk) => void;
 }) => {
   const { t, i18n } = useTranslation();
-  const { setDocumentIds, data: fileThumbnails } = useFetchDocumentThumbnailsByIds();
+  const { setDocumentIds, data: fileThumbnails } =
+    useFetchDocumentThumbnailsByIds();
 
   // Espongo uno stato globale minimale per ispezione rapida da console
   if (DEBUG) {
@@ -94,86 +94,99 @@ const MarkdownContent = ({
   }
 
   // 1) Fase testo + fallback "searching" + tracing trasformazioni
-  const { contentWithCursor, usedSearchingFallback, stageInfo } = useMemo(() => {
-    const stage: any = {
-      input: content,
-      usedSearchingFallback: false,
-      afterFallback: '',
-      afterOldReg: '',
-      afterThinkToSection: '',
-      afterLatex: '',
-    };
+  const { contentWithCursor, usedSearchingFallback, stageInfo } =
+    useMemo(() => {
+      const stage: any = {
+        input: content,
+        usedSearchingFallback: false,
+        afterFallback: '',
+        afterOldReg: '',
+        afterThinkToSection: '',
+        afterLatex: '',
+      };
 
-    let text = content;
+      let text = content;
 
-    if (DEBUG) {
-      console.groupCollapsed(
-        `%c[MarkdownContent] render content`,
-        'color:#888',
-      );
-      console.log('input type:', typeof content, 'len:', (content || '').length);
-      console.log('input preview:', preview(content));
-    }
-
-    // FALLBACK: se content === '' → t('chat.searching')
-    if (text === '') {
-      const translated = t('chat.searching');
-      stage.usedSearchingFallback = true;
-      text = translated;
       if (DEBUG) {
-        console.warn('[MarkdownContent] content è vuoto → fallback t("chat.searching")');
-        console.log('i18n ready?', i18n?.isInitialized, 'fallback value:', translated);
+        console.groupCollapsed(
+          `%c[MarkdownContent] render content`,
+          'color:#888',
+        );
+        console.log(
+          'input type:',
+          typeof content,
+          'len:',
+          (content || '').length,
+        );
+        console.log('input preview:', preview(content));
       }
-    }
 
-    stage.afterFallback = text;
+      // FALLBACK: se content === '' → t('chat.searching')
+      if (text === '') {
+        const translated = t('chat.searching');
+        stage.usedSearchingFallback = true;
+        text = translated;
+        if (DEBUG) {
+          console.warn(
+            '[MarkdownContent] content è vuoto → fallback t("chat.searching")',
+          );
+          console.log(
+            'i18n ready?',
+            i18n?.isInitialized,
+            'fallback value:',
+            translated,
+          );
+        }
+      }
 
-    // Attenzione: voglio vedere se i trasformatori azzerano il testo
-    const nextText = replaceTextByOldReg(text);
-    stage.afterOldReg = nextText;
+      stage.afterFallback = text;
 
-    // voglio loggare anche i match del pattern
-    const matchesBefore = countMatches(nextText);
-    if (DEBUG) {
-      console.log('[MarkdownContent] matches reg prima pipe:', matchesBefore);
-    }
+      // Attenzione: voglio vedere se i trasformatori azzerano il testo
+      const nextText = replaceTextByOldReg(text);
+      stage.afterOldReg = nextText;
 
-    // Mantengo la semantica del tuo pipe, ma loggo gli step
-    let afterThink = '';
-    let afterLatex = '';
+      // voglio loggare anche i match del pattern
+      const matchesBefore = countMatches(nextText);
+      if (DEBUG) {
+        console.log('[MarkdownContent] matches reg prima pipe:', matchesBefore);
+      }
 
-    try {
-      afterThink = replaceThinkToSection(nextText);
-      stage.afterThinkToSection = afterThink;
-    } catch (e) {
-      afterThink = nextText;
-      stage.afterThinkToSection = `[ERROR replaceThinkToSection] ${String(e)}`;
-      if (DEBUG) console.error('replaceThinkToSection ERROR:', e);
-    }
+      // Mantengo la semantica del tuo pipe, ma loggo gli step
+      let afterThink = '';
+      let afterLatex = '';
 
-    try {
-      afterLatex = preprocessLaTeX(afterThink);
-      stage.afterLatex = afterLatex;
-    } catch (e) {
-      afterLatex = afterThink;
-      stage.afterLatex = `[ERROR preprocessLaTeX] ${String(e)}`;
-      if (DEBUG) console.error('preprocessLaTeX ERROR:', e);
-    }
+      try {
+        afterThink = replaceThinkToSection(nextText);
+        stage.afterThinkToSection = afterThink;
+      } catch (e) {
+        afterThink = nextText;
+        stage.afterThinkToSection = `[ERROR replaceThinkToSection] ${String(e)}`;
+        if (DEBUG) console.error('replaceThinkToSection ERROR:', e);
+      }
 
-    if (DEBUG) {
-      console.log('afterFallback preview:', preview(stage.afterFallback));
-      console.log('afterOldReg     preview:', preview(stage.afterOldReg));
-      console.log('afterThink      preview:', preview(afterThink));
-      console.log('afterLaTeX      preview:', preview(afterLatex));
-      console.groupEnd();
-    }
+      try {
+        afterLatex = preprocessLaTeX(afterThink);
+        stage.afterLatex = afterLatex;
+      } catch (e) {
+        afterLatex = afterThink;
+        stage.afterLatex = `[ERROR preprocessLaTeX] ${String(e)}`;
+        if (DEBUG) console.error('preprocessLaTeX ERROR:', e);
+      }
 
-    return {
-      contentWithCursor: afterLatex,
-      usedSearchingFallback: stage.usedSearchingFallback,
-      stageInfo: stage,
-    };
-  }, [content, t, i18n]);
+      if (DEBUG) {
+        console.log('afterFallback preview:', preview(stage.afterFallback));
+        console.log('afterOldReg     preview:', preview(stage.afterOldReg));
+        console.log('afterThink      preview:', preview(afterThink));
+        console.log('afterLaTeX      preview:', preview(afterLatex));
+        console.groupEnd();
+      }
+
+      return {
+        contentWithCursor: afterLatex,
+        usedSearchingFallback: stage.usedSearchingFallback,
+        stageInfo: stage,
+      };
+    }, [content, t, i18n]);
 
   // 2) Thumbnails prep
   useEffect(() => {
@@ -181,7 +194,10 @@ const MarkdownContent = ({
     const ids = Array.isArray(docAggs) ? docAggs.map((x) => x.doc_id) : [];
     setDocumentIds(ids);
     if (DEBUG) {
-      console.groupCollapsed('%c[MarkdownContent] reference/thumbnails', 'color:#8a2be2');
+      console.groupCollapsed(
+        '%c[MarkdownContent] reference/thumbnails',
+        'color:#8a2be2',
+      );
       console.log('doc_aggs len:', reference?.doc_aggs?.length ?? 0);
       console.log('chunks len:', reference?.chunks?.length ?? 0);
       console.log('doc ids:', ids);
@@ -190,17 +206,26 @@ const MarkdownContent = ({
   }, [reference, setDocumentIds]);
 
   const handleDocumentButtonClick = useCallback(
-    (documentId: string, chunk: IReferenceChunk, isPdf: boolean, documentUrl?: string) =>
+    (
+      documentId: string,
+      chunk: IReferenceChunk,
+      isPdf: boolean,
+      documentUrl?: string,
+    ) =>
       () => {
         if (!isPdf) {
           if (!documentUrl) {
-            if (DEBUG) console.warn('[MarkdownContent] documentUrl vuoto per non-PDF');
+            if (DEBUG)
+              console.warn('[MarkdownContent] documentUrl vuoto per non-PDF');
             return;
           }
           window.open(documentUrl, '_blank');
         } else {
           if (!clickDocumentButton) {
-            if (DEBUG) console.warn('[MarkdownContent] clickDocumentButton mancante per PDF');
+            if (DEBUG)
+              console.warn(
+                '[MarkdownContent] clickDocumentButton mancante per PDF',
+              );
             return;
           }
           clickDocumentButton(documentId, chunk);
@@ -213,7 +238,10 @@ const MarkdownContent = ({
     return function wrapTextTransform(tree: any) {
       visitParents(tree, 'text', (node, ancestors) => {
         const latestAncestor = ancestors.at(-1);
-        if (latestAncestor?.tagName !== 'custom-typography' && latestAncestor?.tagName !== 'code') {
+        if (
+          latestAncestor?.tagName !== 'custom-typography' &&
+          latestAncestor?.tagName !== 'code'
+        ) {
           node.type = 'element';
           node.tagName = 'custom-typography';
           node.properties = {};
@@ -236,9 +264,19 @@ const MarkdownContent = ({
       const imageId = chunkItem?.image_id;
 
       if (DEBUG) {
-        console.groupCollapsed('%c[MarkdownContent] getPopoverContent', 'color:#2f855a');
+        console.groupCollapsed(
+          '%c[MarkdownContent] getPopoverContent',
+          'color:#2f855a',
+        );
         console.log('chunkIndex:', chunkIndex);
-        console.log('doc:', doc?.doc_name, 'ext:', fileExtension, 'hasPreviewImg:', !!imageId);
+        console.log(
+          'doc:',
+          doc?.doc_name,
+          'ext:',
+          fileExtension,
+          'hasPreviewImg:',
+          !!imageId,
+        );
         console.groupEnd();
       }
 
@@ -247,7 +285,9 @@ const MarkdownContent = ({
           {imageId && (
             <Popover
               placement="left"
-              content={<Image id={imageId} className={styles.referenceImagePreview} />}
+              content={
+                <Image id={imageId} className={styles.referenceImagePreview} />
+              }
             >
               <Image id={imageId} className={styles.referenceChunkImage} />
             </Popover>
@@ -264,7 +304,11 @@ const MarkdownContent = ({
             {documentId && (
               <Flex gap={'small'}>
                 {fileThumbnail ? (
-                  <img src={fileThumbnail} alt="" className={styles.fileThumbnail} />
+                  <img
+                    src={fileThumbnail}
+                    alt=""
+                    className={styles.fileThumbnail}
+                  />
                 ) : (
                   <SvgIcon name={`file-icon/${fileExtension}`} width={24} />
                 )}
@@ -305,7 +349,10 @@ const MarkdownContent = ({
   const renderReference = useCallback(
     (text: string) => {
       if (DEBUG) {
-        console.groupCollapsed('%c[MarkdownContent] renderReference', 'color:#3182ce');
+        console.groupCollapsed(
+          '%c[MarkdownContent] renderReference',
+          'color:#3182ce',
+        );
         console.log('input text preview:', preview(text));
         console.log('matches:', countMatches(text));
         console.groupEnd();
@@ -314,7 +361,10 @@ const MarkdownContent = ({
       const replacedText = reactStringReplace(text, reg, (match, i) => {
         const chunkIndex = getChunkIndex(match);
         return (
-          <Popover content={getPopoverContent(chunkIndex)} key={`${match}-${i}`}>
+          <Popover
+            content={getPopoverContent(chunkIndex)}
+            key={`${match}-${i}`}
+          >
             <InfoCircleOutlined className={styles.referenceIcon} />
           </Popover>
         );
@@ -334,18 +384,28 @@ const MarkdownContent = ({
             showIcon
             message={
               <span>
-                DEBUG: mostrata <Tag color="blue">t('chat.searching')</Tag> perché <Tag>content === ''</Tag>
-                . i18n ready: <Tag color={i18n?.isInitialized ? 'green' : 'red'}>
+                DEBUG: mostrata <Tag color="blue">t('chat.searching')</Tag>{' '}
+                perché <Tag>content === ''</Tag>. i18n ready:{' '}
+                <Tag color={i18n?.isInitialized ? 'green' : 'red'}>
                   {String(!!i18n?.isInitialized)}
                 </Tag>
               </span>
             }
             description={
               <div style={{ fontSize: 12 }}>
-                <div>afterFallback: <code>{preview(stageInfo.afterFallback)}</code></div>
-                <div>afterOldReg: <code>{preview(stageInfo.afterOldReg)}</code></div>
-                <div>afterThink: <code>{preview(stageInfo.afterThinkToSection)}</code></div>
-                <div>afterLaTeX: <code>{preview(stageInfo.afterLatex)}</code></div>
+                <div>
+                  afterFallback: <code>{preview(stageInfo.afterFallback)}</code>
+                </div>
+                <div>
+                  afterOldReg: <code>{preview(stageInfo.afterOldReg)}</code>
+                </div>
+                <div>
+                  afterThink:{' '}
+                  <code>{preview(stageInfo.afterThinkToSection)}</code>
+                </div>
+                <div>
+                  afterLaTeX: <code>{preview(stageInfo.afterLatex)}</code>
+                </div>
               </div>
             }
           />
@@ -372,7 +432,12 @@ const MarkdownContent = ({
               const { children, className, ...rest } = props;
               const match = /language-(\w+)/.exec(className || '');
               return match ? (
-                <SyntaxHighlighter {...rest} PreTag="div" language={match[1]} wrapLongLines>
+                <SyntaxHighlighter
+                  {...rest}
+                  PreTag="div"
+                  language={match[1]}
+                  wrapLongLines
+                >
                   {String(children).replace(/\n$/, '')}
                 </SyntaxHighlighter>
               ) : (

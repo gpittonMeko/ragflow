@@ -156,8 +156,7 @@ export const useFetchAppConf = () => {
 
 export const useSendMessageWithSse = (
   url: string = api.completeConversation,
-    fetchOptions: RequestInit = {}   // 👈 aggiungi questo parametro
-
+  fetchOptions: RequestInit = {}, // 👈 aggiungi questo parametro
 ) => {
   const [answer, setAnswer] = useState<IAnswer>({} as IAnswer);
   const [done, setDone] = useState(true);
@@ -192,7 +191,7 @@ export const useSendMessageWithSse = (
           // Unisci i fetchOptions passati con i default
           ...fetchOptions,
           headers: {
-            ...(fetchOptions.headers || {}),   // 👈 prendi headers custom se ci sono
+            ...(fetchOptions.headers || {}), // 👈 prendi headers custom se ci sono
             [Authorization]: getAuthorization(),
             'Content-Type': 'application/json',
           },
@@ -200,7 +199,7 @@ export const useSendMessageWithSse = (
           signal: controller?.signal || sseRef.current?.signal,
         });
 
-        const res = response.clone().json();
+        let finalData: any = null;
 
         const reader = response?.body
           ?.pipeThrough(new TextDecoderStream())
@@ -212,7 +211,6 @@ export const useSendMessageWithSse = (
           if (x) {
             const { done, value } = x;
             if (done) {
-              console.info('done');
               resetAnswer();
               break;
             }
@@ -220,34 +218,31 @@ export const useSendMessageWithSse = (
               const val = JSON.parse(value?.data || '');
               const d = val?.data;
               if (typeof d !== 'boolean') {
-                console.info('data:', d);
-
                 // PATCH: Gestisci il vero stato di generazione
                 if (d.running_status === true) {
-                  setIsGenerating(true);   // Mostra loader/barra
+                  setIsGenerating(true);
                 } else {
-                  setIsGenerating(false);  // Nascondi loader/barra
+                  setIsGenerating(false);
                 }
 
                 setAnswer({
                   ...d,
                   conversationId: body?.conversation_id,
                 });
+
+                finalData = val; // Store the last data
               }
             } catch (e) {
-              console.warn(e);
+              // Silently ignore parse errors
             }
           }
         }
-        console.info('done?');
         setDone(true);
         resetAnswer();
-        return { data: await res, response };
+        return { data: finalData, response };
       } catch (e) {
         setDone(true);
         resetAnswer();
-
-        console.warn(e);
       }
     },
     [initializeSseRef, url, resetAnswer],
@@ -257,7 +252,15 @@ export const useSendMessageWithSse = (
     sseRef.current?.abort();
   }, []);
 
-  return { send, answer, done, setDone, resetAnswer, stopOutputMessage, isGenerating, };
+  return {
+    send,
+    answer,
+    done,
+    setDone,
+    resetAnswer,
+    stopOutputMessage,
+    isGenerating,
+  };
 };
 
 export const useSpeechWithSse = (url: string = api.tts) => {
@@ -266,9 +269,9 @@ export const useSpeechWithSse = (url: string = api.tts) => {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          [Authorization]: getAuthorization(),   // default (se non passi niente)
+          [Authorization]: getAuthorization(), // default (se non passi niente)
           'Content-Type': 'application/json',
-          ...(fetchOptions.headers || {}),       // 👈 override se lo passi tu
+          ...(fetchOptions.headers || {}), // 👈 override se lo passi tu
         },
         body: JSON.stringify(body),
       });
