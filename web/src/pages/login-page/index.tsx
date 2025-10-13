@@ -27,9 +27,10 @@ const STRIPE_PK =
 const stripePromise = loadStripe(STRIPE_PK);
 
 // --- base URL backend ---
+// Always use HTTPS if page is loaded over HTTPS (prevent Mixed Content)
 const baseURL =
   (process.env.UMI_APP_API_BASE as string | undefined) ??
-  `${window.location.origin}/oauth`;
+  `${window.location.protocol}//${window.location.hostname}/oauth`;
 
 /* --- mini-component per la “G” trasparente --- */
 const GoogleGIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
