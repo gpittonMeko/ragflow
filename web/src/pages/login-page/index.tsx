@@ -313,17 +313,23 @@ const PresentationPage: React.FC = () => {
       if (forceToken ?? googleToken) {
         headers['Authorization'] =
           `Bearer ${(forceToken ?? googleToken) as string}`;
+        console.log(
+          '[QUOTA] Using Bearer token:',
+          (forceToken ?? googleToken)?.substring(0, 20) + '...',
+        );
       } else {
         headers['X-Client-Id'] = clientIdRef.current;
+        console.log('[QUOTA] Using X-Client-Id:', clientIdRef.current);
       }
 
+      console.log('[QUOTA] Fetching from:', `${baseURL}/api/quota`);
       const res = await fetch(`${baseURL}/api/quota`, {
         headers,
         credentials: 'include',
       });
 
       const data = await res.json();
-      console.log('[QUOTA]', data);
+      console.log('[QUOTA] Response:', data);
 
       if (res.ok) {
         setQuota(data);
