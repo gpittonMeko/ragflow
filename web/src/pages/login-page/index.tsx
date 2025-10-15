@@ -28,9 +28,17 @@ const stripePromise = loadStripe(STRIPE_PK);
 
 // --- base URL backend ---
 // Always use HTTPS if page is loaded over HTTPS (prevent Mixed Content)
-const baseURL =
-  (process.env.UMI_APP_API_BASE as string | undefined) ??
-  `${window.location.protocol}//${window.location.hostname}/oauth`;
+const getBaseURL = () => {
+  const envBase = process.env.UMI_APP_API_BASE as string | undefined;
+  if (envBase) {
+    // Force the env URL to use the same protocol as the current page
+    const url = new URL(envBase);
+    url.protocol = window.location.protocol;
+    return url.origin + url.pathname.replace(/\/$/, '');
+  }
+  return `${window.location.protocol}//${window.location.hostname}:8000`;
+};
+const baseURL = getBaseURL();
 
 /* --- mini-component per la “G” trasparente --- */
 const GoogleGIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
