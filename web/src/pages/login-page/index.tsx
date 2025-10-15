@@ -28,9 +28,17 @@ const stripePromise = loadStripe(STRIPE_PK);
 
 // --- base URL backend ---
 // Always use HTTPS if page is loaded over HTTPS (prevent Mixed Content)
-const baseURL =
-  (process.env.UMI_APP_API_BASE as string | undefined) ??
-  `${window.location.protocol}//${window.location.hostname}/oauth`;
+const getBaseURL = () => {
+  const envBase = process.env.UMI_APP_API_BASE as string | undefined;
+  if (envBase) {
+    // Force the env URL to use the same protocol as the current page
+    const url = new URL(envBase);
+    url.protocol = window.location.protocol;
+    return url.origin + url.pathname.replace(/\/$/, '');
+  }
+  return `${window.location.protocol}//${window.location.hostname}:8000`;
+};
+const baseURL = getBaseURL();
 
 /* --- mini-component per la “G” trasparente --- */
 const GoogleGIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
@@ -129,6 +137,7 @@ const PresentationPage: React.FC = () => {
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [showLimitOverlay, setShowLimitOverlay] = useState(false);
   const [chatExpanded, setChatExpanded] = useState(false);
+  const [hasMessages, setHasMessages] = useState(false);
 
   // quota server-side
   const [quota, setQuota] = useState<QuotaAnon | QuotaUser | null>(null);
@@ -309,19 +318,29 @@ const PresentationPage: React.FC = () => {
     try {
       const headers: Record<string, string> = {};
 
-      if (forceToken ?? googleToken) {
-        headers['Authorization'] = (forceToken ?? googleToken) as string;
+      // SOLO Google OAuth token o X-Client-Id (niente localStorage)
+      const authToken = forceToken ?? googleToken;
+
+      if (authToken) {
+        // Google OAuth token sempre con Bearer
+        headers['Authorization'] = `Bearer ${authToken}`;
+        console.log(
+          '[QUOTA] Using Google Bearer token:',
+          authToken.substring(0, 20) + '...',
+        );
       } else {
         headers['X-Client-Id'] = clientIdRef.current;
+        console.log('[QUOTA] Using X-Client-Id:', clientIdRef.current);
       }
 
+      console.log('[QUOTA] Fetching from:', `${baseURL}/api/quota`);
       const res = await fetch(`${baseURL}/api/quota`, {
         headers,
         credentials: 'include',
       });
 
       const data = await res.json();
-      console.log('[QUOTA]', data);
+      console.log('[QUOTA] Response:', data);
 
       if (res.ok) {
         setQuota(data);
@@ -602,7 +621,9 @@ const PresentationPage: React.FC = () => {
           <div className={styles.freeCounter}>
             {quota?.scope === 'anon'
               ? `${quota.remainingTotal} / ${quota.totalLimit}`
-              : `${Math.max(FREE_LIMIT - genCount, 0)} / ${FREE_LIMIT}`}
+              : quota?.scope === 'user'
+                ? `${(quota as QuotaUser).remainingToday} / ${(quota as QuotaUser).dailyLimit}`
+                : '5 / 5'}
           </div>
         </>
       ) : (
@@ -760,9 +781,10 @@ const PresentationPage: React.FC = () => {
           zIndex: chatExpanded ? 9999 : 'auto',
           background: 'transparent',
           width: chatExpanded ? '100vw' : 'auto',
-          height: chatExpanded ? '100vh' : '150px',
+          height: chatExpanded ? '100vh' : hasMessages ? '400px' : '150px',
           padding: 0,
           margin: 0,
+          transition: 'height 0.3s ease',
         }}
       >
         {chatExpanded && (
@@ -803,7 +825,7 @@ const PresentationPage: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               background: 'transparent',
-              overflow: 'hidden',
+              overflow: chatExpanded ? 'hidden' : 'auto',
               padding: 0,
               margin: 0,
             }}
@@ -813,7 +835,16 @@ const PresentationPage: React.FC = () => {
               }
             }}
           >
-            <DirectChat agentId="9afb6a2267bf11f0a1f2fec73c0cd884" />
+            <DirectChat
+              agentId="9afb6a2267bf11f0a1f2fec73c0cd884"
+              onMessagesChange={(count) => setHasMessages(count > 0)}
+              onGenerationComplete={() => {
+                console.log(
+                  '[INDEX] Generation completed, refreshing quota...',
+                );
+                void refreshQuota();
+              }}
+            />
           </div>
           {showLimitOverlay && (
             <div className={styles.chatOverlay} role="dialog" aria-modal="true">

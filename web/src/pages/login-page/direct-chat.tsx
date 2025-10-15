@@ -20,12 +20,16 @@ interface DirectChatProps {
   agentId: string;
   className?: string;
   style?: React.CSSProperties;
+  onMessagesChange?: (count: number) => void;
+  onGenerationComplete?: () => void;
 }
 
 const DirectChat: React.FC<DirectChatProps> = ({
   agentId,
   className,
   style,
+  onMessagesChange,
+  onGenerationComplete,
 }) => {
   const { theme } = useTheme();
   const location = useLocation();
@@ -93,6 +97,10 @@ const DirectChat: React.FC<DirectChatProps> = ({
     } else {
       if (isGeneratingRef.current) {
         isGeneratingRef.current = false;
+        // Notify parent that generation is complete
+        if (onGenerationComplete) {
+          onGenerationComplete();
+        }
       }
       setProgress(100);
       setTimeout(() => setBarVisible(false), 650);
@@ -102,7 +110,14 @@ const DirectChat: React.FC<DirectChatProps> = ({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [sendLoading]);
+  }, [sendLoading, onGenerationComplete]);
+
+  // Notify parent when messages change
+  useEffect(() => {
+    if (onMessagesChange && derivedMessages) {
+      onMessagesChange(derivedMessages.length);
+    }
+  }, [derivedMessages, onMessagesChange]);
 
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
 

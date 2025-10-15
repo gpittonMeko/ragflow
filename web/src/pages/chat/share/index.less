@@ -111,13 +111,15 @@
 }
 
 .loaderBarWrapper {
-  position: sticky;
-  top: 0;
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 100;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 12px;
+  pointer-events: none;
 }
 .loaderGlass {
   backdrop-filter: blur(13px) brightness(1.12);
@@ -244,7 +246,7 @@
       background-color var(--transition-time),
       border-color var(--transition-time);
     margin-top: 4px;
-    margin-bottom: 4px; /* Reduced from 8px */
+    margin-bottom: 0; /* No bottom margin to prevent gray space */
 
     :global(.ant-input) {
       background-color: var(--bg-input);
@@ -356,6 +358,7 @@ body {
   padding: 0 !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 /* Fix textarea height - reduce initial height */
@@ -366,8 +369,10 @@ body {
   padding: 12px !important;
 }
 
-/* Fix input wrapper container padding */
-:global(.ant-input-affix-wrapper) {
-  padding: 0 10px !important;
-  margin: 0 !important;
+/* Fix input wrapper container padding and margins */
+:global(.messageInputWrapper___nie1o .ant-input-affix-wrapper) {
+  padding: 0 10px !important; /* Restore padding */
+  margin: 5px 2px 0 2px !important; /* 2px side margins for better spacing */
+  width: 100% !important;
+  box-sizing: border-box !important;
 }

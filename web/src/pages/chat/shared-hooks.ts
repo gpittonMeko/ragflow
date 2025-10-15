@@ -138,6 +138,28 @@ export const useSendSharedMessage = () => {
         return;
       }
 
+      // ✅ PRIMA chiama il backend OAuth per decrementare la quota
+      try {
+        const baseURL = `${window.location.protocol}//${window.location.hostname}/oauth`;
+        const quotaRes = await fetch(`${baseURL}/api/generate`, {
+          method: 'POST',
+          headers: {
+            'X-Client-Id': localStorage.getItem('sgai-client-id') || '',
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+
+        if (!quotaRes.ok) {
+          console.warn('[QUOTA] Generation blocked:', await quotaRes.json());
+          // Non procedere se la quota è esaurita
+          return;
+        }
+      } catch (e) {
+        console.error('[QUOTA] Error calling /api/generate:', e);
+        // Procedi comunque per non bloccare la chat in caso di errore di rete
+      }
+
       const res = await send({
         id: id ?? conversationId,
         message: message.content,
