@@ -246,7 +246,7 @@
       background-color var(--transition-time),
       border-color var(--transition-time);
     margin-top: 4px;
-    margin-bottom: 4px; /* Reduced from 8px */
+    margin-bottom: 0; /* No bottom margin to prevent gray space */
 
     :global(.ant-input) {
       background-color: var(--bg-input);
@@ -358,6 +358,7 @@ body {
   padding: 0 !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 /* Fix textarea height - reduce initial height */
