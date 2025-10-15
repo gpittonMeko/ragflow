@@ -613,7 +613,9 @@ const PresentationPage: React.FC = () => {
           <div className={styles.freeCounter}>
             {quota?.scope === 'anon'
               ? `${quota.remainingTotal} / ${quota.totalLimit}`
-              : `${Math.max(FREE_LIMIT - genCount, 0)} / ${FREE_LIMIT}`}
+              : quota?.scope === 'user'
+                ? `${(quota as QuotaUser).remainingToday} / ${(quota as QuotaUser).dailyLimit}`
+                : '5 / 5'}
           </div>
         </>
       ) : (
@@ -828,6 +830,12 @@ const PresentationPage: React.FC = () => {
             <DirectChat
               agentId="9afb6a2267bf11f0a1f2fec73c0cd884"
               onMessagesChange={(count) => setHasMessages(count > 0)}
+              onGenerationComplete={() => {
+                console.log(
+                  '[INDEX] Generation completed, refreshing quota...',
+                );
+                void refreshQuota();
+              }}
             />
           </div>
           {showLimitOverlay && (
