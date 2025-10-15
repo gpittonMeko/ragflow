@@ -129,6 +129,7 @@ const PresentationPage: React.FC = () => {
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [showLimitOverlay, setShowLimitOverlay] = useState(false);
   const [chatExpanded, setChatExpanded] = useState(false);
+  const [hasMessages, setHasMessages] = useState(false);
 
   // quota server-side
   const [quota, setQuota] = useState<QuotaAnon | QuotaUser | null>(null);
@@ -760,9 +761,10 @@ const PresentationPage: React.FC = () => {
           zIndex: chatExpanded ? 9999 : 'auto',
           background: 'transparent',
           width: chatExpanded ? '100vw' : 'auto',
-          height: chatExpanded ? '100vh' : '150px',
+          height: chatExpanded ? '100vh' : hasMessages ? '400px' : '150px',
           padding: 0,
           margin: 0,
+          transition: 'height 0.3s ease',
         }}
       >
         {chatExpanded && (
@@ -803,7 +805,7 @@ const PresentationPage: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               background: 'transparent',
-              overflow: 'hidden',
+              overflow: chatExpanded ? 'hidden' : 'auto',
               padding: 0,
               margin: 0,
             }}
@@ -813,7 +815,10 @@ const PresentationPage: React.FC = () => {
               }
             }}
           >
-            <DirectChat agentId="9afb6a2267bf11f0a1f2fec73c0cd884" />
+            <DirectChat
+              agentId="9afb6a2267bf11f0a1f2fec73c0cd884"
+              onMessagesChange={(count) => setHasMessages(count > 0)}
+            />
           </div>
           {showLimitOverlay && (
             <div className={styles.chatOverlay} role="dialog" aria-modal="true">

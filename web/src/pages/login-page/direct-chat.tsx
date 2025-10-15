@@ -20,12 +20,14 @@ interface DirectChatProps {
   agentId: string;
   className?: string;
   style?: React.CSSProperties;
+  onMessagesChange?: (count: number) => void;
 }
 
 const DirectChat: React.FC<DirectChatProps> = ({
   agentId,
   className,
   style,
+  onMessagesChange,
 }) => {
   const { theme } = useTheme();
   const location = useLocation();
@@ -103,6 +105,13 @@ const DirectChat: React.FC<DirectChatProps> = ({
       if (interval) clearInterval(interval);
     };
   }, [sendLoading]);
+
+  // Notify parent when messages change
+  useEffect(() => {
+    if (onMessagesChange && derivedMessages) {
+      onMessagesChange(derivedMessages.length);
+    }
+  }, [derivedMessages, onMessagesChange]);
 
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
 
