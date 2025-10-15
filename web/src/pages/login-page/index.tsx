@@ -310,12 +310,18 @@ const PresentationPage: React.FC = () => {
     try {
       const headers: Record<string, string> = {};
 
-      if (forceToken ?? googleToken) {
-        headers['Authorization'] =
-          `Bearer ${(forceToken ?? googleToken) as string}`;
+      // Priorità: forceToken > googleToken > Authorization localStorage
+      const authToken =
+        forceToken ?? googleToken ?? localStorage.getItem('Authorization');
+
+      if (authToken) {
+        // Se il token già inizia con "Bearer", non aggiungerlo di nuovo
+        headers['Authorization'] = authToken.startsWith('Bearer ')
+          ? authToken
+          : `Bearer ${authToken}`;
         console.log(
           '[QUOTA] Using Bearer token:',
-          (forceToken ?? googleToken)?.substring(0, 20) + '...',
+          authToken.substring(0, 20) + '...',
         );
       } else {
         headers['X-Client-Id'] = clientIdRef.current;
