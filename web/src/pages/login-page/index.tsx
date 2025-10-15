@@ -311,7 +311,8 @@ const PresentationPage: React.FC = () => {
       const headers: Record<string, string> = {};
 
       if (forceToken ?? googleToken) {
-        headers['Authorization'] = (forceToken ?? googleToken) as string;
+        headers['Authorization'] =
+          `Bearer ${(forceToken ?? googleToken) as string}`;
       } else {
         headers['X-Client-Id'] = clientIdRef.current;
       }
