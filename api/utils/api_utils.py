@@ -144,7 +144,11 @@ def validate_request(*args, **kwargs):
     def wrapper(func):
         @wraps(func)
         def decorated_function(*_args, **_kwargs):
+            import logging
+            logging.info(f"[VALIDATE] flask_request.json: {flask_request.json}")
+            logging.info(f"[VALIDATE] flask_request.data: {flask_request.data}")
             input_arguments = flask_request.json or flask_request.form.to_dict()
+            logging.info(f"[VALIDATE] input_arguments: {input_arguments}")
             no_arguments = []
             error_arguments = []
             for arg in args:
