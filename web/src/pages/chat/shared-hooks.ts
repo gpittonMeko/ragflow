@@ -41,13 +41,16 @@ export const useGetSharedChatSearchParams = () => {
   };
 };
 
-export const useSendSharedMessage = () => {
+export const useSendSharedMessage = (overrideConversationId?: string) => {
   const {
     from,
     sharedId: conversationId,
     auth,
     data: data,
   } = useGetSharedChatSearchParams();
+
+  // Use overrideConversationId if provided, otherwise fall back to URL param
+  const actualConversationId = overrideConversationId || conversationId;
   const { createSharedConversation: setConversation } =
     useCreateNextSharedConversation();
   const { handleInputChange, value, setValue } = useHandleMessageInputChange();
@@ -98,7 +101,7 @@ export const useSendSharedMessage = () => {
       }
 
       const res = await send({
-        id: id ?? conversationId,
+        id: id ?? actualConversationId,
         message: message.content,
         message_id: message.id || uuid(),
         stream: true,
@@ -113,12 +116,18 @@ export const useSendSharedMessage = () => {
         setHasError(true);
       }
     },
-    [send, conversationId, derivedMessages, setValue, removeLatestMessage],
+    [
+      send,
+      actualConversationId,
+      derivedMessages,
+      setValue,
+      removeLatestMessage,
+    ],
   );
 
   const handleSendMessage = useCallback(
     async (message: Message) => {
-      if (conversationId !== '') {
+      if (actualConversationId !== '') {
         sendMessage(message);
       } else {
         const data = await setConversation('user id');
@@ -128,12 +137,12 @@ export const useSendSharedMessage = () => {
         }
       }
     },
-    [conversationId, setConversation, sendMessage],
+    [actualConversationId, setConversation, sendMessage],
   );
 
   const fetchSessionId = useCallback(async () => {
     const payload = {
-      id: conversationId,
+      id: actualConversationId,
       messages: [{ role: 'user', content: '' }],
       stream: true,
     };
@@ -142,7 +151,7 @@ export const useSendSharedMessage = () => {
       message.error(ret?.data.message);
       setHasError(true);
     }
-  }, [send]);
+  }, [actualConversationId, send]);
   //
   //  useEffect(() => {
   //    fetchSessionId();

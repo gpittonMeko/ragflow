@@ -65,7 +65,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
     derivedMessages,
     hasError,
     stopOutputMessage,
-  } = useSendSharedMessage();
+  } = useSendSharedMessage(agentId);
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
     useClickDrawer();
