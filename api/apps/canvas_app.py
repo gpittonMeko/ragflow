@@ -249,7 +249,7 @@ def run():
         canvas.messages.append({"role": "assistant", "content": final_ans["content"], "id": message_id})
         if final_ans.get("reference"):
             canvas.reference.append(final_ans["reference"])
-        cvs.dsl = json.loads(str(canvas))
+        cvs.dsl = safe_serialize_canvas(canvas)
         UserCanvasService.update_by_id(req["id"], cvs.to_dict())
         return get_json_result(data={"answer": final_ans["content"], "reference": final_ans.get("reference", [])})
 
