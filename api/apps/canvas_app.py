@@ -86,17 +86,25 @@ def save():
 
 
 @manager.route('/get/<canvas_id>', methods=['GET'])  # noqa: F821
-@login_required
 def get(canvas_id):
-    e, c = UserCanvasService.get_by_tenant_id(canvas_id)
+    # Allow public access - try by ID first, then by tenant_id if authenticated
+    from flask_login import current_user as flask_current_user
+    is_authenticated = flask_current_user.is_authenticated if hasattr(flask_current_user, 'is_authenticated') else False
+    
+    if is_authenticated:
+        e, c = UserCanvasService.get_by_tenant_id(canvas_id)
+    else:
+        # For public access, get by ID directly
+        e, c = UserCanvasService.get_by_id(canvas_id)
+    
     logging.info(f"get canvas_id: {canvas_id} c: {c}")
     if not e:
         return get_data_error_result(message="canvas not found.")
     return get_json_result(data=c)
 
 @manager.route('/getsse/<canvas_id>', methods=['GET'])
-@login_required   # 👈 usa la sessione/cookie
 def getsse(canvas_id):
+    # Allow public access without authentication
     e, c = UserCanvasService.get_by_id(canvas_id)
     if not e:
         return get_data_error_result(message="canvas not found.")
@@ -109,17 +117,28 @@ def getsse(canvas_id):
 
 @manager.route('/completion', methods=['POST'])  # noqa: F821
 @validate_request("id")
-@login_required
 def run():
     req = request.json
     stream = req.get("stream", True)
     e, cvs = UserCanvasService.get_by_id(req["id"])
     if not e:
         return get_data_error_result(message="canvas not found.")
-    if not UserCanvasService.query(user_id=current_user.id, id=req["id"]):
-        return get_json_result(
-            data=False, message='Only owner of canvas authorized for this operation.',
-            code=RetCode.OPERATING_ERROR)
+    
+    # Allow public access to canvas without authentication
+    # Check if user is logged in
+    from flask_login import current_user as flask_current_user
+    is_authenticated = flask_current_user.is_authenticated if hasattr(flask_current_user, 'is_authenticated') else False
+    
+    # If authenticated, verify ownership
+    if is_authenticated:
+        if not UserCanvasService.query(user_id=flask_current_user.id, id=req["id"]):
+            return get_json_result(
+                data=False, message='Only owner of canvas authorized for this operation.',
+                code=RetCode.OPERATING_ERROR)
+        user_id = flask_current_user.id
+    else:
+        # For public/anonymous access, use the canvas owner's ID
+        user_id = cvs.user_id
 
     if not isinstance(cvs.dsl, str):
         cvs.dsl = json.dumps(cvs.dsl, ensure_ascii=False)
@@ -127,7 +146,7 @@ def run():
     final_ans = {"reference": [], "content": ""}
     message_id = req.get("message_id", get_uuid())
     try:
-        canvas = Canvas(cvs.dsl, current_user.id)
+        canvas = Canvas(cvs.dsl, user_id)
         if "message" in req:
             canvas.messages.append({"role": "user", "content": req["message"], "id": message_id})
             canvas.add_user_input(req["message"])

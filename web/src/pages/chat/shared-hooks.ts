@@ -12,56 +12,7 @@ import { useSearchParams } from 'umi';
 import { v4 as uuid } from 'uuid';
 import { useHandleMessageInputChange } from './hooks';
 
-// Login automatico per l'iframe
-async function ensureIframeAuth() {
-  const existing = localStorage.getItem('Authorization');
-  if (existing) {
-    // Test se funziona ancora
-    try {
-      const testRes = await fetch('/v1/canvas/completion', {
-        method: 'POST',
-        headers: {
-          Authorization: existing,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: 'a92b7464193811f09d527ebdee58e854',
-          message: 'test',
-          stream: false,
-        }),
-      });
-      if (testRes.status === 200) return; // Token OK
-    } catch {}
-  }
-
-  // Fai login
-  try {
-    const res = await fetch('/v1/user/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: 'giovanni.pitton@mekosrl.it',
-        password:
-          'L7vKZIooJFo87FJksfv+9BmnzyKOvcgcmwBzEATGv8CXcr+ipmo+c2sWAvbDdMCi2nBIvZukC17nVxMT0+YBqqDiGlxaMJR1NMfyRyN6Jg/idxeagCD4gFUVQ8PWLjK1hzL5IfMNCjZCmPir7AkDGAb7yoohFaIzEcRuzSwLe8f0vhrI243GYqcEL/tYPSmuWj4t8UbQCa4pgqGcFmT2Oo3TBepUlaylgS1anEr1BfU/OqBH2Nd/860T6oaLuDLU9EDdIpthix6DvFuKHkjX88JleQcgv+2tgmr0s7oSqJWRcypWZ5pSH4ybFJ+uLWi8QJ91zCyxldMsGnCChjirag==',
-      }),
-    });
-
-    const data = await res.json();
-    if (data.code === 0) {
-      const token = res.headers.get('Authorization');
-      if (token) {
-        localStorage.setItem('Authorization', token);
-      }
-    }
-  } catch (e) {
-    // Login failed silently
-  }
-}
-
-// Esegui login all'avvio
-if (typeof window !== 'undefined') {
-  ensureIframeAuth();
-}
+// No login needed - public access is now allowed on the backend
 const isCompletionError = (res: any) =>
   res && (res?.response.status !== 200 || res?.data?.code !== 0);
 
@@ -105,7 +56,6 @@ export const useSendSharedMessage = () => {
     `/v1/canvas/completion`,
     {
       headers: {
-        Authorization: localStorage.getItem('Authorization') || '',
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
       },
@@ -125,19 +75,6 @@ export const useSendSharedMessage = () => {
 
   const sendMessage = useCallback(
     async (message: Message, id?: string) => {
-      // Aspetta che ci sia un token valido
-      let token = localStorage.getItem('Authorization');
-      let attempts = 0;
-      while (!token && attempts < 10) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        token = localStorage.getItem('Authorization');
-        attempts++;
-      }
-
-      if (!token) {
-        return;
-      }
-
       // ✅ PRIMA chiama il backend OAuth per decrementare la quota
       try {
         const baseURL = `${window.location.protocol}//${window.location.hostname}/oauth`;
