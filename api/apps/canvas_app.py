@@ -119,6 +119,7 @@ def getsse(canvas_id):
 @validate_request("id")
 def run():
     req = request.json
+    logging.info(f"[COMPLETION] Request JSON: {req}")
     stream = req.get("stream", True)
     e, cvs = UserCanvasService.get_by_id(req["id"])
     if not e:
