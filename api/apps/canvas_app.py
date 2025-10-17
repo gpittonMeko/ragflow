@@ -153,16 +153,34 @@ def run():
 
     if stream:
         def sse():
-            # ✅ FIX: usa final_ans invece di answer non definito
             nonlocal final_ans, cvs
+            
+            def safe_serialize_canvas(canvas_obj):
+                """Serializza il canvas evitando AttributeError su componenti malformati"""
+                try:
+                    return json.loads(str(canvas_obj))
+                except AttributeError as e:
+                    logging.warning(f"Canvas serialization error (ignored): {e}")
+                    return {
+                        "components": {},
+                        "history": getattr(canvas_obj, 'history', []),
+                        "messages": getattr(canvas_obj, 'messages', []),
+                        "reference": getattr(canvas_obj, 'reference', []),
+                        "path": getattr(canvas_obj, 'path', [])
+                    }
+            
             try:
                 logging.info("[SSE] Starting stream...")
                 for ans in canvas.run(stream=True):
                     if ans.get("running_status"):
-                        yield "data:" + json.dumps({"code": 0, "message": "",
-                                                    "data": {"answer": ans["content"],
-                                                             "running_status": True}},
-                                                   ensure_ascii=False) + "\n\n"
+                        yield "data:" + json.dumps({
+                            "code": 0,
+                            "message": "",
+                            "data": {
+                                "answer": ans["content"],
+                                "running_status": True
+                            }
+                        }, ensure_ascii=False) + "\n\n"
                         continue
                     
                     for k in ans.keys():
@@ -178,33 +196,42 @@ def run():
                     canvas.path.pop(-1)
                 if final_ans.get("reference"):
                     canvas.reference.append(final_ans["reference"])
-                cvs.dsl = json.loads(str(canvas))
+                
+                cvs.dsl = safe_serialize_canvas(canvas)
                 UserCanvasService.update_by_id(req["id"], cvs.to_dict())
                 
-                # ✅ CRITICO: Messaggio finale di completamento
                 logging.info("[SSE] Stream completed successfully")
                 yield "data:" + json.dumps({"code": 0, "message": "", "data": True}, ensure_ascii=False) + "\n\n"
                 
             except GeneratorExit:
-                # Client ha chiuso la connessione
                 logging.warning("[SSE] Client disconnected (GeneratorExit)")
-                cvs.dsl = json.loads(str(canvas))
-                if canvas.path and not canvas.path[-1]:
-                    canvas.path.pop(-1)
-                UserCanvasService.update_by_id(req["id"], cvs.to_dict())
+                try:
+                    cvs.dsl = safe_serialize_canvas(canvas)
+                    if canvas.path and not canvas.path[-1]:
+                        canvas.path.pop(-1)
+                    UserCanvasService.update_by_id(req["id"], cvs.to_dict())
+                except Exception as save_err:
+                    logging.error(f"Save error on GeneratorExit: {save_err}")
                 
             except Exception as e:
                 logging.error(f"[SSE] Error: {str(e)}", exc_info=True)
-                cvs.dsl = json.loads(str(canvas))
-                if canvas.path and not canvas.path[-1]:
-                    canvas.path.pop(-1)
-                UserCanvasService.update_by_id(req["id"], cvs.to_dict())
+                
+                try:
+                    cvs.dsl = safe_serialize_canvas(canvas)
+                    if canvas.path and not canvas.path[-1]:
+                        canvas.path.pop(-1)
+                    UserCanvasService.update_by_id(req["id"], cvs.to_dict())
+                except Exception as save_err:
+                    logging.error(f"Save error on exception: {save_err}")
+                
                 traceback.print_exc()
                 
-                yield "data:" + json.dumps({"code": 500, "message": str(e),
-                                            "data": {"answer": "**ERROR**: " + str(e), "reference": []}},
-                                           ensure_ascii=False) + "\n\n"
-                # Invia comunque messaggio finale
+                yield "data:" + json.dumps({
+                    "code": 500,
+                    "message": str(e),
+                    "data": {"answer": f"**ERROR**: {str(e)}", "reference": []}
+                }, ensure_ascii=False) + "\n\n"
+                
                 yield "data:" + json.dumps({"code": 0, "message": "", "data": True}, ensure_ascii=False) + "\n\n"
 
         resp = Response(sse(), mimetype="text/event-stream")
@@ -214,7 +241,7 @@ def run():
         resp.headers.add_header("Content-Type", "text/event-stream; charset=utf-8")
         return resp
 
-    # Non-streaming (invariato)
+    # Non-streaming
     for answer in canvas.run(stream=False):
         if answer.get("running_status"):
             continue
@@ -327,7 +354,7 @@ def test_db_connect():
         return get_json_result(data="Database Connection Successful!")
     except Exception as e:
         return server_error_response(e)
-#api get list version dsl of canvas
+
 @manager.route('/getlistversion/<canvas_id>', methods=['GET'])  # noqa: F821
 @login_required
 def getlistversion(canvas_id):
@@ -336,17 +363,17 @@ def getlistversion(canvas_id):
         return get_json_result(data=list)
     except Exception as e:
         return get_data_error_result(message=f"Error getting history files: {e}")
-#api get version dsl of canvas
+
 @manager.route('/getversion/<version_id>', methods=['GET'])  # noqa: F821
 @login_required
-def getversion( version_id):
+def getversion(version_id):
     try:
-      
         e, version = UserCanvasVersionService.get_by_id(version_id)
         if version:
             return get_json_result(data=version.to_dict())
     except Exception as e:
         return get_json_result(data=f"Error getting history file: {e}")
+
 @manager.route('/listteam', methods=['GET'])  # noqa: F821
 @login_required
 def list_kbs():
@@ -363,6 +390,7 @@ def list_kbs():
         return get_json_result(data={"kbs": kbs, "total": total})
     except Exception as e:
         return server_error_response(e)
+
 @manager.route('/setting', methods=['POST'])  # noqa: F821
 @validate_request("id", "title", "permission")
 @login_required
