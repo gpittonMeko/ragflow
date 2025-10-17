@@ -41,6 +41,15 @@ export const useGetSharedChatSearchParams = () => {
   };
 };
 
+
+// ✅ AGGIUNGI QUESTA FUNZIONE HELPER PRIMA DI useSendSharedMessage
+function getRagflowToken(): string | null {
+  return localStorage.getItem('Authorization') || 
+         localStorage.getItem('access_token') || 
+         null;
+}
+
+// ✅ SOSTITUISCI TUTTA LA FUNZIONE useSendSharedMessage CON QUESTA
 export const useSendSharedMessage = (overrideConversationId?: string) => {
   const {
     from,
@@ -49,18 +58,19 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
     data: data,
   } = useGetSharedChatSearchParams();
 
-  // Use overrideConversationId if provided, otherwise fall back to URL param
   const actualConversationId = overrideConversationId || conversationId;
   const { createSharedConversation: setConversation } =
     useCreateNextSharedConversation();
   const { handleInputChange, value, setValue } = useHandleMessageInputChange();
 
+  // ✅ MODIFICA: Aggiungi Authorization header dinamicamente
   const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
     `/v1/canvas/completion`,
     {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
+        ...(getRagflowToken() && { 'Authorization': getRagflowToken()! }),
       },
       credentials: 'include',
     },
@@ -78,7 +88,17 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
 
   const sendMessage = useCallback(
     async (message: Message, id?: string) => {
-      // ✅ PRIMA chiama il backend OAuth per decrementare la quota
+      // ✅ NUOVO: Verifica token RAGFlow
+      const ragflowToken = getRagflowToken();
+      if (!ragflowToken) {
+        console.error('[CHAT] ❌ Token RAGFlow mancante');
+        setHasError(true);
+        return;
+      }
+
+      console.log('[CHAT] ✅ Token presente:', ragflowToken.substring(0, 20) + '...');
+
+      // Decrementa quota OAuth
       try {
         const baseURL = `${window.location.protocol}//${window.location.hostname}/oauth`;
         const quotaRes = await fetch(`${baseURL}/api/generate`, {
@@ -91,15 +111,16 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
         });
 
         if (!quotaRes.ok) {
-          console.warn('[QUOTA] Generation blocked:', await quotaRes.json());
-          // Non procedere se la quota è esaurita
+          console.warn('[QUOTA] Generazione bloccata:', await quotaRes.json());
           return;
         }
+        console.log('[QUOTA] ✅ Generazione autorizzata');
       } catch (e) {
-        console.error('[QUOTA] Error calling /api/generate:', e);
-        // Procedi comunque per non bloccare la chat in caso di errore di rete
+        console.error('[QUOTA] Errore:', e);
       }
 
+      // Invia messaggio a RAGFlow
+      console.log('[CHAT] 📤 Invio a RAGFlow...');
       const res = await send({
         id: id ?? actualConversationId,
         message: message.content,
@@ -108,21 +129,19 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
       });
 
       if (isCompletionError(res)) {
+        console.error('[CHAT] ❌ Errore:', res);
         if (res?.data?.code === 102 || res?.response?.status === 401) {
-          return; // non setto hasError → chat resta attiva
+          console.error('[CHAT] ❌ Token non valido/scaduto');
+          return;
         }
         setValue(message.content);
         removeLatestMessage();
         setHasError(true);
+      } else {
+        console.log('[CHAT] ✅ Messaggio inviato');
       }
     },
-    [
-      send,
-      actualConversationId,
-      derivedMessages,
-      setValue,
-      removeLatestMessage,
-    ],
+    [send, actualConversationId, derivedMessages, setValue, removeLatestMessage],
   );
 
   const handleSendMessage = useCallback(
@@ -152,10 +171,6 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
       setHasError(true);
     }
   }, [actualConversationId, send]);
-  //
-  //  useEffect(() => {
-  //    fetchSessionId();
-  //  }, [fetchSessionId, send]);
 
   useEffect(() => {
     if (answer.answer) {
@@ -167,10 +182,10 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
     (documentIds: string[]) => {
       if (trim(value) === '') return;
       const id = uuid();
-      const content = value.trim(); // 👈 salva qui
+      const content = value.trim();
 
       if (done) {
-        setValue(''); // reset dopo
+        setValue('');
         addNewestQuestion({
           content,
           doc_ids: documentIds,
@@ -178,7 +193,7 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
           role: MessageType.User,
         });
         handleSendMessage({
-          content, // 👈 usa la variabile
+          content,
           id,
           role: MessageType.User,
         });
