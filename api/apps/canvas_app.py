@@ -125,12 +125,10 @@ def run():
     if not e:
         return get_data_error_result(message="canvas not found.")
     
-    # Allow public access to canvas without authentication
-    # Check if user is logged in
+    # Allow public access
     from flask_login import current_user as flask_current_user
     is_authenticated = flask_current_user.is_authenticated if hasattr(flask_current_user, 'is_authenticated') else False
     
-    # If authenticated, verify ownership
     if is_authenticated:
         if not UserCanvasService.query(user_id=flask_current_user.id, id=req["id"]):
             return get_json_result(
@@ -138,7 +136,6 @@ def run():
                 code=RetCode.OPERATING_ERROR)
         user_id = flask_current_user.id
     else:
-        # For public/anonymous access, use the canvas owner's ID
         user_id = cvs.user_id
 
     if not isinstance(cvs.dsl, str):
@@ -156,8 +153,10 @@ def run():
 
     if stream:
         def sse():
-            nonlocal answer, cvs
+            # ✅ FIX: usa final_ans invece di answer non definito
+            nonlocal final_ans, cvs
             try:
+                logging.info("[SSE] Starting stream...")
                 for ans in canvas.run(stream=True):
                     if ans.get("running_status"):
                         yield "data:" + json.dumps({"code": 0, "message": "",
@@ -165,11 +164,14 @@ def run():
                                                              "running_status": True}},
                                                    ensure_ascii=False) + "\n\n"
                         continue
+                    
                     for k in ans.keys():
                         final_ans[k] = ans[k]
-                    ans = {"answer": ans["content"], "reference": ans.get("reference", [])}
-                    yield "data:" + json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
+                    
+                    ans_data = {"answer": ans["content"], "reference": ans.get("reference", [])}
+                    yield "data:" + json.dumps({"code": 0, "message": "", "data": ans_data}, ensure_ascii=False) + "\n\n"
 
+                # Salva stato
                 canvas.messages.append({"role": "assistant", "content": final_ans.get("content", ""), "id": message_id})
                 canvas.history.append(("assistant", final_ans.get("content", "")))
                 if canvas.path and not canvas.path[-1]:
@@ -178,24 +180,41 @@ def run():
                     canvas.reference.append(final_ans["reference"])
                 cvs.dsl = json.loads(str(canvas))
                 UserCanvasService.update_by_id(req["id"], cvs.to_dict())
+                
+                # ✅ CRITICO: Messaggio finale di completamento
+                logging.info("[SSE] Stream completed successfully")
+                yield "data:" + json.dumps({"code": 0, "message": "", "data": True}, ensure_ascii=False) + "\n\n"
+                
+            except GeneratorExit:
+                # Client ha chiuso la connessione
+                logging.warning("[SSE] Client disconnected (GeneratorExit)")
+                cvs.dsl = json.loads(str(canvas))
+                if canvas.path and not canvas.path[-1]:
+                    canvas.path.pop(-1)
+                UserCanvasService.update_by_id(req["id"], cvs.to_dict())
+                
             except Exception as e:
+                logging.error(f"[SSE] Error: {str(e)}", exc_info=True)
                 cvs.dsl = json.loads(str(canvas))
                 if canvas.path and not canvas.path[-1]:
                     canvas.path.pop(-1)
                 UserCanvasService.update_by_id(req["id"], cvs.to_dict())
                 traceback.print_exc()
+                
                 yield "data:" + json.dumps({"code": 500, "message": str(e),
                                             "data": {"answer": "**ERROR**: " + str(e), "reference": []}},
                                            ensure_ascii=False) + "\n\n"
-            yield "data:" + json.dumps({"code": 0, "message": "", "data": True}, ensure_ascii=False) + "\n\n"
+                # Invia comunque messaggio finale
+                yield "data:" + json.dumps({"code": 0, "message": "", "data": True}, ensure_ascii=False) + "\n\n"
 
         resp = Response(sse(), mimetype="text/event-stream")
-        resp.headers.add_header("Cache-control", "no-cache")
+        resp.headers.add_header("Cache-Control", "no-cache, no-store, must-revalidate")
         resp.headers.add_header("Connection", "keep-alive")
         resp.headers.add_header("X-Accel-Buffering", "no")
         resp.headers.add_header("Content-Type", "text/event-stream; charset=utf-8")
         return resp
 
+    # Non-streaming (invariato)
     for answer in canvas.run(stream=False):
         if answer.get("running_status"):
             continue
@@ -206,7 +225,6 @@ def run():
         cvs.dsl = json.loads(str(canvas))
         UserCanvasService.update_by_id(req["id"], cvs.to_dict())
         return get_json_result(data={"answer": final_ans["content"], "reference": final_ans.get("reference", [])})
-
 
 @manager.route('/reset', methods=['POST'])  # noqa: F821
 @validate_request("id")
