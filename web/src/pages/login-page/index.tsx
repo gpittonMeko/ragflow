@@ -790,7 +790,7 @@ useEffect(() => {
           zIndex: chatExpanded ? 9999 : 'auto',
           background: 'transparent',
           width: chatExpanded ? '100vw' : 'auto',
-          height: chatExpanded ? '100vh' : hasMessages ? '400px' : '150px',
+          height: chatExpanded ? '100vh' : hasMessages ? '300px' : '150px',
           padding: 0,
           margin: 0,
           transition: 'height 0.3s ease',
