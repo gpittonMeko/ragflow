@@ -100,7 +100,7 @@ def get(canvas_id):
     logging.info(f"get canvas_id: {canvas_id} c: {c}")
     if not e:
         return get_data_error_result(message="canvas not found.")
-    return get_json_result(data=c.to_dict())
+    return get_json_result(data=c if isinstance(c, dict) else c.to_dict())
 
 @manager.route('/getsse/<canvas_id>', methods=['GET'])
 def getsse(canvas_id):
@@ -109,7 +109,7 @@ def getsse(canvas_id):
     if not e:
         return get_data_error_result(message="canvas not found.")
 
-    return get_json_result(data=c.to_dict())
+    return get_json_result(data=c if isinstance(c, dict) else c.to_dict())
 
 
 
@@ -249,7 +249,7 @@ def run():
         canvas.messages.append({"role": "assistant", "content": final_ans["content"], "id": message_id})
         if final_ans.get("reference"):
             canvas.reference.append(final_ans["reference"])
-        cvs.dsl = json.loads(str(canvas))
+        cvs.dsl = safe_serialize_canvas(canvas)
         UserCanvasService.update_by_id(req["id"], cvs.to_dict())
         return get_json_result(data={"answer": final_ans["content"], "reference": final_ans.get("reference", [])})
 
