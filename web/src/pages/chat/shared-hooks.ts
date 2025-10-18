@@ -42,14 +42,20 @@ export const useGetSharedChatSearchParams = () => {
 };
 
 
-// ✅ AGGIUNGI QUESTA FUNZIONE HELPER PRIMA DI useSendSharedMessage
+// ✅ HELPER: Ottieni token RAGFlow
 function getRagflowToken(): string | null {
-  return localStorage.getItem('Authorization') || 
-         localStorage.getItem('access_token') || 
-         null;
+  const auth = localStorage.getItem('Authorization');
+  const access = localStorage.getItem('access_token');
+  
+  console.log('[CHAT] 🔑 getRagflowToken():', {
+    Authorization: auth ? auth.substring(0, 20) + '...' : 'NONE',
+    access_token: access ? access.substring(0, 20) + '...' : 'NONE'
+  });
+  
+  return auth || access || null;
 }
 
-// ✅ SOSTITUISCI TUTTA LA FUNZIONE useSendSharedMessage CON QUESTA
+// ✅ SOSTITUISCI TUTTA LA FUNZIONE useSendSharedMessage
 export const useSendSharedMessage = (overrideConversationId?: string) => {
   const {
     from,
@@ -63,6 +69,15 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
     useCreateNextSharedConversation();
   const { handleInputChange, value, setValue } = useHandleMessageInputChange();
 
+  // ✅ AGGIUNGI: Log degli headers che verranno usati
+  const ragflowTokenForHeaders = getRagflowToken();
+  console.log('[CHAT] 🔧 Headers configurati per useSendMessageWithSse:', {
+    'Content-Type': 'application/json',
+    'Accept': 'text/event-stream',
+    'Authorization': ragflowTokenForHeaders ? ragflowTokenForHeaders.substring(0, 20) + '...' : 'NONE',
+    'credentials': 'include'
+  });
+
   // ✅ MODIFICA: Aggiungi Authorization header dinamicamente
   const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
     `/v1/canvas/completion`,
@@ -70,7 +85,7 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
-        ...(getRagflowToken() && { 'Authorization': getRagflowToken()! }),
+        ...(ragflowTokenForHeaders && { 'Authorization': ragflowTokenForHeaders }),
       },
       credentials: 'include',
     },
@@ -88,10 +103,21 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
 
   const sendMessage = useCallback(
     async (message: Message, id?: string) => {
-      // ✅ NUOVO: Verifica token RAGFlow
+      console.log('[CHAT] 🚀 === INIZIO sendMessage ===');
+      
+      // ✅ DEBUG: Verifica token RAGFlow
       const ragflowToken = getRagflowToken();
+      console.log('[CHAT] 🔍 PRE-SEND DEBUG:', {
+        tokenPresent: !!ragflowToken,
+        tokenPrefix: ragflowToken ? ragflowToken.substring(0, 20) + '...' : 'NONE',
+        conversationId: id ?? actualConversationId,
+        messageContent: message.content.substring(0, 50) + '...',
+        messageId: message.id || uuid(),
+        timestamp: new Date().toISOString()
+      });
+
       if (!ragflowToken) {
-        console.error('[CHAT] ❌ Token RAGFlow mancante');
+        console.error('[CHAT] ❌ Token RAGFlow mancante - ABORT');
         setHasError(true);
         return;
       }
@@ -101,6 +127,8 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
       // Decrementa quota OAuth
       try {
         const baseURL = `${window.location.protocol}//${window.location.hostname}/oauth`;
+        console.log('[QUOTA] 📤 Chiamata a:', `${baseURL}/api/generate`);
+        
         const quotaRes = await fetch(`${baseURL}/api/generate`, {
           method: 'POST',
           headers: {
@@ -110,17 +138,29 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
           credentials: 'include',
         });
 
+        console.log('[QUOTA] 📡 Response:', {
+          status: quotaRes.status,
+          ok: quotaRes.ok
+        });
+
         if (!quotaRes.ok) {
-          console.warn('[QUOTA] Generazione bloccata:', await quotaRes.json());
+          const quotaData = await quotaRes.json();
+          console.warn('[QUOTA] ❌ Generazione bloccata:', quotaData);
           return;
         }
         console.log('[QUOTA] ✅ Generazione autorizzata');
       } catch (e) {
-        console.error('[QUOTA] Errore:', e);
+        console.error('[QUOTA] ❌ Errore:', e);
       }
 
       // Invia messaggio a RAGFlow
-      console.log('[CHAT] 📤 Invio a RAGFlow...');
+      console.log('[CHAT] 📤 Invio a RAGFlow...', {
+        endpoint: '/v1/canvas/completion',
+        conversationId: id ?? actualConversationId,
+        messageLength: message.content.length,
+        messageId: message.id || uuid()
+      });
+
       const res = await send({
         id: id ?? actualConversationId,
         message: message.content,
@@ -128,18 +168,77 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
         stream: true,
       });
 
-      if (isCompletionError(res)) {
-        console.error('[CHAT] ❌ Errore:', res);
+      console.log('[CHAT] 📡 RAGFlow raw response:', res);
+
+      // ✅ NUOVO: Ispeziona la response in dettaglio
+      if (res?.response) {
+        console.log('[CHAT] 🔍 Response object exists');
+        console.log('[CHAT] 🔍 Response details:', {
+          status: res.response.status,
+          statusText: res.response.statusText,
+          ok: res.response.ok,
+          type: res.response.type,
+          url: res.response.url
+        });
+
+        // Prova a estrarre headers
+        try {
+          const headers: any = {};
+          if (res.response.headers) {
+            headers['content-type'] = res.response.headers.get('content-type');
+            headers['authorization'] = res.response.headers.get('authorization');
+            headers['x-error'] = res.response.headers.get('x-error');
+          }
+          console.log('[CHAT] 📋 Response headers:', headers);
+        } catch (e) {
+          console.warn('[CHAT] ⚠️ Non riesco a leggere gli headers:', e);
+        }
+
+        // Prova a leggere il body
+        try {
+          const clone = res.response.clone();
+          const text = await clone.text();
+          console.log('[CHAT] 📄 Response body (primi 500 char):', text.substring(0, 500));
+          
+          // Prova a parsare come JSON
+          try {
+            const json = JSON.parse(text);
+            console.log('[CHAT] 📦 Response body (parsed JSON):', json);
+          } catch {
+            console.log('[CHAT] 📝 Response body non è JSON valido');
+          }
+        } catch (e) {
+          console.warn('[CHAT] ⚠️ Non riesco a leggere il body:', e);
+        }
+      } else {
+        console.warn('[CHAT] ⚠️ res.response è undefined/null');
+      }
+
+      // Check errore
+      const isError = isCompletionError(res);
+      console.log('[CHAT] 🔍 isCompletionError:', isError);
+
+      if (isError) {
+        console.error('[CHAT] ❌ isCompletionError = true');
+        console.error('[CHAT] ❌ Dettagli errore:', {
+          dataCode: res?.data?.code,
+          dataMessage: res?.data?.message,
+          responseStatus: res?.response?.status,
+          responseStatusText: res?.response?.statusText
+        });
+        
         if (res?.data?.code === 102 || res?.response?.status === 401) {
-          console.error('[CHAT] ❌ Token non valido/scaduto');
+          console.error('[CHAT] ❌ Token non valido/scaduto (code 102 o status 401)');
           return;
         }
         setValue(message.content);
         removeLatestMessage();
         setHasError(true);
       } else {
-        console.log('[CHAT] ✅ Messaggio inviato');
+        console.log('[CHAT] ✅ Messaggio inviato con successo');
       }
+
+      console.log('[CHAT] 🏁 === FINE sendMessage ===');
     },
     [send, actualConversationId, derivedMessages, setValue, removeLatestMessage],
   );
