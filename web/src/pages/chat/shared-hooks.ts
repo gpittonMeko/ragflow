@@ -13,8 +13,34 @@ import { v4 as uuid } from 'uuid';
 import { useHandleMessageInputChange } from './hooks';
 
 // No login needed - public access is now allowed on the backend
-const isCompletionError = (res: any) =>
-  res && (res?.response.status !== 200 || res?.data?.code !== 0);
+const isCompletionError = (res: any) => {
+    console.log('[CHAT] 🔍 isCompletionError check:', {
+      hasRes: !!res,
+      hasResponse: !!res?.response,
+      status: res?.response?.status,
+      hasData: !!res?.data,
+      dataCode: res?.data?.code,
+      dataKeys: res?.data ? Object.keys(res.data) : 'NO DATA'
+    });
+
+    if (!res?.response) {
+      console.log('[CHAT] ⚠️ Nessun response object');
+      return true;
+    }
+
+    if (res.response.status !== 200) {
+      console.log('[CHAT] ⚠️ Status non 200:', res.response.status);
+      return true;
+    }
+
+    if (res.data && res.data.code !== undefined && res.data.code !== 0) {
+      console.log('[CHAT] ⚠️ data.code non è 0:', res.data.code);
+      return true;
+    }
+
+    console.log('[CHAT] ✅ No errors detected');
+    return false;
+  };
 
 export const useSendButtonDisabled = (value: string) => {
   return trim(value) === '';
