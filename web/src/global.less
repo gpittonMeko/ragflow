@@ -40,3 +40,18 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #888;
 }
+
+/* Fix z-index for Ant Design Popover - must be above chat and other overlays */
+.ant-popover {
+  z-index: 10000 !important;
+}
+
+/* Ensure Popover content is also at high z-index */
+.ant-popover-content {
+  z-index: 10001 !important;
+}
+
+/* Ant Design Tooltip z-index fix */
+.ant-tooltip {
+  z-index: 10000 !important;
+}
