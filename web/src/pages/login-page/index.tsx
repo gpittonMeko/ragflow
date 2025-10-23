@@ -1,3 +1,4 @@
+import WhatsAppSupport from '@/components/whatsapp-support';
 import { loadStripe } from '@stripe/stripe-js';
 import { Button } from 'antd';
 import {
@@ -246,36 +247,36 @@ const PresentationPage: React.FC = () => {
 
   // Sync al login
   // ✅ CERCA QUESTO useEffect E SOSTITUISCILO
-useEffect(() => {
-  if (!isLoggedIn) return;
+  useEffect(() => {
+    if (!isLoggedIn) return;
 
-  const syncOnLogin = async () => {
-    // 1. Sync Stripe (può fallire, non bloccante)
-    try {
-      const res = await fetch(`${baseURL}/api/stripe/sync`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+    const syncOnLogin = async () => {
+      // 1. Sync Stripe (può fallire, non bloccante)
+      try {
+        const res = await fetch(`${baseURL}/api/stripe/sync`, {
+          method: 'POST',
+          credentials: 'include',
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (data.changed && data.new_plan === 'premium') {
-        toast.success('Account Premium attivato!');
-        await refreshQuota();
+        if (data.changed && data.new_plan === 'premium') {
+          toast.success('Account Premium attivato!');
+          await refreshQuota();
+        }
+      } catch (err) {
+        console.warn('⚠️ Stripe sync error (non bloccante):', err);
       }
-    } catch (err) {
-      console.warn('⚠️ Stripe sync error (non bloccante):', err);
-    }
 
-    // 2. ✅ NUOVO: Assicura token RAGFlow valido
-    const token = await ensureRagflowAuth();
-    if (token) {
-      console.log('✅ Token RAGFlow pronto:', token.substring(0, 20) + '...');
-    }
-  };
+      // 2. ✅ NUOVO: Assicura token RAGFlow valido
+      const token = await ensureRagflowAuth();
+      if (token) {
+        console.log('✅ Token RAGFlow pronto:', token.substring(0, 20) + '...');
+      }
+    };
 
-  syncOnLogin();
-}, [isLoggedIn]);
+    syncOnLogin();
+  }, [isLoggedIn]);
 
   async function ensureRagflowAuth(): Promise<string | null> {
     try {
@@ -985,6 +986,9 @@ useEffect(() => {
           </p>
         </div>
       </div>
+
+      {/* WhatsApp Support Button */}
+      <WhatsAppSupport phoneNumber="3288216708" />
     </div>
   );
 };
