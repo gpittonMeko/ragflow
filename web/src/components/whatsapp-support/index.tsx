@@ -12,7 +12,6 @@ const WhatsAppSupport = ({
   phoneNumber = '3288216708',
   position = { x: 20, y: 20 },
 }: IProps) => {
-  console.log('[WhatsAppSupport] Component rendering...');
   const [isVisible, setIsVisible] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -78,15 +77,7 @@ const WhatsAppSupport = ({
     setIsVisible(false);
   }, []);
 
-  if (!isVisible) {
-    console.log('[WhatsAppSupport] Component not visible');
-    return null;
-  }
-
-  console.log(
-    '[WhatsAppSupport] Rendering component at position:',
-    currentPosition,
-  );
+  if (!isVisible) return null;
 
   return (
     <div
@@ -97,10 +88,6 @@ const WhatsAppSupport = ({
         top: `${currentPosition.y}px`,
         zIndex: 9999,
         cursor: isDragging ? 'grabbing' : 'grab',
-        backgroundColor: 'red', // DEBUG: colore di debug
-        width: '60px',
-        height: '60px',
-        border: '2px solid blue',
       }}
       onMouseDown={handleMouseDown}
     >
