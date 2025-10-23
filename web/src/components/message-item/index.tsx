@@ -154,38 +154,35 @@ const MessageItem = ({
 
       let chunk: IReferenceChunk | undefined;
 
-      // FIX ROBUSTO: Trova tutti i chunk per questo documento
-      // e prendi quello con la similarity più alta (quello mostrato nei popup)
-      const docChunks = allChunks.filter((c) => c.doc_id === docId);
-
-      if (docChunks.length > 0) {
-        // Se ci sono multipli chunk, prendi quello con similarity più alta
-        chunk = docChunks.reduce((best, current) => {
-          // Usa vector_similarity se disponibile, altrimenti similarity
-          const bestScore = best.vector_similarity ?? best.similarity ?? 0;
-          const currentScore =
-            current.vector_similarity ?? current.similarity ?? 0;
-          return currentScore > bestScore ? current : best;
-        }) as IReferenceChunk;
-
+      // FIX CORRETTO: doc_aggs e chunks sono allineati 1-a-1 dal backend
+      // Usa direttamente l'indice del documento cliccato per prendere il chunk corrispondente
+      if (
+        docIndex !== undefined &&
+        docIndex >= 0 &&
+        docIndex < allChunks.length
+      ) {
+        chunk = allChunks[docIndex] as IReferenceChunk;
         console.debug(
-          '[MessageItem] Found',
-          docChunks.length,
-          'chunks for doc',
+          '[MessageItem] Using chunk at index',
+          docIndex,
+          'for doc',
           docId,
-          '-> selected chunk with similarity:',
-          chunk.vector_similarity ?? chunk.similarity,
+          '-> chunk:',
+          chunk.id,
+        );
+      } else {
+        // Fallback: cerca per doc_id (per compatibilità)
+        chunk = allChunks.find((c) => c.doc_id === docId) as IReferenceChunk;
+        console.warn(
+          '[MessageItem] docIndex non valido o non fornito, cercando per doc_id:',
+          docId,
         );
       }
 
-      // Fallback: se non trovato, prendi il primo chunk disponibile
+      // Ultimo fallback: prendi il primo chunk disponibile
       if (!chunk && allChunks.length > 0) {
         chunk = allChunks[0] as IReferenceChunk;
-        console.warn(
-          '[MessageItem] No chunks found for docId:',
-          docId,
-          '-> using first available chunk',
-        );
+        console.warn('[MessageItem] No chunk found, using first available');
       }
 
       if (chunk) {
@@ -201,7 +198,7 @@ const MessageItem = ({
         console.warn('[MessageItem] Nessun chunk trovato per docId:', docId);
       }
     },
-    [allChunks, clickDocumentButton, referenceDocumentList],
+    [allChunks, clickDocumentButton],
   );
 
   // downloadPdf: token fresco ad ogni click
