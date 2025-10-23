@@ -17,11 +17,14 @@ export const PdfDrawer = ({
   chunk,
 }: IProps) => {
   const drawerRef = useRef<HTMLDivElement>(null);
-  
+
   const [drawerWidth, setDrawerWidth] = useState(() => {
     if (typeof window !== 'undefined') {
-      return window.innerWidth <= 768 ? '95vw' : 
-             window.innerWidth <= 1024 ? '80vw' : '50vw';
+      return window.innerWidth <= 768
+        ? '95vw'
+        : window.innerWidth <= 1024
+          ? '80vw'
+          : '50vw';
     }
     return '50vw';
   });
@@ -46,26 +49,31 @@ export const PdfDrawer = ({
       visible,
       documentId,
       chunkId: chunk?.id,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     if (visible) {
       setTimeout(() => {
-        const drawerElement = document.querySelector('.ant-drawer[style*="translateX(0"]');
+        const drawerElement = document.querySelector(
+          '.ant-drawer[style*="translateX(0"]',
+        );
         const drawerMask = document.querySelector('.ant-drawer-mask');
-        
+
         console.log('[PdfDrawer] Mount check:', {
           drawerExists: !!drawerElement,
           drawerVisible: drawerElement?.style?.transform === 'translateX(0px)',
           maskVisible: drawerMask?.style?.opacity === '1',
-          drawerBody: !!drawerElement?.querySelector('.ant-drawer-body')
+          drawerBody: !!drawerElement?.querySelector('.ant-drawer-body'),
         });
 
-        if (drawerElement && drawerElement.style.transform !== 'translateX(0px)') {
+        if (
+          drawerElement &&
+          drawerElement.style.transform !== 'translateX(0px)'
+        ) {
           console.warn('[PdfDrawer] Forcing drawer visibility');
           (drawerElement as HTMLElement).style.transform = 'translateX(0px)';
           (drawerElement as HTMLElement).style.visibility = 'visible';
-          
+
           if (drawerMask) {
             (drawerMask as HTMLElement).style.opacity = '1';
             (drawerMask as HTMLElement).style.visibility = 'visible';
@@ -92,23 +100,27 @@ export const PdfDrawer = ({
       maskClosable={true}
       placement="right"
       className="pdf-drawer-debug"
+      zIndex={11000}
       styles={{
         body: {
           padding: '16px',
           height: 'calc(100% - 55px)',
-          overflow: 'hidden'
-        }
+          overflow: 'hidden',
+        },
       }}
       afterOpenChange={(open) => {
         console.log('[PdfDrawer] After open change:', open);
-        
+
         if (open) {
           setTimeout(() => {
-            const documentContainer = document.querySelector('[class*="documentContainer"]');
+            const documentContainer = document.querySelector(
+              '[class*="documentContainer"]',
+            );
             console.log('[PdfDrawer] Content check:', {
               hasDocumentContainer: !!documentContainer,
-              containerVisible: documentContainer ? 
-                window.getComputedStyle(documentContainer).display !== 'none' : false
+              containerVisible: documentContainer
+                ? window.getComputedStyle(documentContainer).display !== 'none'
+                : false,
             });
           }, 500);
         }
