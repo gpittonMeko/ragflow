@@ -1,5 +1,6 @@
 import { ReactComponent as ChatAppCube } from '@/assets/svg/chat-app-cube.svg';
 import RenameModal from '@/components/rename-modal';
+import WhatsAppSupport from '@/components/whatsapp-support';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import {
   Avatar,
@@ -386,6 +387,9 @@ const Chat = () => {
           isAgent={false}
         ></EmbedModal>
       )}
+
+      {/* WhatsApp Support Button */}
+      <WhatsAppSupport phoneNumber="3288216708" />
     </Flex>
   );
 };

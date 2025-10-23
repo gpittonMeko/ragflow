@@ -13,6 +13,7 @@ import { buildMessageItemReference } from '../utils';
 import MessageInput from '@/components/message-input';
 import PdfDrawer from '@/components/pdf-drawer';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
+import WhatsAppSupport from '@/components/whatsapp-support';
 import {
   useFetchNextConversation,
   useGetChatSearchParams,
@@ -53,64 +54,66 @@ const ChatContainer = ({ controller }: IProps) => {
     useCreateConversationBeforeUploadDocument();
 
   return (
-  <>
-    <Flex flex={1} className={styles.chatContainer} vertical>
-      {/* Mostra i messaggi solo se esistono */}
-      {derivedMessages && derivedMessages.length > 0 && (
-        <Flex vertical className={styles.messageContainer}>
-          <div>
-            <Spin spinning={loading}>
-              {derivedMessages.map((message, i) => (
-                <MessageItem
-                  loading={
-                    message.role === MessageType.Assistant &&
-                    sendLoading &&
-                    derivedMessages.length - 1 === i
-                  }
-                  key={buildMessageUuidWithRole(message)}
-                  nickname={userInfo.nickname}
-                  avatar={userInfo.avatar}
-                  avatarDialog={canvasInfo.avatar}
-                  item={message}
-                  reference={buildMessageItemReference(
-                    { message: derivedMessages, reference },
-                    message,
-                  )}
-                  clickDocumentButton={clickDocumentButton}
-                  index={i}
-                  showLikeButton={false}
-                  sendLoading={sendLoading}
-                />
-              ))}
-            </Spin>
-          </div>
-          <div ref={ref} />
-        </Flex>
-      )}
+    <>
+      <Flex flex={1} className={styles.chatContainer} vertical>
+        {/* Mostra i messaggi solo se esistono */}
+        {derivedMessages && derivedMessages.length > 0 && (
+          <Flex vertical className={styles.messageContainer}>
+            <div>
+              <Spin spinning={loading}>
+                {derivedMessages.map((message, i) => (
+                  <MessageItem
+                    loading={
+                      message.role === MessageType.Assistant &&
+                      sendLoading &&
+                      derivedMessages.length - 1 === i
+                    }
+                    key={buildMessageUuidWithRole(message)}
+                    nickname={userInfo.nickname}
+                    avatar={userInfo.avatar}
+                    avatarDialog={canvasInfo.avatar}
+                    item={message}
+                    reference={buildMessageItemReference(
+                      { message: derivedMessages, reference },
+                      message,
+                    )}
+                    clickDocumentButton={clickDocumentButton}
+                    index={i}
+                    showLikeButton={false}
+                    sendLoading={sendLoading}
+                  />
+                ))}
+              </Spin>
+            </div>
+            <div ref={ref} />
+          </Flex>
+        )}
 
-      {/* Input sempre visibile */}
-      <MessageInput
-        showUploadIcon={false}
-        value={value}
-        sendLoading={sendLoading}
-        disabled={false}
-        sendDisabled={sendLoading}
-        conversationId=""
-        onPressEnter={handlePressEnter}
-        onInputChange={handleInputChange}
-        stopOutputMessage={stopOutputMessage}
+        {/* Input sempre visibile */}
+        <MessageInput
+          showUploadIcon={false}
+          value={value}
+          sendLoading={sendLoading}
+          disabled={false}
+          sendDisabled={sendLoading}
+          conversationId=""
+          onPressEnter={handlePressEnter}
+          onInputChange={handleInputChange}
+          stopOutputMessage={stopOutputMessage}
+        />
+      </Flex>
+
+      <PdfDrawer
+        visible={visible}
+        hideModal={hideModal}
+        documentId={documentId}
+        chunk={selectedChunk}
       />
-    </Flex>
 
-    <PdfDrawer
-      visible={visible}
-      hideModal={hideModal}
-      documentId={documentId}
-      chunk={selectedChunk}
-    />
-  </>
-);
-
+      {/* WhatsApp Support Button */}
+      <WhatsAppSupport phoneNumber="3288216708" />
+    </>
+  );
 };
 
 export default memo(ChatContainer);
