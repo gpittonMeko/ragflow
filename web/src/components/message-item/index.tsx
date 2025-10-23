@@ -148,40 +148,44 @@ const MessageItem = ({
   };
 
   // ==== Drawer ====
-  const findChunkForDoc = useCallback(
-    (docId?: string) => {
-      if (!docId) return undefined;
-      return allChunks.find((c) => c.doc_id === docId);
-    },
-    [allChunks],
-  );
-
   const openDrawer = useCallback(
     (docId?: string, docIndex?: number) => {
       if (!docId || !clickDocumentButton) return;
 
       let chunk: IReferenceChunk | undefined;
 
-      // FIX: Se abbiamo l'indice del documento, usa il chunk specifico da doc_aggs
-      if (docIndex !== undefined && referenceDocumentList[docIndex]) {
-        const doc = referenceDocumentList[docIndex];
-        // Il chunk specifico dovrebbe essere nel documento stesso
-        if (doc.chunk_id) {
-          // Cerca il chunk specifico in allChunks usando chunk_id
-          chunk = allChunks.find(
-            (c) => c.id === doc.chunk_id,
-          ) as IReferenceChunk;
-        }
+      // FIX ROBUSTO: Trova tutti i chunk per questo documento
+      // e prendi quello con la similarity più alta (quello mostrato nei popup)
+      const docChunks = allChunks.filter((c) => c.doc_id === docId);
+
+      if (docChunks.length > 0) {
+        // Se ci sono multipli chunk, prendi quello con similarity più alta
+        chunk = docChunks.reduce((best, current) => {
+          // Usa vector_similarity se disponibile, altrimenti similarity
+          const bestScore = best.vector_similarity ?? best.similarity ?? 0;
+          const currentScore =
+            current.vector_similarity ?? current.similarity ?? 0;
+          return currentScore > bestScore ? current : best;
+        }) as IReferenceChunk;
+
+        console.debug(
+          '[MessageItem] Found',
+          docChunks.length,
+          'chunks for doc',
+          docId,
+          '-> selected chunk with similarity:',
+          chunk.vector_similarity ?? chunk.similarity,
+        );
       }
 
-      // Fallback: se non trovato, usa la logica precedente
-      if (!chunk) {
-        chunk = findChunkForDoc(docId) as IReferenceChunk | undefined;
-        if (!chunk && allChunks.length > 0) {
-          chunk =
-            (allChunks.find((c) => c.doc_id === docId) as IReferenceChunk) ||
-            (allChunks[0] as IReferenceChunk);
-        }
+      // Fallback: se non trovato, prendi il primo chunk disponibile
+      if (!chunk && allChunks.length > 0) {
+        chunk = allChunks[0] as IReferenceChunk;
+        console.warn(
+          '[MessageItem] No chunks found for docId:',
+          docId,
+          '-> using first available chunk',
+        );
       }
 
       if (chunk) {
@@ -197,7 +201,7 @@ const MessageItem = ({
         console.warn('[MessageItem] Nessun chunk trovato per docId:', docId);
       }
     },
-    [allChunks, clickDocumentButton, findChunkForDoc, referenceDocumentList],
+    [allChunks, clickDocumentButton, referenceDocumentList],
   );
 
   // downloadPdf: token fresco ad ogni click
