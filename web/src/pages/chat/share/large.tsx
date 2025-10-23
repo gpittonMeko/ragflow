@@ -12,6 +12,7 @@ import {
 import { buildMessageItemReference } from '../utils';
 
 import PdfDrawer from '@/components/pdf-drawer';
+import WhatsAppSupport from '@/components/whatsapp-support';
 import { useFetchNextConversationSSE } from '@/hooks/chat-hooks';
 import { useFetchFlowSSE } from '@/hooks/flow-hooks';
 import i18n from '@/locales/config';
@@ -333,6 +334,9 @@ const ChatContainer = ({ theme }) => {
           chunk={selectedChunk}
         ></PdfDrawer>
       )}
+
+      {/* WhatsApp Support Button */}
+      <WhatsAppSupport phoneNumber="3288216708" />
     </>
   );
 };

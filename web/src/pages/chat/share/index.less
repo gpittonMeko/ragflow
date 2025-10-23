@@ -178,10 +178,12 @@
   transition: background-color var(--transition-time);
   padding: 0;
   margin: 0;
+  overflow-x: hidden; /* FIX: Previene overflow orizzontale globale */
 
   .messageContainer {
     flex: 1 1 auto;
     overflow-y: auto;
+    overflow-x: hidden; /* FIX: Previene scroll orizzontale */
     min-height: 0;
     padding: 8px 4px 4px 4px; /* Reduced horizontal padding, added bottom padding */
     margin: 5px 2px 2px 2px !important; /* Custom spacing: 5px top, 2px sides and bottom */

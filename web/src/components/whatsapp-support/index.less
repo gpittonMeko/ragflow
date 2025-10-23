@@ -1,0 +1,80 @@
+.whatsappSupport {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  .whatsappButton {
+    background: #25d366 !important;
+    border-color: #25d366 !important;
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: #20c55a !important;
+      border-color: #20c55a !important;
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  .closeButton {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid #d9d9d9 !important;
+    color: #666 !important;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+
+    &:hover {
+      background: #ff4d4f !important;
+      border-color: #ff4d4f !important;
+      color: white !important;
+    }
+  }
+}
+
+/* Animazione di entrata */
+.whatsappSupport {
+  animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .whatsappSupport {
+    .whatsappButton {
+      width: 50px !important;
+      height: 50px !important;
+    }
+
+    .closeButton {
+      width: 18px;
+      height: 18px;
+      top: -6px;
+      right: -6px;
+    }
+  }
+}
