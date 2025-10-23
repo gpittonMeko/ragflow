@@ -14,38 +14,31 @@ import { IMessage } from '@/pages/chat/interface';
 import MarkdownContent from '@/pages/chat/markdown-content';
 import { getExtension, isImage } from '@/utils/document-util';
 
-
+import { DownloadOutlined, EyeOutlined, LinkOutlined } from '@ant-design/icons';
 import {
   Avatar,
   Button,
+  Collapse,
   Flex,
   List,
   Space,
-  Typography,
-  Popover,
   Tooltip,
-  Collapse,
+  Typography,
 } from 'antd';
-import {
-  EyeOutlined,
-  DownloadOutlined,
-  LinkOutlined,
-} from '@ant-design/icons';
 
 import { Authorization } from '@/constants/authorization';
 import { getAuthorization } from '@/utils/authorization-util';
 
+import PdfPreviewer from '@/components/pdf-previewer';
 import FileIcon from '../file-icon';
 import IndentedTreeModal from '../indented-tree/modal';
 import NewDocumentLink from '../new-document-link';
 import { useTheme } from '../theme-provider';
 import { AssistantGroupButton, UserGroupButton } from './group-button';
-import PdfPreviewer from '@/components/pdf-previewer';
 
 import styles from './index.less';
 
 import { humanizePdfName, replacePdfNamesInText } from './humanize-sentenza';
-
 
 const { Text } = Typography;
 const { Panel } = Collapse;
@@ -64,8 +57,6 @@ interface IProps extends Partial<IRemoveMessageById>, IRegenerateMessage {
   showLikeButton?: boolean;
   showLoudspeaker?: boolean;
 }
-
-
 
 const MessageItem = ({
   item,
@@ -114,14 +105,16 @@ const MessageItem = ({
     return item.content.replace(/\*\*Fonti:\*\*[\s\S]*$/i, '').trim();
   }, [item.content, isAssistant]);
 
-
   const beautifiedContent = useMemo(() => {
     if (!isAssistant) return cleanedContent;
     return replacePdfNamesInText(cleanedContent, humanizePdfName);
   }, [cleanedContent, isAssistant]);
 
   // Fonti
-  const referenceDocumentList = useMemo(() => reference?.doc_aggs ?? [], [reference?.doc_aggs]);
+  const referenceDocumentList = useMemo(
+    () => reference?.doc_aggs ?? [],
+    [reference?.doc_aggs],
+  );
 
   const handleUserDocumentClick = useCallback(
     (id: string) => () => {
@@ -130,8 +123,6 @@ const MessageItem = ({
     },
     [showModal],
   );
-
-  
 
   const handleRegenerateMessage = useCallback(() => {
     regenerateMessage?.(item);
@@ -166,27 +157,48 @@ const MessageItem = ({
   );
 
   const openDrawer = useCallback(
-    (docId?: string) => {
+    (docId?: string, docIndex?: number) => {
       if (!docId || !clickDocumentButton) return;
-      let chunk = findChunkForDoc(docId) as IReferenceChunk | undefined;
-      // fallback: se non lo trova, prendi il primo chunk dello stesso doc_id o il primo in assoluto
-      if (!chunk && allChunks.length > 0) {
-        chunk =
-          (allChunks.find((c) => c.doc_id === docId) as IReferenceChunk) ||
-          (allChunks[0] as IReferenceChunk);
+
+      let chunk: IReferenceChunk | undefined;
+
+      // FIX: Se abbiamo l'indice del documento, usa il chunk specifico da doc_aggs
+      if (docIndex !== undefined && referenceDocumentList[docIndex]) {
+        const doc = referenceDocumentList[docIndex];
+        // Il chunk specifico dovrebbe essere nel documento stesso
+        if (doc.chunk_id) {
+          // Cerca il chunk specifico in allChunks usando chunk_id
+          chunk = allChunks.find(
+            (c) => c.id === doc.chunk_id,
+          ) as IReferenceChunk;
+        }
       }
+
+      // Fallback: se non trovato, usa la logica precedente
+      if (!chunk) {
+        chunk = findChunkForDoc(docId) as IReferenceChunk | undefined;
+        if (!chunk && allChunks.length > 0) {
+          chunk =
+            (allChunks.find((c) => c.doc_id === docId) as IReferenceChunk) ||
+            (allChunks[0] as IReferenceChunk);
+        }
+      }
+
       if (chunk) {
-        console.debug('[MessageItem] openDrawer ->', docId, chunk);
+        console.debug(
+          '[MessageItem] openDrawer ->',
+          docId,
+          chunk,
+          'docIndex:',
+          docIndex,
+        );
         clickDocumentButton(docId, chunk);
       } else {
         console.warn('[MessageItem] Nessun chunk trovato per docId:', docId);
       }
     },
-    [allChunks, clickDocumentButton, findChunkForDoc],
+    [allChunks, clickDocumentButton, findChunkForDoc, referenceDocumentList],
   );
-
-
-  
 
   // downloadPdf: token fresco ad ogni click
   const downloadPdf = useCallback(async (url?: string) => {
@@ -216,17 +228,14 @@ const MessageItem = ({
     }
   }, []);
 
-
   // buildDownloadUrl: converte id o link “frontend” nell’endpoint REST
   const buildDownloadUrl = (docId?: string, url?: string) => {
-    if (url?.includes('/v1/document/get/')) return url;                      // già corretto
-    const idFromFrontend = url?.match(/\/document\/([a-f0-9-]+)/i)?.[1];     // estrae id
+    if (url?.includes('/v1/document/get/')) return url; // già corretto
+    const idFromFrontend = url?.match(/\/document\/([a-f0-9-]+)/i)?.[1]; // estrae id
     if (idFromFrontend) return `/v1/document/get/${idFromFrontend}`;
-    if (docId) return `/v1/document/get/${docId}`;                           // fallback solo id
-    return '#';                                                              // nessun dato
+    if (docId) return `/v1/document/get/${docId}`; // fallback solo id
+    return '#'; // nessun dato
   };
-
-
 
   // Mini anteprima nel popover
   const renderPreviewPopover = (url?: string) => {
@@ -299,7 +308,9 @@ const MessageItem = ({
                   content={item.content}
                   messageId={item.id}
                   removeMessageById={removeMessageById}
-                  regenerateMessage={regenerateMessage && handleRegenerateMessage}
+                  regenerateMessage={
+                    regenerateMessage && handleRegenerateMessage
+                  }
                   sendLoading={sendLoading}
                 />
               )}
@@ -309,8 +320,6 @@ const MessageItem = ({
               <MarkdownContent
                 loading={loading}
                 content={beautifiedContent}
-
-
                 reference={reference}
                 clickDocumentButton={clickDocumentButton}
               />
@@ -335,80 +344,80 @@ const MessageItem = ({
                     size="small"
                     itemLayout="vertical"
                     dataSource={referenceDocumentList}
-                    renderItem={(doc) => {
-                    const url = doc.url;
-                    console.log('DOC →', doc);
-                    const displayName =
-                      doc.original_name ||
-                      doc.originalFilename ||
-                      doc.file_name ||
-                      doc.name ||
-                      doc.doc_name;
+                    renderItem={(doc, idx) => {
+                      const url = doc.url;
+                      console.log('DOC →', doc);
+                      const displayName =
+                        doc.original_name ||
+                        doc.originalFilename ||
+                        doc.file_name ||
+                        doc.name ||
+                        doc.doc_name;
 
-                    const prettyName = humanizePdfName(displayName) || displayName;
-                    const dlUrl = buildDownloadUrl(doc.doc_id, url);
+                      const prettyName =
+                        humanizePdfName(displayName) || displayName;
+                      const dlUrl = buildDownloadUrl(doc.doc_id, url);
 
-                    return (
-                      <List.Item
-                        style={{
-                          padding: '8px 0',
-                          border: 'none',
-                          borderBottom: '1px solid #f0f0f0',
-                        }}
-                      >
-                        <Flex vertical gap={4}>
-                          <Flex gap={'small'} align="center" wrap="wrap">
-                            <FileIcon id={doc.doc_id} name={doc.doc_name} />
+                      return (
+                        <List.Item
+                          style={{
+                            padding: '8px 0',
+                            border: 'none',
+                            borderBottom: '1px solid #f0f0f0',
+                          }}
+                        >
+                          <Flex vertical gap={4}>
+                            <Flex gap={'small'} align="center" wrap="wrap">
+                              <FileIcon id={doc.doc_id} name={doc.doc_name} />
 
-                            <NewDocumentLink
-                              documentId={doc.doc_id}
-                              documentName={prettyName}
-                              prefix="document"
-                              link={doc.url}
-                            >
-                              {prettyName}
-                            </NewDocumentLink>
+                              <NewDocumentLink
+                                documentId={doc.doc_id}
+                                documentName={prettyName}
+                                prefix="document"
+                                link={doc.url}
+                              >
+                                {prettyName}
+                              </NewDocumentLink>
 
-                            <Flex gap={6} align="center">
-                              <Tooltip title="Apri anteprima nel drawer">
-                                <Button
-                                  className={styles.sourceActionBtn}
-                                  icon={<EyeOutlined />}
-                                  onClick={() => openDrawer(doc.doc_id)}
-                                  size="small"
-                                />
-                              </Tooltip>
-
-                              <Tooltip title="Scarica PDF">
-                                <Button
-                                  className={styles.sourceActionBtn}
-                                  icon={<DownloadOutlined />}
-                                  size="small"
-                                  onClick={() => downloadPdf(dlUrl)}
-                                >
-                                  Scarica
-                                </Button>
-                              </Tooltip>
-
-                              {doc.url && (
-                                <Tooltip title="Apri link esterno">
+                              <Flex gap={6} align="center">
+                                <Tooltip title="Apri anteprima nel drawer">
                                   <Button
                                     className={styles.sourceActionBtn}
-                                    icon={<LinkOutlined />}
-                                    href={doc.url}
-                                    target="_blank"
-                                    rel="noreferrer"
+                                    icon={<EyeOutlined />}
+                                    onClick={() => openDrawer(doc.doc_id, idx)}
                                     size="small"
                                   />
                                 </Tooltip>
-                              )}
+
+                                <Tooltip title="Scarica PDF">
+                                  <Button
+                                    className={styles.sourceActionBtn}
+                                    icon={<DownloadOutlined />}
+                                    size="small"
+                                    onClick={() => downloadPdf(dlUrl)}
+                                  >
+                                    Scarica
+                                  </Button>
+                                </Tooltip>
+
+                                {doc.url && (
+                                  <Tooltip title="Apri link esterno">
+                                    <Button
+                                      className={styles.sourceActionBtn}
+                                      icon={<LinkOutlined />}
+                                      href={doc.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      size="small"
+                                    />
+                                  </Tooltip>
+                                )}
+                              </Flex>
                             </Flex>
                           </Flex>
-                        </Flex>
-                      </List.Item>
-                    );
-                  }}
-
+                        </List.Item>
+                      );
+                    }}
                   />
                 </Panel>
               </Collapse>
@@ -434,7 +443,10 @@ const MessageItem = ({
                             {item.name}
                           </NewDocumentLink>
                         ) : (
-                          <Button type="text" onClick={handleUserDocumentClick(item.id)}>
+                          <Button
+                            type="text"
+                            onClick={handleUserDocumentClick(item.id)}
+                          >
                             <Text
                               style={{ maxWidth: '40vw' }}
                               ellipsis={{ tooltip: item.name }}
