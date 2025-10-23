@@ -6,7 +6,7 @@ import { IReferenceChunk } from '@/interfaces/database/chat';
 import { IChunk } from '@/interfaces/database/knowledge';
 import FileError from '@/pages/document-viewer/file-error';
 import { Skeleton } from 'antd';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AreaHighlight,
   Highlight,
@@ -42,7 +42,18 @@ const DocumentPreviewer = ({ chunk, documentId, visible }: IProps) => {
   const ref = useRef<(highlight: IHighlight) => void>(() => {});
   const [loaded, setLoaded] = useState(false);
   const [viewportReady, setViewportReady] = useState(false);
-  
+
+  // DEBUG: Log chunk changes
+  useEffect(() => {
+    console.log('[DocumentPreviewer] Chunk changed:', {
+      chunkId: chunk?.id,
+      docId: chunk?.doc_id,
+      positionsCount: chunk?.positions?.length,
+      highlightsCount: state.length,
+      chunkContent: chunk?.content_with_weight?.substring(0, 100),
+    });
+  }, [chunk, state]);
+
   const url = getDocumentUrl();
   const error = useCatchDocumentError(url);
 
@@ -54,21 +65,24 @@ const DocumentPreviewer = ({ chunk, documentId, visible }: IProps) => {
   }, [visible]);
 
   // SAFE SCROLL - questo è il fix principale
-  const safeScrollToHighlight = useCallback((highlight: IHighlight) => {
-    if (!viewportReady) {
-      console.warn('Viewport not ready, skipping scroll');
-      return;
-    }
-    
-    try {
-      if (ref.current && typeof ref.current === 'function') {
-        ref.current(highlight);
-        console.log('Scroll successful');
+  const safeScrollToHighlight = useCallback(
+    (highlight: IHighlight) => {
+      if (!viewportReady) {
+        console.warn('Viewport not ready, skipping scroll');
+        return;
       }
-    } catch (error: any) {
-      console.error('Scroll failed:', error.message);
-    }
-  }, [viewportReady]);
+
+      try {
+        if (ref.current && typeof ref.current === 'function') {
+          ref.current(highlight);
+          console.log('Scroll successful');
+        }
+      } catch (error: any) {
+        console.error('Scroll failed:', error.message);
+      }
+    },
+    [viewportReady],
+  );
 
   // FIX PRINCIPALE: Non fare scroll finché viewport non è pronto
   useEffect(() => {
@@ -82,31 +96,35 @@ const DocumentPreviewer = ({ chunk, documentId, visible }: IProps) => {
   }, [state, loaded, viewportReady, safeScrollToHighlight]);
 
   // Callback sicuro per scrollRef
-  const handleScrollRef = useCallback((scrollTo: (highlight: IHighlight) => void) => {
-    console.log('ScrollRef received');
-    
-    ref.current = (highlight: IHighlight) => {
-      try {
-        // Controlli di sicurezza
-        const pdfViewer = document.querySelector('.PdfHighlighter');
-        const canvas = pdfViewer?.querySelector('canvas');
-        
-        if (!pdfViewer) throw new Error('PDF viewer not found');
-        if (!canvas || canvas.width === 0) throw new Error('Canvas not ready');
-        
-        scrollTo(highlight);
-      } catch (error: any) {
-        console.warn('ScrollTo wrapper error:', error.message);
-        // Non rilanciare l'errore per evitare crash
-      }
-    };
-    
-    setLoaded(true);
-    // Delay per dare tempo al PDF di renderizzare completamente
-    setTimeout(() => {
-      setViewportReady(true);
-    }, 1000);
-  }, []);
+  const handleScrollRef = useCallback(
+    (scrollTo: (highlight: IHighlight) => void) => {
+      console.log('ScrollRef received');
+
+      ref.current = (highlight: IHighlight) => {
+        try {
+          // Controlli di sicurezza
+          const pdfViewer = document.querySelector('.PdfHighlighter');
+          const canvas = pdfViewer?.querySelector('canvas');
+
+          if (!pdfViewer) throw new Error('PDF viewer not found');
+          if (!canvas || canvas.width === 0)
+            throw new Error('Canvas not ready');
+
+          scrollTo(highlight);
+        } catch (error: any) {
+          console.warn('ScrollTo wrapper error:', error.message);
+          // Non rilanciare l'errore per evitare crash
+        }
+      };
+
+      setLoaded(true);
+      // Delay per dare tempo al PDF di renderizzare completamente
+      setTimeout(() => {
+        setViewportReady(true);
+      }, 1000);
+    },
+    [],
+  );
 
   return (
     <div className={styles.documentContainer}>
@@ -118,7 +136,8 @@ const DocumentPreviewer = ({ chunk, documentId, visible }: IProps) => {
       >
         {(pdfDocument) => {
           // Gestione sicura del documento
-          pdfDocument.getPage(1)
+          pdfDocument
+            .getPage(1)
             .then((page) => {
               const viewport = page.getViewport({ scale: 1 });
               const width = viewport.width;

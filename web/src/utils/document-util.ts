@@ -9,36 +9,51 @@ export const buildChunkHighlights = (
   selectedChunk: IChunk | IReferenceChunk,
   size: { width: number; height: number },
 ) => {
-  return Array.isArray(selectedChunk?.positions) &&
-    selectedChunk.positions.every((x) => Array.isArray(x))
-    ? selectedChunk?.positions?.map((x) => {
-        const boundingRect = {
-          width: size.width,
-          height: size.height,
-          x1: x[1],
-          x2: x[2],
-          y1: x[3],
-          y2: x[4],
-        };
-        return {
-          id: uuid(),
-          comment: {
-            text: '',
-            emoji: '',
-          },
-          content: {
-            text:
-              get(selectedChunk, 'content_with_weight') ||
-              get(selectedChunk, 'content', ''),
-          },
-          position: {
-            boundingRect: boundingRect,
-            rects: [boundingRect],
-            pageNumber: x[0],
-          },
-        };
-      })
-    : [];
+  if (!selectedChunk?.positions || !Array.isArray(selectedChunk.positions)) {
+    return [];
+  }
+
+  // Handle IReferenceChunk (positions: number[]) vs IChunk (positions: number[][])
+  let positionsArray: number[][];
+
+  if (
+    selectedChunk.positions.length > 0 &&
+    Array.isArray(selectedChunk.positions[0])
+  ) {
+    // IChunk format: positions is already number[][]
+    positionsArray = selectedChunk.positions as number[][];
+  } else {
+    // IReferenceChunk format: positions is number[], wrap it in an array
+    positionsArray = [selectedChunk.positions as number[]];
+  }
+
+  return positionsArray.map((x) => {
+    const boundingRect = {
+      width: size.width,
+      height: size.height,
+      x1: x[1],
+      x2: x[2],
+      y1: x[3],
+      y2: x[4],
+    };
+    return {
+      id: uuid(),
+      comment: {
+        text: '',
+        emoji: '',
+      },
+      content: {
+        text:
+          get(selectedChunk, 'content_with_weight') ||
+          get(selectedChunk, 'content', ''),
+      },
+      position: {
+        boundingRect: boundingRect,
+        rects: [boundingRect],
+        pageNumber: x[0],
+      },
+    };
+  });
 };
 
 export const isFileUploadDone = (file: UploadFile) => file.status === 'done';
