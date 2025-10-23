@@ -75,7 +75,14 @@
   }
 }
 
-/* Mask disabilitata nel componente - non serve regola CSS */
+/* Forza la mask del PDF drawer a non bloccare le interazioni */
+:global(.ant-drawer.ant-drawer-open:has(.pdf-drawer-debug)) {
+  > :global(.ant-drawer-mask) {
+    pointer-events: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+}
 
 :global(.pdf-drawer-debug .ant-drawer-content) {
   display: flex !important;
