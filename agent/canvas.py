@@ -229,19 +229,23 @@ class Canvas:
 
             ran += 1
 
-        # FIX: Check if path has at least 2 elements before accessing path[-2]
-        if len(self.path) < 2 or not self.path[-2]:
-            logging.warning(f"Canvas.run: path has insufficient elements: {self.path}")
-            return
-        
-        downstream = self.components[self.path[-2][-1]]["downstream"]
-        if not downstream and self.components[self.path[-2][-1]].get("parent_id"):
-            cid = self.path[-2][-1]
-            pid = self.components[cid]["parent_id"]
-            o, _ = self.components[cid]["obj"].output(allow_partial=False)
-            oo, _ = self.components[pid]["obj"].output(allow_partial=False)
-            self.components[pid]["obj"].set_output(pd.concat([oo, o], ignore_index=True).dropna())
-            downstream = [pid]
+        # Get downstream components from the last element of path[-2]
+        # If path[-2] is empty or path has less than 2 elements, use "begin" as starting point
+        if len(self.path) >= 2 and self.path[-2]:
+            last_component_id = self.path[-2][-1]
+            downstream = self.components[last_component_id]["downstream"]
+            
+            # Check for parent_id case
+            if not downstream and self.components[last_component_id].get("parent_id"):
+                cid = last_component_id
+                pid = self.components[cid]["parent_id"]
+                o, _ = self.components[cid]["obj"].output(allow_partial=False)
+                oo, _ = self.components[pid]["obj"].output(allow_partial=False)
+                self.components[pid]["obj"].set_output(pd.concat([oo, o], ignore_index=True).dropna())
+                downstream = [pid]
+        else:
+            # First run: start from "begin" component's downstream
+            downstream = self.components.get("begin", {}).get("downstream", [])
 
         for m in prepare2run(downstream):
             yield {"content": m, "running_status": True}
