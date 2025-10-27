@@ -19,6 +19,13 @@ const roadmapData: RoadmapItem[] = [
     quarter: 'Q1 2025',
   },
   {
+    title: 'Database Storico Sentenze',
+    description:
+      'Integrazione archivio storico sentenze dal 1950 al 2019. Ricerca su 70+ anni di giurisprudenza italiana per analisi evolutiva del diritto.',
+    status: 'planned',
+    quarter: 'Q1 2025',
+  },
+  {
     title: 'Applicazione Mobile Android',
     description:
       'App nativa Android per consultare SGAI in mobilità. Ricerca vocale, sincronizzazione cloud e modalità offline.',

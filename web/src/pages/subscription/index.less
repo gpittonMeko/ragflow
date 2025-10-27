@@ -1,8 +1,11 @@
 .subscriptionContainer {
-  min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 40px 20px;
+  padding: 20px;
   position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 
   .backButton {
     position: fixed;
@@ -27,39 +30,56 @@
 
   .header {
     text-align: center;
-    margin-bottom: 60px;
-    margin-top: 40px;
+    margin-top: 60px;
+    margin-bottom: 20px;
     color: white;
+    flex-shrink: 0;
 
     h1 {
-      font-size: 48px;
+      font-size: 36px;
       font-weight: 700;
-      margin-bottom: 16px;
+      margin-bottom: 8px;
       text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
     .subtitle {
-      font-size: 20px;
+      font-size: 16px;
       opacity: 0.9;
       margin: 0;
     }
   }
 
   .content {
-    max-width: 900px;
+    flex: 1;
+    max-width: 1000px;
+    width: 100%;
     margin: 0 auto;
     display: flex;
-    flex-direction: column;
-    gap: 24px;
+    flex-direction: row;
+    gap: 20px;
+    align-items: flex-start;
 
-    .currentPlanCard,
-    .upgradeCard {
+    .currentPlanCard {
+      flex: 2;
       background: rgba(255, 255, 255, 0.1);
       backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 16px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-      padding: 32px;
+      padding: 24px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .upgradeCard {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      padding: 24px;
       color: white;
     }
 
@@ -118,9 +138,9 @@
     .planDetails {
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      margin-bottom: 24px;
-      padding: 20px;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 16px;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 12px;
@@ -161,12 +181,12 @@
     }
 
     .planFeatures {
-      margin-bottom: 24px;
+      margin-bottom: 16px;
 
       h3 {
-        font-size: 20px;
+        font-size: 16px;
         font-weight: 600;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
         color: white;
       }
 
@@ -174,17 +194,17 @@
         list-style: none;
         padding: 0;
         margin: 0;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
 
         li {
-          font-size: 15px;
-          line-height: 1.6;
-          padding: 10px 12px;
+          font-size: 13px;
+          line-height: 1.4;
+          padding: 6px 10px;
           background: rgba(255, 255, 255, 0.08);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 8px;
+          border-radius: 6px;
           color: white;
         }
       }

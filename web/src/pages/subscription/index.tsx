@@ -1,13 +1,6 @@
 import { loadStripe } from '@stripe/stripe-js';
 import { Button, Spin } from 'antd';
-import {
-  CheckCircle,
-  CreditCard,
-  Download,
-  Mail,
-  Shield,
-  XCircle,
-} from 'lucide-react';
+import { CheckCircle, CreditCard, Mail, Shield, XCircle } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'umi';
@@ -52,18 +45,35 @@ const SubscriptionPage: React.FC = () => {
   const fetchSubscriptionData = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${baseURL}/api/subscription/info`, {
+
+      // Usa l'API quota che già esiste invece di subscription/info
+      const res = await fetch(`${baseURL}/api/quota`, {
         credentials: 'include',
       });
 
-      if (res.status === 401) {
+      if (!res.ok) {
         toast.error('Devi essere loggato per vedere gli abbonamenti');
         setTimeout(() => navigate('/'), 2000);
         return;
       }
 
       const data = await res.json();
-      setSubscription(data);
+
+      // Converti i dati quota in formato subscription
+      if (data.scope === 'user') {
+        setSubscription({
+          plan: data.plan,
+          email: data.id,
+          stripe_customer_id: undefined,
+          subscription_id: undefined,
+          current_period_end: undefined,
+          cancel_at_period_end: false,
+        });
+      } else {
+        // Utente anonimo
+        toast.error('Devi essere loggato per vedere gli abbonamenti');
+        setTimeout(() => navigate('/'), 2000);
+      }
     } catch (error) {
       toast.error('Errore nel caricamento dei dati abbonamento');
       console.error(error);
@@ -108,52 +118,17 @@ const SubscriptionPage: React.FC = () => {
   };
 
   const handleCancelSubscription = async () => {
-    if (
-      !confirm(
-        "Sei sicuro di voler cancellare l'abbonamento? Potrai continuare ad usare Premium fino alla fine del periodo già pagato.",
-      )
-    ) {
-      return;
-    }
-
-    setActionLoading(true);
-    try {
-      const res = await fetch(`${baseURL}/api/subscription/cancel`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Errore cancellazione');
-
-      toast.success('Abbonamento cancellato con successo');
-      await fetchSubscriptionData();
-    } catch (error: any) {
-      toast.error(error.message || 'Errore durante la cancellazione');
-      console.error(error);
-    } finally {
-      setActionLoading(false);
-    }
+    // TODO: Implementare API backend per cancellazione Stripe
+    toast.info(
+      "Funzionalità in sviluppo. Contatta il supporto WhatsApp per cancellare l'abbonamento.",
+    );
   };
 
   const handleManageBilling = async () => {
-    setActionLoading(true);
-    try {
-      const res = await fetch(`${baseURL}/api/subscription/portal`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Errore portale Stripe');
-
-      window.location.href = data.url;
-    } catch (error: any) {
-      toast.error(error.message || 'Errore apertura portale');
-      console.error(error);
-    } finally {
-      setActionLoading(false);
-    }
+    // TODO: Implementare Stripe Customer Portal
+    toast.info(
+      'Funzionalità in sviluppo. Contatta il supporto WhatsApp per gestire i pagamenti.',
+    );
   };
 
   if (loading) {
@@ -306,16 +281,6 @@ const SubscriptionPage: React.FC = () => {
                     Cancella Abbonamento
                   </Button>
                 )}
-
-                <Button
-                  size="large"
-                  onClick={() =>
-                    window.open(`${baseURL}/api/subscription/invoice`, '_blank')
-                  }
-                  icon={<Download />}
-                >
-                  Scarica Fatture
-                </Button>
               </>
             )}
           </div>
