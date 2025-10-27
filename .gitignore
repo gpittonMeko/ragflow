@@ -46,3 +46,4 @@ nltk_data/
 # segreti locali
 .env
 *.env
+.env.secrets
