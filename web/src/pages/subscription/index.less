@@ -1,0 +1,297 @@
+.subscriptionContainer {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 40px 20px;
+  position: relative;
+
+  .backButton {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    z-index: 100;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateX(-5px);
+    }
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 60px;
+    margin-top: 40px;
+    color: white;
+
+    h1 {
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .subtitle {
+      font-size: 20px;
+      opacity: 0.9;
+      margin: 0;
+    }
+  }
+
+  .content {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+
+    .currentPlanCard,
+    .upgradeCard {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      border: none;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+
+      :global {
+        .ant-card-body {
+          padding: 32px;
+        }
+      }
+    }
+
+    .planHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+
+      .planInfo {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+
+        h2 {
+          margin: 0;
+          font-size: 28px;
+          font-weight: 700;
+        }
+      }
+
+      .iconPremium {
+        color: #52c41a;
+      }
+
+      .iconFree {
+        color: #faad14;
+      }
+    }
+
+    .planDetails {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding: 20px;
+      background: #f5f5f5;
+      border-radius: 12px;
+
+      .detailRow {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 16px;
+
+        svg {
+          color: #667eea;
+          flex-shrink: 0;
+        }
+
+        strong {
+          font-weight: 600;
+        }
+      }
+
+      .cancelNotice {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: #fff7e6;
+        border-left: 4px solid #faad14;
+        border-radius: 8px;
+        color: #d46b08;
+        font-size: 14px;
+
+        svg {
+          color: #faad14;
+          flex-shrink: 0;
+        }
+      }
+    }
+
+    .planFeatures {
+      margin-bottom: 24px;
+
+      h3 {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 16px;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 12px;
+
+        li {
+          font-size: 15px;
+          line-height: 1.6;
+          padding: 8px;
+          background: #f5f5f5;
+          border-radius: 8px;
+        }
+      }
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+
+      .upgradeButton {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        height: 48px;
+        font-size: 16px;
+        font-weight: 600;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        }
+      }
+    }
+
+    .upgradeCard {
+      h3 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 24px;
+        text-align: center;
+      }
+
+      .benefitsList {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+
+        .benefit {
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
+          padding: 16px;
+          background: #f5f5f5;
+          border-radius: 12px;
+          transition: all 0.3s ease;
+
+          &:hover {
+            background: #e6f7ff;
+            transform: translateX(8px);
+          }
+
+          .benefitIcon {
+            color: #52c41a;
+            flex-shrink: 0;
+            margin-top: 4px;
+          }
+
+          strong {
+            display: block;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+          }
+
+          p {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+          }
+        }
+      }
+    }
+  }
+
+  .loadingContainer,
+  .errorContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    color: white;
+    gap: 20px;
+
+    p {
+      font-size: 18px;
+      margin: 0;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .subscriptionContainer {
+    padding: 20px 16px;
+
+    .header {
+      margin-top: 60px;
+
+      h1 {
+        font-size: 32px;
+      }
+
+      .subtitle {
+        font-size: 16px;
+      }
+    }
+
+    .content {
+      .currentPlanCard,
+      .upgradeCard {
+        :global {
+          .ant-card-body {
+            padding: 20px;
+          }
+        }
+      }
+
+      .planHeader {
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .planFeatures ul {
+        grid-template-columns: 1fr;
+      }
+
+      .actions {
+        flex-direction: column;
+
+        button {
+          width: 100%;
+        }
+      }
+    }
+  }
+}

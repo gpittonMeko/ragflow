@@ -324,7 +324,6 @@ body {
   flex-direction: column;
   overflow: hidden;
   margin-top: -40px;
-
 }
 
 /* Stato normale: fissa a 300px */
@@ -1524,5 +1523,131 @@ span {
   .userChipExpanded {
     height: 40px !important;
     min-width: 200px !important;
+  }
+}
+
+/* ======= HAMBURGER MENU ======= */
+.anonHeader {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 1000;
+}
+
+.hamburgerButton {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--toggle-bg);
+  border: 1px solid var(--toggle-border);
+  color: var(--text-primary);
+
+  @supports (backdrop-filter: blur(8px)) {
+    backdrop-filter: blur(8px) saturate(180%);
+    -webkit-backdrop-filter: blur(8px) saturate(180%);
+  }
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: scale(1.05);
+    background: var(--button-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  svg {
+    color: var(--text-primary);
+  }
+}
+
+.dropdownMenu {
+  position: fixed;
+  top: 75px;
+  right: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--toggle-border);
+  border-radius: 12px;
+  padding: 8px;
+  min-width: 280px;
+  z-index: 999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+
+  @supports (backdrop-filter: blur(8px)) {
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+  }
+
+  animation: slideDown 0.2s ease-out;
+
+  .menuItem {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    text-align: left;
+
+    &:hover {
+      background: var(--button-hover);
+      transform: translateX(4px);
+    }
+
+    svg {
+      flex-shrink: 0;
+      color: var(--accent-color);
+    }
+
+    span {
+      font-weight: 500;
+    }
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .anonHeader {
+    flex-wrap: wrap;
+  }
+
+  .hamburgerButton {
+    width: 40px;
+    height: 40px;
+  }
+
+  .dropdownMenu {
+    right: 10px;
+    top: 70px;
+    min-width: 240px;
   }
 }

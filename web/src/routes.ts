@@ -22,7 +22,7 @@ export enum Routes {
   Result = '/result',
   ResultView = `${Chunk}${Result}`,
   SgaiAccessLogin = '/sgai-access-login',
-  SearchHome = '/search'
+  SearchHome = '/search',
 }
 
 const routes = [
@@ -44,6 +44,16 @@ const routes = [
   {
     path: '/chat/share',
     component: '@/pages/chat/share',
+    layout: false,
+  },
+  {
+    path: '/roadmap',
+    component: '@/pages/roadmap',
+    layout: false,
+  },
+  {
+    path: '/subscription',
+    component: '@/pages/subscription',
     layout: false,
   },
   {
@@ -152,13 +162,13 @@ const routes = [
   },
 
   {
-  path: '/success',
-  component: '@/pages/success',
-  layout: false,
+    path: '/success',
+    component: '@/pages/success',
+    layout: false,
   },
 
   {
-  path: Routes.Login,                 // '/login'
+    path: Routes.Login, // '/login'
     component: '@/pages/login-iframe-bridge',
     layout: false,
   },

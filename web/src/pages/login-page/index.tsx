@@ -3,11 +3,15 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Button } from 'antd';
 import {
   BadgeDollarSign,
+  CreditCard,
   Home,
   LockKeyhole,
   LogOut,
+  MapPin,
+  Menu,
   Moon,
   Sun,
+  X,
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -114,6 +118,7 @@ const PresentationPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [userChipOpen, setUserChipOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleHomeClick = () => {
     navigate('/knowledge');
@@ -616,25 +621,56 @@ const PresentationPage: React.FC = () => {
       {!isLoggedIn ? (
         <>
           {/* ───── Ramo ANONIMO ───── */}
-          <button
-            onClick={() => {
-              setShowLimitOverlay(false);
-              setShowGoogleModal(true);
-            }}
-            className={styles.googleBtnCustom}
-            aria-label="Accedi con Google"
-          >
-            <GoogleGIcon size={18} />
-            <span>Accedi con Google</span>
-          </button>
+          <div className={styles.anonHeader}>
+            <button
+              onClick={() => {
+                setShowLimitOverlay(false);
+                setShowGoogleModal(true);
+              }}
+              className={styles.googleBtnCustom}
+              aria-label="Accedi con Google"
+            >
+              <GoogleGIcon size={18} />
+              <span>Accedi con Google</span>
+            </button>
 
-          <div className={styles.freeCounter}>
-            {quota?.scope === 'anon'
-              ? `${quota.remainingTotal} / ${quota.totalLimit}`
-              : quota?.scope === 'user'
-                ? `${(quota as QuotaUser).remainingToday} / ${(quota as QuotaUser).dailyLimit}`
-                : '5 / 5'}
+            <div className={styles.freeCounter}>
+              {quota?.scope === 'anon'
+                ? `${quota.remainingTotal} / ${quota.totalLimit}`
+                : quota?.scope === 'user'
+                  ? `${(quota as QuotaUser).remainingToday} / ${(quota as QuotaUser).dailyLimit}`
+                  : '5 / 5'}
+            </div>
+
+            {/* Hamburger Menu per Anonimi */}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className={styles.hamburgerButton}
+              aria-label="Menu"
+            >
+              {menuOpen ? (
+                <X size={24} aria-hidden />
+              ) : (
+                <Menu size={24} aria-hidden />
+              )}
+            </button>
           </div>
+
+          {/* Dropdown Menu per Anonimi */}
+          {menuOpen && (
+            <div className={styles.dropdownMenu}>
+              <button
+                onClick={() => {
+                  navigate('/roadmap');
+                  setMenuOpen(false);
+                }}
+                className={styles.menuItem}
+              >
+                <MapPin size={20} />
+                <span>Roadmap & Sviluppi Futuri</span>
+              </button>
+            </div>
+          )}
         </>
       ) : (
         <>
@@ -705,7 +741,46 @@ const PresentationPage: React.FC = () => {
                 <Moon size={20} aria-hidden />
               )}
             </button>
+
+            {/* Hamburger Menu */}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className={styles.hamburgerButton}
+              aria-label="Menu"
+            >
+              {menuOpen ? (
+                <X size={24} aria-hidden />
+              ) : (
+                <Menu size={24} aria-hidden />
+              )}
+            </button>
           </div>
+
+          {/* Dropdown Menu */}
+          {menuOpen && (
+            <div className={styles.dropdownMenu}>
+              <button
+                onClick={() => {
+                  navigate('/subscription');
+                  setMenuOpen(false);
+                }}
+                className={styles.menuItem}
+              >
+                <CreditCard size={20} />
+                <span>Gestione Abbonamento</span>
+              </button>
+              <button
+                onClick={() => {
+                  navigate('/roadmap');
+                  setMenuOpen(false);
+                }}
+                className={styles.menuItem}
+              >
+                <MapPin size={20} />
+                <span>Roadmap & Sviluppi Futuri</span>
+              </button>
+            </div>
+          )}
 
           {/* Banner FREE sotto al logo */}
           {!quotaLoading && userPlan === 'free' && (
