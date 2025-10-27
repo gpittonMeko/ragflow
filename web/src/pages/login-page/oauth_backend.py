@@ -798,21 +798,31 @@ def stripe_webhook():
 @app.get("/api/subscription/info")
 def get_subscription_info():
     """Recupera info abbonamento Stripe dell'utente loggato"""
+    print("🔍 [subscription/info] START")
+    
     if not stripe.api_key:
+        print("❌ Stripe API key non configurata")
         return jsonify(error="Stripe not configured"), 500
     
     u = get_current_user_from_cookie()
+    print(f"🔍 User from cookie: {u}")
+    
     if not u:
+        print("❌ Utente non loggato")
         return jsonify(error="UNAUTHORIZED"), 401
     
     try:
+        print(f"🔍 User email: {u.email}, plan: {u.plan}")
+        
         # Dati base utente
         info = {
             "email": u.email,
             "plan": u.plan,
-            "stripe_customer_id": u.stripe_customer_id,
-            "subscription_id": u.stripe_subscription_id,
+            "stripe_customer_id": getattr(u, "stripe_customer_id", None),
+            "subscription_id": getattr(u, "stripe_subscription_id", None),
         }
+        
+        print(f"🔍 Info base: {info}")
         
         # Se ha un subscription_id, recupera i dettagli da Stripe
         if u.stripe_subscription_id:
