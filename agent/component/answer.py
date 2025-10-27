@@ -64,10 +64,14 @@ class Answer(ComponentBase, ABC):
             for ii, row in stream.iterrows():
                 answer += row.to_dict()["content"]
                 yield {"content": answer}
-        else:
+        elif stream is not None and callable(stream):
             for st in stream():
                 res = st
                 yield st
+        else:
+            # Handle case where stream is None or not callable
+            res = {"content": "No input stream available"}
+            yield res
         if self._param.post_answers:
             res["content"] += random.choice(self._param.post_answers)
             yield res

@@ -230,8 +230,7 @@ class Canvas:
             ran += 1
 
         # Get downstream components from the last element of path[-2]
-        # If path[-2] is empty or path has less than 2 elements, use "begin" as starting point
-        if len(self.path) >= 2 and self.path[-2]:
+        if len(self.path) >= 2 and len(self.path[-2]) > 0:
             last_component_id = self.path[-2][-1]
             downstream = self.components[last_component_id]["downstream"]
             
@@ -244,8 +243,8 @@ class Canvas:
                 self.components[pid]["obj"].set_output(pd.concat([oo, o], ignore_index=True).dropna())
                 downstream = [pid]
         else:
-            # First run: start from "begin" component's downstream
-            downstream = self.components.get("begin", {}).get("downstream", [])
+            # Fallback: use "begin" component's downstream
+            downstream = self.components["begin"]["downstream"] if "begin" in self.components else []
 
         for m in prepare2run(downstream):
             yield {"content": m, "running_status": True}
