@@ -1064,6 +1064,14 @@ const PresentationPage: React.FC = () => {
 
       {/* WhatsApp Support Button */}
       <WhatsAppSupport phoneNumber="3288216708" />
+
+      {/* Footer con Sede Legale */}
+      <div className={styles.legalFooter}>
+        <p>
+          SGAI S.r.l. - Sede Legale: Via Ettore Majorana 32, Noventa di Piave
+          (VE)
+        </p>
+      </div>
     </div>
   );
 };
