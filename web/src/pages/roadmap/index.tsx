@@ -16,63 +16,63 @@ const roadmapData: RoadmapItem[] = [
     description:
       'Aggiunta di 50.000+ nuove sentenze dalla Corte di Cassazione, TAR e Tribunali amministrativi. Copertura completa 2020-2024.',
     status: 'in-progress',
-    quarter: 'Q1 2025',
+    quarter: 'Q4 2025',
   },
   {
     title: 'Database Storico Sentenze',
     description:
       'Integrazione archivio storico sentenze dal 1950 al 2019. Ricerca su 70+ anni di giurisprudenza italiana per analisi evolutiva del diritto.',
-    status: 'planned',
-    quarter: 'Q1 2025',
+    status: 'in-progress',
+    quarter: 'Q4 2025',
   },
   {
     title: 'Applicazione Mobile Android',
     description:
       'App nativa Android per consultare SGAI in mobilità. Ricerca vocale, sincronizzazione cloud e modalità offline.',
     status: 'planned',
-    quarter: 'Q2 2025',
+    quarter: 'Q1 2026',
   },
   {
     title: 'Installazione On-Premise',
     description:
       'Versione enterprise installabile nei server dello Studio. Privacy totale, personalizzazione completa, nessun dato su cloud esterno.',
     status: 'planned',
-    quarter: 'Q2 2025',
+    quarter: 'Q1 2026',
   },
   {
     title: 'Integrazione Normativa Europea',
     description:
       'Database completo di normative UE, CEDU e direttive comunitarie con traduzione automatica e cross-reference.',
     status: 'planned',
-    quarter: 'Q3 2025',
+    quarter: 'Q2 2026',
   },
   {
     title: 'AI Assistant per Redazione Atti',
     description:
       'Assistente IA specializzato nella stesura di atti giudiziari: ricorsi, memorie, controdeduzioni con suggerimenti di giurisprudenza pertinente.',
     status: 'planned',
-    quarter: 'Q3 2025',
+    quarter: 'Q2 2026',
   },
   {
     title: 'Analisi Predittiva Esiti',
     description:
       "Sistema di machine learning per prevedere l'esito di contenziosi basandosi su precedenti giurisprudenziali e caratteristiche del caso.",
     status: 'planned',
-    quarter: 'Q4 2025',
+    quarter: 'Q3 2026',
   },
   {
     title: 'Applicazione iOS',
     description:
       'Estensione della mobile experience su iPhone e iPad con supporto Apple Pencil per annotazioni.',
     status: 'planned',
-    quarter: 'Q4 2025',
+    quarter: 'Q3 2026',
   },
   {
     title: 'Ricerca Semantica Avanzata',
     description:
       'Motore di ricerca potenziato con comprensione del contesto giuridico, sinonimi legali e ricerca per concetti invece che per parole chiave.',
     status: 'planned',
-    quarter: 'Q1 2026',
+    quarter: 'Q4 2026',
   },
 ];
 
