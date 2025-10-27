@@ -792,6 +792,102 @@ def stripe_webhook():
     return jsonify(received=True)
 
 
+# ─────────────────────────────────────────────────────────────
+# STRIPE – Get Subscription Info
+# ─────────────────────────────────────────────────────────────
+@app.get("/api/subscription/info")
+def get_subscription_info():
+    """Recupera info abbonamento Stripe dell'utente loggato"""
+    if not stripe.api_key:
+        return jsonify(error="Stripe not configured"), 500
+    
+    u = get_current_user_from_cookie()
+    if not u:
+        return jsonify(error="UNAUTHORIZED"), 401
+    
+    try:
+        # Dati base utente
+        info = {
+            "email": u.email,
+            "plan": u.plan,
+            "stripe_customer_id": u.stripe_customer_id,
+            "subscription_id": u.stripe_subscription_id,
+        }
+        
+        # Se ha un subscription_id, recupera i dettagli da Stripe
+        if u.stripe_subscription_id:
+            try:
+                sub = stripe.Subscription.retrieve(u.stripe_subscription_id)
+                info["current_period_end"] = sub.current_period_end * 1000  # timestamp in ms
+                info["cancel_at_period_end"] = sub.cancel_at_period_end
+                info["status"] = sub.status
+            except Exception as e:
+                print(f"⚠️  Errore recupero subscription da Stripe: {e}")
+        
+        return jsonify(info)
+    except Exception as exc:
+        print(f"❌ Errore subscription/info: {exc}")
+        return jsonify(error=str(exc)), 500
+
+
+# ─────────────────────────────────────────────────────────────
+# STRIPE – Create Customer Portal Session
+# ─────────────────────────────────────────────────────────────
+@app.post("/api/subscription/portal")
+def create_portal_session():
+    """Crea sessione Stripe Customer Portal per gestire abbonamento"""
+    if not stripe.api_key:
+        return jsonify(error="Stripe not configured"), 500
+    
+    u = get_current_user_from_cookie()
+    if not u:
+        return jsonify(error="UNAUTHORIZED"), 401
+    
+    if not u.stripe_customer_id:
+        return jsonify(error="No Stripe customer found"), 400
+    
+    try:
+        portal_session = stripe.billing_portal.Session.create(
+            customer=u.stripe_customer_id,
+            return_url=f"{os.getenv('FRONTEND_URL', 'http://localhost')}/subscription",
+        )
+        return jsonify(url=portal_session.url)
+    except Exception as exc:
+        print(f"❌ Errore portal session: {exc}")
+        return jsonify(error=str(exc)), 500
+
+
+# ─────────────────────────────────────────────────────────────
+# STRIPE – Cancel Subscription
+# ─────────────────────────────────────────────────────────────
+@app.post("/api/subscription/cancel")
+def cancel_subscription():
+    """Cancella abbonamento Stripe (resta attivo fino a fine periodo)"""
+    if not stripe.api_key:
+        return jsonify(error="Stripe not configured"), 500
+    
+    u = get_current_user_from_cookie()
+    if not u:
+        return jsonify(error="UNAUTHORIZED"), 401
+    
+    if not u.stripe_subscription_id:
+        return jsonify(error="No active subscription"), 400
+    
+    try:
+        # Cancella alla fine del periodo corrente (non immediatamente)
+        sub = stripe.Subscription.modify(
+            u.stripe_subscription_id,
+            cancel_at_period_end=True
+        )
+        return jsonify(
+            ok=True,
+            cancel_at_period_end=sub.cancel_at_period_end,
+            current_period_end=sub.current_period_end * 1000
+        )
+    except Exception as exc:
+        print(f"❌ Errore cancellazione subscription: {exc}")
+        return jsonify(error=str(exc)), 500
+
 
 @app.teardown_appcontext
 def close_db_connection(exc):
