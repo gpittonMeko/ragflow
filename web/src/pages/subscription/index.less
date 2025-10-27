@@ -54,17 +54,35 @@
 
     .currentPlanCard,
     .upgradeCard {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 16px;
-      border: none;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      padding: 32px;
+      color: white;
+    }
 
-      :global {
-        .ant-card-body {
-          padding: 32px;
-        }
-      }
+    .badgePremium,
+    .badgeFree {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .badgePremium {
+      background: linear-gradient(135deg, #52c41a, #95de64);
+      color: white;
+      box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
+    }
+
+    .badgeFree {
+      background: linear-gradient(135deg, #faad14, #ffd666);
+      color: white;
+      box-shadow: 0 4px 12px rgba(250, 173, 20, 0.3);
     }
 
     .planHeader {
@@ -82,15 +100,18 @@
           margin: 0;
           font-size: 28px;
           font-weight: 700;
+          color: white;
         }
       }
 
       .iconPremium {
         color: #52c41a;
+        filter: drop-shadow(0 0 8px rgba(82, 196, 26, 0.5));
       }
 
       .iconFree {
         color: #faad14;
+        filter: drop-shadow(0 0 8px rgba(250, 173, 20, 0.5));
       }
     }
 
@@ -100,7 +121,8 @@
       gap: 16px;
       margin-bottom: 24px;
       padding: 20px;
-      background: #f5f5f5;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 12px;
 
       .detailRow {
@@ -108,9 +130,10 @@
         align-items: center;
         gap: 12px;
         font-size: 16px;
+        color: white;
 
         svg {
-          color: #667eea;
+          color: #69b1ff;
           flex-shrink: 0;
         }
 
@@ -124,10 +147,10 @@
         align-items: center;
         gap: 12px;
         padding: 12px;
-        background: #fff7e6;
+        background: rgba(250, 173, 20, 0.1);
         border-left: 4px solid #faad14;
         border-radius: 8px;
-        color: #d46b08;
+        color: #ffd666;
         font-size: 14px;
 
         svg {
@@ -144,6 +167,7 @@
         font-size: 20px;
         font-weight: 600;
         margin-bottom: 16px;
+        color: white;
       }
 
       ul {
@@ -157,9 +181,11 @@
         li {
           font-size: 15px;
           line-height: 1.6;
-          padding: 8px;
-          background: #f5f5f5;
+          padding: 10px 12px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 8px;
+          color: white;
         }
       }
     }
@@ -189,6 +215,7 @@
         font-weight: 700;
         margin-bottom: 24px;
         text-align: center;
+        color: white;
       }
 
       .benefitsList {
@@ -201,19 +228,22 @@
           align-items: flex-start;
           gap: 16px;
           padding: 16px;
-          background: #f5f5f5;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 12px;
           transition: all 0.3s ease;
 
           &:hover {
-            background: #e6f7ff;
+            background: rgba(255, 255, 255, 0.15);
             transform: translateX(8px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
           }
 
           .benefitIcon {
             color: #52c41a;
             flex-shrink: 0;
             margin-top: 4px;
+            filter: drop-shadow(0 0 6px rgba(82, 196, 26, 0.5));
           }
 
           strong {
@@ -221,12 +251,13 @@
             font-size: 18px;
             font-weight: 600;
             margin-bottom: 4px;
+            color: white;
           }
 
           p {
             margin: 0;
             font-size: 14px;
-            color: #666;
+            color: rgba(255, 255, 255, 0.8);
           }
         }
       }

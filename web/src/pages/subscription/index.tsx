@@ -1,5 +1,5 @@
 import { loadStripe } from '@stripe/stripe-js';
-import { Badge, Button, Card, Spin } from 'antd';
+import { Button, Spin } from 'antd';
 import {
   CheckCircle,
   CreditCard,
@@ -195,18 +195,15 @@ const SubscriptionPage: React.FC = () => {
       </div>
 
       <div className={styles.content}>
-        <Card className={styles.currentPlanCard}>
+        <div className={styles.currentPlanCard}>
           <div className={styles.planHeader}>
             <div className={styles.planInfo}>
               <h2>Piano Attuale</h2>
-              <Badge
-                count={isPremium ? 'PREMIUM' : 'FREE'}
-                style={{
-                  backgroundColor: isPremium ? '#52c41a' : '#faad14',
-                  fontSize: '14px',
-                  padding: '4px 12px',
-                }}
-              />
+              <span
+                className={isPremium ? styles.badgePremium : styles.badgeFree}
+              >
+                {isPremium ? 'PREMIUM' : 'FREE'}
+              </span>
             </div>
             {isPremium ? (
               <CheckCircle className={styles.iconPremium} size={48} />
@@ -322,10 +319,10 @@ const SubscriptionPage: React.FC = () => {
               </>
             )}
           </div>
-        </Card>
+        </div>
 
         {isFree && (
-          <Card className={styles.upgradeCard}>
+          <div className={styles.upgradeCard}>
             <h3>Perché passare a Premium?</h3>
             <div className={styles.benefitsList}>
               <div className={styles.benefit}>
@@ -350,7 +347,7 @@ const SubscriptionPage: React.FC = () => {
                 </div>
               </div>
             </div>
-          </Card>
+          </div>
         )}
       </div>
     </div>
