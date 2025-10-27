@@ -229,6 +229,11 @@ class Canvas:
 
             ran += 1
 
+        # FIX: Check if path has at least 2 elements before accessing path[-2]
+        if len(self.path) < 2 or not self.path[-2]:
+            logging.warning(f"Canvas.run: path has insufficient elements: {self.path}")
+            return
+        
         downstream = self.components[self.path[-2][-1]]["downstream"]
         if not downstream and self.components[self.path[-2][-1]].get("parent_id"):
             cid = self.path[-2][-1]
