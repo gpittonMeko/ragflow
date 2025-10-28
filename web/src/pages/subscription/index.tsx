@@ -1,6 +1,6 @@
 import { loadStripe } from '@stripe/stripe-js';
 import { Button, Spin } from 'antd';
-import { CheckCircle, CreditCard, Mail, Shield, XCircle } from 'lucide-react';
+import { CheckCircle, CreditCard, Mail, Shield } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'umi';
@@ -95,35 +95,6 @@ const SubscriptionPage: React.FC = () => {
       if (error) throw new Error(error.message);
     } catch (error: any) {
       toast.error(error.message || "Errore durante l'upgrade");
-      console.error(error);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleCancelSubscription = async () => {
-    if (
-      !confirm(
-        "Sei sicuro di voler cancellare l'abbonamento? Potrai continuare ad usare Premium fino alla fine del periodo già pagato.",
-      )
-    ) {
-      return;
-    }
-
-    setActionLoading(true);
-    try {
-      const res = await fetch(`${baseURL}/api/subscription/cancel`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Errore cancellazione');
-
-      toast.success('Abbonamento cancellato con successo');
-      await fetchSubscriptionData();
-    } catch (error: any) {
-      toast.error(error.message || 'Errore durante la cancellazione');
       console.error(error);
     } finally {
       setActionLoading(false);
@@ -228,7 +199,7 @@ const SubscriptionPage: React.FC = () => {
 
             {subscription.cancel_at_period_end && (
               <div className={styles.cancelNotice}>
-                <XCircle size={20} />
+                <Shield size={20} />
                 <span>
                   L&apos;abbonamento è stato cancellato e terminerà il{' '}
                   {new Date(
