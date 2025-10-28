@@ -859,7 +859,7 @@ def create_portal_session():
     try:
         portal_session = stripe.billing_portal.Session.create(
             customer=u.stripe_customer_id,
-            return_url=f"{os.getenv('FRONTEND_URL', 'http://localhost')}/subscription",
+            return_url=f"{APP_URL}/subscription",
             configuration="bpc_1SMthDBo6bKd1aEWfVbZeRA9",
         )
         return jsonify(url=portal_session.url)

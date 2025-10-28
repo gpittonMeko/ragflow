@@ -12,6 +12,34 @@ interface RoadmapItem {
 
 const roadmapData: RoadmapItem[] = [
   {
+    title: 'Database Giustizia Tributaria - 630.000+ Sentenze',
+    description:
+      '✅ Completato: Integrato database completo con 631.263 sentenze della giustizia tributaria (Banca Dati MEF). Copertura completa di commissioni tributarie, TAR e giurisdizioni regionali.',
+    status: 'completed',
+    quarter: 'Q3 2025',
+  },
+  {
+    title: 'Database Cassazione e Massimari',
+    description:
+      '✅ Completato: Integrati 2.368 sentenze della Corte di Cassazione Sezione Quinta, 8 Massimari della Cassazione e 154 Massimari delle Corti di Merito. Base giurisprudenziale solida per analisi normative.',
+    status: 'completed',
+    quarter: 'Q3 2025',
+  },
+  {
+    title: 'Assistente AI per Interpretazione Documenti',
+    description:
+      '✅ Completato: Assistente IA completamente funzionante che aiuta ad interpretare documenti giuridici, rispondere a domande complesse e fornire analisi contestuali basate sulla conoscenza integrata.',
+    status: 'completed',
+    quarter: 'Q3 2025',
+  },
+  {
+    title: 'Database Normativa e Prassi Fiscale',
+    description:
+      '✅ Completato: Integrati 9.136 documenti di Prassi Agenzia delle Entrate, 135 documenti di normativa tributaria, 22 Informazioni Tariffarie Vincolanti (ITV) e Note Esplicative. Sistema completo per consulenza fiscale.',
+    status: 'completed',
+    quarter: 'Q3 2025',
+  },
+  {
     title: 'Espansione Database Sentenze',
     description:
       'Aggiunta di 50.000+ nuove sentenze dalla Corte di Cassazione, TAR e Tribunali amministrativi. Copertura completa 2020-2024.',
