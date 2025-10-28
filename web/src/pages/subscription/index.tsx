@@ -286,20 +286,8 @@ const SubscriptionPage: React.FC = () => {
                   loading={actionLoading}
                   icon={<CreditCard />}
                 >
-                  Gestisci Pagamenti
+                  Gestione Abbonamento
                 </Button>
-
-                {!subscription.cancel_at_period_end && (
-                  <Button
-                    danger
-                    size="large"
-                    onClick={handleCancelSubscription}
-                    loading={actionLoading}
-                    icon={<XCircle />}
-                  >
-                    Cancella Abbonamento
-                  </Button>
-                )}
               </>
             )}
           </div>
