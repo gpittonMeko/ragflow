@@ -265,6 +265,20 @@ def run():
     logging.info(f"[INJECT] Inizio iniezione history per session {session_id}")
     canvas_dsl = inject_history_to_generate_components(canvas)
     canvas = Canvas(json.dumps(canvas_dsl), user_id)
+    
+    # ✅ RICOSTRUISCI LA HISTORY NEL NUOVO CANVAS
+    if canvas.messages:
+        canvas.history = []
+        for msg in canvas.messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if role and content:
+                canvas.history.append((role, content))
+        logging.info(f"[HISTORY] Ricostruita history nel nuovo canvas: {len(canvas.history)} messaggi")
+        # Debug: stampa i primi 3 messaggi della history
+        for i, (role, content) in enumerate(canvas.history[:3]):
+            logging.info(f"[HISTORY] Messaggio {i}: {role} -> {content[:100]}...")
+    
     logging.info(f"[INJECT] Completata iniezione history")
     
     try:
