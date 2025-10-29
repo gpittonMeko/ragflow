@@ -7,40 +7,40 @@ import {
 import { Message } from '@/interfaces/database/chat';
 import { message } from 'antd';
 import trim from 'lodash/trim';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'umi';
 import { v4 as uuid } from 'uuid';
 import { useHandleMessageInputChange } from './hooks';
 
 // No login needed - public access is now allowed on the backend
 const isCompletionError = (res: any) => {
-    console.log('[CHAT] 🔍 isCompletionError check:', {
-      hasRes: !!res,
-      hasResponse: !!res?.response,
-      status: res?.response?.status,
-      hasData: !!res?.data,
-      dataCode: res?.data?.code,
-      dataKeys: res?.data ? Object.keys(res.data) : 'NO DATA'
-    });
+  console.log('[CHAT] 🔍 isCompletionError check:', {
+    hasRes: !!res,
+    hasResponse: !!res?.response,
+    status: res?.response?.status,
+    hasData: !!res?.data,
+    dataCode: res?.data?.code,
+    dataKeys: res?.data ? Object.keys(res.data) : 'NO DATA',
+  });
 
-    if (!res?.response) {
-      console.log('[CHAT] ⚠️ Nessun response object');
-      return true;
-    }
+  if (!res?.response) {
+    console.log('[CHAT] ⚠️ Nessun response object');
+    return true;
+  }
 
-    if (res.response.status !== 200) {
-      console.log('[CHAT] ⚠️ Status non 200:', res.response.status);
-      return true;
-    }
+  if (res.response.status !== 200) {
+    console.log('[CHAT] ⚠️ Status non 200:', res.response.status);
+    return true;
+  }
 
-    if (res.data && res.data.code !== undefined && res.data.code !== 0) {
-      console.log('[CHAT] ⚠️ data.code non è 0:', res.data.code);
-      return true;
-    }
+  if (res.data && res.data.code !== undefined && res.data.code !== 0) {
+    console.log('[CHAT] ⚠️ data.code non è 0:', res.data.code);
+    return true;
+  }
 
-    console.log('[CHAT] ✅ No errors detected');
-    return false;
-  };
+  console.log('[CHAT] ✅ No errors detected');
+  return false;
+};
 
 export const useSendButtonDisabled = (value: string) => {
   return trim(value) === '';
@@ -67,22 +67,24 @@ export const useGetSharedChatSearchParams = () => {
   };
 };
 
-
 // ✅ HELPER: Ottieni token RAGFlow
 function getRagflowToken(): string | null {
   const auth = localStorage.getItem('Authorization');
   const access = localStorage.getItem('access_token');
-  
+
   console.log('[CHAT] 🔑 getRagflowToken():', {
     Authorization: auth ? auth.substring(0, 20) + '...' : 'NONE',
-    access_token: access ? access.substring(0, 20) + '...' : 'NONE'
+    access_token: access ? access.substring(0, 20) + '...' : 'NONE',
   });
-  
+
   return auth || access || null;
 }
 
 // ✅ SOSTITUISCI TUTTA LA FUNZIONE useSendSharedMessage
-export const useSendSharedMessage = (overrideConversationId?: string) => {
+export const useSendSharedMessage = (
+  overrideConversationId?: string,
+  userSessionId?: string,
+) => {
   const {
     from,
     sharedId: conversationId,
@@ -91,6 +93,7 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
   } = useGetSharedChatSearchParams();
 
   const actualConversationId = overrideConversationId || conversationId;
+  const actualSessionId = userSessionId; // ✅ Session ID per conversazioni separate
   const { createSharedConversation: setConversation } =
     useCreateNextSharedConversation();
   const { handleInputChange, value, setValue } = useHandleMessageInputChange();
@@ -99,9 +102,11 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
   const ragflowTokenForHeaders = getRagflowToken();
   console.log('[CHAT] 🔧 Headers configurati per useSendMessageWithSse:', {
     'Content-Type': 'application/json',
-    'Accept': 'text/event-stream',
-    'Authorization': ragflowTokenForHeaders ? ragflowTokenForHeaders.substring(0, 20) + '...' : 'NONE',
-    'credentials': 'include'
+    Accept: 'text/event-stream',
+    Authorization: ragflowTokenForHeaders
+      ? ragflowTokenForHeaders.substring(0, 20) + '...'
+      : 'NONE',
+    credentials: 'include',
   });
 
   // ✅ MODIFICA: Aggiungi Authorization header dinamicamente
@@ -111,35 +116,38 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
-        ...(ragflowTokenForHeaders && { 'Authorization': ragflowTokenForHeaders }),
+        ...(ragflowTokenForHeaders && {
+          Authorization: ragflowTokenForHeaders,
+        }),
       },
       credentials: 'include',
     },
-    [],
   );
 
   const {
     derivedMessages,
-    ref,
     removeLatestMessage,
     addNewestAnswer,
     addNewestQuestion,
   } = useSelectDerivedMessages();
+  const ref = useRef<HTMLDivElement>(null); // ✅ ref locale per scroll
   const [hasError, setHasError] = useState(false);
 
   const sendMessage = useCallback(
     async (message: Message, id?: string) => {
       console.log('[CHAT] 🚀 === INIZIO sendMessage ===');
-      
+
       // ✅ DEBUG: Verifica token RAGFlow
       const ragflowToken = getRagflowToken();
       console.log('[CHAT] 🔍 PRE-SEND DEBUG:', {
         tokenPresent: !!ragflowToken,
-        tokenPrefix: ragflowToken ? ragflowToken.substring(0, 20) + '...' : 'NONE',
+        tokenPrefix: ragflowToken
+          ? ragflowToken.substring(0, 20) + '...'
+          : 'NONE',
         conversationId: id ?? actualConversationId,
         messageContent: message.content.substring(0, 50) + '...',
         messageId: message.id || uuid(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       if (!ragflowToken) {
@@ -148,13 +156,16 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
         return;
       }
 
-      console.log('[CHAT] ✅ Token presente:', ragflowToken.substring(0, 20) + '...');
+      console.log(
+        '[CHAT] ✅ Token presente:',
+        ragflowToken.substring(0, 20) + '...',
+      );
 
       // Decrementa quota OAuth
       try {
         const baseURL = `${window.location.protocol}//${window.location.hostname}/oauth`;
         console.log('[QUOTA] 📤 Chiamata a:', `${baseURL}/api/generate`);
-        
+
         const quotaRes = await fetch(`${baseURL}/api/generate`, {
           method: 'POST',
           headers: {
@@ -166,7 +177,7 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
 
         console.log('[QUOTA] 📡 Response:', {
           status: quotaRes.status,
-          ok: quotaRes.ok
+          ok: quotaRes.ok,
         });
 
         if (!quotaRes.ok) {
@@ -183,14 +194,16 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
       console.log('[CHAT] 📤 Invio a RAGFlow...', {
         endpoint: '/v1/canvas/completion',
         conversationId: id ?? actualConversationId,
+        sessionId: actualSessionId, // ✅ Log session_id
         messageLength: message.content.length,
-        messageId: message.id || uuid()
+        messageId: message.id || uuid(),
       });
 
       const res = await send({
         id: id ?? actualConversationId,
         message: message.content,
         message_id: message.id || uuid(),
+        session_id: actualSessionId, // ✅ INVIA session_id al backend!
         stream: true,
       });
 
@@ -204,7 +217,7 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
           statusText: res.response.statusText,
           ok: res.response.ok,
           type: res.response.type,
-          url: res.response.url
+          url: res.response.url,
         });
 
         // Prova a estrarre headers
@@ -212,7 +225,8 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
           const headers: any = {};
           if (res.response.headers) {
             headers['content-type'] = res.response.headers.get('content-type');
-            headers['authorization'] = res.response.headers.get('authorization');
+            headers['authorization'] =
+              res.response.headers.get('authorization');
             headers['x-error'] = res.response.headers.get('x-error');
           }
           console.log('[CHAT] 📋 Response headers:', headers);
@@ -224,8 +238,11 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
         try {
           const clone = res.response.clone();
           const text = await clone.text();
-          console.log('[CHAT] 📄 Response body (primi 500 char):', text.substring(0, 500));
-          
+          console.log(
+            '[CHAT] 📄 Response body (primi 500 char):',
+            text.substring(0, 500),
+          );
+
           // Prova a parsare come JSON
           try {
             const json = JSON.parse(text);
@@ -250,11 +267,13 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
           dataCode: res?.data?.code,
           dataMessage: res?.data?.message,
           responseStatus: res?.response?.status,
-          responseStatusText: res?.response?.statusText
+          responseStatusText: res?.response?.statusText,
         });
-        
+
         if (res?.data?.code === 102 || res?.response?.status === 401) {
-          console.error('[CHAT] ❌ Token non valido/scaduto (code 102 o status 401)');
+          console.error(
+            '[CHAT] ❌ Token non valido/scaduto (code 102 o status 401)',
+          );
           return;
         }
         setValue(message.content);
@@ -266,7 +285,13 @@ export const useSendSharedMessage = (overrideConversationId?: string) => {
 
       console.log('[CHAT] 🏁 === FINE sendMessage ===');
     },
-    [send, actualConversationId, derivedMessages, setValue, removeLatestMessage],
+    [
+      send,
+      actualConversationId,
+      derivedMessages,
+      setValue,
+      removeLatestMessage,
+    ],
   );
 
   const handleSendMessage = useCallback(

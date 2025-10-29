@@ -17,24 +17,25 @@ const WhatsAppSupport = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [currentPosition, setCurrentPosition] = useState(position);
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
+  // Funzione generica per gestire l'inizio del drag (mouse o touch)
+  const handleDragStart = useCallback(
+    (clientX: number, clientY: number) => {
       setIsDragging(true);
       setDragStart({
-        x: e.clientX - currentPosition.x,
-        y: e.clientY - currentPosition.y,
+        x: clientX - currentPosition.x,
+        y: clientY - currentPosition.y,
       });
     },
     [currentPosition],
   );
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
+  // Funzione generica per gestire il movimento (mouse o touch)
+  const handleDragMove = useCallback(
+    (clientX: number, clientY: number) => {
       if (!isDragging) return;
 
-      const newX = e.clientX - dragStart.x;
-      const newY = e.clientY - dragStart.y;
+      const newX = clientX - dragStart.x;
+      const newY = clientY - dragStart.y;
 
       // Limita la posizione entro i bordi della finestra
       const maxX = window.innerWidth - 60; // 60px = larghezza del bottone
@@ -48,21 +49,71 @@ const WhatsAppSupport = ({
     [isDragging, dragStart],
   );
 
+  // Handler per mouse
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      handleDragStart(e.clientX, e.clientY);
+    },
+    [handleDragStart],
+  );
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      handleDragMove(e.clientX, e.clientY);
+    },
+    [handleDragMove],
+  );
+
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
   }, []);
 
-  // Aggiungi event listeners per il drag
+  // Handler per touch
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      handleDragStart(touch.clientX, touch.clientY);
+    },
+    [handleDragStart],
+  );
+
+  const handleTouchMove = useCallback(
+    (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        handleDragMove(touch.clientX, touch.clientY);
+      }
+    },
+    [handleDragMove],
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Aggiungi event listeners per il drag (mouse e touch)
   useEffect(() => {
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove);
+      document.addEventListener('touchend', handleTouchEnd);
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
       };
     }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [
+    isDragging,
+    handleMouseMove,
+    handleMouseUp,
+    handleTouchMove,
+    handleTouchEnd,
+  ]);
 
   const handleWhatsAppClick = useCallback(() => {
     const message = encodeURIComponent(
@@ -88,8 +139,10 @@ const WhatsAppSupport = ({
         top: `${currentPosition.y}px`,
         zIndex: 9999,
         cursor: isDragging ? 'grabbing' : 'grab',
+        touchAction: 'none', // Previene lo scroll durante il drag
       }}
       onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
     >
       <Tooltip title="Trascina per spostare • Clicca per WhatsApp">
         <Button

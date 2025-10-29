@@ -109,6 +109,19 @@ function getOrCreateClientId(): string {
   return id;
 }
 
+// ✅ Genera session_id unico per ogni browser (conversazioni separate)
+function getOrCreateSessionId(): string {
+  let id = localStorage.getItem('sgai-session-id');
+  if (!id) {
+    id = uuidv4();
+    localStorage.setItem('sgai-session-id', id);
+    console.log('[SESSION] Creato nuovo session_id:', id);
+  } else {
+    console.log('[SESSION] Riutilizzo session_id:', id);
+  }
+  return id;
+}
+
 const PresentationPage: React.FC = () => {
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const [hideExtras, setHideExtras] = useState(false);
@@ -149,6 +162,9 @@ const PresentationPage: React.FC = () => {
   // quota server-side
   const [quota, setQuota] = useState<QuotaAnon | QuotaUser | null>(null);
   const clientIdRef = useRef<string>(getOrCreateClientId());
+
+  // ✅ Session ID unico per ogni browser (conversazioni separate nel DB!)
+  const sessionId = useRef<string>(getOrCreateSessionId()).current;
 
   // derivati UI
   // DOPO
@@ -635,11 +651,11 @@ const PresentationPage: React.FC = () => {
             </button>
 
             <div className={styles.freeCounter}>
-              {quota?.scope === 'anon'
-                ? `${quota.remainingTotal} / ${quota.totalLimit}`
-                : quota?.scope === 'user'
-                  ? `${(quota as QuotaUser).remainingToday} / ${(quota as QuotaUser).dailyLimit}`
-                  : '5 / 5'}
+              {!quota
+                ? '5 / 5'
+                : quota.scope === 'anon'
+                  ? `${(quota as QuotaAnon).remainingTotal} / ${(quota as QuotaAnon).totalLimit}`
+                  : `${(quota as QuotaUser).remainingToday} / ${(quota as QuotaUser).dailyLimit}`}
             </div>
 
             {/* Hamburger Menu per Anonimi */}
@@ -922,6 +938,7 @@ const PresentationPage: React.FC = () => {
           >
             <DirectChat
               agentId="a92b7464193811f09d527ebdee58e854"
+              sessionId={sessionId}
               onMessagesChange={(count) => setHasMessages(count > 0)}
               onGenerationComplete={() => {
                 console.log(

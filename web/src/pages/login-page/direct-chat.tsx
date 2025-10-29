@@ -18,6 +18,7 @@ import styles from '../chat/share/index.less';
 
 interface DirectChatProps {
   agentId: string;
+  sessionId?: string; // ✅ Session ID unico per ogni browser
   className?: string;
   style?: React.CSSProperties;
   onMessagesChange?: (count: number) => void;
@@ -26,6 +27,7 @@ interface DirectChatProps {
 
 const DirectChat: React.FC<DirectChatProps> = ({
   agentId,
+  sessionId,
   className,
   style,
   onMessagesChange,
@@ -55,6 +57,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
     }
   }, [agentId, location.pathname, location.search]);
 
+  // ✅ Passa agentId E sessionId per gestire conversazioni separate
   const {
     handlePressEnter,
     handleInputChange,
@@ -65,7 +68,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
     derivedMessages,
     hasError,
     stopOutputMessage,
-  } = useSendSharedMessage(agentId);
+  } = useSendSharedMessage(agentId, sessionId);
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
     useClickDrawer();

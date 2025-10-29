@@ -118,9 +118,14 @@ def getsse(canvas_id):
 @manager.route('/completion', methods=['POST'])  # noqa: F821
 @validate_request("id")
 def run():
+    from api.db.services.api_service import API4ConversationService
+    from api.db.db_models import API4Conversation
+    
     req = request.json
     logging.info(f"[COMPLETION] Request JSON: {req}")
     stream = req.get("stream", True)
+    session_id = req.get("session_id")  # ✅ Leggi session_id dal frontend
+    
     e, cvs = UserCanvasService.get_by_id(req["id"])
     if not e:
         return get_data_error_result(message="canvas not found.")
@@ -143,11 +148,68 @@ def run():
 
     final_ans = {"reference": [], "content": ""}
     message_id = req.get("message_id", get_uuid())
-    try:
+    
+    # ✅ FIX COMPLETO: Gestisci conversazioni separate con session_id
+    if not session_id:
+        # Nuova sessione: usa DSL originale del canvas
+        session_id = get_uuid()
         canvas = Canvas(cvs.dsl, user_id)
+        logging.info(f"[SESSION] Creata nuova sessione: {session_id}")
+        
+        # Salva conversazione vuota nel DB
+        conv_data = {
+            "id": session_id,
+            "dialog_id": cvs.id,
+            "user_id": "",
+            "message": [],
+            "source": "agent",
+            "dsl": json.loads(str(canvas))
+        }
+        API4ConversationService.save(**conv_data)
+        conv = API4Conversation(**conv_data)
+    else:
+        # Sessione esistente: recupera dal DB
+        e, conv = API4ConversationService.get_by_id(session_id)
+        if not e:
+            # Session non trovata, creala
+            logging.warning(f"[SESSION] {session_id} non trovata, creo nuova")
+            canvas = Canvas(cvs.dsl, user_id)
+            conv_data = {
+                "id": session_id,
+                "dialog_id": cvs.id,
+                "user_id": "",
+                "message": [],
+                "source": "agent",
+                "dsl": json.loads(str(canvas))
+            }
+            API4ConversationService.save(**conv_data)
+            conv = API4Conversation(**conv_data)
+        else:
+            logging.info(f"[SESSION] Caricata sessione esistente: {session_id}")
+            # ✅ USA IL DSL DELLA CONVERSAZIONE, non del canvas globale!
+            canvas = Canvas(json.dumps(conv.dsl), user_id)
+    
+    # ✅ RICOSTRUISCI SEMPRE la history dai messages salvati
+    if canvas.messages:
+        canvas.history = []
+        for msg in canvas.messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if role and content:
+                canvas.history.append((role, content))
+        logging.info(f"[HISTORY] Ricostruita history: {len(canvas.history)} messaggi")
+    else:
+        logging.info(f"[HISTORY] Nessun messaggio precedente")
+    
+    try:
         if "message" in req:
             canvas.messages.append({"role": "user", "content": req["message"], "id": message_id})
             canvas.add_user_input(req["message"])
+            # Salva anche in conv.message
+            if not conv.message:
+                conv.message = []
+            conv.message.append({"role": "user", "content": req["message"], "id": message_id, "created_at": time.time()})
+            logging.info(f"[HISTORY] Nuovo messaggio, totale history: {len(canvas.history)}")
     except Exception as e:
         return server_error_response(e)
 
@@ -197,19 +259,25 @@ def run():
                 if final_ans.get("reference"):
                     canvas.reference.append(final_ans["reference"])
                 
-                cvs.dsl = safe_serialize_canvas(canvas)
-                UserCanvasService.update_by_id(req["id"], cvs.to_dict())
+                # ✅ SALVA NELLA CONVERSAZIONE (session-based), non nel canvas globale!
+                conv.message.append({"role": "assistant", "content": final_ans.get("content", ""), "id": message_id, "created_at": time.time()})
+                conv.dsl = safe_serialize_canvas(canvas)
+                if final_ans.get("reference"):
+                    if not conv.reference:
+                        conv.reference = []
+                    conv.reference.extend(final_ans["reference"] if isinstance(final_ans["reference"], list) else [final_ans["reference"]])
+                API4ConversationService.update_by_id(session_id, conv.to_dict())
                 
-                logging.info("[SSE] Stream completed successfully")
+                logging.info(f"[SSE] Stream completed, session: {session_id}, history: {len(canvas.history)} msgs")
                 yield "data:" + json.dumps({"code": 0, "message": "", "data": True}, ensure_ascii=False) + "\n\n"
                 
             except GeneratorExit:
                 logging.warning("[SSE] Client disconnected (GeneratorExit)")
                 try:
-                    cvs.dsl = safe_serialize_canvas(canvas)
+                    conv.dsl = safe_serialize_canvas(canvas)
                     if canvas.path and not canvas.path[-1]:
                         canvas.path.pop(-1)
-                    UserCanvasService.update_by_id(req["id"], cvs.to_dict())
+                    API4ConversationService.update_by_id(session_id, conv.to_dict())
                 except Exception as save_err:
                     logging.error(f"Save error on GeneratorExit: {save_err}")
                 
@@ -217,10 +285,10 @@ def run():
                 logging.error(f"[SSE] Error: {str(e)}", exc_info=True)
                 
                 try:
-                    cvs.dsl = safe_serialize_canvas(canvas)
+                    conv.dsl = safe_serialize_canvas(canvas)
                     if canvas.path and not canvas.path[-1]:
                         canvas.path.pop(-1)
-                    UserCanvasService.update_by_id(req["id"], cvs.to_dict())
+                    API4ConversationService.update_by_id(session_id, conv.to_dict())
                 except Exception as save_err:
                     logging.error(f"Save error on exception: {save_err}")
                 
@@ -247,10 +315,14 @@ def run():
             continue
         final_ans["content"] = "\n".join(answer["content"]) if "content" in answer else ""
         canvas.messages.append({"role": "assistant", "content": final_ans["content"], "id": message_id})
+        conv.message.append({"role": "assistant", "content": final_ans["content"], "id": message_id, "created_at": time.time()})
         if final_ans.get("reference"):
             canvas.reference.append(final_ans["reference"])
-        cvs.dsl = safe_serialize_canvas(canvas)
-        UserCanvasService.update_by_id(req["id"], cvs.to_dict())
+            if not conv.reference:
+                conv.reference = []
+            conv.reference.extend(final_ans["reference"] if isinstance(final_ans["reference"], list) else [final_ans["reference"]])
+        conv.dsl = safe_serialize_canvas(canvas)
+        API4ConversationService.update_by_id(session_id, conv.to_dict())
         return get_json_result(data={"answer": final_ans["content"], "reference": final_ans.get("reference", [])})
 
 @manager.route('/reset', methods=['POST'])  # noqa: F821

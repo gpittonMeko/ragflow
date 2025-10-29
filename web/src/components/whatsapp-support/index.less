@@ -4,12 +4,17 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  user-select: none; /* Previene la selezione del testo durante il drag */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 
   .whatsappButton {
     background: #25d366 !important;
     border-color: #25d366 !important;
     box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
     transition: all 0.3s ease;
+    pointer-events: auto; /* Assicura che il click funzioni */
 
     &:hover {
       background: #20c55a !important;
@@ -65,16 +70,29 @@
 /* Responsive */
 @media (max-width: 768px) {
   .whatsappSupport {
+    /* Rendi il pulsante più grande su mobile per facilitare il drag */
     .whatsappButton {
-      width: 50px !important;
-      height: 50px !important;
+      width: 56px !important;
+      height: 56px !important;
+      touch-action: none; /* Previene comportamenti di default del browser */
     }
 
     .closeButton {
-      width: 18px;
-      height: 18px;
+      width: 22px;
+      height: 22px;
       top: -6px;
       right: -6px;
+      /* Aumenta leggermente l'area di touch */
+      padding: 4px;
     }
   }
+}
+
+/* Effetto durante il drag */
+.whatsappSupport[style*='grabbing'] {
+  opacity: 0.8;
+  transform: scale(1.05);
+  transition:
+    opacity 0.1s ease,
+    transform 0.1s ease;
 }
