@@ -33,6 +33,9 @@ interface ChatSession {
 const CHAT_HISTORY_KEY = 'sgai-chat-history';
 const CURRENT_SESSION_KEY = 'sgai-current-session';
 
+// ✅ Codice beta tester hardcoded
+const BETA_TESTER_CODE = 'SGAI2024BETA';
+
 // --- CHAT HISTORY FUNCTIONS ---
 const getChatHistory = (): ChatSession[] => {
   try {
@@ -170,12 +173,12 @@ function getOrCreateClientId(): string {
   return id;
 }
 
-// ✅ Genera session_id unico per ogni browser (conversazioni separate)
+// ✅ Genera session_id unico per ogni TAB (conversazioni separate)
 function getOrCreateSessionId(): string {
-  let id = localStorage.getItem('sgai-session-id');
+  let id = sessionStorage.getItem('sgai-session-id');
   if (!id) {
     id = uuidv4();
-    localStorage.setItem('sgai-session-id', id);
+    sessionStorage.setItem('sgai-session-id', id);
     console.log('[SESSION] Creato nuovo session_id:', id);
   } else {
     console.log('[SESSION] Riutilizzo session_id:', id);
@@ -220,6 +223,10 @@ const PresentationPage: React.FC = () => {
   const [chatExpanded, setChatExpanded] = useState(false);
   const [hasMessages, setHasMessages] = useState(false);
 
+  // ✅ Beta tester states
+  const [showBetaCodeModal, setShowBetaCodeModal] = useState(false);
+  const [betaCode, setBetaCode] = useState('');
+
   // quota server-side
   const [quota, setQuota] = useState<QuotaAnon | QuotaUser | null>(null);
   const clientIdRef = useRef<string>(getOrCreateClientId());
@@ -254,9 +261,9 @@ const PresentationPage: React.FC = () => {
     setSessionId(newSessionId);
     setCurrentChatTitle('Nuova Chat');
     setHasMessages(false);
-    setChatExpanded(false);
-    // Reload page to reset chat
-    window.location.reload();
+    setChatExpanded(true); // Apri la chat
+    setShowChatHistory(false); // Chiudi sidebar
+    // NON ricaricare la pagina - mantieni l'UI
   };
 
   const switchToChat = (chat: ChatSession) => {
@@ -265,8 +272,8 @@ const PresentationPage: React.FC = () => {
     setCurrentChatTitle(chat.title);
     setHasMessages(true);
     setChatExpanded(true);
-    // Reload page to load the chat
-    window.location.reload();
+    setShowChatHistory(false); // Chiudi sidebar
+    // NON ricaricare la pagina - mantieni l'UI
   };
 
   const updateCurrentChat = (title: string, lastMessage: string) => {
@@ -281,6 +288,56 @@ const PresentationPage: React.FC = () => {
     setCurrentChatTitle(chatSession.title);
     loadChatHistory();
   };
+
+  // ✅ Beta tester functions
+  const handleBetaCodeSubmit = () => {
+    if (betaCode === BETA_TESTER_CODE) {
+      // Aggiorna quota a premium
+      const premiumQuota: QuotaUser = {
+        scope: 'user',
+        id: 'beta-tester',
+        plan: 'premium',
+        usedToday: 0,
+        dailyLimit: -1, // illimitato
+        remainingToday: -1,
+        day: new Date().toISOString().split('T')[0],
+      };
+      setQuota(premiumQuota);
+
+      // Salva in localStorage
+      localStorage.setItem('sgai-beta-code', BETA_TESTER_CODE);
+      localStorage.setItem('sgai-quota', JSON.stringify(premiumQuota));
+
+      toast.success('Codice beta accettato! Accesso premium attivato.');
+      setShowBetaCodeModal(false);
+      setBetaCode('');
+    } else {
+      toast.error('Codice beta non valido.');
+    }
+  };
+
+  // Check for existing beta code on mount
+  useEffect(() => {
+    const savedBetaCode = localStorage.getItem('sgai-beta-code');
+    if (savedBetaCode === BETA_TESTER_CODE) {
+      const premiumQuota: QuotaUser = {
+        scope: 'user',
+        id: 'beta-tester',
+        plan: 'premium',
+        usedToday: 0,
+        dailyLimit: -1,
+        remainingToday: -1,
+        day: new Date().toISOString().split('T')[0],
+      };
+      setQuota(premiumQuota);
+    }
+  }, []);
+
+  // Update sessionStorage when sessionId changes
+  useEffect(() => {
+    sessionStorage.setItem('sgai-session-id', sessionId);
+    console.log('[SESSION] Updated sessionId:', sessionId);
+  }, [sessionId]);
 
   // derivati UI
   // DOPO
@@ -821,6 +878,16 @@ const PresentationPage: React.FC = () => {
                 <X size={20} />
                 <span>Nuova Chat</span>
               </button>
+              <button
+                onClick={() => {
+                  setShowBetaCodeModal(true);
+                  setMenuOpen(false);
+                }}
+                className={styles.menuItem}
+              >
+                <LockKeyhole size={20} />
+                <span>Codice Beta Tester</span>
+              </button>
             </div>
           )}
         </>
@@ -950,6 +1017,16 @@ const PresentationPage: React.FC = () => {
               >
                 <X size={20} />
                 <span>Nuova Chat</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowBetaCodeModal(true);
+                  setMenuOpen(false);
+                }}
+                className={styles.menuItem}
+              >
+                <LockKeyhole size={20} />
+                <span>Codice Beta Tester</span>
               </button>
             </div>
           )}
@@ -1093,6 +1170,7 @@ const PresentationPage: React.FC = () => {
             }}
           >
             <DirectChat
+              key={sessionId} // Force re-render when sessionId changes
               agentId="a92b7464193811f09d527ebdee58e854"
               sessionId={sessionId}
               onMessagesChange={(count) => setHasMessages(count > 0)}
@@ -1285,6 +1363,37 @@ const PresentationPage: React.FC = () => {
               <X size={16} />
               Nuova Chat
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Beta Tester */}
+      {showBetaCodeModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <h3>Codice Beta Tester</h3>
+            <p>Inserisci il codice per accedere all'account premium:</p>
+            <input
+              type="text"
+              value={betaCode}
+              onChange={(e) => setBetaCode(e.target.value)}
+              placeholder="Inserisci codice beta"
+              className={styles.betaCodeInput}
+            />
+            <div className={styles.modalActions}>
+              <button
+                onClick={() => setShowBetaCodeModal(false)}
+                className={styles.cancelButton}
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleBetaCodeSubmit}
+                className={styles.submitButton}
+              >
+                Attiva Premium
+              </button>
+            </div>
           </div>
         </div>
       )}
