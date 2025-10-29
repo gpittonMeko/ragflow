@@ -125,6 +125,10 @@ def run():
     logging.info(f"[COMPLETION] Request JSON: {req}")
     stream = req.get("stream", True)
     session_id = req.get("session_id")  # ✅ Leggi session_id dal frontend
+    # Tronca session_id a 32 caratteri per compatibilità con DB
+    if session_id and len(session_id) > 32:
+        session_id = session_id[:32]
+        logging.info(f"[SESSION] Troncato session_id a 32 char: {session_id}")
     
     e, cvs = UserCanvasService.get_by_id(req["id"])
     if not e:
