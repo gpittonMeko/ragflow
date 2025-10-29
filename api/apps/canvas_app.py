@@ -226,30 +226,44 @@ def run():
             dsl = json.loads(str(canvas_obj))
             components = dsl.get('components', {})
             
+            logging.info(f"[INJECT] Trovati {len(components)} componenti totali")
+            
             for comp_id, comp_data in components.items():
-                if comp_data.get('obj', {}).get('component_name') == 'Generate':
+                comp_name = comp_data.get('obj', {}).get('component_name')
+                logging.info(f"[INJECT] Componente {comp_id}: {comp_name}")
+                
+                if comp_name == 'Generate':
                     params = comp_data.get('obj', {}).get('params', {})
+                    current_query = params.get('query', [])
+                    
+                    logging.info(f"[INJECT] {comp_id} - query attuale: {current_query}")
                     
                     # Se non ha query o query è vuoto, aggiungi la history
-                    if not params.get('query') or params['query'] == []:
+                    if not current_query or current_query == []:
                         # Crea query che punta all'Answer component (che contiene la history)
                         params['query'] = [{"component_id": "Answer:RudeBatsItch", "type": "reference"}]
-                        logging.info(f"[INJECT] Aggiunto query a {comp_id} per ricevere history")
+                        logging.info(f"[INJECT] ✅ Aggiunto query a {comp_id} per ricevere history")
                         
                         # Aggiungi anche history al prompt se non c'è
                         prompt = params.get('prompt', '')
                         if '{query}' not in prompt and '{history}' not in prompt:
                             params['prompt'] = f"CONTESTO DELLA CONVERSAZIONE:\n{{query}}\n\n{prompt}"
-                            logging.info(f"[INJECT] Aggiunto {{query}} al prompt di {comp_id}")
+                            logging.info(f"[INJECT] ✅ Aggiunto {{query}} al prompt di {comp_id}")
+                    else:
+                        logging.info(f"[INJECT] ⏭️ {comp_id} già ha query: {current_query}")
             
             return dsl
         except Exception as e:
-            logging.warning(f"[INJECT] Errore iniezione history: {e}")
+            logging.error(f"[INJECT] ❌ Errore iniezione history: {e}")
+            import traceback
+            logging.error(f"[INJECT] Traceback: {traceback.format_exc()}")
             return json.loads(str(canvas_obj))
     
     # Applica la modifica al canvas
+    logging.info(f"[INJECT] Inizio iniezione history per session {session_id}")
     canvas_dsl = inject_history_to_generate_components(canvas)
     canvas = Canvas(json.dumps(canvas_dsl), user_id)
+    logging.info(f"[INJECT] Completata iniezione history")
     
     try:
         if "message" in req:
