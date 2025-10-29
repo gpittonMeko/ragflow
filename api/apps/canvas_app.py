@@ -175,7 +175,7 @@ def run():
         # Sessione esistente: recupera dal DB
         e, conv = API4ConversationService.get_by_id(session_id)
         if not e:
-            # Session non trovata, creala
+            # Session non trovata, creala (con gestione duplicate)
             logging.warning(f"[SESSION] {session_id} non trovata, creo nuova")
             canvas = Canvas(cvs.dsl, user_id)
             conv_data = {
@@ -186,8 +186,22 @@ def run():
                 "source": "agent",
                 "dsl": json.loads(str(canvas))
             }
-            API4ConversationService.save(**conv_data)
-            conv = API4Conversation(**conv_data)
+            try:
+                API4ConversationService.save(**conv_data)
+                conv = API4Conversation(**conv_data)
+                logging.info(f"[SESSION] Nuova sessione creata: {session_id}")
+            except Exception as ex:
+                # Gestisci duplicate key: riprova a caricare
+                logging.warning(f"[SESSION] Errore creazione (duplicate?): {ex}, riprovo a caricare")
+                e, conv = API4ConversationService.get_by_id(session_id)
+                if e:
+                    canvas = Canvas(json.dumps(conv.dsl), user_id)
+                    logging.info(f"[SESSION] Caricata dopo errore: {session_id}")
+                else:
+                    # Fallback: usa canvas vuoto
+                    logging.error(f"[SESSION] FALLBACK: uso canvas vuoto per {session_id}")
+                    canvas = Canvas(cvs.dsl, user_id)
+                    conv = API4Conversation(**conv_data)
         else:
             logging.info(f"[SESSION] Caricata sessione esistente: {session_id}")
             # ✅ USA IL DSL DELLA CONVERSAZIONE, non del canvas globale!
