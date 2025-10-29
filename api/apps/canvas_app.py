@@ -219,6 +219,38 @@ def run():
     else:
         logging.info(f"[HISTORY] Nessun messaggio precedente")
     
+    # ✅ FORZA HISTORY IN TUTTI I GENERATE COMPONENTS
+    def inject_history_to_generate_components(canvas_obj):
+        """Inietta la history in tutti i componenti Generate che non hanno query"""
+        try:
+            dsl = json.loads(str(canvas_obj))
+            components = dsl.get('components', {})
+            
+            for comp_id, comp_data in components.items():
+                if comp_data.get('obj', {}).get('component_name') == 'Generate':
+                    params = comp_data.get('obj', {}).get('params', {})
+                    
+                    # Se non ha query o query è vuoto, aggiungi la history
+                    if not params.get('query') or params['query'] == []:
+                        # Crea query che punta all'Answer component (che contiene la history)
+                        params['query'] = [{"component_id": "Answer:RudeBatsItch", "type": "reference"}]
+                        logging.info(f"[INJECT] Aggiunto query a {comp_id} per ricevere history")
+                        
+                        # Aggiungi anche history al prompt se non c'è
+                        prompt = params.get('prompt', '')
+                        if '{query}' not in prompt and '{history}' not in prompt:
+                            params['prompt'] = f"CONTESTO DELLA CONVERSAZIONE:\n{{query}}\n\n{prompt}"
+                            logging.info(f"[INJECT] Aggiunto {{query}} al prompt di {comp_id}")
+            
+            return dsl
+        except Exception as e:
+            logging.warning(f"[INJECT] Errore iniezione history: {e}")
+            return json.loads(str(canvas_obj))
+    
+    # Applica la modifica al canvas
+    canvas_dsl = inject_history_to_generate_components(canvas)
+    canvas = Canvas(json.dumps(canvas_dsl), user_id)
+    
     try:
         if "message" in req:
             canvas.messages.append({"role": "user", "content": req["message"], "id": message_id})
