@@ -146,15 +146,15 @@ const DirectChat: React.FC<DirectChatProps> = ({
     }
   }, [derivedMessages, onChatUpdate]);
 
-  // Force reload messages when switching sessions
+  // Force reload when switching sessions
   useEffect(() => {
     if (forceReload) {
       console.log(
         '[DirectChat] Force reload triggered for sessionId:',
         sessionId,
       );
-      // The key prop will force a complete re-render of the component
-      // and useSendSharedMessage will automatically load the conversation
+      // Simple solution: reload page to load the correct session
+      window.location.reload();
     }
   }, [forceReload, sessionId]);
 
