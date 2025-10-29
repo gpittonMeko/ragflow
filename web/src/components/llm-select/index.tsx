@@ -40,7 +40,6 @@ const LLMSelect = ({ id, value, onChange, disabled }: IProps) => {
       <AntSelect
         options={modelOptions}
         style={{ width: '100%' }}
-        dropdownStyle={{ display: 'none' }}
         id={id}
         value={value}
         onChange={onChange}

@@ -249,6 +249,8 @@ def run():
                         if '{query}' not in prompt and '{history}' not in prompt:
                             params['prompt'] = f"CONTESTO DELLA CONVERSAZIONE:\n{{query}}\n\n{prompt}"
                             logging.info(f"[INJECT] ✅ Aggiunto {{query}} al prompt di {comp_id}")
+                        else:
+                            logging.info(f"[INJECT] ⏭️ {comp_id} già ha {{query}} o {{history}} nel prompt")
                     else:
                         logging.info(f"[INJECT] ⏭️ {comp_id} già ha query: {current_query}")
             

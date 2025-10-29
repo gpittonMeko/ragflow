@@ -275,9 +275,8 @@ const PresentationPage: React.FC = () => {
     setHasMessages(true);
     setChatExpanded(true);
     setShowLeftSidebar(false); // Chiudi sidebar
-    setForceReloadChat(true); // Forza reload dei messaggi
-    // Reset forceReload dopo un breve delay
-    setTimeout(() => setForceReloadChat(false), 100);
+    // Forza reload immediato
+    setForceReloadChat(true);
   };
 
   const updateCurrentChat = (title: string, lastMessage: string) => {
