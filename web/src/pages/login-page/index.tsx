@@ -21,6 +21,67 @@ import { SvgLogoInteractive } from './SvgLogoInteractive';
 import DirectChat from './direct-chat';
 import styles from './index.less';
 
+// --- CHAT HISTORY MANAGEMENT ---
+interface ChatSession {
+  id: string;
+  title: string;
+  lastMessage: string;
+  timestamp: number;
+  sessionId: string;
+}
+
+const CHAT_HISTORY_KEY = 'sgai-chat-history';
+const CURRENT_SESSION_KEY = 'sgai-current-session';
+
+// --- CHAT HISTORY FUNCTIONS ---
+const getChatHistory = (): ChatSession[] => {
+  try {
+    const stored = localStorage.getItem(CHAT_HISTORY_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveChatHistory = (history: ChatSession[]) => {
+  try {
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(history));
+  } catch (e) {
+    console.error('Error saving chat history:', e);
+  }
+};
+
+const addChatSession = (session: ChatSession) => {
+  const history = getChatHistory();
+  const existingIndex = history.findIndex((h) => h.id === session.id);
+
+  if (existingIndex >= 0) {
+    history[existingIndex] = session;
+  } else {
+    history.unshift(session);
+  }
+
+  // Keep only last 20 chats
+  const limitedHistory = history.slice(0, 20);
+  saveChatHistory(limitedHistory);
+};
+
+const getCurrentSessionId = (): string => {
+  try {
+    return sessionStorage.getItem(CURRENT_SESSION_KEY) || '';
+  } catch {
+    return '';
+  }
+};
+
+const setCurrentSessionId = (sessionId: string) => {
+  try {
+    sessionStorage.setItem(CURRENT_SESSION_KEY, sessionId);
+  } catch (e) {
+    console.error('Error setting current session:', e);
+  }
+};
+
 const CLIENT_ID =
   '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
 
@@ -164,7 +225,62 @@ const PresentationPage: React.FC = () => {
   const clientIdRef = useRef<string>(getOrCreateClientId());
 
   // ✅ Session ID unico per ogni browser (conversazioni separate nel DB!)
-  const sessionId = useRef<string>(getOrCreateSessionId()).current;
+  const [sessionId, setSessionId] = useState<string>(getOrCreateSessionId());
+
+  // Load current session from sessionStorage
+  useEffect(() => {
+    const currentSession = getCurrentSessionId();
+    if (currentSession) {
+      // Update sessionId if we have a stored one
+      setSessionId(currentSession);
+      sessionStorage.setItem('sgai-session-id', currentSession);
+    }
+    loadChatHistory();
+  }, []);
+
+  // --- CHAT HISTORY STATE ---
+  const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
+  const [showChatHistory, setShowChatHistory] = useState(false);
+  const [currentChatTitle, setCurrentChatTitle] = useState('Nuova Chat');
+
+  // --- CHAT HISTORY FUNCTIONS ---
+  const loadChatHistory = () => {
+    setChatHistory(getChatHistory());
+  };
+
+  const createNewChat = () => {
+    const newSessionId = uuidv4().slice(0, 32);
+    setCurrentSessionId(newSessionId);
+    setSessionId(newSessionId);
+    setCurrentChatTitle('Nuova Chat');
+    setHasMessages(false);
+    setChatExpanded(false);
+    // Reload page to reset chat
+    window.location.reload();
+  };
+
+  const switchToChat = (chat: ChatSession) => {
+    setCurrentSessionId(chat.sessionId);
+    setSessionId(chat.sessionId);
+    setCurrentChatTitle(chat.title);
+    setHasMessages(true);
+    setChatExpanded(true);
+    // Reload page to load the chat
+    window.location.reload();
+  };
+
+  const updateCurrentChat = (title: string, lastMessage: string) => {
+    const chatSession: ChatSession = {
+      id: sessionId,
+      title: title || 'Nuova Chat',
+      lastMessage,
+      timestamp: Date.now(),
+      sessionId: sessionId,
+    };
+    addChatSession(chatSession);
+    setCurrentChatTitle(chatSession.title);
+    loadChatHistory();
+  };
 
   // derivati UI
   // DOPO
@@ -685,6 +801,26 @@ const PresentationPage: React.FC = () => {
                 <MapPin size={20} />
                 <span>Roadmap & Sviluppi Futuri</span>
               </button>
+              <button
+                onClick={() => {
+                  setShowChatHistory(!showChatHistory);
+                  setMenuOpen(false);
+                }}
+                className={styles.menuItem}
+              >
+                <Menu size={20} />
+                <span>Storico Chat</span>
+              </button>
+              <button
+                onClick={() => {
+                  createNewChat();
+                  setMenuOpen(false);
+                }}
+                className={styles.menuItem}
+              >
+                <X size={20} />
+                <span>Nuova Chat</span>
+              </button>
             </div>
           )}
         </>
@@ -794,6 +930,26 @@ const PresentationPage: React.FC = () => {
               >
                 <MapPin size={20} />
                 <span>Roadmap & Sviluppi Futuri</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowChatHistory(!showChatHistory);
+                  setMenuOpen(false);
+                }}
+                className={styles.menuItem}
+              >
+                <Menu size={20} />
+                <span>Storico Chat</span>
+              </button>
+              <button
+                onClick={() => {
+                  createNewChat();
+                  setMenuOpen(false);
+                }}
+                className={styles.menuItem}
+              >
+                <X size={20} />
+                <span>Nuova Chat</span>
               </button>
             </div>
           )}
@@ -940,6 +1096,7 @@ const PresentationPage: React.FC = () => {
               agentId="a92b7464193811f09d527ebdee58e854"
               sessionId={sessionId}
               onMessagesChange={(count) => setHasMessages(count > 0)}
+              onChatUpdate={updateCurrentChat}
               onGenerationComplete={() => {
                 console.log(
                   '[INDEX] Generation completed, refreshing quota...',
@@ -1089,6 +1246,48 @@ const PresentationPage: React.FC = () => {
           (VE)
         </p>
       </div>
+
+      {/* Chat History Sidebar */}
+      {showChatHistory && (
+        <div className={styles.chatHistorySidebar}>
+          <div className={styles.chatHistoryHeader}>
+            <h3>Storico Chat</h3>
+            <button
+              onClick={() => setShowChatHistory(false)}
+              className={styles.closeButton}
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className={styles.chatHistoryList}>
+            {chatHistory.length === 0 ? (
+              <p className={styles.noChats}>Nessuna chat precedente</p>
+            ) : (
+              chatHistory.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`${styles.chatItem} ${
+                    chat.sessionId === sessionId ? styles.activeChat : ''
+                  }`}
+                  onClick={() => switchToChat(chat)}
+                >
+                  <div className={styles.chatTitle}>{chat.title}</div>
+                  <div className={styles.chatPreview}>{chat.lastMessage}</div>
+                  <div className={styles.chatTime}>
+                    {new Date(chat.timestamp).toLocaleString()}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className={styles.chatHistoryFooter}>
+            <button onClick={createNewChat} className={styles.newChatButton}>
+              <X size={16} />
+              Nuova Chat
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

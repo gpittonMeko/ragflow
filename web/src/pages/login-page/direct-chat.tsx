@@ -23,6 +23,7 @@ interface DirectChatProps {
   style?: React.CSSProperties;
   onMessagesChange?: (count: number) => void;
   onGenerationComplete?: () => void;
+  onChatUpdate?: (title: string, lastMessage: string) => void; // ✅ Callback per aggiornare chat history
 }
 
 const DirectChat: React.FC<DirectChatProps> = ({
@@ -32,6 +33,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
   style,
   onMessagesChange,
   onGenerationComplete,
+  onChatUpdate,
 }) => {
   const { theme } = useTheme();
   const location = useLocation();
@@ -121,6 +123,26 @@ const DirectChat: React.FC<DirectChatProps> = ({
       onMessagesChange(derivedMessages.length);
     }
   }, [derivedMessages, onMessagesChange]);
+
+  // Update chat history when messages change
+  useEffect(() => {
+    if (onChatUpdate && derivedMessages && derivedMessages.length > 0) {
+      const lastMessage = derivedMessages[derivedMessages.length - 1];
+      if (lastMessage && lastMessage.content) {
+        // Generate title from first user message
+        const firstUserMessage = derivedMessages.find(
+          (msg) => msg.role === 'user',
+        );
+        const title =
+          firstUserMessage?.content?.slice(0, 50) + '...' || 'Nuova Chat';
+
+        // Get last message content
+        const lastMessageContent = lastMessage.content.slice(0, 100) + '...';
+
+        onChatUpdate(title, lastMessageContent);
+      }
+    }
+  }, [derivedMessages, onChatUpdate]);
 
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
 
