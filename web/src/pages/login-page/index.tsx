@@ -248,6 +248,7 @@ const PresentationPage: React.FC = () => {
   // --- CHAT HISTORY STATE ---
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
   const [showChatHistory, setShowChatHistory] = useState(false);
+  const [showLeftSidebar, setShowLeftSidebar] = useState(false);
   const [currentChatTitle, setCurrentChatTitle] = useState('Nuova Chat');
 
   // --- CHAT HISTORY FUNCTIONS ---
@@ -860,23 +861,13 @@ const PresentationPage: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  setShowChatHistory(!showChatHistory);
+                  setShowLeftSidebar(!showLeftSidebar);
                   setMenuOpen(false);
                 }}
                 className={styles.menuItem}
               >
                 <Menu size={20} />
-                <span>Storico Chat</span>
-              </button>
-              <button
-                onClick={() => {
-                  createNewChat();
-                  setMenuOpen(false);
-                }}
-                className={styles.menuItem}
-              >
-                <X size={20} />
-                <span>Nuova Chat</span>
+                <span>Gestione Chat</span>
               </button>
               <button
                 onClick={() => {
@@ -1000,23 +991,13 @@ const PresentationPage: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  setShowChatHistory(!showChatHistory);
+                  setShowLeftSidebar(!showLeftSidebar);
                   setMenuOpen(false);
                 }}
                 className={styles.menuItem}
               >
                 <Menu size={20} />
-                <span>Storico Chat</span>
-              </button>
-              <button
-                onClick={() => {
-                  createNewChat();
-                  setMenuOpen(false);
-                }}
-                className={styles.menuItem}
-              >
-                <X size={20} />
-                <span>Nuova Chat</span>
+                <span>Gestione Chat</span>
               </button>
               <button
                 onClick={() => {
@@ -1325,44 +1306,51 @@ const PresentationPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Chat History Sidebar */}
-      {showChatHistory && (
-        <div className={styles.chatHistorySidebar}>
-          <div className={styles.chatHistoryHeader}>
-            <h3>Storico Chat</h3>
+      {/* Left Sidebar - Chat Management */}
+      {showLeftSidebar && (
+        <div
+          className={`${styles.leftSidebar} ${showLeftSidebar ? styles.show : ''}`}
+        >
+          <div className={styles.leftSidebarHeader}>
+            <h3>Gestione Chat</h3>
             <button
-              onClick={() => setShowChatHistory(false)}
+              onClick={() => setShowLeftSidebar(false)}
               className={styles.closeButton}
             >
               <X size={20} />
             </button>
           </div>
-          <div className={styles.chatHistoryList}>
-            {chatHistory.length === 0 ? (
-              <p className={styles.noChats}>Nessuna chat precedente</p>
-            ) : (
-              chatHistory.map((chat) => (
-                <div
-                  key={chat.id}
-                  className={`${styles.chatItem} ${
-                    chat.sessionId === sessionId ? styles.activeChat : ''
-                  }`}
-                  onClick={() => switchToChat(chat)}
-                >
-                  <div className={styles.chatTitle}>{chat.title}</div>
-                  <div className={styles.chatPreview}>{chat.lastMessage}</div>
-                  <div className={styles.chatTime}>
-                    {new Date(chat.timestamp).toLocaleString()}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          <div className={styles.chatHistoryFooter}>
+          <div className={styles.leftSidebarContent}>
             <button onClick={createNewChat} className={styles.newChatButton}>
               <X size={16} />
               Nuova Chat
             </button>
+            <div className={styles.chatHistorySection}>
+              <h4>Storico Chat</h4>
+              <div className={styles.chatHistoryList}>
+                {chatHistory.length === 0 ? (
+                  <div className={styles.noChats}>Nessuna chat precedente</div>
+                ) : (
+                  chatHistory.map((chat) => (
+                    <div
+                      key={chat.id}
+                      className={`${styles.chatItem} ${
+                        chat.sessionId === sessionId ? styles.activeChat : ''
+                      }`}
+                      onClick={() => switchToChat(chat)}
+                    >
+                      <div className={styles.chatTitle}>{chat.title}</div>
+                      <div className={styles.chatPreview}>
+                        {chat.lastMessage}
+                      </div>
+                      <div className={styles.chatTime}>
+                        {new Date(chat.timestamp).toLocaleString()}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
