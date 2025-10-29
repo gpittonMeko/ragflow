@@ -14,6 +14,7 @@
 #  limitations under the License.
 #
 from datetime import datetime
+import logging
 
 import peewee
 
@@ -66,6 +67,7 @@ class API4ConversationService(CommonService):
     def append_message(cls, id, conversation):
         cls.update_by_id(id, conversation)
         return cls.model.update(round=cls.model.round + 1).where(cls.model.id == id).execute()
+
 
     @classmethod
     @DB.connection_context()

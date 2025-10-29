@@ -250,6 +250,7 @@ const PresentationPage: React.FC = () => {
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [showLeftSidebar, setShowLeftSidebar] = useState(false);
   const [currentChatTitle, setCurrentChatTitle] = useState('Nuova Chat');
+  const [forceReloadChat, setForceReloadChat] = useState(false);
 
   // --- CHAT HISTORY FUNCTIONS ---
   const loadChatHistory = () => {
@@ -273,8 +274,10 @@ const PresentationPage: React.FC = () => {
     setCurrentChatTitle(chat.title);
     setHasMessages(true);
     setChatExpanded(true);
-    setShowChatHistory(false); // Chiudi sidebar
-    // NON ricaricare la pagina - mantieni l'UI
+    setShowLeftSidebar(false); // Chiudi sidebar
+    setForceReloadChat(true); // Forza reload dei messaggi
+    // Reset forceReload dopo un breve delay
+    setTimeout(() => setForceReloadChat(false), 100);
   };
 
   const updateCurrentChat = (title: string, lastMessage: string) => {
@@ -1151,9 +1154,9 @@ const PresentationPage: React.FC = () => {
             }}
           >
             <DirectChat
-              key={sessionId} // Force re-render when sessionId changes
               agentId="a92b7464193811f09d527ebdee58e854"
               sessionId={sessionId}
+              forceReload={forceReloadChat}
               onMessagesChange={(count) => setHasMessages(count > 0)}
               onChatUpdate={updateCurrentChat}
               onGenerationComplete={() => {

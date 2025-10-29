@@ -24,6 +24,7 @@ interface DirectChatProps {
   onMessagesChange?: (count: number) => void;
   onGenerationComplete?: () => void;
   onChatUpdate?: (title: string, lastMessage: string) => void; // ✅ Callback per aggiornare chat history
+  forceReload?: boolean; // ✅ Force reload messages when switching sessions
 }
 
 const DirectChat: React.FC<DirectChatProps> = ({
@@ -34,6 +35,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
   onMessagesChange,
   onGenerationComplete,
   onChatUpdate,
+  forceReload = false,
 }) => {
   const { theme } = useTheme();
   const location = useLocation();
@@ -143,6 +145,18 @@ const DirectChat: React.FC<DirectChatProps> = ({
       }
     }
   }, [derivedMessages, onChatUpdate]);
+
+  // Force reload messages when switching sessions
+  useEffect(() => {
+    if (forceReload) {
+      console.log(
+        '[DirectChat] Force reload triggered for sessionId:',
+        sessionId,
+      );
+      // The key prop will force a complete re-render of the component
+      // and useSendSharedMessage will automatically load the conversation
+    }
+  }, [forceReload, sessionId]);
 
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
 
