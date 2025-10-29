@@ -231,23 +231,31 @@ def run():
     except Exception as e:
         return server_error_response(e)
 
+    # ✅ FUNZIONE DI SERIALIZZAZIONE (usata sia stream che non-stream)
+    def safe_serialize_canvas(canvas_obj):
+        """Serializza il canvas evitando AttributeError su componenti malformati"""
+        try:
+            dsl = json.loads(str(canvas_obj))
+            # ✅ FORZA il salvataggio della history/messages/reference modificati!
+            dsl['history'] = getattr(canvas_obj, 'history', [])
+            dsl['messages'] = getattr(canvas_obj, 'messages', [])
+            dsl['reference'] = getattr(canvas_obj, 'reference', [])
+            dsl['path'] = getattr(canvas_obj, 'path', [])
+            logging.info(f"[SERIALIZE] Salvato DSL con {len(dsl.get('history', []))} msgs in history, {len(dsl.get('messages', []))} in messages")
+            return dsl
+        except AttributeError as e:
+            logging.warning(f"Canvas serialization error (ignored): {e}")
+            return {
+                "components": {},
+                "history": getattr(canvas_obj, 'history', []),
+                "messages": getattr(canvas_obj, 'messages', []),
+                "reference": getattr(canvas_obj, 'reference', []),
+                "path": getattr(canvas_obj, 'path', [])
+            }
+
     if stream:
         def sse():
             nonlocal final_ans, cvs
-            
-            def safe_serialize_canvas(canvas_obj):
-                """Serializza il canvas evitando AttributeError su componenti malformati"""
-                try:
-                    return json.loads(str(canvas_obj))
-                except AttributeError as e:
-                    logging.warning(f"Canvas serialization error (ignored): {e}")
-                    return {
-                        "components": {},
-                        "history": getattr(canvas_obj, 'history', []),
-                        "messages": getattr(canvas_obj, 'messages', []),
-                        "reference": getattr(canvas_obj, 'reference', []),
-                        "path": getattr(canvas_obj, 'path', [])
-                    }
             
             try:
                 logging.info("[SSE] Starting stream...")
