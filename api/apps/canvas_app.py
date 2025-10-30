@@ -246,11 +246,12 @@ def run():
                         
                         # Aggiungi anche history al prompt se non c'è
                         prompt = params.get('prompt', '')
-                        if '{query}' not in prompt and '{history}' not in prompt:
-                            params['prompt'] = f"CONTESTO DELLA CONVERSAZIONE:\n{{query}}\n\n{prompt}"
-                            logging.info(f"[INJECT] ✅ Aggiunto {{query}} al prompt di {comp_id}")
+                        if '{Answer:RudeBatsItch}' not in prompt and '{query}' not in prompt and '{history}' not in prompt:
+                            # Usa il nome esatto del componente Answer
+                            params['prompt'] = f"CONTESTO DELLA CONVERSAZIONE PRECEDENTE:\n{{Answer:RudeBatsItch}}\n\nDOMANDA ATTUALE DELL'UTENTE:\n{{user}}\n\n{prompt}"
+                            logging.info(f"[INJECT] ✅ Aggiunto {{Answer:RudeBatsItch}} al prompt di {comp_id}")
                         else:
-                            logging.info(f"[INJECT] ⏭️ {comp_id} già ha {{query}} o {{history}} nel prompt")
+                            logging.info(f"[INJECT] ⏭️ {comp_id} già ha {{Answer:...}} o {{query}} o {{history}} nel prompt")
                     else:
                         logging.info(f"[INJECT] ⏭️ {comp_id} già ha query: {current_query}")
             

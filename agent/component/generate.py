@@ -288,12 +288,14 @@ class Generate(ComponentBase):
             component_id = para["key"]
             cpn = self._canvas.get_component(component_id)["obj"]
             if cpn.component_name.lower() == "answer":
-                hist = self._canvas.get_history(1)
+                # ✅ USA message_history_window_size invece di 1 per avere tutta la conversazione
+                hist = self._canvas.get_history(self._param.message_history_window_size)
                 if hist:
-                    hist = hist[0]["content"]
+                    # Formatta come "ROLE: content"
+                    hist_text = "\n".join([f"{msg['role'].upper()}: {msg['content']}" for msg in hist])
+                    kwargs[para["key"]] = hist_text
                 else:
-                    hist = ""
-                kwargs[para["key"]] = hist
+                    kwargs[para["key"]] = ""
                 continue
             _, out = cpn.output(allow_partial=False)
             if "content" not in out.columns:
