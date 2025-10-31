@@ -315,8 +315,21 @@ class Generate(ComponentBase):
                     [o if isinstance(o, str) else str(o) for o in out["content"]])
             self._param.inputs.append({"component_id": para["key"], "content": kwargs[para["key"]]})
 
+        # DEBUG: Log cosa ha ricevuto il Generate
+        logging.info(f"[GENERATE-DEBUG] {self._id} - kwargs keys: {list(kwargs.keys())}")
+        for k, v in kwargs.items():
+            if isinstance(v, str):
+                logging.info(f"[GENERATE-DEBUG] {self._id} - {k}: {v[:200]}...")
+            else:
+                logging.info(f"[GENERATE-DEBUG] {self._id} - {k}: {type(v)}")
+        
+        logging.info(f"[GENERATE-DEBUG] {self._id} - retrieval_res count: {len(retrieval_res)}")
+        logging.info(f"[GENERATE-DEBUG] {self._id} - all_chunks count: {len(all_chunks)}")
+        
         # 2. ORDINA I TAG SECONDO L'ORDINE DEI TAG NEL PROMPT
         prompt_tags = re.findall(r"\{Retrieval:([a-zA-Z0-9_]+)\}", prompt)
+        logging.info(f"[GENERATE-DEBUG] {self._id} - prompt_tags found: {prompt_tags}")
+        
         ordered_chunks = []
         for tag in prompt_tags:
             key = f"Retrieval:{tag}"
