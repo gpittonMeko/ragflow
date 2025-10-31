@@ -190,6 +190,21 @@ def run():
                 API4ConversationService.save(**conv_data)
                 conv = API4Conversation(**conv_data)
                 logging.info(f"[SESSION] Nuova sessione creata: {session_id}")
+                
+                # ✅ ESEGUI canvas.run() UNA VOLTA per inizializzare il path e il begin
+                logging.info(f"[SESSION] Inizializzo canvas per nuova sessione...")
+                for ans in canvas.run(stream=False):
+                    pass  # Ignora l'output, ci serve solo per popolare canvas.path
+                logging.info(f"[SESSION] Canvas inizializzato, path: {canvas.path}")
+                
+                # Salva il prologue come primo messaggio se esiste
+                prologue = canvas.get_prologue()
+                if prologue:
+                    conv.message = [{"role": "assistant", "content": prologue, "id": "begin-welcome"}]
+                    canvas.messages = [{"role": "assistant", "content": prologue, "id": "begin-welcome"}]
+                    canvas.history = [("assistant", prologue)]
+                    logging.info(f"[SESSION] Aggiunto messaggio di benvenuto dal prologue")
+                
             except Exception as ex:
                 # Gestisci duplicate key: riprova a caricare
                 logging.warning(f"[SESSION] Errore creazione (duplicate?): {ex}, riprovo a caricare")
