@@ -318,6 +318,10 @@ class Generate(ComponentBase):
 
         # DEBUG: Log cosa ha ricevuto il Generate
         logging.info(f"[GENERATE-DEBUG] {self._id} - kwargs keys: {list(kwargs.keys())}")
+        logging.info(f"[GENERATE-DEBUG] {self._id} - history length: {len(history)}")
+        if history:
+            logging.info(f"[GENERATE-DEBUG] {self._id} - last 3 history items: {history[-3:]}")
+        
         for k, v in kwargs.items():
             if isinstance(v, str):
                 logging.info(f"[GENERATE-DEBUG] {self._id} - {k}: {v[:200]}...")
