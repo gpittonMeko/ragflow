@@ -2109,3 +2109,54 @@ span {
     padding: 0 20px;
   }
 }
+
+/* ======= SERVICE HOURS BANNER ======= */
+.serviceHoursBanner {
+  background: linear-gradient(
+    135deg,
+    rgba(18, 219, 255, 0.12),
+    rgba(34, 255, 184, 0.12)
+  );
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(120, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px 20px;
+  margin: 16px auto;
+  max-width: 600px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 160, 255, 0.15);
+
+  .bannerIcon {
+    font-size: 20px;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  .bannerText {
+    color: #e6ffff;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+
+    strong {
+      color: #12dbff;
+      font-weight: 600;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .serviceHoursBanner {
+    padding: 10px 16px;
+    margin: 12px 16px;
+
+    .bannerIcon {
+      font-size: 18px;
+    }
+
+    .bannerText {
+      font-size: 13px;
+    }
+  }
+}

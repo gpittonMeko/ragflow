@@ -1277,17 +1277,25 @@ const PresentationPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Service Hours Banner */}
+        <div className={styles.serviceHoursBanner}>
+          <span className={styles.bannerIcon}>🕐</span>
+          <span className={styles.bannerText}>
+            Servizio attivo dalle <strong>8:00 alle 22:00</strong>
+          </span>
+        </div>
+
         <div className={styles.disclaimerSection}>
           <p>
             <strong>Disclaimer:</strong>
           </p>
           <p>
-            SGAI è un sistema in fase di sviluppo, basato sull’intelligenza
+            SGAI è un sistema in fase di sviluppo, basato sull'intelligenza
             artificiale. Lo sappiamo: non è ancora completo, e talvolta può
             fornire risposte inesatte, parziali o incoerenti. Ma è proprio
-            grazie all’uso quotidiano e al supporto degli utenti che il progetto
+            grazie all'uso quotidiano e al supporto degli utenti che il progetto
             può evolversi e migliorare. Il sistema viene aggiornato
-            costantemente, con l’integrazione progressiva di nuove fonti,
+            costantemente, con l'integrazione progressiva di nuove fonti,
             funzionalità e affinamenti della logica. Se oggi non trovi quello
             che cerchi, è possibile che domani ci sia. Pur puntando alla massima
             accuratezza, invitiamo a verificare sempre i contenuti con fonti
