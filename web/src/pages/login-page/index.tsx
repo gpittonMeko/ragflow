@@ -1144,6 +1144,11 @@ const PresentationPage: React.FC = () => {
             }}
             onClick={() => {
               if (!chatExpanded) {
+                // Crea SEMPRE un nuovo sessionId quando espandi la chat
+                const newSessionId = uuidv4().slice(0, 32);
+                sessionStorage.setItem(CURRENT_SESSION_KEY, newSessionId);
+                setSessionId(newSessionId);
+                setCurrentChatTitle('Nuova Chat');
                 setChatExpanded(true);
               }
             }}
