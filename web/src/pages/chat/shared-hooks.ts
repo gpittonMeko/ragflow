@@ -234,25 +234,7 @@ export const useSendSharedMessage = (
           console.warn('[CHAT] ⚠️ Non riesco a leggere gli headers:', e);
         }
 
-        // Prova a leggere il body
-        try {
-          const clone = res.response.clone();
-          const text = await clone.text();
-          console.log(
-            '[CHAT] 📄 Response body (primi 500 char):',
-            text.substring(0, 500),
-          );
-
-          // Prova a parsare come JSON
-          try {
-            const json = JSON.parse(text);
-            console.log('[CHAT] 📦 Response body (parsed JSON):', json);
-          } catch {
-            console.log('[CHAT] 📝 Response body non è JSON valido');
-          }
-        } catch (e) {
-          console.warn('[CHAT] ⚠️ Non riesco a leggere il body:', e);
-        }
+        // Body logging removed - was causing "Response body is already used" error
       } else {
         console.warn('[CHAT] ⚠️ res.response è undefined/null');
       }
