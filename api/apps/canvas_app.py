@@ -225,8 +225,10 @@ def run():
     
     try:
         if "message" in req:
+            logging.info(f"[CANVAS] Aggiunto messaggio utente: {req['message'][:100]}...")
             canvas.messages.append({"role": "user", "content": req["message"], "id": message_id})
             canvas.add_user_input(req["message"])
+            logging.info(f"[CANVAS] add_user_input chiamato, canvas.path: {canvas.path}")
             # Salva anche in conv.message
             if not conv.message:
                 conv.message = []
@@ -263,7 +265,10 @@ def run():
             
             try:
                 logging.info("[SSE] Starting stream...")
+                answer_count = 0
                 for ans in canvas.run(stream=True):
+                    answer_count += 1
+                    logging.info(f"[SSE] Received answer #{answer_count}: {list(ans.keys())}")
                     if ans.get("running_status"):
                         yield "data:" + json.dumps({
                             "code": 0,
