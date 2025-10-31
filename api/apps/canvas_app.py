@@ -223,6 +223,8 @@ def run():
     # Il canvas usa già il DSL corretto dalla conversazione
     logging.info(f"[SESSION] Canvas caricato, messages: {len(canvas.messages)}, history: {len(canvas.history)}")
     
+    logging.info(f"[DEBUG-REQ] req keys: {list(req.keys())}, 'message' in req: {'message' in req}")
+    
     try:
         if "message" in req:
             logging.info(f"[CANVAS] Aggiunto messaggio utente: {req['message'][:100]}...")
