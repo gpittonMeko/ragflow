@@ -181,7 +181,11 @@ class Canvas:
                     yield an
             else:
                 yield ans
-            return
+            # ✅ NON fare return se il path ha solo ['begin'] - continua il flow!
+            if len(self.path) == 1 and self.path[0] == ['begin']:
+                logging.info("[CANVAS] Prima esecuzione - continuo il flow dopo Answer")
+            else:
+                return
 
         if not self.path:
             self.components["begin"]["obj"].run(self.history, **kwargs)
