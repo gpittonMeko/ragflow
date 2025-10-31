@@ -175,10 +175,10 @@ function getOrCreateClientId(): string {
 
 // ✅ Genera session_id unico per ogni TAB (conversazioni separate)
 function getOrCreateSessionId(): string {
-  let id = sessionStorage.getItem('sgai-session-id');
+  let id = sessionStorage.getItem(CURRENT_SESSION_KEY);
   if (!id) {
-    id = uuidv4();
-    sessionStorage.setItem('sgai-session-id', id);
+    id = uuidv4().slice(0, 32); // Truncate to 32 chars for DB compatibility
+    sessionStorage.setItem(CURRENT_SESSION_KEY, id);
     console.log('[SESSION] Creato nuovo session_id:', id);
   } else {
     console.log('[SESSION] Riutilizzo session_id:', id);
@@ -259,13 +259,9 @@ const PresentationPage: React.FC = () => {
 
   const createNewChat = () => {
     const newSessionId = uuidv4().slice(0, 32);
-    setCurrentSessionId(newSessionId);
-    setSessionId(newSessionId);
-    setCurrentChatTitle('Nuova Chat');
-    setHasMessages(false);
-    setChatExpanded(true); // Apri la chat
-    setShowChatHistory(false); // Chiudi sidebar
-    // NON ricaricare la pagina - mantieni l'UI
+    sessionStorage.setItem(CURRENT_SESSION_KEY, newSessionId);
+    // Ricarica la pagina per pulire completamente la chat
+    window.location.reload();
   };
 
   const switchToChat = (chat: ChatSession) => {
