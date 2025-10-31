@@ -69,6 +69,13 @@ class Answer(ComponentBase, ABC):
                 res = st
                 yield st
         else:
+            # ✅ FIX: Se siamo alla prima esecuzione (path vuoto), NON ritornare nulla
+            # Il Canvas continuerà il flow e Answer verrà chiamato di nuovo dopo i Generate
+            if len(self._canvas.path) == 1 and self._canvas.path[0] == ['begin']:
+                res = {"content": ""}
+                # NON fare yield - lascia che il Canvas continui
+                self.set_output(res)
+                return
             # Handle case where stream is None or not callable
             res = {"content": "No input stream available"}
             yield res
