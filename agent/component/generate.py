@@ -15,6 +15,7 @@
 #
 import json
 import re
+import logging
 from functools import partial
 import pandas as pd
 from api.db import LLMType
