@@ -175,10 +175,10 @@ function getOrCreateClientId(): string {
 
 // ✅ Genera session_id unico per ogni TAB (conversazioni separate)
 function getOrCreateSessionId(): string {
-  let id = sessionStorage.getItem(CURRENT_SESSION_KEY);
+  let id = sessionStorage.getItem('sgai-session-id');
   if (!id) {
-    id = uuidv4().slice(0, 32); // Truncate to 32 chars for DB compatibility
-    sessionStorage.setItem(CURRENT_SESSION_KEY, id);
+    id = uuidv4();
+    sessionStorage.setItem('sgai-session-id', id);
     console.log('[SESSION] Creato nuovo session_id:', id);
   } else {
     console.log('[SESSION] Riutilizzo session_id:', id);
