@@ -219,68 +219,9 @@ def run():
     else:
         logging.info(f"[HISTORY] Nessun messaggio precedente")
     
-    # ✅ FORZA HISTORY IN TUTTI I GENERATE COMPONENTS
-    def inject_history_to_generate_components(canvas_obj):
-        """Inietta la history in tutti i componenti Generate che non hanno query"""
-        try:
-            dsl = json.loads(str(canvas_obj))
-            components = dsl.get('components', {})
-            
-            logging.info(f"[INJECT] Trovati {len(components)} componenti totali")
-            
-            for comp_id, comp_data in components.items():
-                comp_name = comp_data.get('obj', {}).get('component_name')
-                logging.info(f"[INJECT] Componente {comp_id}: {comp_name}")
-                
-                if comp_name == 'Generate':
-                    params = comp_data.get('obj', {}).get('params', {})
-                    current_query = params.get('query', [])
-                    
-                    logging.info(f"[INJECT] {comp_id} - query attuale: {current_query}")
-                    
-                    # Se non ha query o query è vuoto, aggiungi la history
-                    if not current_query or current_query == []:
-                        # Crea query che punta all'Answer component (che contiene la history)
-                        params['query'] = [{"component_id": "Answer:RudeBatsItch", "type": "reference"}]
-                        logging.info(f"[INJECT] ✅ Aggiunto query a {comp_id} per ricevere history")
-                        
-                        # Aggiungi anche history al prompt se non c'è
-                        prompt = params.get('prompt', '')
-                        if '{Answer:RudeBatsItch}' not in prompt and '{query}' not in prompt and '{history}' not in prompt:
-                            # Usa il nome esatto del componente Answer
-                            params['prompt'] = f"CONTESTO DELLA CONVERSAZIONE PRECEDENTE:\n{{Answer:RudeBatsItch}}\n\nDOMANDA ATTUALE DELL'UTENTE:\n{{user}}\n\n{prompt}"
-                            logging.info(f"[INJECT] ✅ Aggiunto {{Answer:RudeBatsItch}} al prompt di {comp_id}")
-                        else:
-                            logging.info(f"[INJECT] ⏭️ {comp_id} già ha {{Answer:...}} o {{query}} o {{history}} nel prompt")
-                    else:
-                        logging.info(f"[INJECT] ⏭️ {comp_id} già ha query: {current_query}")
-            
-            return dsl
-        except Exception as e:
-            logging.error(f"[INJECT] ❌ Errore iniezione history: {e}")
-            import traceback
-            logging.error(f"[INJECT] Traceback: {traceback.format_exc()}")
-            return json.loads(str(canvas_obj))
-    
-    # Applica la modifica al canvas
-    logging.info(f"[INJECT] Inizio iniezione history per session {session_id}")
-    canvas_dsl = inject_history_to_generate_components(canvas)
-    canvas = Canvas(json.dumps(canvas_dsl), user_id)
-    
-    # ✅ RICOSTRUISCI LA HISTORY NEL NUOVO CANVAS
-    if canvas.messages:
-        canvas.history = []
-        for msg in canvas.messages:
-            role = msg.get("role", "user")
-            content = msg.get("content", "")
-            if role and content:
-                canvas.history.append((role, content))
-        logging.info(f"[HISTORY] Ricostruita history nel nuovo canvas: {len(canvas.history)} messaggi")
-        # Debug: stampa i primi 3 messaggi della history
-        for i, (role, content) in enumerate(canvas.history[:3]):
-            logging.info(f"[HISTORY] Messaggio {i}: {role} -> {content[:100]}...")
-    
-    logging.info(f"[INJECT] Completata iniezione history")
+    # ❌ INJECTION DISABILITATA - causava problemi al Generate
+    # Il canvas usa già il DSL corretto dalla conversazione
+    logging.info(f"[SESSION] Canvas caricato, messages: {len(canvas.messages)}, history: {len(canvas.history)}")
     
     try:
         if "message" in req:
