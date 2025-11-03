@@ -70,6 +70,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
     derivedMessages,
     hasError,
     stopOutputMessage,
+    setDerivedMessages,
   } = useSendSharedMessage(agentId, sessionId);
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
@@ -144,10 +145,60 @@ const DirectChat: React.FC<DirectChatProps> = ({
     }
   }, [derivedMessages, onChatUpdate]);
 
-  // Log sessionId changes for debugging
+  // Load historical messages when sessionId changes
+  const prevSessionIdRef = useRef<string | undefined>(sessionId);
   useEffect(() => {
-    console.log('[DirectChat] SessionId changed to:', sessionId);
-  }, [sessionId]);
+    if (
+      prevSessionIdRef.current &&
+      prevSessionIdRef.current !== sessionId &&
+      sessionId
+    ) {
+      console.log(
+        '[DirectChat] SessionId changed from',
+        prevSessionIdRef.current,
+        'to',
+        sessionId,
+        '- loading messages',
+      );
+
+      // Load messages from backend
+      const loadHistoricalMessages = async () => {
+        try {
+          const response = await fetch(
+            `/v1/canvas/session/${agentId}/${sessionId}`,
+          );
+          if (response.ok) {
+            const result = await response.json();
+            if (result.code === 0 && result.data?.messages) {
+              console.log(
+                '[DirectChat] Loaded',
+                result.data.messages.length,
+                'historical messages',
+              );
+              setDerivedMessages(result.data.messages);
+            } else {
+              console.log(
+                '[DirectChat] No historical messages found, resetting',
+              );
+              setDerivedMessages([]);
+            }
+          } else {
+            console.error(
+              '[DirectChat] Failed to load messages:',
+              response.status,
+            );
+            setDerivedMessages([]);
+          }
+        } catch (error) {
+          console.error('[DirectChat] Error loading messages:', error);
+          setDerivedMessages([]);
+        }
+      };
+
+      void loadHistoricalMessages();
+    }
+    prevSessionIdRef.current = sessionId;
+  }, [sessionId, agentId, setDerivedMessages]);
 
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
 

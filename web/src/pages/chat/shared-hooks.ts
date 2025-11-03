@@ -344,5 +344,6 @@ export const useSendSharedMessage = (
     derivedMessages,
     hasError,
     stopOutputMessage,
+    setDerivedMessages,
   };
 };

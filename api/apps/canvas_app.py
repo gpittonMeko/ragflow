@@ -112,6 +112,26 @@ def getsse(canvas_id):
     return get_json_result(data=c if isinstance(c, dict) else c.to_dict())
 
 
+@manager.route('/session/<canvas_id>/<session_id>', methods=['GET'])
+def get_session_messages(canvas_id, session_id):
+    """Load messages for a specific session"""
+    from api.db.services.api_service import API4ConversationService
+    
+    # Verify canvas exists
+    e, c = UserCanvasService.get_by_id(canvas_id)
+    if not e:
+        return get_data_error_result(message="canvas not found.")
+    
+    # Load conversation by session_id
+    e, conv = API4ConversationService.get_by_id(session_id)
+    if not e:
+        logging.info(f"[SESSION API] Session {session_id} not found, returning empty")
+        return get_json_result(data={"messages": []})
+    
+    # Return messages from DSL
+    messages = conv.dsl.get("messages", []) if conv.dsl else []
+    logging.info(f"[SESSION API] Loaded {len(messages)} messages for session {session_id}")
+    return get_json_result(data={"messages": messages})
 
 
 
