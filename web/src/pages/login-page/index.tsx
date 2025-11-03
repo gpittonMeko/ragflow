@@ -250,7 +250,6 @@ const PresentationPage: React.FC = () => {
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [showLeftSidebar, setShowLeftSidebar] = useState(false);
   const [currentChatTitle, setCurrentChatTitle] = useState('Nuova Chat');
-  const [forceReloadChat, setForceReloadChat] = useState(false);
 
   // --- CHAT HISTORY FUNCTIONS ---
   const loadChatHistory = () => {
@@ -265,14 +264,14 @@ const PresentationPage: React.FC = () => {
   };
 
   const switchToChat = (chat: ChatSession) => {
+    console.log('[INDEX] Switching to chat:', chat);
     setCurrentSessionId(chat.sessionId);
     setSessionId(chat.sessionId);
+    sessionStorage.setItem(CURRENT_SESSION_KEY, chat.sessionId);
     setCurrentChatTitle(chat.title);
     setHasMessages(true);
     setChatExpanded(true);
     setShowLeftSidebar(false); // Chiudi sidebar
-    // Forza reload immediato
-    setForceReloadChat(true);
   };
 
   const updateCurrentChat = (title: string, lastMessage: string) => {
@@ -1143,12 +1142,15 @@ const PresentationPage: React.FC = () => {
               margin: 0,
             }}
             onClick={() => {
-              if (!chatExpanded) {
-                // Crea SEMPRE un nuovo sessionId quando espandi la chat
+              if (!chatExpanded && !hasMessages) {
+                // Crea un nuovo sessionId SOLO se la chat è vuota
                 const newSessionId = uuidv4().slice(0, 32);
                 sessionStorage.setItem(CURRENT_SESSION_KEY, newSessionId);
                 setSessionId(newSessionId);
                 setCurrentChatTitle('Nuova Chat');
+                setChatExpanded(true);
+              } else if (!chatExpanded && hasMessages) {
+                // Se ci sono già messaggi, espandi senza cambiare sessionId
                 setChatExpanded(true);
               }
             }}
@@ -1156,7 +1158,6 @@ const PresentationPage: React.FC = () => {
             <DirectChat
               agentId="a92b7464193811f09d527ebdee58e854"
               sessionId={sessionId}
-              forceReload={forceReloadChat}
               onMessagesChange={(count) => setHasMessages(count > 0)}
               onChatUpdate={updateCurrentChat}
               onGenerationComplete={() => {
@@ -1304,18 +1305,18 @@ const PresentationPage: React.FC = () => {
             decisione rilevante.
           </p>
         </div>
+
+        {/* Sede Legale - Separato e ben visibile sotto il disclaimer */}
+        <div className={styles.legalFooter}>
+          <p>
+            SGAI S.r.l. - Sede Legale: Via Ettore Majorana 32, Noventa di Piave
+            (VE)
+          </p>
+        </div>
       </div>
 
-      {/* WhatsApp Support Button - FIXED bottom position */}
+      {/* WhatsApp Support Button - FIXED bottom left */}
       <WhatsAppSupport phoneNumber="3288216708" />
-
-      {/* Footer con Sede Legale */}
-      <div className={styles.legalFooter}>
-        <p>
-          SGAI S.r.l. - Sede Legale: Via Ettore Majorana 32, Noventa di Piave
-          (VE)
-        </p>
-      </div>
 
       {/* Left Sidebar - Chat Management */}
       {showLeftSidebar && (

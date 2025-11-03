@@ -2108,33 +2108,43 @@ span {
 
 /* ======= LEGAL FOOTER ======= */
 .legalFooter {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   text-align: center;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 8px 20px;
-  z-index: 50;
-  pointer-events: none;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 12px 20px;
+  margin-top: 20px;
+  margin-bottom: 80px; /* spazio per il pulsante WhatsApp */
 
   p {
     margin: 0;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.3px;
-    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    line-height: 1.5;
   }
 }
 
 @media (max-width: 768px) {
   .legalFooter {
+    margin-bottom: 70px;
+    padding: 10px 16px;
+
+    p {
+      font-size: 11px;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .legalFooter {
+    padding: 8px 12px;
+    margin-bottom: 60px;
+
     p {
       font-size: 10px;
-      padding: 0 10px;
     }
   }
 }

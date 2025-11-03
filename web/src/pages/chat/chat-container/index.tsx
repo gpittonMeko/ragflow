@@ -110,7 +110,7 @@ const ChatContainer = ({ controller }: IProps) => {
         chunk={selectedChunk}
       />
 
-      {/* WhatsApp Support Button */}
+      {/* WhatsApp Support Button - Bottom Left */}
       <WhatsAppSupport phoneNumber="3288216708" />
     </>
   );
