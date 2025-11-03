@@ -38,7 +38,7 @@ const FlowChatBox = () => {
       <Flex flex={1} className={styles.chatContainer} vertical>
         <Flex flex={1} vertical className={styles.messageContainer}>
           <div>
-            <Spin spinning={loading}>
+            <Spin spinning={loading || sendLoading}>
               {derivedMessages?.map((message, i) => {
                 return (
                   <MessageItem

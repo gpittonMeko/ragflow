@@ -256,7 +256,7 @@ const ChatContainer = ({ theme }) => {
           ref={messagesContainerRef}
         >
           <div>
-            <Spin spinning={loading}>
+            <Spin spinning={loading || sendLoading}>
               {derivedMessages?.map((message, i) => {
                 const isLastMessage = i === lastMessageIndex;
                 return (

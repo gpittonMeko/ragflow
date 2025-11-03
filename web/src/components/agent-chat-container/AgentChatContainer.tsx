@@ -54,7 +54,7 @@ const AgentChatContainer = ({ agentId, onFirstGeneration }: IProps) => {
       <Flex flex={1} className={styles.agentChatContainer} vertical>
         <Flex flex={1} vertical className={styles.messageContainer}>
           <div>
-            <Spin spinning={loading}>
+            <Spin spinning={loading || sendLoading}>
               {derivedMessages?.map((message, i) => (
                 <MessageItem
                   key={buildMessageUuidWithRole(message)}
