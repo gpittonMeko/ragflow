@@ -13,10 +13,10 @@ const WhatsAppSupport = ({ phoneNumber = '3288216708', position }: IProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-  // Default: bottom-left (20px from left, 80px from bottom)
+  // Default: bottom-RIGHT (20px from right edge, 80px from bottom)
   const getDefaultPosition = () => {
     if (position) return position;
-    return { x: 20, y: window.innerHeight - 80 };
+    return { x: window.innerWidth - 80, y: window.innerHeight - 80 };
   };
 
   const [currentPosition, setCurrentPosition] = useState(getDefaultPosition());
