@@ -129,6 +129,7 @@ export const useSendSharedMessage = (
     removeLatestMessage,
     addNewestAnswer,
     addNewestQuestion,
+    setDerivedMessages,
   } = useSelectDerivedMessages();
   const ref = useRef<HTMLDivElement>(null); // ✅ ref locale per scroll
   const [hasError, setHasError] = useState(false);
