@@ -8,14 +8,18 @@ interface IProps {
   position?: { x: number; y: number };
 }
 
-const WhatsAppSupport = ({
-  phoneNumber = '3288216708',
-  position = { x: 20, y: 20 },
-}: IProps) => {
+const WhatsAppSupport = ({ phoneNumber = '3288216708', position }: IProps) => {
   const [isVisible, setIsVisible] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [currentPosition, setCurrentPosition] = useState(position);
+
+  // Default: bottom-left (20px from left, 80px from bottom)
+  const getDefaultPosition = () => {
+    if (position) return position;
+    return { x: 20, y: window.innerHeight - 80 };
+  };
+
+  const [currentPosition, setCurrentPosition] = useState(getDefaultPosition());
 
   // Funzione generica per gestire l'inizio del drag (mouse o touch)
   const handleDragStart = useCallback(
