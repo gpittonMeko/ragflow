@@ -1,0 +1,91 @@
+#######################################################################
+#  SGAI – React + Ragflow + OAuth Flask + Chat
+#######################################################################
+
+server {
+    listen 80;
+    server_name sgailegal.com sgailegal.it www.sgailegal.com www.sgailegal.it app.sgailegal.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name sgailegal.com sgailegal.it www.sgailegal.com www.sgailegal.it app.sgailegal.com;
+
+    ssl_certificate     /etc/letsencrypt/live/sgailegal.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/sgailegal.com/privkey.pem;
+
+    # GZIP
+    gzip on;
+    gzip_min_length 1k;
+    gzip_comp_level 6;
+    gzip_types text/plain application/javascript text/css application/json image/svg+xml image/png image/jpeg;
+
+    # ✅ AGGIUNTA: Location SSE specifica con priorità massima
+    location = /v1/canvas/completion {
+        proxy_pass http://127.0.0.1:9380;
+        proxy_http_version 1.1;
+        
+        # Headers base
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection '';
+        
+        # ✅ SSE: Disabilita tutti i buffer
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_request_buffering off;
+        add_header X-Accel-Buffering no always;
+        
+        # ✅ Timeout lunghi per generazioni complesse
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 3600s;
+        proxy_read_timeout 3600s;
+        
+        # Cache headers
+        add_header Cache-Control 'no-cache' always;
+    }
+
+    # API principali - PRIMA di tutto
+    location ^~ /api/ {
+        include /etc/nginx/proxy.conf;
+        proxy_pass http://127.0.0.1:9380;
+    }
+        
+    location ^~ /v1/ {
+        include /etc/nginx/proxy.conf;
+        proxy_pass http://127.0.0.1:9380;
+    }
+
+    # Bundle JS /flow/
+    location ^~ /flow/ {
+        include /etc/nginx/proxy.conf;
+        proxy_pass http://127.0.0.1:9380;
+    }
+
+    # OAuth
+    location ^~ /oauth/ {
+        include /etc/nginx/proxy.conf;
+        proxy_redirect off;
+        proxy_pass http://ragflow-backend-oauth:8000/;
+    }
+
+    # CHAT SHARE
+    location ^~ /chat/share {
+        root /ragflow/web/dist;
+        index index.html;
+        try_files $uri /index.html;
+        
+        # Headers per iframe
+        add_header X-Frame-Options "";
+        add_header Content-Security-Policy "frame-ancestors *;";
+    }
+
+    # SPA React - TUTTO IL RESTO
+    location / {
+        root /ragflow/web/dist;
+        try_files $uri $uri/ /index.html;
+    }
+}

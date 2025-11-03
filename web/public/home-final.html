@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SGAI - Assistente Legale AI</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚖️</text></svg>">
+  <style>
+    /* Variabili CSS identiche a login-page */
+    :root {
+      --bg-primary: #0a0a0a;
+      --card-bg: #1c1c1e;
+      --text-primary: #f5f5f7;
+      --text-secondary: #a1a1a6;
+      --accent-color: #0070f3;
+      --border-radius: 16px;
+      --shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Hero Section - identico login-page */
+    .hero-section {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Background gradient animato */
+    .hero-section::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 50%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 50%, rgba(118, 75, 162, 0.15) 0%, transparent 50%);
+      animation: gradientShift 15s ease infinite;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      50% { transform: translate(-10%, -10%) rotate(180deg); }
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 600px;
+      width: 100%;
+      text-align: center;
+    }
+
+    /* Logo animato */
+    .logo-container {
+      margin-bottom: 50px;
+      animation: fadeInDown 1s ease;
+    }
+
+    .logo-gradient {
+      font-size: 84px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -3px;
+      line-height: 1;
+      margin-bottom: 15px;
+      text-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+
+    .tagline {
+      font-size: 22px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    /* Status Card */
+    .status-card {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      padding: 45px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(10px);
+      animation: fadeInUp 1s ease 0.2s both;
+    }
+
+    .status-indicator {
+      margin-bottom: 30px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 28px;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 17px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .status-online {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .status-offline {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .status-starting {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: white;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 18px 32px;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .btn:hover::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 35px rgba(102, 126, 234, 0.6);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #4A90E2 0%, #63B3ED 100%);
+      color: white;
+      box-shadow: 0 4px 20px rgba(74, 144, 226, 0.4);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 35px rgba(74, 144, 226, 0.6);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Info Box */
+    .info-box {
+      margin-top: 25px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .info-box-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-box-content {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* Progress Bar */
+    .progress-section {
+      margin-top: 25px;
+      display: none;
+    }
+
+    .progress-bar-container {
+      background: rgba(255, 255, 255, 0.1);
+      height: 10px;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 15px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      width: 0%;
+      transition: width 0.5s ease;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);
+    }
+
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .progress-timer {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    /* Features Grid - come login-page */
+    .features-section {
+      margin-top: 60px;
+      padding: 80px 20px;
+    }
+
+    .features-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .features-title {
+      text-align: center;
+      font-size: 42px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .features-subtitle {
+      text-align: center;
+      font-size: 18px;
+      color: var(--text-secondary);
+      margin-bottom: 60px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      padding: 35px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      cursor: pointer;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+      border-color: rgba(102, 126, 234, 0.3);
+    }
+
+    .feature-icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+
+    .feature-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    .feature-description {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* Footer legale - identico login-page */
+    .legal-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(28, 28, 30, 0.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 20px 30px;
+      z-index: 900;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .legal-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      font-size: 11px;
+      color: rgba(161, 161, 166, 0.95);
+      line-height: 1.7;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+
+    .legal-content strong {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    .legal-links {
+      margin-top: 12px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .legal-link {
+      color: rgba(161, 161, 166, 0.95);
+      text-decoration: none;
+      transition: color 0.3s ease;
+      font-weight: 600;
+    }
+
+    .legal-link:hover {
+      color: var(--text-primary);
+    }
+
+    /* WhatsApp Widget */
+    .whatsapp-widget {
+      position: fixed;
+      bottom: 140px;
+      left: 30px;
+      z-index: 1000;
+      animation: fadeInUp 1s ease 0.5s both;
+    }
+
+    .whatsapp-button {
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 6px 25px rgba(37, 211, 102, 0.5);
+      transition: all 0.3s ease;
+      border: none;
+      text-decoration: none;
+    }
+
+    .whatsapp-button:hover {
+      transform: scale(1.15) rotate(5deg);
+      box-shadow: 0 8px 35px rgba(37, 211, 102, 0.7);
+    }
+
+    .whatsapp-icon {
+      width: 36px;
+      height: 36px;
+      fill: white;
+    }
+
+    /* Animations */
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.03); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .logo-gradient { font-size: 56px; }
+      .tagline { font-size: 18px; }
+      .status-card { padding: 30px 25px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .legal-footer { padding: 15px 20px; }
+      .whatsapp-widget { bottom: 120px; right: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Hero Section -->
+  <div class="hero-section">
+    <div class="hero-content">
+      <!-- Logo SVG Interattivo -->
+      <div class="logo-container">
+        <svg id="sgai-logo" viewBox="0 0 13500 8500" preserveAspectRatio="xMidYMid meet" width="90%" style="max-width: min(95vw, 420px); height: auto; display: block; margin: 0 auto; cursor: pointer;">
+          <defs>
+            <linearGradient id="gradient-home" gradientUnits="userSpaceOnUse" x1="50%" y1="30%" x2="80%" y2="60%">
+              <stop offset="0%" stop-color="#8EC5FC" />
+              <stop offset="20%" stop-color="#B0D2FA" />
+              <stop offset="40%" stop-color="#D8B4F8" />
+              <stop offset="60%" stop-color="#FFD6E8" />
+              <stop offset="80%" stop-color="#C8FCEA" />
+              <stop offset="100%" stop-color="#8EC5FC" />
+            </linearGradient>
+            <filter id="logo-glow-home" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="50" result="glow" />
+              <feMerge>
+                <feMergeNode in="glow" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <g transform="translate(1350, 1050)">
+            <g fill="url(#gradient-home)" filter="url(#logo-glow-home)" transform="scale(1.15,-1.15) translate(0,-8500) translate(0,-600)">
+              <path d="M2900 8409 c-117 -8 -234 -25 -260 -39 -10 -5 -28 -10 -39 -10 -11 0 -37 -7 -58 -16 -37 -16 -55 -24 -138 -60 -164 -72 -346 -246 -419 -399 -10 -22 -24 -49 -29 -60 -6 -11 -14 -36 -18 -55 -4 -19 -12 -53 -18 -75 -14 -52 -14 -298 0 -350 6 -22 14 -56 18 -75 29 -130 164 -301 306 -387 77 -46 244 -119 320 -140 11 -3 34 -11 52 -19 17 -8 41 -14 52 -14 12 0 29 -4 39 -9 21 -12 114 -41 162 -51 19 -5 49 -13 65 -18 17 -6 53 -17 80 -25 202 -59 180 -51 285 -101 89 -42 142 -83 178 -140 25 -38 27 -49 27 -146 0 -90 -3 -112 -23 -153 -55 -110 -170 -179 -356 -212 -100 -18 -138 -17 -296 6 -162 23 -320 80 -445 160 -16 10 -37 22 -45 26 -8 3 -31 19 -51 35 -20 15 -40 28 -44 28 -4 0 -24 14 -45 30 -21 17 -44 30 -52 30 -15 0 -40 -25 -148 -150 -36 -42 -82 -93 -102 -115 -56 -61 -78 -92 -78 -108 0 -17 105 -104 206 -170 77 -50 233 -134 274 -147 14 -5 50 -18 80 -30 55 -22 79 -29 175 -50 28 -6 64 -16 82 -21 95 -29 492 -35 608 -9 22 5 62 14 89 20 257 54 501 217 623 415 26 41 76 151 85 185 5 19 14 53 20 75 18 69 14 342 -6 410 -44 148 -83 214 -185 313 -57 55 -175 135 -251 169 -59 27 -119 50 -175 67 -33 11 -74 25 -92 33 -17 7 -37 13 -44 13 -7 0 -31 6 -54 14 -22 8 -67 22 -100 31 -33 10 -78 24 -100 30 -22 7 -67 21 -100 30 -33 10 -69 22 -80 26 -11 5 -42 16 -70 25 -86 27 -196 87 -240 130 -61 59 -85 119 -85 215 0 43 4 80 9 84 5 3 12 18 16 34 7 34 89 119 137 142 142 70 283 87 488 60 191 -24 332 -88 534 -240 l59 -44 46 49 c26 27 90 99 143 159 52 61 109 126 127 145 17 19 31 40 31 47 0 6 -21 29 -47 50 -27 21 -50 40 -53 43 -34 38 -327 200 -360 200 -9 0 -20 4 -26 9 -5 4 -43 18 -84 31 -41 12 -85 26 -97 31 -12 4 -46 11 -75 14 -29 3 -71 10 -93 15 -53 12 -217 16 -335 9z"/>
+              <path d="M5720 8400 c-14 -5 -54 -13 -90 -19 -73 -10 -145 -27 -175 -40 -11 -5 -42 -17 -70 -26 -71 -25 -188 -81 -264 -128 -59 -36 -92 -59 -186 -130 -115 -87 -284 -295 -363 -447 -65 -127 -126 -296 -143 -398 -6 -32 -14 -79 -19 -107 -11 -65 -11 -445 0 -510 5 -27 14 -79 20 -115 6 -35 15 -69 20 -74 6 -6 10 -21 10 -35 0 -15 7 -39 15 -55 8 -15 15 -33 15 -38 0 -5 14 -39 30 -75 17 -35 30 -66 30 -68 0 -12 96 -164 137 -217 62 -82 199 -217 259 -259 27 -18 51 -36 54 -39 8 -10 170 -104 212 -123 21 -10 55 -25 75 -34 21 -9 46 -20 55 -24 19 -9 65 -22 143 -39 28 -6 64 -16 80 -21 90 -29 479 -35 605 -8 25 5 72 14 105 20 33 6 64 15 70 20 5 5 20 9 35 9 14 0 37 6 52 14 15 8 40 17 57 21 17 4 33 11 36 16 4 5 13 9 21 9 18 0 125 50 239 113 96 52 305 205 330 240 13 18 15 101 15 593 0 315 -3 579 -6 588 -6 14 -67 16 -594 16 -426 0 -591 -3 -596 -11 -10 -16 -12 -432 -2 -458 8 -22 9 -22 313 -20 169 0 309 -2 313 -6 11 -10 11 -427 0 -448 -18 -35 -185 -125 -318 -170 -136 -46 -162 -50 -340 -51 -174 0 -176 0 -270 33 -142 51 -229 107 -340 221 -132 134 -225 309 -272 515 -6 28 -13 124 -15 215 -4 169 4 239 43 365 109 347 385 594 724 645 153 23 353 2 465 -50 11 -5 42 -18 68 -30 68 -30 138 -73 232 -144 44 -33 82 -62 85 -65 3 -3 15 -14 26 -24 22 -18 22 -18 90 70 38 48 74 94 81 101 7 7 13 17 13 20 0 4 10 18 23 32 41 45 147 189 147 199 0 16 -25 39 -116 107 -121 92 -354 224 -394 224 -9 0 -20 4 -26 8 -8 7 -96 36 -194 63 -108 30 -489 50 -550 29z"/>
+              <path d="M8624 8339 c-8 -8 -14 -25 -14 -36 0 -11 -7 -26 -15 -33 -8 -7 -15 -19 -15 -27 0 -8 -6 -27 -13 -41 -14 -26 -36 -77 -62 -137 -7 -16 -24 -55 -38 -85 -13 -30 -44 -100 -67 -154 -23 -54 -45 -106 -49 -115 -5 -9 -15 -33 -24 -54 -9 -20 -23 -52 -31 -70 -8 -17 -21 -48 -30 -67 -18 -43 -60 -138 -92 -207 -13 -28 -24 -55 -24 -58 0 -3 -11 -30 -24 -58 -13 -29 -34 -74 -46 -102 -11 -27 -25 -59 -30 -70 -34 -77 -64 -144 -105 -240 -26 -60 -55 -128 -65 -150 -22 -49 -42 -95 -70 -160 -26 -61 -30 -70 -74 -168 -20 -42 -36 -79 -36 -82 0 -2 -14 -34 -31 -72 -40 -90 -44 -100 -69 -158 -12 -27 -25 -59 -30 -70 -5 -11 -18 -42 -30 -70 -12 -27 -27 -63 -35 -80 -7 -16 -21 -48 -30 -70 -9 -22 -23 -53 -30 -70 -8 -16 -26 -57 -40 -90 -15 -33 -33 -73 -41 -90 -25 -50 -4 -57 161 -51 77 3 172 5 210 5 l70 1 112 83 c62 45 155 109 208 142 53 33 126 79 163 103 37 24 182 113 324 198 298 179 299 179 405 116 66 -39 290 -177 329 -202 12 -8 67 -42 121 -74 94 -58 217 -137 238 -153 6 -5 28 -20 50 -33 22 -13 49 -32 59 -42 11 -10 38 -30 60 -45 23 -16 52 -38 66 -51 42 -38 83 -43 305 -40 l210 3 -2 26 c-1 14 -16 57 -34 95 -34 73 -48 105 -74 169 -9 22 -24 56 -32 75 -9 19 -22 49 -29 65 -6 17 -20 48 -30 70 -18 42 -31 73 -59 140 -9 22 -24 56 -32 75 -9 19 -22 49 -29 65 -6 17 -20 48 -30 70 -22 51 -44 102 -60 140 -17 43 -38 91 -72 165 -16 36 -37 83 -47 105 -23 56 -46 105 -62 137 -7 14 -13 33 -13 41 0 8 -7 20 -15 27 -8 7 -15 21 -15 30 0 10 -6 31 -14 47 -8 15 -21 44 -29 63 -19 45 -39 89 -76 173 -17 37 -31 71 -31 76 0 5 -6 22 -14 38 -42 82 -76 160 -76 174 0 9 -7 22 -15 29 -8 7 -15 23 -15 35 0 12 -7 28 -15 35 -8 7 -15 18 -15 25 0 8 -7 27 -15 44 -8 17 -22 45 -30 62 -8 17 -15 39 -15 49 0 9 -7 23 -15 30 -8 7 -15 18 -15 25 0 8 -7 27 -15 44 -8 17 -22 45 -30 62 -8 17 -15 39 -15 49 0 9 -7 23 -15 30 -8 7 -15 19 -15 27 0 8 -7 28 -15 44 -8 16 -22 42 -30 58 -8 16 -15 36 -15 44 0 8 -7 20 -15 27 -8 7 -15 23 -15 36 0 12 -4 26 -10 29 -5 3 -14 24 -20 45 -6 22 -16 40 -23 40 -7 0 -135 1 -285 3 -239 2 -275 0 -288 -14z m316 -788 c0 -9 4 -21 8 -26 4 -6 18 -37 31 -70 12 -33 27 -69 31 -80 5 -11 19 -45 31 -75 11 -30 27 -68 34 -85 37 -83 45 -104 45 -113 0 -6 6 -23 14 -39 8 -15 19 -39 25 -53 5 -14 19 -46 30 -72 12 -26 21 -51 21 -57 0 -5 6 -22 14 -38 23 -45 46 -100 46 -111 0 -6 6 -23 14 -39 8 -15 19 -39 25 -53 5 -14 19 -46 30 -72 12 -26 21 -51 21 -57 0 -5 6 -22 14 -38 8 -15 22 -46 31 -68 9 -22 23 -53 32 -68 13 -26 14 -31 1 -44 -13 -13 -17 -13 -31 1 -8 9 -19 16 -22 16 -4 0 -44 22 -89 49 -44 27 -106 62 -136 79 -30 16 -84 46 -120 66 -36 20 -77 41 -92 47 -16 6 -28 15 -28 20 0 12 -43 12 -56 0 -5 -5 -34 -22 -64 -39 -109 -58 -237 -130 -301 -170 -36 -22 -81 -48 -99 -57 l-33 -17 7 29 c4 15 14 42 21 58 8 17 23 55 35 85 11 30 25 64 30 75 5 11 18 43 30 70 12 28 25 59 30 70 5 11 18 43 30 70 11 28 25 58 30 67 6 10 10 23 10 29 0 10 14 45 45 114 12 27 32 73 67 155 5 14 16 39 23 55 7 17 29 71 49 120 21 50 42 101 48 115 5 14 16 39 22 55 20 48 49 109 59 123 12 16 37 -3 37 -27z"/>
+              <path d="M10922 6883 l3 -1468 287 -2 288 -3 6 27 c4 15 4 333 1 707 -4 375 -7 1024 -7 1444 l0 762 -290 0 -290 0 2 -1467z"/>
+            </g>
+          </g>
+        </svg>
+        <div class="tagline" style="margin-top: 15px;">Assistente Legale Intelligente</div>
+      </div>
+
+      <!-- Status Card -->
+      <div class="status-card">
+        <div class="status-indicator">
+          <div id="status-badge" class="status-badge status-starting">
+            <span class="status-dot"></span>
+            <span id="status-text">Verifica stato sistema...</span>
+          </div>
+        </div>
+
+        <div id="main-buttons">
+          <!-- Pulsanti dinamici inseriti via JS -->
+        </div>
+
+        <!-- Progress Section (nascosta inizialmente) -->
+        <div class="progress-section" id="progress-section">
+          <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar"></div>
+          </div>
+          <div class="progress-info">
+            <span id="progress-message">Avvio in corso...</span>
+            <span class="progress-timer" id="progress-timer">0:00</span>
+          </div>
+        </div>
+
+        <!-- Info Box -->
+        <div class="info-box">
+          <div class="info-box-title">
+            <span>🕐</span>
+            <span>Orario di Servizio</span>
+          </div>
+          <div class="info-box-content">
+            <strong>Lunedì - Venerdì:</strong> 8:00 - 22:00<br>
+            Il sistema si attiva automaticamente durante l'orario lavorativo.<br>
+            Fuori orario, puoi riattivare manualmente il servizio (tempo di avvio: ~2 minuti).
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features Section -->
+  <div class="features-section">
+    <div class="features-container">
+      <div class="features-title">Perché scegliere SGAI?</div>
+      <div class="features-subtitle">Assistenza legale intelligente, sempre a portata di mano</div>
+      
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">⚖️</div>
+          <div class="feature-title">Consulenza Tributaria</div>
+          <div class="feature-description">
+            Risposte immediate su questioni fiscali, accertamenti, e normative tributarie italiane.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📚</div>
+          <div class="feature-title">Database Giurisprudenziale</div>
+          <div class="feature-description">
+            Accesso a migliaia di sentenze, circolari e documenti legali aggiornati.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <div class="feature-title">AI Avanzata</div>
+          <div class="feature-description">
+            Tecnologia RAG (Retrieval Augmented Generation) per risposte precise e contestualizzate.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <div class="feature-title">Sicurezza e Privacy</div>
+          <div class="feature-description">
+            I tuoi dati sono protetti con crittografia end-to-end e non vengono condivisi.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <div class="feature-title">Risposte Rapide</div>
+          <div class="feature-description">
+            Ottieni risposte dettagliate in pochi secondi, con fonti citate e verificabili.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">💬</div>
+          <div class="feature-title">Supporto Continuo</div>
+          <div class="feature-description">
+            Assistenza WhatsApp disponibile per supporto tecnico e domande.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legal Footer -->
+  <div class="legal-footer">
+    <div class="legal-content">
+      <strong>⚠️ Disclaimer Importante:</strong> SGAI è un sistema di intelligenza artificiale progettato per fornire informazioni e assistenza 
+      su questioni legali, tributarie e doganali. Le risposte generate hanno <strong>scopo puramente informativo</strong> e non costituiscono 
+      consulenza legale professionale. Per questioni legali specifiche o decisioni importanti, è sempre necessario consultare un avvocato 
+      qualificato. L'utilizzo di SGAI non crea un rapporto avvocato-cliente.
+      
+      <div class="legal-links">
+        <a href="mailto:info@sgailegal.com" class="legal-link">📧 Contatti</a>
+        <a href="#" class="legal-link">📜 Privacy Policy</a>
+        <a href="#" class="legal-link">📋 Termini di Servizio</a>
+        <a href="#" class="legal-link">🔐 Sicurezza</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- WhatsApp Widget -->
+  <a href="https://wa.me/393271382486?text=Ciao!%20Ho%20bisogno%20di%20assistenza%20con%20SGAI" 
+     target="_blank" 
+     class="whatsapp-widget">
+    <div class="whatsapp-button" title="Contattaci su WhatsApp">
+      <svg class="whatsapp-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+    </div>
+  </a>
+
+  <script>
+    const API_ENDPOINT = 'https://91k2hfw1n3.execute-api.eu-north-1.amazonaws.com/wake-up';
+    const SGAI_URL = 'https://www.sgailegal.com';
+    const CHECK_INTERVAL = 5000; // 5 secondi
+    
+    let systemState = 'checking';
+    let startTime = null;
+
+    // Controlla stato sistema
+    async function checkSystemStatus() {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        
+        const response = await fetch(SGAI_URL, {
+          method: 'HEAD',
+          mode: 'no-cors',
+          cache: 'no-cache',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        showOnlineState();
+        
+      } catch (error) {
+        showOfflineState();
+      }
+    }
+
+    function showOnlineState() {
+      if (systemState === 'online') return;
+      systemState = 'online';
+      
+      const badge = document.getElementById('status-badge');
+      badge.className = 'status-badge status-online';
+      document.getElementById('status-text').textContent = 'Sistema Operativo';
+      
+      document.getElementById('main-buttons').innerHTML = `
+        <a href="${SGAI_URL}" class="btn btn-primary">
+          <span>💬</span>
+          <span>Accedi alla Chat SGAI</span>
+        </a>
+        <div class="info-box" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3);">
+          <div class="info-box-title" style="color: #10b981;">
+            <span>✅</span>
+            <span>Tutti i Servizi Attivi</span>
+          </div>
+          <div class="info-box-content">
+            Il sistema è completamente operativo. Fai clic sul pulsante sopra per accedere 
+            all'assistente AI e iniziare una conversazione.
+          </div>
+        </div>
+      `;
+    }
+
+    function showOfflineState() {
+      if (systemState === 'offline') return;
+      systemState = 'offline';
+      
+      const badge = document.getElementById('status-badge');
+      badge.className = 'status-badge status-offline';
+      document.getElementById('status-text').textContent = 'Sistema in Pausa';
+      
+      document.getElementById('main-buttons').innerHTML = `
+        <button onclick="wakeUpSystem()" class="btn btn-secondary" id="wake-btn">
+          <span>⚡</span>
+          <span>Riattiva Servizio (~2 minuti)</span>
+        </button>
+        <div class="info-box" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
+          <div class="info-box-title" style="color: #ef4444;">
+            <span>⏸️</span>
+            <span>Servizio Temporaneamente Non Disponibile</span>
+          </div>
+          <div class="info-box-content">
+            Il sistema è attualmente in pausa per risparmio energetico.<br>
+            <strong>Si riattiverà automaticamente alle 8:00</strong> oppure puoi riattivarlo 
+            immediatamente cliccando il pulsante sopra.
+          </div>
+        </div>
+      `;
+    }
+
+    async function wakeUpSystem() {
+      const btn = document.getElementById('wake-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading-spinner"></span><span>Riattivazione in corso...</span>';
+      
+      // Mostra progress
+      const progressSection = document.getElementById('progress-section');
+      progressSection.style.display = 'block';
+      
+      const badge = document.getElementById('status-badge');
+      badge.className = 'status-badge status-starting';
+      document.getElementById('status-text').textContent = 'Avvio Sistema...';
+      
+      try {
+        // Chiama Lambda
+        const response = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force_start: true })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        // Inizia monitoraggio
+        monitorStartup();
+        
+      } catch (error) {
+        badge.className = 'status-badge status-offline';
+        document.getElementById('status-text').textContent = 'Errore Riattivazione';
+        updateProgress(0, '❌ Errore durante la riattivazione. Riprova tra qualche minuto.');
+        btn.disabled = false;
+        btn.innerHTML = '<span>⚡</span><span>Riattiva Servizio</span>';
+      }
+    }
+
+    function updateProgress(percentage, message) {
+      document.getElementById('progress-bar').style.width = percentage + '%';
+      document.getElementById('progress-message').textContent = message;
+    }
+
+    function updateTimer(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      document.getElementById('progress-timer').textContent = 
+        `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    async function monitorStartup() {
+      startTime = Date.now();
+      const maxWait = 180000; // 3 minuti
+      
+      const checkLoop = setInterval(async () => {
+        const elapsed = Date.now() - startTime;
+        const seconds = Math.floor(elapsed / 1000);
+        
+        if (elapsed > maxWait) {
+          clearInterval(checkLoop);
+          updateProgress(100, '⚠️ Avvio in corso... Ricarica la pagina tra poco');
+          return;
+        }
+        
+        // Progress simulato realistico
+        let percentage = Math.min(95, (elapsed / maxWait) * 100);
+        let message = 'Avvio istanza EC2...';
+        
+        if (seconds > 25) message = 'Caricamento servizi Docker...';
+        if (seconds > 50) message = 'Inizializzazione database...';
+        if (seconds > 80) message = 'Avvio servizio AI...';
+        if (seconds > 110) message = 'Ultimi controlli di sistema...';
+        
+        updateProgress(percentage, message);
+        updateTimer(seconds);
+        
+        // Prova a connettersi
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          
+          await fetch(SGAI_URL, {
+            method: 'HEAD',
+            mode: 'no-cors',
+            cache: 'no-cache',
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          // Sistema online!
+          clearInterval(checkLoop);
+          updateProgress(100, '✅ Sistema pronto! Reindirizzamento...');
+          
+          setTimeout(() => {
+            window.location.href = SGAI_URL;
+          }, 1500);
+          
+        } catch (e) {
+          // Ancora offline, continua
+        }
+        
+      }, 3000);
+    }
+
+    // Auto-check periodico
+    function startPeriodicCheck() {
+      checkSystemStatus();
+      setInterval(checkSystemStatus, CHECK_INTERVAL);
+    }
+
+    // Init
+    window.addEventListener('load', () => {
+      startPeriodicCheck();
+    });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SGAI - Fuori Servizio</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    .container {
+      text-align: center;
+      padding: 40px 20px;
+      max-width: 600px;
+      width: 100%;
+      animation: fadeIn 0.8s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo {
+      width: 180px;
+      height: auto;
+      margin-bottom: 40px;
+      filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .coffee-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      animation: steam 2s ease-in-out infinite;
+      display: inline-block;
+    }
+
+    @keyframes steam {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-5px) scale(1.05); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+    }
+
+    h1 {
+      font-size: 42px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 20px;
+      margin-bottom: 16px;
+      opacity: 0.95;
+      font-weight: 500;
+    }
+
+    .schedule {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      padding: 20px 30px;
+      border-radius: 16px;
+      margin: 30px 0;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .schedule-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      opacity: 0.9;
+    }
+
+    .schedule-hours {
+      font-size: 32px;
+      font-weight: 700;
+      color: #FFD700;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      letter-spacing: 1px;
+    }
+
+    .wake-button {
+      background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+      color: #1a1a2e;
+      border: none;
+      padding: 18px 50px;
+      font-size: 20px;
+      font-weight: 700;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 24px rgba(255, 215, 0, 0.4);
+      margin-top: 30px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .wake-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(255, 215, 0, 0.6);
+      background: linear-gradient(135deg, #FFA500 0%, #FFD700 100%);
+    }
+
+    .wake-button:active {
+      transform: translateY(-1px);
+    }
+
+    .wake-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .status-message {
+      margin-top: 25px;
+      font-size: 18px;
+      font-weight: 500;
+      min-height: 30px;
+      opacity: 0.95;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .footer {
+      margin-top: 50px;
+      font-size: 14px;
+      opacity: 0.7;
+      line-height: 1.6;
+    }
+
+    .error {
+      background: rgba(255, 59, 48, 0.2);
+      border: 1px solid rgba(255, 59, 48, 0.4);
+      padding: 15px 25px;
+      border-radius: 12px;
+      margin-top: 20px;
+      font-size: 16px;
+      animation: shake 0.5s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 32px; }
+      .subtitle { font-size: 18px; }
+      .schedule-hours { font-size: 28px; }
+      .wake-button {
+        padding: 16px 40px;
+        font-size: 18px;
+      }
+      .coffee-icon { font-size: 60px; }
+      .logo { width: 140px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Logo SGAI (stesso della login page) -->
+    <img src="/sgai-logo.svg" alt="SGAI Logo" class="logo" id="logo" />
+
+    <div class="coffee-icon">☕</div>
+
+    <h1>SGAI sta riposando</h1>
+    <p class="subtitle">Anche l'intelligenza artificiale ha bisogno di una pausa!</p>
+
+    <div class="schedule">
+      <div class="schedule-title">🕐 Orario di servizio</div>
+      <div class="schedule-hours">8:00 - 22:00</div>
+    </div>
+
+    <button class="wake-button" id="wakeBtn" onclick="wakeUpSGAI()">
+      ⚡ Risveglia SGAI Ora
+    </button>
+
+    <div class="status-message" id="status"></div>
+
+    <div class="footer">
+      <p>Il servizio si riattiverà automaticamente alle 8:00</p>
+      <p>oppure clicca il pulsante per un risveglio immediato (~ 2 minuti)</p>
+    </div>
+  </div>
+
+  <script>
+    // CONFIGURAZIONE
+    const API_ENDPOINT = 'https://91k2hfw1n3.execute-api.eu-north-1.amazonaws.com/wake-up';
+    const SGAI_URL = 'https://sgai.me';
+    const POLL_INTERVAL = 5000; // 5 secondi
+    const MAX_POLL_TIME = 180000; // 3 minuti
+
+    let pollStartTime = null;
+
+    function setStatus(message, isError = false) {
+      const statusEl = document.getElementById('status');
+      if (isError) {
+        statusEl.innerHTML = `<div class="error">${message}</div>`;
+      } else {
+        statusEl.innerHTML = message;
+      }
+    }
+
+    function setLoading(message) {
+      setStatus(`<span class="loading"></span>${message}`);
+    }
+
+    function showLoadingScreen() {
+      // Nasconde il contenuto principale e mostra una schermata di caricamento smooth
+      const container = document.querySelector('.container');
+      container.style.transition = 'opacity 0.5s ease-in-out';
+      container.style.opacity = '0';
+      
+      setTimeout(() => {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 60px 40px;">
+            <div class="coffee-icon" style="font-size: 100px; animation: pulse 1.5s ease-in-out infinite;">☕</div>
+            <h1 style="margin-top: 30px;">Risveglio in corso...</h1>
+            <div style="margin: 30px auto; max-width: 500px;">
+              <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 10px; overflow: hidden;">
+                <div id="progress-bar" style="background: linear-gradient(90deg, #4A90E2, #63B3ED); height: 100%; width: 0%; border-radius: 10px; transition: width 0.3s ease;"></div>
+              </div>
+              <p id="loading-message" style="margin-top: 20px; font-size: 18px; opacity: 0.9;"></p>
+              <p id="loading-timer" style="margin-top: 10px; font-size: 16px; opacity: 0.7; font-family: monospace;"></p>
+            </div>
+            <div style="margin-top: 40px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 12px; backdrop-filter: blur(10px);">
+              <p style="font-size: 14px; opacity: 0.8; line-height: 1.6;">
+                ⚙️ Avvio istanza EC2<br>
+                🐳 Caricamento servizi Docker<br>
+                🔧 Inizializzazione RAGFlow<br>
+                ✨ Preparazione sistema AI
+              </p>
+            </div>
+          </div>
+        `;
+        container.style.opacity = '1';
+      }, 500);
+    }
+
+    function updateProgress(percentage, message, elapsed) {
+      const progressBar = document.getElementById('progress-bar');
+      const messageEl = document.getElementById('loading-message');
+      const timerEl = document.getElementById('loading-timer');
+      
+      if (progressBar) progressBar.style.width = percentage + '%';
+      if (messageEl) messageEl.textContent = message;
+      if (timerEl) {
+        const mins = Math.floor(elapsed / 60);
+        const secs = elapsed % 60;
+        timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+      }
+    }
+
+    async function wakeUpSGAI() {
+      const btn = document.getElementById('wakeBtn');
+      btn.disabled = true;
+      
+      setLoading('Invio richiesta...');
+
+      try {
+        // Chiama Lambda con force_start=true
+        const response = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force_start: true })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Errore HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Lambda response:', data);
+
+        // Mostra schermata di caricamento smooth
+        showLoadingScreen();
+
+        // Inizia il polling per verificare quando SGAI è pronto
+        pollStartTime = Date.now();
+        pollSGAIStatus();
+
+      } catch (error) {
+        console.error('Errore:', error);
+        setStatus('❌ Errore durante il risveglio. Riprova tra qualche minuto.', true);
+        btn.disabled = false;
+      }
+    }
+
+    async function pollSGAIStatus() {
+      const elapsed = Date.now() - pollStartTime;
+      const seconds = Math.floor(elapsed / 1000);
+      
+      if (elapsed > MAX_POLL_TIME) {
+        updateProgress(100, '⚠️ Risveglio in corso... Ricarica la pagina tra poco.', seconds);
+        return;
+      }
+
+      // Calcola la percentuale di avanzamento (simulata)
+      let percentage = Math.min(95, (elapsed / MAX_POLL_TIME) * 100);
+      let message = 'Avvio istanza EC2...';
+      
+      if (seconds > 30) message = 'Caricamento servizi Docker...';
+      if (seconds > 60) message = 'Inizializzazione RAGFlow...';
+      if (seconds > 90) message = 'Ultimi controlli...';
+      
+      updateProgress(percentage, message, seconds);
+
+      try {
+        // Prova a fare una richiesta HEAD a SGAI
+        const response = await fetch(SGAI_URL, {
+          method: 'HEAD',
+          mode: 'no-cors',
+          cache: 'no-cache'
+        });
+
+        // Se arriviamo qui senza errori, SGAI è probabilmente online
+        updateProgress(100, '✅ SGAI è pronto! Reindirizzamento...', seconds);
+        
+        setTimeout(() => {
+          window.location.href = SGAI_URL;
+        }, 1500);
+
+      } catch (error) {
+        // SGAI non è ancora pronto, riprova
+        setTimeout(pollSGAIStatus, POLL_INTERVAL);
+      }
+    }
+
+    // Fallback: carica il logo da un URL assoluto se il path relativo fallisce
+    document.getElementById('logo').onerror = function() {
+      // Usa un placeholder o un URL alternativo
+      this.style.display = 'none';
+    };
+  </script>
+</body>
+</html>
+
+

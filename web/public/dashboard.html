@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SGAI Control Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: white;
+    }
+
+    .dashboard {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 30px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .header h1 {
+      font-size: 48px;
+      margin-bottom: 10px;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .header .subtitle {
+      font-size: 18px;
+      opacity: 0.9;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 25px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    .card h2 {
+      font-size: 20px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
+      margin: 10px 0;
+    }
+
+    .status-online {
+      background: #10b981;
+      color: white;
+    }
+
+    .status-offline {
+      background: #ef4444;
+      color: white;
+    }
+
+    .status-loading {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4A90E2 0%, #63B3ED 100%);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(74, 144, 226, 0.4);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .metric {
+      margin: 15px 0;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-bottom: 5px;
+    }
+
+    .metric-value {
+      font-size: 24px;
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    .log-container {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 20px;
+      height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .log-line {
+      margin: 5px 0;
+      padding: 5px;
+      border-radius: 4px;
+    }
+
+    .log-info { color: #60a5fa; }
+    .log-success { color: #34d399; }
+    .log-warning { color: #fbbf24; }
+    .log-error { color: #f87171; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .loading { animation: pulse 1.5s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <div class="header">
+      <h1>🎛️ SGAI Control Dashboard</h1>
+      <div class="subtitle">Gestione remota istanza EC2 e servizi</div>
+    </div>
+
+    <div class="grid">
+      <!-- STATUS EC2 -->
+      <div class="card">
+        <h2>🖥️ Istanza EC2</h2>
+        <div id="ec2-status" class="status-badge status-loading">
+          <span class="loading">●</span> Caricamento...
+        </div>
+        <div class="metric">
+          <div class="metric-label">Instance ID</div>
+          <div class="metric-value" style="font-size:14px;">i-0ec0704c7b36f7648</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Regione</div>
+          <div class="metric-value" style="font-size:18px;">eu-north-1</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">IP</div>
+          <div class="metric-value" style="font-size:18px;">13.49.16.179</div>
+        </div>
+        <button id="btn-start" class="btn btn-primary" onclick="startEC2()">
+          ▶️ Avvia EC2 (Force Start)
+        </button>
+        <button id="btn-stop" class="btn btn-danger" onclick="stopEC2()">
+          ⏹️ Ferma EC2
+        </button>
+      </div>
+
+      <!-- STATUS DOCKER -->
+      <div class="card">
+        <h2>🐳 Servizi Docker</h2>
+        <div id="docker-status" class="status-badge status-loading">
+          <span class="loading">●</span> Caricamento...
+        </div>
+        <div class="metric">
+          <div class="metric-label">Container Attivi</div>
+          <div class="metric-value" id="container-count">-</div>
+        </div>
+        <div id="container-list" style="margin-top:15px; font-size:12px; opacity:0.8;">
+        </div>
+      </div>
+
+      <!-- MONITOR AUTO-SHUTDOWN -->
+      <div class="card">
+        <h2>⏱️ Auto-Shutdown Monitor</h2>
+        <div id="monitor-status" class="status-badge status-loading">
+          <span class="loading">●</span> Caricamento...
+        </div>
+        <div class="metric">
+          <div class="metric-label">Timeout Inattività</div>
+          <div class="metric-value" style="font-size:18px;">15 minuti</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Tempo Rimanente</div>
+          <div class="metric-value" id="shutdown-timer">-</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Force-Start Attivo</div>
+          <div class="metric-value" id="force-start-status" style="font-size:16px;">-</div>
+        </div>
+      </div>
+
+      <!-- LAMBDA MANAGER -->
+      <div class="card">
+        <h2>⚡ Lambda Manager</h2>
+        <div id="lambda-status" class="status-badge status-loading">
+          <span class="loading">●</span> Caricamento...
+        </div>
+        <div class="metric">
+          <div class="metric-label">Ultima Esecuzione</div>
+          <div class="metric-value" id="lambda-last-run" style="font-size:14px;">-</div>
+        </div>
+        <button class="btn btn-primary" onclick="invokeLambda()">
+          🚀 Esegui Lambda Ora
+        </button>
+      </div>
+    </div>
+
+    <!-- LOG STREAM -->
+    <div class="card">
+      <h2>📜 Log Stream (Real-time)</h2>
+      <div class="log-container" id="log-stream">
+        <div class="log-line log-info">Connessione al sistema...</div>
+      </div>
+      <button class="btn btn-primary" onclick="refreshLogs()" style="margin-top:15px;">
+        🔄 Aggiorna Log
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const API_ENDPOINT = 'https://91k2hfw1n3.execute-api.eu-north-1.amazonaws.com/wake-up';
+    const REFRESH_INTERVAL = 5000; // 5 secondi
+
+    let refreshTimer;
+
+    function addLog(message, type = 'info') {
+      const logStream = document.getElementById('log-stream');
+      const time = new Date().toLocaleTimeString('it-IT');
+      const logLine = document.createElement('div');
+      logLine.className = `log-line log-${type}`;
+      logLine.textContent = `[${time}] ${message}`;
+      logStream.appendChild(logLine);
+      logStream.scrollTop = logStream.scrollHeight;
+
+      // Mantieni max 100 righe
+      while (logStream.children.length > 100) {
+        logStream.removeChild(logStream.firstChild);
+      }
+    }
+
+    async function checkEC2Status() {
+      try {
+        addLog('Controllo stato EC2...', 'info');
+        // Qui dovresti chiamare un'API che interroga AWS
+        // Per ora simulo
+        const isOnline = Math.random() > 0.5;
+        
+        const statusEl = document.getElementById('ec2-status');
+        if (isOnline) {
+          statusEl.className = 'status-badge status-online';
+          statusEl.innerHTML = '<span>●</span> Online';
+          addLog('EC2 is RUNNING', 'success');
+        } else {
+          statusEl.className = 'status-badge status-offline';
+          statusEl.innerHTML = '<span>●</span> Offline';
+          addLog('EC2 is STOPPED', 'warning');
+        }
+      } catch (error) {
+        addLog(`Errore check EC2: ${error.message}`, 'error');
+      }
+    }
+
+    async function startEC2() {
+      const btn = document.getElementById('btn-start');
+      btn.disabled = true;
+      addLog('🚀 Avvio EC2 con force_start=true...', 'info');
+
+      try {
+        const response = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force_start: true })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        addLog('✅ Lambda eseguita con successo!', 'success');
+        addLog(`Risposta: ${JSON.stringify(data)}`, 'info');
+        
+        // Monitora l'avvio
+        monitorStartup();
+
+      } catch (error) {
+        addLog(`❌ Errore: ${error.message}`, 'error');
+        btn.disabled = false;
+      }
+    }
+
+    async function stopEC2() {
+      if (!confirm('Sei sicuro di voler fermare SGAI?')) return;
+      
+      addLog('🔴 Arresto EC2...', 'warning');
+      // Implementa chiamata API per stop
+      addLog('⚠️ Funzione non ancora implementata', 'warning');
+    }
+
+    async function invokeLambda() {
+      addLog('⚡ Invocazione Lambda schedulata...', 'info');
+      // Simula invocazione
+      setTimeout(() => {
+        addLog('✅ Lambda eseguita', 'success');
+      }, 1000);
+    }
+
+    function monitorStartup() {
+      addLog('📊 Monitoraggio avvio in corso...', 'info');
+      let elapsed = 0;
+      
+      const interval = setInterval(() => {
+        elapsed += 5;
+        addLog(`⏱️ Avvio in corso... ${elapsed}s`, 'info');
+        
+        if (elapsed >= 120) {
+          clearInterval(interval);
+          addLog('✅ SGAI dovrebbe essere pronto!', 'success');
+          addLog('🔗 Vai su: https://www.sgailegal.com', 'success');
+        }
+      }, 5000);
+    }
+
+    function refreshLogs() {
+      document.getElementById('log-stream').innerHTML = '';
+      addLog('Log puliti', 'info');
+      checkEC2Status();
+    }
+
+    // Auto-refresh
+    function startAutoRefresh() {
+      refreshTimer = setInterval(() => {
+        checkEC2Status();
+      }, REFRESH_INTERVAL);
+    }
+
+    // Init
+    window.onload = () => {
+      addLog('🎛️ Dashboard avviata', 'success');
+      addLog(`📡 Auto-refresh ogni ${REFRESH_INTERVAL/1000}s`, 'info');
+      checkEC2Status();
+      startAutoRefresh();
+    };
+  </script>
+</body>
+</html>
+

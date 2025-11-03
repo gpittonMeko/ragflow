@@ -1005,12 +1005,20 @@ body {
   font-size: 0.95rem;
 }
 
-/* Mobile: non far sovrapporre nulla al logo */
+/* Mobile: MOLTO meno spazio sopra logo */
 @media (max-width: 768px) {
-  /* Aggiungi spazio sopra il logo per evitare sovrapposizione con header */
+  /* Logo molto più in alto */
   .heroSection {
-    margin-top: 20px !important;
-    padding-top: 10px !important;
+    margin-top: 0px !important;
+    padding-top: 0px !important;
+    align-items: flex-start !important;
+    padding-bottom: 20px !important;
+  }
+
+  /* Logobox più compatto */
+  .logoBox {
+    margin-top: 10px !important;
+    max-height: 140px !important;
   }
 
   /* Rendi l'header anonimo più compatto */

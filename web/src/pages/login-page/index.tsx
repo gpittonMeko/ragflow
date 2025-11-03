@@ -1307,7 +1307,10 @@ const PresentationPage: React.FC = () => {
       </div>
 
       {/* WhatsApp Support Button */}
-      <WhatsAppSupport phoneNumber="3288216708" />
+      <WhatsAppSupport
+        phoneNumber="3288216708"
+        position={{ x: 20, y: window.innerHeight - 100 }}
+      />
 
       {/* Footer con Sede Legale */}
       <div className={styles.legalFooter}>
