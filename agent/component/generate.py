@@ -462,8 +462,21 @@ class Generate(ComponentBase):
         return Generate.be_output(ans)
     
     def stream_output(self, chat_mdl, prompt, ordered_chunks):
+        # ✅ FIX CRITICO: Prendi la history dal canvas (come fa la modalità non-stream)
+        msg = self._canvas.get_history(self._param.message_history_window_size)
+        if len(msg) < 1:
+            msg.append({"role": "user", "content": "Output: "})
+        _, msg = message_fit_in([{"role": "system", "content": prompt}, *msg], int(chat_mdl.max_length * 0.97))
+        if len(msg) < 2:
+            msg.append({"role": "user", "content": "Output: "})
+        
+        logging.info(f"[LLM-STREAM] === STREAM CALL ===")
+        logging.info(f"[LLM-STREAM] msg count: {len(msg)}")
+        for i, m in enumerate(msg):
+            logging.info(f"[LLM-STREAM] msg[{i}]: role={m.get('role', 'system')} content={str(m.get('content', ''))[:200]}")
+        
         answer = ""
-        for ans in chat_mdl.chat_streamly(prompt, [], self._param.gen_conf()):
+        for ans in chat_mdl.chat_streamly(msg[0]["content"], msg[1:], self._param.gen_conf()):
             res = {"content": ans, "reference": []}
             answer = ans
             yield res
