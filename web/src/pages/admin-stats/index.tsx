@@ -49,12 +49,22 @@ interface UserSession {
 }
 
 const AdminStats: React.FC = () => {
+  // ⚠️ IMPORTANTE: Tutti gli useState DEVONO essere dichiarati PRIMA di qualsiasi return condizionale
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
     null,
   );
+  // Statistiche aggregate - SPOSTATO QUI prima del return
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    freeUsers: 0,
+    premiumUsers: 0,
+    betaTesters: 0,
+    todayLogins: 0,
+    uniqueCountries: 0,
+  });
 
   // Check authentication on mount
   useEffect(() => {
@@ -88,16 +98,6 @@ const AdminStats: React.FC = () => {
   if (!isAuthenticated) {
     return <AdminLogin onLoginSuccess={handleLoginSuccess} />;
   }
-
-  // Statistiche aggregate
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    freeUsers: 0,
-    premiumUsers: 0,
-    betaTesters: 0,
-    todayLogins: 0,
-    uniqueCountries: 0,
-  });
 
   useEffect(() => {
     fetchUserSessions();
@@ -140,6 +140,8 @@ const AdminStats: React.FC = () => {
     const mockSessions: UserSession[] = [
       {
         id: '1',
+        sessionId: 'session-abc123',
+        userId: 'user@example.com',
         email: 'user@example.com',
         plan: 'premium',
         loginTime: '2025-11-04 10:30:00',
@@ -149,9 +151,36 @@ const AdminStats: React.FC = () => {
         city: 'Milan',
         browser: 'Chrome',
         os: 'Windows 10',
+        messagesCount: 4,
+        tokens: 1250,
+        duration: 45,
+        conversation: [
+          {
+            type: 'question',
+            text: 'Quali sono le scadenze fiscali di novembre?',
+            timestamp: 1730716200,
+          },
+          {
+            type: 'answer',
+            text: 'Le principali scadenze fiscali di novembre 2025 sono: 16 novembre - versamento IVA mensile, 18 novembre - contributi INPS, 30 novembre - presentazione modelli INTRASTAT.',
+            timestamp: 1730716215,
+          },
+          {
+            type: 'question',
+            text: 'E per le partite IVA forfettarie?',
+            timestamp: 1730716250,
+          },
+          {
+            type: 'answer',
+            text: 'Per i forfettari le scadenze principali sono: versamento acconto imposta sostitutiva entro il 30 novembre, non è richiesto il versamento IVA essendo regime forfettario.',
+            timestamp: 1730716265,
+          },
+        ],
       },
       {
         id: '2',
+        sessionId: 'session-def456',
+        userId: 'anonymous_89.45.120.33',
         plan: 'free',
         loginTime: '2025-11-04 09:15:00',
         ipAddress: '89.45.xx.xx',
@@ -160,9 +189,26 @@ const AdminStats: React.FC = () => {
         city: 'Rome',
         browser: 'Safari',
         os: 'macOS',
+        messagesCount: 2,
+        tokens: 580,
+        duration: 28,
+        conversation: [
+          {
+            type: 'question',
+            text: 'Come funziona la rivalutazione TFR?',
+            timestamp: 1730711700,
+          },
+          {
+            type: 'answer',
+            text: "Il TFR viene rivalutato annualmente applicando un tasso fisso dell'1,5% più il 75% dell'aumento ISTAT rispetto all'anno precedente.",
+            timestamp: 1730711715,
+          },
+        ],
       },
       {
         id: '3',
+        sessionId: 'session-ghi789',
+        userId: 'beta@test.com',
         email: 'beta@test.com',
         plan: 'beta',
         loginTime: '2025-11-04 08:45:00',
@@ -172,6 +218,41 @@ const AdminStats: React.FC = () => {
         city: 'Turin',
         browser: 'Firefox',
         os: 'Linux',
+        messagesCount: 6,
+        tokens: 2100,
+        duration: 120,
+        conversation: [
+          {
+            type: 'question',
+            text: 'Dammi informazioni sul regime forfettario 2025',
+            timestamp: 1730709900,
+          },
+          {
+            type: 'answer',
+            text: 'Il regime forfettario 2025 prevede: limite massimo 85.000€ di ricavi, aliquota 15% (5% primi 5 anni), nessun addebito IVA, contabilità semplificata.',
+            timestamp: 1730709915,
+          },
+          {
+            type: 'question',
+            text: 'Quali sono i limiti per rimanere nel regime?',
+            timestamp: 1730709950,
+          },
+          {
+            type: 'answer',
+            text: 'I principali limiti sono: ricavi max 85.000€, spese per collaboratori max 20.000€, non possedere partecipazioni in società, non essere socio in SNC/SAS.',
+            timestamp: 1730709965,
+          },
+          {
+            type: 'question',
+            text: 'E se supero gli 85.000€?',
+            timestamp: 1730710000,
+          },
+          {
+            type: 'answer',
+            text: "Se superi gli 85.000€, esci dal regime forfettario dall'anno successivo e passi al regime ordinario con obbligo di partita IVA ordinaria.",
+            timestamp: 1730710015,
+          },
+        ],
       },
     ];
 
