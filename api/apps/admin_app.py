@@ -100,27 +100,49 @@ def get_user_sessions():
             else:
                 stats['freeUsers'] += 1
             
-            # Estrai messaggi
-            messages = conv.get('message', [])
+            # Estrai messaggi (può essere JSON string o già parsed)
+            messages_raw = conv.get('message', [])
+            if isinstance(messages_raw, str):
+                try:
+                    import json
+                    messages = json.loads(messages_raw)
+                except:
+                    messages = []
+            else:
+                messages = messages_raw if messages_raw else []
             
-            # Costruisci conversazione formattata
+            # Costruisci conversazione formattata - MIGLIORE PARSING
             conversation_text = []
-            for msg in messages:
+            for idx, msg in enumerate(messages):
+                if not isinstance(msg, dict):
+                    continue
+                    
                 role = msg.get('role', 'unknown')
                 content = msg.get('content', '')
-                timestamp = msg.get('created_at', '')
+                timestamp = msg.get('created_at', 0)
+                
+                # Salta messaggi di sistema, vuoti o di benvenuto
+                if role == 'system':
+                    continue
+                if not content or content.strip() == '':
+                    continue
+                # Salta messaggi di benvenuto standard
+                if 'Benvenuto! Sono SGAI' in content:
+                    continue
                 
                 if role == 'user':
                     conversation_text.append({
                         'type': 'question',
                         'text': content,
-                        'timestamp': timestamp
+                        'timestamp': timestamp,
+                        'index': idx
                     })
                 elif role == 'assistant':
                     conversation_text.append({
                         'type': 'answer',
                         'text': content,
-                        'timestamp': timestamp
+                        'timestamp': timestamp,
+                        'index': idx
                     })
             
             # Estrai info browser/OS da user_id o altri campi
