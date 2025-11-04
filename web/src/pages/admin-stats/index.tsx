@@ -1,13 +1,25 @@
 import {
   ClockCircleOutlined,
   GlobalOutlined,
+  LogoutOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Card, Col, DatePicker, Row, Space, Statistic, Table, Tag } from 'antd';
+import {
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Row,
+  Space,
+  Statistic,
+  Table,
+  Tag,
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import React, { useEffect, useState } from 'react';
 import styles from './index.less';
+import AdminLogin from './login';
 
 const { RangePicker } = DatePicker;
 
@@ -25,11 +37,45 @@ interface UserSession {
 }
 
 const AdminStats: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
     null,
   );
+
+  // Check authentication on mount
+  useEffect(() => {
+    const authenticated = localStorage.getItem('admin-authenticated');
+    const sessionTime = localStorage.getItem('admin-session');
+
+    if (authenticated === 'true' && sessionTime) {
+      // Session expires after 24 hours
+      const sessionAge = Date.now() - parseInt(sessionTime);
+      if (sessionAge < 24 * 60 * 60 * 1000) {
+        setIsAuthenticated(true);
+      } else {
+        // Session expired
+        localStorage.removeItem('admin-authenticated');
+        localStorage.removeItem('admin-session');
+      }
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('admin-authenticated');
+    localStorage.removeItem('admin-session');
+    setIsAuthenticated(false);
+  };
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+  };
+
+  // Show login if not authenticated
+  if (!isAuthenticated) {
+    return <AdminLogin onLoginSuccess={handleLoginSuccess} />;
+  }
 
   // Statistiche aggregate
   const [stats, setStats] = useState({
@@ -196,11 +242,21 @@ const AdminStats: React.FC = () => {
   return (
     <div className={styles.adminContainer}>
       <div className={styles.header}>
-        <h1>📊 Statistiche Utenti SGAI</h1>
-        <p className={styles.subtitle}>
-          Dashboard amministrativa - Accesso limitato al personale di
-          manutenzione
-        </p>
+        <div>
+          <h1>📊 Statistiche Utenti SGAI</h1>
+          <p className={styles.subtitle}>
+            Dashboard amministrativa - Accesso limitato al personale di
+            manutenzione
+          </p>
+        </div>
+        <Button
+          danger
+          icon={<LogoutOutlined />}
+          onClick={handleLogout}
+          className={styles.logoutBtn}
+        >
+          Logout
+        </Button>
       </div>
 
       {/* Filtro date */}

@@ -6,7 +6,13 @@
 
 .header {
   margin-bottom: 24px;
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  > div {
+    flex: 1;
+  }
 
   h1 {
     font-size: 32px;
@@ -14,6 +20,12 @@
     color: var(--text-primary);
     margin-bottom: 8px;
   }
+}
+
+.logoutBtn {
+  flex-shrink: 0;
+  height: 40px;
+  font-weight: 600;
 }
 
 .subtitle {
