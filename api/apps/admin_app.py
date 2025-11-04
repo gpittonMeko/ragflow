@@ -22,8 +22,10 @@ from collections import defaultdict
 import re
 
 # Blueprint per le API admin
+# NOTA: url_prefix viene impostato automaticamente dal sistema di auto-registrazione
+# Il path finale sarà /v1/admin/...
 from flask import Blueprint
-manager = Blueprint('admin', __name__, url_prefix='/api/admin')
+manager = Blueprint('admin', __name__)
 
 
 @manager.route('/user-sessions', methods=['POST'])
