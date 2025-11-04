@@ -3,7 +3,8 @@
   --card-bg: #1c1c1e;
   --text-primary: #f5f5f7;
   --text-secondary: #a1a1a6;
-  --accent-color: #0070f3;
+  --accent-color: #667eea;
+  --accent-secondary: #764ba2;
   --feature-title-color: #ffffff;
   --feature-text-color: #ffffff;
   --border-radius: 16px;
@@ -17,7 +18,7 @@
   --toggle-border: rgba(255, 255, 255, 0.35);
   --modal-card-bg: #ffffff;
   --modal-card-text: #000000;
-  --premium-btn-bg: linear-gradient(135deg, #ff8a05, #ff4f05);
+  --premium-btn-bg: linear-gradient(135deg, #667eea, #764ba2);
 }
 
 [data-theme='light'] {
@@ -684,14 +685,14 @@ body {
 .featuresSection {
   display: grid !important;
   grid-template-columns: repeat(3, 1fr) !important; /* columns: 3 */
-  gap: 5px !important; /* gap: 5px   */
+  gap: 12px !important; /* gap: aumentato da 5px a 12px */
   margin-bottom: 3rem;
   margin-top: 2rem; /* ← AGGIUNGI questo per abbassarle */
 }
 
 .featureCard {
   background-color: var(--card-bg);
-  padding: 8px !important; /* cardPadding: 8 */
+  padding: 16px !important; /* cardPadding: aumentato da 8 a 16 */
   border-radius: 28px !important; /* cardRadius: 28 */
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18); /* cardShadow: true */
   transition: var(--card-transition);
@@ -699,6 +700,7 @@ body {
   flex-direction: column;
   align-items: center;
   text-align: center;
+  margin: 8px; /* Aggiunto margine esterno */
 
   &:hover {
     transform: translateY(-5px);
@@ -741,7 +743,7 @@ body {
   display: block;
   height: 100px; /* fetch: height */
   min-height: 180px; /* fetch: minHeight */
-  max-height: 213px; /* fetch: maxHeight */
+  max-height: 243px; /* fetch: maxHeight - aumentato da 213px a 243px */
   border-radius: 6px; /* fetch: borderRadius */
 
   background: transparent;
