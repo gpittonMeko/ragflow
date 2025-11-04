@@ -51,17 +51,19 @@ def get_user_sessions():
         # Query base
         query = API4Conversation.select()
         
-        # Filtro date se specificato
+        # Filtro date se specificato (usa update_time in millisecondi)
         if start_date:
             start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-            query = query.where(API4Conversation.create_time >= start_dt)
+            start_ts = int(start_dt.timestamp() * 1000)
+            query = query.where(API4Conversation.update_time >= start_ts)
         
         if end_date:
             end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
-            query = query.where(API4Conversation.create_time < end_dt)
+            end_ts = int(end_dt.timestamp() * 1000)
+            query = query.where(API4Conversation.update_time < end_ts)
         
         # Ordina per data (più recenti prima)
-        query = query.order_by(API4Conversation.create_time.desc())
+        query = query.order_by(API4Conversation.update_time.desc())
         
         # Esegui query
         with DB.connection_context():
@@ -122,31 +124,41 @@ def get_user_sessions():
             # Estrai info browser/OS da user_id o altri campi
             browser, os = extract_browser_os(conv.get('user_id', ''))
             
+            # Converti timestamp da millisecondi a datetime
+            update_ts = conv.get('update_time')
+            login_time_str = ''
+            if update_ts:
+                try:
+                    login_dt = datetime.fromtimestamp(update_ts / 1000)
+                    login_time_str = login_dt.strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    # Count today logins
+                    if login_dt.date() == today:
+                        stats['todayLogins'] += 1
+                except:
+                    login_time_str = 'N/A'
+            
             # Crea sessione
             session = {
                 'id': conv.get('id', '')[:8],
                 'sessionId': conv.get('id', ''),
-                'userId': user_id,
-                'email': user_id if '@' in user_id else None,
+                'userId': user_id if user_id else 'anonymous',
+                'email': user_id if user_id and '@' in user_id else None,
                 'plan': plan,
-                'loginTime': conv.get('create_time', '').strftime('%Y-%m-%d %H:%M:%S') if conv.get('create_time') else '',
-                'ipAddress': extract_ip(user_id),
-                'userAgent': user_id,
+                'loginTime': login_time_str,
+                'ipAddress': extract_ip(user_id or ''),
+                'userAgent': user_id or 'N/A',
                 'country': 'Italy',  # da implementare con GeoIP
                 'city': 'Unknown',
                 'browser': browser,
                 'os': os,
                 'messagesCount': len(messages),
                 'conversation': conversation_text,
-                'duration': conv.get('duration', 0),
+                'duration': round(conv.get('duration', 0), 1),
                 'tokens': conv.get('tokens', 0)
             }
             
             sessions.append(session)
-            
-            # Count today logins
-            if conv.get('create_time') and conv.get('create_time').date() == today:
-                stats['todayLogins'] += 1
         
         stats['totalUsers'] = len(user_ids_set)
         stats['uniqueCountries'] = 1  # placeholder
