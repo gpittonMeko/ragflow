@@ -94,15 +94,7 @@ const AdminStats: React.FC = () => {
     setIsAuthenticated(true);
   };
 
-  // Show login if not authenticated
-  if (!isAuthenticated) {
-    return <AdminLogin onLoginSuccess={handleLoginSuccess} />;
-  }
-
-  useEffect(() => {
-    fetchUserSessions();
-  }, [dateRange]);
-
+  // ⚠️ fetchUserSessions e loadMockData DEVONO essere definiti PRIMA degli useEffect
   const fetchUserSessions = async () => {
     setLoading(true);
     try {
@@ -266,6 +258,18 @@ const AdminStats: React.FC = () => {
       uniqueCountries: 1,
     });
   };
+
+  // useEffect per caricare dati - DEVE essere prima del return condizionale
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchUserSessions();
+    }
+  }, [dateRange, isAuthenticated]);
+
+  // Show login if not authenticated
+  if (!isAuthenticated) {
+    return <AdminLogin onLoginSuccess={handleLoginSuccess} />;
+  }
 
   const columns: ColumnsType<UserSession> = [
     {
