@@ -23,8 +23,16 @@ import AdminLogin from './login';
 
 const { RangePicker } = DatePicker;
 
+interface ConversationMessage {
+  type: 'question' | 'answer';
+  text: string;
+  timestamp: number;
+}
+
 interface UserSession {
   id: string;
+  sessionId: string;
+  userId: string;
   email?: string;
   plan: 'free' | 'premium' | 'beta';
   loginTime: string;
@@ -34,6 +42,10 @@ interface UserSession {
   city?: string;
   browser?: string;
   os?: string;
+  messagesCount: number;
+  conversation: ConversationMessage[];
+  duration: number;
+  tokens: number;
 }
 
 const AdminStats: React.FC = () => {
@@ -94,8 +106,7 @@ const AdminStats: React.FC = () => {
   const fetchUserSessions = async () => {
     setLoading(true);
     try {
-      // TODO: Chiamata API al backend per ottenere le sessioni
-      const response = await fetch('/api/admin/user-sessions', {
+      const response = await fetch('/v1/admin/user-sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -105,13 +116,20 @@ const AdminStats: React.FC = () => {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setSessions(data.sessions || []);
-        setStats(data.stats || stats);
+        const result = await response.json();
+        if (result.code === 0 && result.data) {
+          setSessions(result.data.sessions || []);
+          setStats(result.data.stats || stats);
+        } else {
+          console.error('API error:', result.message);
+          loadMockData();
+        }
+      } else {
+        console.error('HTTP error:', response.status);
+        loadMockData();
       }
     } catch (error) {
       console.error('Error fetching user sessions:', error);
-      // Mock data per testing
       loadMockData();
     } finally {
       setLoading(false);
@@ -237,6 +255,19 @@ const AdminStats: React.FC = () => {
       dataIndex: 'os',
       key: 'os',
     },
+    {
+      title: 'Messaggi',
+      dataIndex: 'messagesCount',
+      key: 'messagesCount',
+      sorter: (a, b) => a.messagesCount - b.messagesCount,
+      render: (count: number) => <Tag color="blue">{count}</Tag>,
+    },
+    {
+      title: 'Tokens',
+      dataIndex: 'tokens',
+      key: 'tokens',
+      sorter: (a, b) => a.tokens - b.tokens,
+    },
   ];
 
   return (
@@ -344,14 +375,58 @@ const AdminStats: React.FC = () => {
         <Table
           columns={columns}
           dataSource={sessions}
-          rowKey="id"
+          rowKey="sessionId"
           loading={loading}
           pagination={{
             pageSize: 20,
             showSizeChanger: true,
             showTotal: (total) => `Totale ${total} sessioni`,
           }}
-          scroll={{ x: 1200 }}
+          scroll={{ x: 1400 }}
+          expandable={{
+            expandedRowRender: (record) => (
+              <div className={styles.conversationDetail}>
+                <h4>💬 Conversazione Completa</h4>
+                <div className={styles.conversationMessages}>
+                  {record.conversation && record.conversation.length > 0 ? (
+                    record.conversation.map((msg, idx) => (
+                      <div
+                        key={idx}
+                        className={
+                          msg.type === 'question'
+                            ? styles.questionMessage
+                            : styles.answerMessage
+                        }
+                      >
+                        <div className={styles.messageHeader}>
+                          <span className={styles.messageRole}>
+                            {msg.type === 'question' ? '👤 Utente' : '🤖 SGAI'}
+                          </span>
+                          <span className={styles.messageTime}>
+                            {msg.timestamp
+                              ? new Date(msg.timestamp * 1000).toLocaleString()
+                              : ''}
+                          </span>
+                        </div>
+                        <div className={styles.messageContent}>{msg.text}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <p style={{ color: '#999', fontStyle: 'italic' }}>
+                      Nessun messaggio disponibile
+                    </p>
+                  )}
+                </div>
+                <div className={styles.sessionMeta}>
+                  <span>📊 Durata: {Math.round(record.duration || 0)}s</span>
+                  <span>🔤 Token usati: {record.tokens || 0}</span>
+                  <span>🆔 Session ID: {record.sessionId}</span>
+                </div>
+              </div>
+            ),
+            rowExpandable: (record) =>
+              record.conversation && record.conversation.length > 0,
+          }}
         />
       </Card>
 
