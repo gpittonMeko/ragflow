@@ -168,6 +168,13 @@ const routes = [
   },
 
   {
+    path: '/admin-stats',
+    component: '@/pages/admin-stats',
+    layout: false,
+    // ⚠️ Accesso limitato - solo personale manutenzione
+  },
+
+  {
     path: Routes.Login, // '/login'
     component: '@/pages/login-iframe-bridge',
     layout: false,

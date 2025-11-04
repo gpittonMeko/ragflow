@@ -1,0 +1,127 @@
+.adminContainer {
+  padding: 24px;
+  background: var(--bg-color);
+  min-height: 100vh;
+}
+
+.header {
+  margin-bottom: 24px;
+  text-align: center;
+
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
+.filterCard {
+  margin-bottom: 16px;
+
+  :global(.ant-card-body) {
+    padding: 16px;
+  }
+}
+
+.resetButton {
+  padding: 4px 15px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.statsRow {
+  margin-bottom: 24px;
+
+  :global(.ant-card) {
+    text-align: center;
+
+    :global(.ant-statistic-title) {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    :global(.ant-statistic-content) {
+      font-size: 28px;
+      font-weight: 700;
+    }
+  }
+}
+
+.tableCard {
+  margin-bottom: 16px;
+
+  :global(.ant-card-head-title) {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  :global(.ant-table) {
+    font-size: 13px;
+  }
+
+  :global(.ant-table-thead > tr > th) {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  :global(.ant-table-tbody > tr:hover > td) {
+    background: var(--button-hover);
+  }
+}
+
+.warningCard {
+  border: 2px solid #ff4d4f;
+  background: rgba(255, 77, 79, 0.05);
+
+  :global(.ant-card-body) {
+    padding: 16px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 13px;
+
+    strong {
+      color: #ff4d4f;
+      font-weight: 700;
+    }
+  }
+}
+
+/* Dark theme adjustments */
+[data-theme='dark'] {
+  .adminContainer {
+    :global(.ant-card) {
+      background: var(--card-bg);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    :global(.ant-table) {
+      background: transparent;
+      color: var(--text-primary);
+    }
+
+    :global(.ant-picker) {
+      background: var(--card-bg);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: var(--text-primary);
+    }
+  }
+}
