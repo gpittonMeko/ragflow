@@ -18,6 +18,18 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import React, { useEffect, useState } from 'react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import styles from './index.less';
 import AdminLogin from './login';
 
@@ -65,6 +77,8 @@ const AdminStats: React.FC = () => {
     todayLogins: 0,
     uniqueCountries: 0,
   });
+  // Dati per grafici giornalieri
+  const [dailyStats, setDailyStats] = useState<any[]>([]);
 
   // Check authentication on mount
   useEffect(() => {
@@ -112,6 +126,10 @@ const AdminStats: React.FC = () => {
         if (result.code === 0 && result.data) {
           setSessions(result.data.sessions || []);
           setStats(result.data.stats || stats);
+
+          // Calcola statistiche giornaliere per i grafici
+          const dailyData = calculateDailyStats(result.data.sessions || []);
+          setDailyStats(dailyData);
         } else {
           console.error('API error:', result.message);
           loadMockData();
@@ -257,6 +275,49 @@ const AdminStats: React.FC = () => {
       todayLogins: 3,
       uniqueCountries: 1,
     });
+
+    // Mock daily stats
+    setDailyStats(calculateDailyStats(mockSessions));
+  };
+
+  // Funzione per calcolare statistiche giornaliere
+  const calculateDailyStats = (sessionsList: UserSession[]) => {
+    const dailyMap = new Map<string, any>();
+
+    sessionsList.forEach((session) => {
+      if (!session.loginTime || session.loginTime === 'N/A') return;
+
+      const date = session.loginTime.split(' ')[0]; // YYYY-MM-DD
+
+      if (!dailyMap.has(date)) {
+        dailyMap.set(date, {
+          date,
+          sessions: 0,
+          messages: 0,
+          tokens: 0,
+          users: new Set(),
+        });
+      }
+
+      const day = dailyMap.get(date);
+      day.sessions += 1;
+      day.messages += session.messagesCount || 0;
+      day.tokens += session.tokens || 0;
+      day.users.add(session.userId);
+    });
+
+    // Converti in array e calcola utenti unici per giorno
+    const result = Array.from(dailyMap.values())
+      .map((day) => ({
+        date: day.date,
+        sessioni: day.sessions,
+        messaggi: day.messages,
+        tokens: day.tokens,
+        utenti: day.users.size,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return result;
   };
 
   // useEffect per caricare dati - DEVE essere prima del return condizionale
@@ -455,8 +516,66 @@ const AdminStats: React.FC = () => {
         </Col>
       </Row>
 
+      {/* Grafici Andamento Giornaliero */}
+      {dailyStats.length > 0 && (
+        <Row gutter={16} className={styles.chartsRow}>
+          <Col span={12}>
+            <Card
+              title="📈 Andamento Sessioni Giornaliere"
+              className={styles.chartCard}
+            >
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={dailyStats}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="sessioni"
+                    stroke="#667eea"
+                    strokeWidth={2}
+                    name="Sessioni"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="utenti"
+                    stroke="#764ba2"
+                    strokeWidth={2}
+                    name="Utenti Unici"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+
+          <Col span={12}>
+            <Card
+              title="📊 Messaggi e Tokens per Giorno"
+              className={styles.chartCard}
+            >
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={dailyStats}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="messaggi" fill="#667eea" name="Messaggi" />
+                  <Bar dataKey="tokens" fill="#764ba2" name="Tokens" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+        </Row>
+      )}
+
       {/* Tabella sessioni */}
-      <Card className={styles.tableCard} title="📋 Sessioni Utenti">
+      <Card
+        className={styles.tableCard}
+        title="📋 Sessioni Utenti (Clicca per espandere e vedere messaggi)"
+      >
         <Table
           columns={columns}
           dataSource={sessions}
