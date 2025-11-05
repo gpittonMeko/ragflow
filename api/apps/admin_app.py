@@ -145,9 +145,6 @@ def get_user_sessions():
                         'index': idx
                     })
             
-            # Estrai info browser/OS da user_id o altri campi
-            browser, os = extract_browser_os(conv.get('user_id', ''))
-            
             # Converti timestamp da millisecondi a datetime
             update_ts = conv.get('update_time')
             login_time_str = ''
@@ -162,6 +159,13 @@ def get_user_sessions():
                 except:
                     login_time_str = 'N/A'
             
+            # Get tracking data from database (new columns)
+            ip_address = conv.get('ip_address', 'N/A')
+            user_agent = conv.get('user_agent', 'N/A')
+            browser = conv.get('browser', 'Unknown')
+            os_name = conv.get('os', 'Unknown')
+            device_type = conv.get('device_type', 'desktop')
+            
             # Crea sessione
             session = {
                 'id': conv.get('id', '')[:8],
@@ -170,12 +174,15 @@ def get_user_sessions():
                 'email': user_id if user_id and '@' in user_id else None,
                 'plan': plan,
                 'loginTime': login_time_str,
-                'ipAddress': extract_ip(user_id or ''),
-                'userAgent': user_id or 'N/A',
+                'ipAddress': ip_address,
+                'userAgent': user_agent,
                 'country': 'Italy',  # da implementare con GeoIP
-                'city': 'Unknown',
+                'city': 'Unknown',  # da implementare con GeoIP
                 'browser': browser,
-                'os': os,
+                'os': os_name,
+                'deviceType': device_type,
+                'referrer': conv.get('referrer'),
+                'language': conv.get('language'),
                 'messagesCount': len(messages),
                 'conversation': conversation_text,
                 'duration': round(conv.get('duration', 0), 1),

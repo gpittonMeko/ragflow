@@ -139,12 +139,16 @@ def stats():
 
 @manager.route('/new_conversation', methods=['GET'])  # noqa: F821
 def set_conversation():
+    from api.utils.tracking_utils import get_tracking_info
     token = request.headers.get('Authorization').split()[1]
     objs = APIToken.query(token=token)
     if not objs:
         return get_json_result(
             data=False, message='Authentication error: API key is invalid!"', code=settings.RetCode.AUTHENTICATION_ERROR)
     try:
+        # Get tracking info
+        tracking = get_tracking_info(request)
+        
         if objs[0].source == "agent":
             e, cvs = UserCanvasService.get_by_id(objs[0].dialog_id)
             if not e:
@@ -157,7 +161,8 @@ def set_conversation():
                 "dialog_id": cvs.id,
                 "user_id": request.args.get("user_id", ""),
                 "message": [{"role": "assistant", "content": canvas.get_prologue()}],
-                "source": "agent"
+                "source": "agent",
+                **tracking  # Add tracking fields
             }
             API4ConversationService.save(**conv)
             return get_json_result(data=conv)
@@ -169,7 +174,8 @@ def set_conversation():
                 "id": get_uuid(),
                 "dialog_id": dia.id,
                 "user_id": request.args.get("user_id", ""),
-                "message": [{"role": "assistant", "content": dia.prompt_config["prologue"]}]
+                "message": [{"role": "assistant", "content": dia.prompt_config["prologue"]}],
+                **tracking  # Add tracking fields
             }
             API4ConversationService.save(**conv)
             return get_json_result(data=conv)

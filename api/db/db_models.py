@@ -751,6 +751,14 @@ class API4Conversation(DataBaseModel):
     duration = FloatField(default=0, index=True)
     round = IntegerField(default=0, index=True)
     thumb_up = IntegerField(default=0, index=True)
+    # Tracking fields for admin stats
+    ip_address = CharField(max_length=45, null=True, help_text="Client IP address", index=True)
+    user_agent = CharField(max_length=512, null=True, help_text="User agent string")
+    browser = CharField(max_length=64, null=True, help_text="Browser name")
+    os = CharField(max_length=64, null=True, help_text="Operating system")
+    device_type = CharField(max_length=32, null=True, help_text="mobile|desktop|tablet")
+    referrer = CharField(max_length=512, null=True, help_text="HTTP referer")
+    language = CharField(max_length=16, null=True, help_text="Browser language")
 
     class Meta:
         db_table = "api_4_conversation"
@@ -885,5 +893,35 @@ def migrate_db():
         pass
     try:
         migrate(migrator.add_column("llm", "is_tools", BooleanField(null=False, help_text="support tools", default=False)))
+    except Exception:
+        pass
+    
+    # Admin stats tracking fields
+    try:
+        migrate(migrator.add_column("api_4_conversation", "ip_address", CharField(max_length=45, null=True, help_text="Client IP address", index=True)))
+    except Exception:
+        pass
+    try:
+        migrate(migrator.add_column("api_4_conversation", "user_agent", CharField(max_length=512, null=True, help_text="User agent string")))
+    except Exception:
+        pass
+    try:
+        migrate(migrator.add_column("api_4_conversation", "browser", CharField(max_length=64, null=True, help_text="Browser name")))
+    except Exception:
+        pass
+    try:
+        migrate(migrator.add_column("api_4_conversation", "os", CharField(max_length=64, null=True, help_text="Operating system")))
+    except Exception:
+        pass
+    try:
+        migrate(migrator.add_column("api_4_conversation", "device_type", CharField(max_length=32, null=True, help_text="mobile|desktop|tablet")))
+    except Exception:
+        pass
+    try:
+        migrate(migrator.add_column("api_4_conversation", "referrer", CharField(max_length=512, null=True, help_text="HTTP referer")))
+    except Exception:
+        pass
+    try:
+        migrate(migrator.add_column("api_4_conversation", "language", CharField(max_length=16, null=True, help_text="Browser language")))
     except Exception:
         pass
