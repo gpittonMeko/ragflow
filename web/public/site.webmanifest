@@ -1,0 +1,26 @@
+{
+  "name": "SGAI Legal - Assistente AI Diritto Tributario",
+  "short_name": "SGAI",
+  "description": "Assistente legale basato su intelligenza artificiale specializzato in diritto tributario e doganale italiano. Analisi di 50.000+ sentenze in tempo reale.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#667eea",
+  "orientation": "portrait-primary",
+  "lang": "it",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["legal", "business", "productivity", "finance"],
+  "iarc_rating_id": "",
+  "prefer_related_applications": false
+}
+
+

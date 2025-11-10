@@ -1,12 +1,23 @@
 import path from 'path';
 import TerserPlugin from 'terser-webpack-plugin';
 import { defineConfig } from 'umi';
-import { appName } from './src/conf.json';
 import routes from './src/routes';
 
 export default defineConfig({
-  title: appName,
+  title: 'SGAI Legal | Assistente AI per Diritto Tributario Italiano',
   outputPath: 'dist',
+  metas: [
+    {
+      name: 'description',
+      content:
+        "SGAI è l'assistente legale AI specializzato in diritto tributario italiano. Analisi giurisprudenziale istantanea con 50.000+ sentenze, consulenza fiscale automatizzata.",
+    },
+    {
+      name: 'keywords',
+      content:
+        'assistente legale AI, diritto tributario, consulenza fiscale Italia, intelligenza artificiale legale, avvocato tributarista online',
+    },
+  ],
   alias: { '@parent': path.resolve(__dirname, '../') },
   npmClient: 'npm',
   base: '/',
@@ -34,6 +45,9 @@ export default defineConfig({
   copy: [
     { from: 'src/conf.json', to: 'dist/conf.json' },
     { from: 'node_modules/monaco-editor/min/vs/', to: 'dist/vs/' },
+    { from: 'public/sitemap.xml', to: 'dist/sitemap.xml' },
+    { from: 'public/robots.txt', to: 'dist/robots.txt' },
+    { from: 'public/site.webmanifest', to: 'dist/site.webmanifest' },
   ],
   proxy: [
     {

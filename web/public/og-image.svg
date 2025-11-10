@@ -1,0 +1,32 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#20143b"/>
+      <stop offset="50%" stop-color="#0d0d2d"/>
+      <stop offset="100%" stop-color="#040408"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8f7bff"/>
+      <stop offset="100%" stop-color="#5ef0c2"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#05051a" flood-opacity="0.65"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <rect x="120" y="140" width="960" height="350" rx="40" fill="rgba(10,10,25,0.8)" stroke="rgba(255,255,255,0.08)"/>
+  </g>
+  <text x="160" y="250" fill="url(#accent)" font-family="Inter, 'Segoe UI', sans-serif" font-size="72" font-weight="800" letter-spacing="-1.5">SGAI LEGAL</text>
+  <text x="160" y="320" fill="#ffffff" font-family="Inter, 'Segoe UI', sans-serif" font-size="38" font-weight="600">Assistente AI Tributario per studi legali italiani</text>
+  <text x="160" y="370" fill="#cbd5ff" font-family="Inter, 'Segoe UI', sans-serif" font-size="26">50.000+ sentenze, prassi Agenzia Entrate, ricorsi pronti in minuti.</text>
+  <g transform="translate(160,410)">
+    <rect width="330" height="70" rx="18" fill="url(#accent)"/>
+    <text x="165" y="45" font-family="Inter, 'Segoe UI', sans-serif" font-size="24" font-weight="700" text-anchor="middle" fill="#080910">Prova gratuita — 5 domande al giorno</text>
+  </g>
+  <g fill="#9fa7ff" font-family="Inter, 'Segoe UI', sans-serif" font-size="24" font-weight="600">
+    <text x="620" y="470">SGAI supera Lextel AI, Lexroom e Simpliciter.</text>
+    <text x="620" y="506">Motore RAG fiscale proprietario con citazioni verificate.</text>
+  </g>
+</svg>
+

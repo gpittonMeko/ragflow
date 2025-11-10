@@ -1,0 +1,30 @@
+<svg width="1200" height="600" viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tw-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111133"/>
+      <stop offset="100%" stop-color="#050519"/>
+    </linearGradient>
+    <linearGradient id="tw-accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4fc3f7"/>
+      <stop offset="100%" stop-color="#9575cd"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="600" fill="url(#tw-bg)"/>
+  <g transform="translate(120,120)">
+    <text fill="url(#tw-accent)" font-family="Inter, 'Segoe UI', sans-serif" font-size="64" font-weight="800" letter-spacing="-1.2">SGAI Legal • AI Tributaria per Avvocati</text>
+    <text y="80" fill="#dce7ff" font-family="Inter, 'Segoe UI', sans-serif" font-size="30" font-weight="600">Ricerca giurisprudenziale istantanea con fonti citate e prontuario tributario completo.</text>
+    <g transform="translate(0,150)" fill="#b2beff" font-family="Inter, 'Segoe UI', sans-serif" font-size="26">
+      <text>• RAG proprietario su 50.000+ sentenze e prassi Agenzia Entrate</text>
+      <text y="48">• Workflow dedicati a memorie, ricorsi e lettere di compliance</text>
+      <text y="96">• Compliance GDPR, hosting UE, audit trail completo</text>
+    </g>
+    <g transform="translate(0,330)">
+      <rect width="360" height="72" rx="18" fill="url(#tw-accent)"/>
+      <text x="180" y="46" font-family="Inter, 'Segoe UI', sans-serif" font-size="26" font-weight="700" text-anchor="middle" fill="#051121">Prenota una demo gratuita</text>
+    </g>
+    <text y="430" fill="#7c89ff" font-family="Inter, 'Segoe UI', sans-serif" font-size="24">
+      Superiamo Lextel AI, Lexroom e Simpliciter sulla qualità delle fonti e sulla velocità di redazione.
+    </text>
+  </g>
+</svg>
+
