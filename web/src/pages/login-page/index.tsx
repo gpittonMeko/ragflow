@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { useNavigate } from 'umi';
+import { Helmet, useNavigate } from 'umi';
 import { v4 as uuidv4 } from 'uuid';
 import { SvgLogoInteractive } from './SvgLogoInteractive';
 import DirectChat from './direct-chat';
@@ -1397,6 +1397,21 @@ const PresentationPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <Helmet>
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-P9QCNBXQKP"
+        />
+        <script>
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-P9QCNBXQKP');
+          `}
+        </script>
+      </Helmet>
     </div>
   );
 };
