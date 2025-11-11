@@ -684,47 +684,47 @@ body {
 
 .featuresSection {
   display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important; /* columns: 3 */
-  gap: 12px !important; /* gap: aumentato da 5px a 12px */
-  margin-bottom: 3rem;
-  margin-top: 2rem; /* ← AGGIUNGI questo per abbassarle */
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 8px !important;
+  margin: 12px auto 20px;
+  width: 100%;
 }
 
 .featureCard {
   background-color: var(--card-bg);
-  padding: 16px !important; /* cardPadding: aumentato da 8 a 16 */
-  border-radius: 28px !important; /* cardRadius: 28 */
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18); /* cardShadow: true */
+  padding: 12px !important;
+  border-radius: 22px !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
   transition: var(--card-transition);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin: 8px; /* Aggiunto margine esterno */
+  margin: 0;
 
   &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
   }
 
   h3 {
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    margin-bottom: 0.6rem;
     font-weight: 600;
     color: var(--feature-title-color);
   }
 
   p {
     color: var(--feature-text-color);
-    font-size: 1rem;
-    line-height: 1.6;
+    font-size: 0.88rem;
+    line-height: 1.35;
   }
 }
 
 .featureIcon {
-  width: 60px;
-  height: 60px;
-  margin-bottom: 1.5rem;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 0.8rem;
   color: var(--accent-color);
 }
 
@@ -758,22 +758,23 @@ body {
 }
 
 .disclaimerSection {
-  padding: 5px !important;
-  border-radius: 15px !important;
+  padding: 8px 12px !important;
+  border-radius: 14px !important;
   background-color: var(--disclaimer-bg);
-  margin-top: 3rem;
+  margin-top: 16px;
   backdrop-filter: var(--nav-blur);
   -webkit-backdrop-filter: var(--nav-blur);
 
   strong {
     color: #ff453a;
     display: block;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
   }
 
   p {
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     color: var(--text-secondary);
+    margin: 0;
   }
 }
 
@@ -1536,9 +1537,13 @@ span {
 }
 
 .extraBlocks {
-  flex: 1 1 auto; /* prende lo spazio rimanente */
-  overflow-y: auto; /* se servisse scroll interno */
-  margin-top: 2rem;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  margin-top: 1rem;
+  padding: 0 6px 32px;
   z-index: 1;
 }
 
@@ -1547,7 +1552,10 @@ span {
 }
 
 .featuresSection {
-  top: 20px;
+  top: 12px;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 960px;
 }
 
 .pageContainer.fullscreen .iframeSection {
@@ -2111,13 +2119,13 @@ span {
 /* ======= LEGAL FOOTER ======= */
 .legalFooter {
   text-align: center;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
-  padding: 12px 20px;
-  margin-top: 20px;
-  margin-bottom: 80px; /* spazio per il pulsante WhatsApp */
+  padding: 10px 16px;
+  margin: 12px auto 56px;
+  max-width: 960px;
 
   p {
     margin: 0;
@@ -2155,29 +2163,29 @@ span {
 .serviceHoursBanner {
   background: linear-gradient(
     135deg,
-    rgba(18, 219, 255, 0.12),
-    rgba(34, 255, 184, 0.12)
+    rgba(18, 219, 255, 0.1),
+    rgba(34, 255, 184, 0.1)
   );
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(120, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(120, 255, 255, 0.18);
   border-radius: 12px;
-  padding: 12px 20px;
-  margin: 16px auto;
-  max-width: 600px;
+  padding: 10px 16px;
+  margin: 8px auto;
+  max-width: 560px;
   text-align: center;
   box-shadow: 0 4px 16px rgba(0, 160, 255, 0.15);
 
   .bannerIcon {
-    font-size: 20px;
-    margin-right: 8px;
+    font-size: 18px;
+    margin-right: 6px;
     vertical-align: middle;
   }
 
   .bannerText {
     color: #e6ffff;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
-    line-height: 1.4;
+    line-height: 1.35;
     letter-spacing: 0.01em;
 
     strong {

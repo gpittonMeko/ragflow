@@ -222,6 +222,7 @@ const PresentationPage: React.FC = () => {
   const [showLimitOverlay, setShowLimitOverlay] = useState(false);
   const [chatExpanded, setChatExpanded] = useState(false);
   const [hasMessages, setHasMessages] = useState(false);
+  const [chatHasBeenOpened, setChatHasBeenOpened] = useState(false);
 
   // ✅ Beta tester states
   const [showBetaCodeModal, setShowBetaCodeModal] = useState(false);
@@ -1093,7 +1094,13 @@ const PresentationPage: React.FC = () => {
           zIndex: chatExpanded ? 9999 : 'auto',
           background: 'transparent',
           width: chatExpanded ? '100vw' : 'auto',
-          height: chatExpanded ? '100vh' : hasMessages ? '300px' : '180px',
+          height: chatExpanded
+            ? '100vh'
+            : hasMessages
+              ? '300px'
+              : chatHasBeenOpened
+                ? '180px'
+                : '150px',
           padding: 0,
           margin: 0,
           transition: 'height 0.3s ease',
@@ -1148,9 +1155,11 @@ const PresentationPage: React.FC = () => {
                 sessionStorage.setItem(CURRENT_SESSION_KEY, newSessionId);
                 setSessionId(newSessionId);
                 setCurrentChatTitle('Nuova Chat');
+                setChatHasBeenOpened(true);
                 setChatExpanded(true);
               } else if (!chatExpanded && hasMessages) {
                 // Se ci sono già messaggi, espandi senza cambiare sessionId
+                setChatHasBeenOpened(true);
                 setChatExpanded(true);
               }
             }}
