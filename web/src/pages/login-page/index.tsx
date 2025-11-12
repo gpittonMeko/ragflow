@@ -1084,8 +1084,7 @@ const PresentationPage: React.FC = () => {
       )}
       {/* LOGO SGAI */}
       <div
-        className={`${styles.heroSection} ${hideExtras ? styles.heroShrink : ''}`}
-        style={{ display: chatExpanded ? 'none' : 'block' }}
+        className={`${styles.heroSection} ${chatExpanded ? styles.heroPinned : ''} ${hideExtras ? styles.heroShrink : ''}`}
       >
         <div className={styles.logoBox}>
           <SvgLogoInteractive flipped />
@@ -1116,8 +1115,8 @@ const PresentationPage: React.FC = () => {
           height: chatExpanded
             ? '100vh'
             : chatHasBeenOpened
-              ? '180px'
-              : '150px',
+              ? '170px'
+              : '170px',
           padding: 0,
           margin: 0,
           transition: 'height 0.3s ease',

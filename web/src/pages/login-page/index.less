@@ -600,6 +600,32 @@ body {
   width: 100%;
   margin: 0 auto;
 }
+.heroSection.heroPinned {
+  position: sticky;
+  top: 0;
+  z-index: 9000;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  background: linear-gradient(
+    180deg,
+    rgba(13, 19, 33, 0.95),
+    rgba(13, 19, 33, 0.75) 65%,
+    transparent
+  );
+  backdrop-filter: blur(12px);
+  transition:
+    padding 0.3s ease,
+    background 0.3s ease;
+}
+[data-theme='light'] .heroSection.heroPinned {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.94),
+    rgba(255, 255, 255, 0.82) 70%,
+    transparent
+  );
+  border-bottom: 1px solid rgba(17, 24, 39, 0.05);
+}
 
 .heroSection.heroShrink {
   transform: scale(0.4); /* si rimpicciolisce */
@@ -1575,7 +1601,7 @@ span {
   justify-content: center;
   overflow-y: auto;
   margin-top: 0.5rem;
-  padding: 0 6px 12px;
+  padding: 0 12px 12px;
   z-index: 1;
 }
 
@@ -2204,13 +2230,14 @@ span {
   padding: 8px 14px;
   margin: 6px auto;
   max-width: 560px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   box-shadow: 0 4px 16px rgba(0, 160, 255, 0.15);
 
   .bannerIcon {
     font-size: 18px;
-    margin-right: 6px;
-    vertical-align: middle;
   }
 
   .bannerText {
@@ -2253,6 +2280,8 @@ span {
   .serviceHoursBanner {
     padding: 8px 14px;
     margin: 10px 16px;
+    flex-direction: column;
+    gap: 4px;
 
     .bannerIcon {
       font-size: 18px;
