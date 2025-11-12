@@ -35,6 +35,7 @@ const CURRENT_SESSION_KEY = 'sgai-current-session';
 
 // ✅ Codice beta tester hardcoded
 const BETA_TESTER_CODE = 'SGAI2024BETA';
+const HERO_PINNED_HEIGHT = 150;
 
 // --- CHAT HISTORY FUNCTIONS ---
 const getChatHistory = (): ChatSession[] => {
@@ -1105,14 +1106,18 @@ const PresentationPage: React.FC = () => {
         className={styles.iframeSection}
         style={{
           position: chatExpanded ? 'fixed' : 'relative',
-          top: chatExpanded ? 0 : 'auto',
+          top: chatExpanded ? HERO_PINNED_HEIGHT : 'auto',
           left: chatExpanded ? 0 : 'auto',
           right: chatExpanded ? 0 : 'auto',
           bottom: chatExpanded ? 0 : 'auto',
           zIndex: chatExpanded ? 9999 : 'auto',
           background: 'transparent',
           width: chatExpanded ? '100vw' : 'auto',
-          height: chatExpanded ? '100vh' : hasMessages ? '300px' : '170px',
+          height: chatExpanded
+            ? `calc(100vh - ${HERO_PINNED_HEIGHT}px)`
+            : hasMessages
+              ? '300px'
+              : '170px',
           padding: 0,
           margin: 0,
           transition: 'height 0.3s ease',
