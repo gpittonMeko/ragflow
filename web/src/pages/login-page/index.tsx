@@ -252,6 +252,25 @@ const PresentationPage: React.FC = () => {
   const [showLeftSidebar, setShowLeftSidebar] = useState(false);
   const [currentChatTitle, setCurrentChatTitle] = useState('Nuova Chat');
 
+  useEffect(() => {
+    const previousHtmlOverflowX = document.documentElement.style.overflowX;
+    const previousHtmlOverflowY = document.documentElement.style.overflowY;
+    const previousBodyOverflowX = document.body.style.overflowX;
+    const previousBodyOverflowY = document.body.style.overflowY;
+
+    document.documentElement.style.overflowX = 'hidden';
+    document.documentElement.style.overflowY = 'hidden';
+    document.body.style.overflowX = 'hidden';
+    document.body.style.overflowY = 'hidden';
+
+    return () => {
+      document.documentElement.style.overflowX = previousHtmlOverflowX;
+      document.documentElement.style.overflowY = previousHtmlOverflowY;
+      document.body.style.overflowX = previousBodyOverflowX;
+      document.body.style.overflowY = previousBodyOverflowY;
+    };
+  }, []);
+
   // --- CHAT HISTORY FUNCTIONS ---
   const loadChatHistory = () => {
     setChatHistory(getChatHistory());
