@@ -449,7 +449,7 @@
 
 html {
   font-size: clamp(14px, 1.1vw, 16px) !important; /* max 16px invece di 18px */
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 body {
@@ -462,8 +462,8 @@ body {
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
-  overflow: hidden;
-  height: 100vh;
+  overflow-x: hidden;
+  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
