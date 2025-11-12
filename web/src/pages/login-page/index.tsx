@@ -1112,11 +1112,7 @@ const PresentationPage: React.FC = () => {
           zIndex: chatExpanded ? 9999 : 'auto',
           background: 'transparent',
           width: chatExpanded ? '100vw' : 'auto',
-          height: chatExpanded
-            ? '100vh'
-            : chatHasBeenOpened
-              ? '170px'
-              : '170px',
+          height: chatExpanded ? '100vh' : hasMessages ? '300px' : '170px',
           padding: 0,
           margin: 0,
           transition: 'height 0.3s ease',
