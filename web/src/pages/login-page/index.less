@@ -685,15 +685,15 @@ body {
 .featuresSection {
   display: grid !important;
   grid-template-columns: repeat(3, 1fr) !important;
-  gap: 8px !important;
-  margin: 12px auto 20px;
+  gap: 6px !important;
+  margin: 8px auto 12px;
   width: 100%;
 }
 
 .featureCard {
   background-color: var(--card-bg);
-  padding: 12px !important;
-  border-radius: 22px !important;
+  padding: 10px !important;
+  border-radius: 20px !important;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
   transition: var(--card-transition);
   display: flex;
@@ -703,28 +703,28 @@ body {
   margin: 0;
 
   &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
   }
 
   h3 {
-    font-size: 1.2rem;
-    margin-bottom: 0.6rem;
+    font-size: 1.15rem;
+    margin-bottom: 0.4rem;
     font-weight: 600;
     color: var(--feature-title-color);
   }
 
   p {
     color: var(--feature-text-color);
-    font-size: 0.88rem;
-    line-height: 1.35;
+    font-size: 0.86rem;
+    line-height: 1.3;
   }
 }
 
 .featureIcon {
   width: 48px;
   height: 48px;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.6rem;
   color: var(--accent-color);
 }
 
@@ -742,7 +742,7 @@ body {
   border: none;
   display: block;
   height: 100px; /* fetch: height */
-  min-height: 180px; /* fetch: minHeight */
+  min-height: 150px; /* fetch: minHeight */
   max-height: 243px; /* fetch: maxHeight - aumentato da 213px a 243px */
   border-radius: 6px; /* fetch: borderRadius */
 
@@ -761,7 +761,7 @@ body {
   padding: 8px 12px !important;
   border-radius: 14px !important;
   background-color: var(--disclaimer-bg);
-  margin-top: 16px;
+  margin-top: 12px;
   backdrop-filter: var(--nav-blur);
   -webkit-backdrop-filter: var(--nav-blur);
 
@@ -1540,10 +1540,10 @@ span {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   overflow-y: auto;
-  margin-top: 1rem;
-  padding: 0 6px 32px;
+  margin-top: 0.5rem;
+  padding: 0 6px 18px;
   z-index: 1;
 }
 
@@ -2124,7 +2124,7 @@ span {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   padding: 10px 16px;
-  margin: 12px auto 56px;
+  margin: 10px auto 40px;
   max-width: 960px;
 
   p {
@@ -2169,8 +2169,8 @@ span {
   backdrop-filter: blur(8px);
   border: 1px solid rgba(120, 255, 255, 0.18);
   border-radius: 12px;
-  padding: 10px 16px;
-  margin: 8px auto;
+  padding: 8px 14px;
+  margin: 6px auto;
   max-width: 560px;
   text-align: center;
   box-shadow: 0 4px 16px rgba(0, 160, 255, 0.15);
@@ -2197,8 +2197,8 @@ span {
 
 @media (max-width: 768px) {
   .serviceHoursBanner {
-    padding: 10px 16px;
-    margin: 12px 16px;
+    padding: 8px 14px;
+    margin: 10px 16px;
 
     .bannerIcon {
       font-size: 18px;
