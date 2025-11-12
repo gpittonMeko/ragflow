@@ -46,7 +46,7 @@ DEFAULT_VERBOSE_LLM_SETTING = {
     "top_p": 0.9,
     "frequency_penalty": 0.2,
     "presence_penalty": 0.1,
-    "max_tokens": 1024,
+    "max_tokens": 2048,
 }
 LEGACY_CONCISE_LLM_SETTING = {
     "temperature": 0.1,

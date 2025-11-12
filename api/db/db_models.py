@@ -697,7 +697,7 @@ class Dialog(DataBaseModel):
             "top_p": 0.9,
             "frequency_penalty": 0.2,
             "presence_penalty": 0.1,
-            "max_tokens": 1024,
+            "max_tokens": 2048,
         },
     )
     prompt_type = CharField(max_length=16, null=False, default="simple", help_text="simple|advanced", index=True)
