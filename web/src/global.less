@@ -2,21 +2,23 @@
 
 html {
   height: 100%;
-  overflow: hidden; // The content of the DatasetSettings page is too high, which will cause scroll bars to appear on the html tags. Setting the maximum height in DatasetSettings does not work either. I don't understand.
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 body {
   font-family: Inter;
   margin: 0;
-  height: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
 }
 
 #root {
-  height: 100%;
+  min-height: 100%;
 }
 
 .ant-app {
-  height: 100%;
+  min-height: 100%;
 }
 
 /* Scroll bar stylings */

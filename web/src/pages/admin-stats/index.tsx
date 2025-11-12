@@ -9,6 +9,7 @@ import {
   Card,
   Col,
   DatePicker,
+  Progress,
   Row,
   Space,
   Statistic,
@@ -60,6 +61,17 @@ interface UserSession {
   tokens: number;
 }
 
+interface KnowledgeStats {
+  dataset: string;
+  total: number;
+  chunkSum: number;
+  statusCounts: Record<string, number>;
+  progress: number;
+  remaining: number;
+  lastStartedAt?: string | null;
+  found?: boolean;
+}
+
 const AdminStats: React.FC = () => {
   // ⚠️ IMPORTANTE: Tutti gli useState DEVONO essere dichiarati PRIMA di qualsiasi return condizionale
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -79,6 +91,10 @@ const AdminStats: React.FC = () => {
   });
   // Dati per grafici giornalieri
   const [dailyStats, setDailyStats] = useState<any[]>([]);
+  const [knowledgeStats, setKnowledgeStats] = useState<KnowledgeStats | null>(
+    null,
+  );
+  const [knowledgeLoading, setKnowledgeLoading] = useState(false);
 
   // Check authentication on mount
   useEffect(() => {
@@ -327,6 +343,32 @@ const AdminStats: React.FC = () => {
     }
   }, [dateRange, isAuthenticated]);
 
+  const fetchKnowledgeStats = async () => {
+    setKnowledgeLoading(true);
+    try {
+      const response = await fetch(
+        '/v1/admin/knowledge-status?dataset=SENTENZE%20BANCA%20DATI%20MEF',
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      if (result.code === 0 && result.data) {
+        setKnowledgeStats(result.data as KnowledgeStats);
+      }
+    } catch (error) {
+      console.error('Errore nel recupero stato knowledge:', error);
+    } finally {
+      setKnowledgeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchKnowledgeStats();
+    }
+  }, [isAuthenticated]);
+
   // Show login if not authenticated
   if (!isAuthenticated) {
     return <AdminLogin onLoginSuccess={handleLoginSuccess} />;
@@ -515,6 +557,72 @@ const AdminStats: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* Stato dataset sentenze */}
+      {knowledgeStats && (
+        <Card
+          className={styles.knowledgeCard}
+          title="📚 Stato dataset «SENTENZE BANCA DATI MEF»"
+          loading={knowledgeLoading}
+          extra={
+            <Button size="small" onClick={fetchKnowledgeStats}>
+              Aggiorna
+            </Button>
+          }
+        >
+          <div className={styles.knowledgeContent}>
+            <div className={styles.knowledgeProgress}>
+              <Progress
+                type="circle"
+                percent={Math.min(
+                  100,
+                  Math.round((knowledgeStats.progress || 0) * 1000) / 10,
+                )}
+                format={(value) => `${value?.toFixed(1)}%`}
+                strokeColor="#52c41a"
+              />
+              <div className={styles.knowledgeSummary}>
+                <span>
+                  <strong>
+                    {knowledgeStats.statusCounts?.done?.toLocaleString() ?? 0}
+                  </strong>{' '}
+                  documenti completati
+                </span>
+                <span>
+                  <strong>{knowledgeStats.total.toLocaleString()}</strong>{' '}
+                  documenti totali
+                </span>
+                <span>
+                  <strong>{knowledgeStats.remaining.toLocaleString()}</strong>{' '}
+                  in attesa di completamento
+                </span>
+                {knowledgeStats.lastStartedAt && (
+                  <span>
+                    Ultimo job avviato il{' '}
+                    {new Date(knowledgeStats.lastStartedAt).toLocaleString()}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className={styles.statusList}>
+              {[
+                ['done', '✅ Completati'],
+                ['running', '🔄 In esecuzione'],
+                ['unstart', '⌛ In coda'],
+                ['cancel', '⏹️ Annullati'],
+                ['fail', '⚠️ Falliti'],
+              ].map(([key, label]) => (
+                <div key={key} className={styles.statusItem}>
+                  <span className={styles.statusLabel}>{label}</span>
+                  <span className={styles.statusValue}>
+                    {knowledgeStats.statusCounts?.[key]?.toLocaleString() ?? 0}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Grafici Andamento Giornaliero */}
       {dailyStats.length > 0 && (

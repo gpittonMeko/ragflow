@@ -15,10 +15,11 @@
 #
 from datetime import datetime, timedelta
 from flask import request
-from flask_login import login_required
-from api.db.db_models import API4Conversation, DB
+from api.db import TaskStatus
+from api.db.db_models import API4Conversation, DB, Document, Knowledgebase
 from api.utils.api_utils import server_error_response, get_json_result
 from collections import defaultdict
+from peewee import fn
 import re
 
 # Blueprint per le API admin
@@ -199,6 +200,90 @@ def get_user_sessions():
             'stats': stats
         })
         
+    except Exception as e:
+        return server_error_response(e)
+
+
+@manager.route('/knowledge-status', methods=['GET'])
+def get_knowledge_status():
+    """
+    Ritorna lo stato di avanzamento del parsing documenti per un dataset.
+    Risponde con totale documenti, chunk estratti, distribuzione per stato e progresso.
+    """
+    dataset_name = request.args.get('dataset', 'SENTENZE BANCA DATI MEF')
+    try:
+        status_map = {
+            TaskStatus.UNSTART.value: 'unstart',
+            TaskStatus.RUNNING.value: 'running',
+            TaskStatus.CANCEL.value: 'cancel',
+            TaskStatus.DONE.value: 'done',
+            TaskStatus.FAIL.value: 'fail',
+        }
+
+        with DB.connection_context():
+            dataset_ids = list(
+                Knowledgebase
+                .select(Knowledgebase.id)
+                .where(Knowledgebase.name == dataset_name)
+                .dicts()
+            )
+
+            if not dataset_ids:
+                return get_json_result(data={
+                    'dataset': dataset_name,
+                    'found': False,
+                    'total': 0,
+                    'chunkSum': 0,
+                    'statusCounts': {label: 0 for label in status_map.values()},
+                    'progress': 0.0,
+                    'remaining': 0
+                })
+
+            kb_ids = [row['id'] for row in dataset_ids]
+
+            query = (
+                Document
+                .select(
+                    Document.run.alias('run_status'),
+                    fn.COUNT(Document.id).alias('doc_count'),
+                    fn.SUM(Document.chunk_num).alias('chunk_sum'),
+                    fn.MAX(Document.process_begin_at).alias('last_started_at'),
+                )
+                .where(Document.kb_id.in_(kb_ids))
+                .group_by(Document.run)
+            )
+
+            status_counts = {label: 0 for label in status_map.values()}
+            total_docs = 0
+            total_chunks = 0
+            last_started_at = None
+
+            for row in query.dicts():
+                status_key = status_map.get(row['run_status'] or TaskStatus.UNSTART.value, 'unknown')
+                count = row.get('doc_count', 0) or 0
+                chunks = row.get('chunk_sum', 0) or 0
+                status_counts[status_key] = status_counts.get(status_key, 0) + count
+                total_docs += count
+                total_chunks += chunks
+
+                started_at = row.get('last_started_at')
+                if started_at and (last_started_at is None or started_at > last_started_at):
+                    last_started_at = started_at
+
+            done_docs = status_counts.get('done', 0)
+            parsed_progress = (done_docs / total_docs) if total_docs else 0.0
+            remaining_docs = total_docs - done_docs if total_docs else 0
+
+            return get_json_result(data={
+                'dataset': dataset_name,
+                'found': True,
+                'total': total_docs,
+                'chunkSum': total_chunks,
+                'statusCounts': status_counts,
+                'progress': parsed_progress,
+                'remaining': remaining_docs,
+                'lastStartedAt': last_started_at.isoformat() if last_started_at else None,
+            })
     except Exception as e:
         return server_error_response(e)
 

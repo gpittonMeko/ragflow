@@ -1121,6 +1121,7 @@ const PresentationPage: React.FC = () => {
           padding: 0,
           margin: 0,
           transition: 'height 0.3s ease',
+          overflow: chatExpanded ? 'hidden' : hasMessages ? 'auto' : 'hidden',
         }}
       >
         {chatExpanded && (
