@@ -14,13 +14,13 @@
 #  limitations under the License.
 #
 import binascii
-from datetime import datetime
 import logging
 import re
 import time
 from copy import deepcopy
 from functools import partial
 from timeit import default_timer as timer
+from typing import Optional
 
 from langfuse import Langfuse
 
@@ -39,6 +39,32 @@ from rag.nlp.search import index_name
 from rag.prompts import chunks_format, citation_prompt, full_question, kb_prompt, keyword_extraction, llm_id2llm_type, message_fit_in
 from rag.utils import num_tokens_from_string, rmSpace
 from rag.utils.tavily_conn import Tavily
+
+
+DEFAULT_VERBOSE_LLM_SETTING = {
+    "temperature": 0.65,
+    "top_p": 0.9,
+    "frequency_penalty": 0.2,
+    "presence_penalty": 0.1,
+    "max_tokens": 1024,
+}
+LEGACY_CONCISE_LLM_SETTING = {
+    "temperature": 0.1,
+    "top_p": 0.3,
+    "frequency_penalty": 0.7,
+    "presence_penalty": 0.4,
+    "max_tokens": 512,
+}
+
+
+def _normalize_llm_setting(setting: Optional[dict]) -> dict:
+    if not setting:
+        return DEFAULT_VERBOSE_LLM_SETTING.copy()
+    if setting == LEGACY_CONCISE_LLM_SETTING:
+        return DEFAULT_VERBOSE_LLM_SETTING.copy()
+    merged = DEFAULT_VERBOSE_LLM_SETTING.copy()
+    merged.update(setting)
+    return merged
 
 
 class DialogService(CommonService):
@@ -109,7 +135,9 @@ def chat_solo(dialog, messages, stream=True):
     msg = [{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])} for m in messages if m["role"] != "system"]
     if stream:
         last_ans = ""
-        for ans in chat_mdl.chat_streamly(prompt_config.get("system", ""), msg, dialog.llm_setting):
+        for ans in chat_mdl.chat_streamly(
+            prompt_config.get("system", ""), msg, _normalize_llm_setting(dialog.llm_setting)
+        ):
             answer = ans
             delta_ans = ans[len(last_ans) :]
             if num_tokens_from_string(delta_ans) < 16:
@@ -119,7 +147,9 @@ def chat_solo(dialog, messages, stream=True):
         if delta_ans:
             yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, delta_ans), "prompt": "", "created_at": time.time()}
     else:
-        answer = chat_mdl.chat(prompt_config.get("system", ""), msg, dialog.llm_setting)
+        answer = chat_mdl.chat(
+            prompt_config.get("system", ""), msg, _normalize_llm_setting(dialog.llm_setting)
+        )
         user_content = msg[-1].get("content", "[content not available]")
         logging.debug("User: {}|Assistant: {}".format(user_content, answer))
         yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, answer), "prompt": "", "created_at": time.time()}
@@ -283,7 +313,7 @@ def chat(dialog, messages, stream=True, **kwargs):
         return {"answer": prompt_config["empty_response"], "reference": kbinfos}
 
     kwargs["knowledge"] = "\n------\n" + "\n\n------\n\n".join(knowledges)
-    gen_conf = dialog.llm_setting
+    gen_conf = _normalize_llm_setting(dialog.llm_setting)
 
     msg = [{"role": "system", "content": prompt_config["system"].format(**kwargs)}]
     prompt4citation = ""
