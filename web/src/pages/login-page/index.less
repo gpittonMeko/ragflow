@@ -609,28 +609,45 @@ body {
   place-items: center;
   padding-top: 12px;
   padding-bottom: 12px;
-  background: linear-gradient(
-    180deg,
-    rgba(13, 19, 33, 0.95),
-    rgba(13, 19, 33, 0.82) 60%,
-    rgba(13, 19, 33, 0.55) 78%,
-    transparent 100%
-  );
-  backdrop-filter: blur(12px);
   transition:
     padding 0.3s ease,
     background 0.3s ease;
+  background: transparent;
+  backdrop-filter: blur(12px);
+  overflow: visible;
 }
-[data-theme='light'] .heroSection.heroPinned {
+.heroSection.heroPinned::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 190px;
+  pointer-events: none;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.94),
-    rgba(255, 255, 255, 0.88) 62%,
-    rgba(255, 255, 255, 0.72) 80%,
-    transparent 100%
+    rgba(13, 19, 33, 0.92) 0%,
+    rgba(13, 19, 33, 0.7) 55%,
+    rgba(13, 19, 33, 0) 100%
   );
+  z-index: 1;
+}
+[data-theme='light'] .heroSection.heroPinned {
+  background: transparent;
   border-bottom: 1px solid rgba(17, 24, 39, 0.05);
   box-shadow: 0 8px 18px rgba(17, 24, 39, 0.06);
+}
+[data-theme='light'] .heroSection.heroPinned::after {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.78) 55%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+.heroSection.heroPinned .logoBox {
+  position: relative;
+  z-index: 2;
 }
 
 .heroSection.heroShrink {
