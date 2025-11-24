@@ -1110,14 +1110,14 @@ const PresentationPage: React.FC = () => {
           left: chatExpanded ? 0 : 'auto',
           right: chatExpanded ? 0 : 'auto',
           bottom: chatExpanded ? 0 : 'auto',
-          zIndex: chatExpanded ? 9999 : 'auto',
+          zIndex: chatExpanded ? 9998 : 'auto',
           background: 'transparent',
           width: chatExpanded ? '100vw' : 'auto',
           height: chatExpanded
             ? `calc(100vh - ${HERO_PINNED_HEIGHT}px)`
             : hasMessages
               ? '300px'
-              : '170px',
+              : '150px',
           padding: 0,
           margin: 0,
           transition: 'height 0.3s ease',
