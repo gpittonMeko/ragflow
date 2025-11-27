@@ -188,10 +188,13 @@ class Canvas:
                 return
 
         if not self.path:
+            logging.info(f"[CANVAS] Path vuoto, inizializzo con 'begin'. History: {len(self.history)} messaggi")
             self.components["begin"]["obj"].run(self.history, **kwargs)
             self.path.append(["begin"])
+            logging.info(f"[CANVAS] ✅ Path inizializzato: {self.path}")
 
         self.path.append([])
+        logging.debug(f"[CANVAS] Path dopo append: {self.path}")
 
         ran = -1
         waiting = []
@@ -266,10 +269,19 @@ class Canvas:
 
             downstream = []
             if cpn["obj"].component_name.lower() in ["switch", "categorize", "relevant"]:
-                switch_out = cpn["obj"].output()[1].iloc[0, 0]
-                assert switch_out in self.components, \
-                    "{}'s output: {} not valid.".format(cpn_id, switch_out)
-                downstream = [switch_out]
+                try:
+                    output_df = cpn["obj"].output()
+                    switch_out = output_df[1].iloc[0, 0]
+                    logging.info(f"[CANVAS] Componente {cpn_id} ({cpn['obj'].component_name}) ha selezionato downstream: {switch_out}")
+                    assert switch_out in self.components, \
+                        "{}'s output: {} not valid.".format(cpn_id, switch_out)
+                    downstream = [switch_out]
+                    logging.info(f"[CANVAS] ✅ Downstream impostato: {downstream}")
+                except Exception as e:
+                    logging.error(f"[CANVAS] ❌ Errore nel recupero output da {cpn_id}: {e}", exc_info=True)
+                    # Fallback: usa tutti i downstream disponibili
+                    downstream = cpn["downstream"]
+                    logging.warning(f"[CANVAS] ⚠️ Fallback: uso downstream di default: {downstream}")
             else:
                 downstream = cpn["downstream"]
 

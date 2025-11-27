@@ -97,9 +97,14 @@ class Categorize(Generate, ABC):
         # If a category is found, return the category with the highest count.
         if any(category_counts.values()):
             max_category = max(category_counts.items(), key=lambda x: x[1])
-            return Categorize.be_output(self._param.category_description[max_category[0]]["to"])
+            selected_component = self._param.category_description[max_category[0]]["to"]
+            logging.info(f"[CATEGORIZE] ✅ Categoria selezionata: '{max_category[0]}' -> Componente: {selected_component}")
+            return Categorize.be_output(selected_component)
 
-        return Categorize.be_output(list(self._param.category_description.items())[-1][1]["to"])
+        # Fallback: usa l'ultima categoria (di solito "Risposta non attinente")
+        fallback_component = list(self._param.category_description.items())[-1][1]["to"]
+        logging.warning(f"[CATEGORIZE] ⚠️ Nessuna categoria trovata, uso fallback: {fallback_component}")
+        return Categorize.be_output(fallback_component)
 
     def debug(self, **kwargs):
         df = self._run([], **kwargs)

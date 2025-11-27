@@ -192,21 +192,29 @@ export const useSendSharedMessage = (
       }
 
       // Invia messaggio a RAGFlow
-      console.log('[CHAT] 📤 Invio a RAGFlow...', {
-        endpoint: '/v1/canvas/completion',
-        conversationId: id ?? actualConversationId,
-        sessionId: actualSessionId, // ✅ Log session_id
-        messageLength: message.content.length,
-        messageId: message.id || uuid(),
-      });
-
-      const res = await send({
+      const payload: any = {
         id: id ?? actualConversationId,
         message: message.content,
         message_id: message.id || uuid(),
-        session_id: actualSessionId, // ✅ INVIA session_id al backend!
         stream: true,
-      });
+      };
+
+      // ✅ Includi session_id solo se è definito (il backend creerà una nuova sessione se mancante)
+      if (actualSessionId) {
+        payload.session_id = actualSessionId;
+      }
+
+      console.log('[CHAT] 📤 === PAYLOAD COMPLETO PER RAGFLOW ===');
+      console.log('[CHAT] 📤 Endpoint: /v1/canvas/completion');
+      console.log('[CHAT] 📤 Payload:', JSON.stringify(payload, null, 2));
+      console.log('[CHAT] 📤 Message content:', message.content);
+      console.log(
+        '[CHAT] 📤 Session ID:',
+        actualSessionId || 'NON PRESENTE (backend creerà nuova sessione)',
+      );
+      console.log('[CHAT] 📤 Agent ID:', id ?? actualConversationId);
+
+      const res = await send(payload);
 
       console.log('[CHAT] 📡 RAGFlow raw response:', res);
 
