@@ -15,12 +15,13 @@
 #
 from datetime import datetime, timedelta
 from flask import request
-from api.db import TaskStatus
-from api.db.db_models import API4Conversation, DB, Document, Knowledgebase
+from api.db import TaskStatus, StatusEnum
+from api.db.db_models import API4Conversation, DB, Document, Knowledgebase, Task
 from api.utils.api_utils import server_error_response, get_json_result
 from collections import defaultdict
 from peewee import fn
 import re
+import logging
 
 # Blueprint per le API admin
 # NOTA: url_prefix viene impostato automaticamente dal sistema di auto-registrazione
@@ -325,4 +326,165 @@ def extract_ip(user_id: str):
     if match:
         return match.group(0)
     return 'N/A'
+
+
+@manager.route('/requeue-unstart-documents', methods=['POST'])
+def requeue_unstart_documents():
+    """
+    Rimette in coda tutti i documenti con stato 'unstart' per un dataset specifico.
+    
+    Request body:
+    {
+        "dataset": "SENTENZE BANCA DATI MEF",  # opzionale, default
+        "limit": 1000,  # opzionale, numero massimo di documenti da processare
+        "dry_run": false  # opzionale, se true solo conta senza processare
+    }
+    
+    Returns:
+    {
+        "total_found": 1234,
+        "queued": 1000,
+        "errors": []
+    }
+    """
+    try:
+        from api.db.services.document_service import DocumentService
+        from api.db.services.file2document_service import File2DocumentService
+        from api.db.services.task_service import queue_tasks, TaskService
+        from api.db.services.knowledgebase_service import KnowledgebaseService
+        from api import settings
+        from rag.utils import search
+        
+        req = request.json or {}
+        dataset_name = req.get('dataset', 'SENTENZE BANCA DATI MEF')
+        limit = req.get('limit', 1000)  # Limite per evitare sovraccarico
+        dry_run = req.get('dry_run', False)
+        
+        with DB.connection_context():
+            # Trova il dataset
+            dataset_ids = list(
+                Knowledgebase
+                .select(Knowledgebase.id, Knowledgebase.tenant_id)
+                .where(Knowledgebase.name == dataset_name)
+                .dicts()
+            )
+            
+            if not dataset_ids:
+                return get_json_result(
+                    data={
+                        'error': f'Dataset "{dataset_name}" non trovato',
+                        'total_found': 0,
+                        'queued': 0
+                    },
+                    code=settings.RetCode.DATA_ERROR
+                )
+            
+            kb_ids = [row['id'] for row in dataset_ids]
+            tenant_id = dataset_ids[0]['tenant_id']
+            
+            # Trova documenti con stato unstart (0) - NON tocca DONE, RUNNING, CANCEL
+            # Esclude anche documenti VIRTUAL che non devono essere processati
+            unstart_docs = list(
+                Document
+                .select(
+                    Document.id, 
+                    Document.name, 
+                    Document.kb_id, 
+                    Document.type, 
+                    Document.parser_id, 
+                    Document.parser_config,
+                    Document.status
+                )
+                .where(
+                    Document.kb_id.in_(kb_ids),
+                    Document.run == TaskStatus.UNSTART.value,
+                    Document.status == StatusEnum.VALID.value  # Solo documenti validi
+                )
+                .limit(limit)
+                .dicts()
+            )
+            
+            logging.info(f"[REQUEUE] Trovati {len(unstart_docs)} documenti UNSTART per dataset '{dataset_name}'")
+            
+            total_found = len(unstart_docs)
+            queued = 0
+            errors = []
+            
+            if dry_run:
+                return get_json_result(data={
+                    'dataset': dataset_name,
+                    'total_found': total_found,
+                    'queued': 0,
+                    'dry_run': True,
+                    'message': f'Trovati {total_found} documenti da processare (dry run)'
+                })
+            
+            # Processa ogni documento
+            for doc_dict in unstart_docs:
+                try:
+                    doc_id = doc_dict['id']
+                    doc_name = doc_dict.get('name', 'unknown')
+                    
+                    # ✅ VERIFICA: Non processare documenti già DONE o RUNNING (doppio controllo)
+                    e, doc_check = DocumentService.get_by_id(doc_id)
+                    if not e:
+                        errors.append(f"Documento {doc_id}: non trovato nel DB")
+                        continue
+                    
+                    if doc_check.run == TaskStatus.DONE.value:
+                        logging.warning(f"[REQUEUE] ⚠️ Salto documento {doc_id} ({doc_name}): già DONE")
+                        continue
+                    
+                    if doc_check.run == TaskStatus.RUNNING.value:
+                        logging.warning(f"[REQUEUE] ⚠️ Salto documento {doc_id} ({doc_name}): già RUNNING")
+                        continue
+                    
+                    # Ottieni bucket e nome file
+                    bucket, name = File2DocumentService.get_storage_address(doc_id=doc_id)
+                    if not bucket or not name:
+                        errors.append(f"Documento {doc_id} ({doc_name}): file non trovato nello storage")
+                        logging.warning(f"[REQUEUE] ⚠️ File non trovato per {doc_id}: bucket={bucket}, name={name}")
+                        continue
+                    
+                    # Prepara documento per queue_tasks
+                    doc = doc_dict.copy()
+                    doc['tenant_id'] = tenant_id
+                    
+                    # ✅ Aggiorna stato a RUNNING PRIMA di mettere in coda
+                    DocumentService.update_by_id(doc_id, {
+                        'run': TaskStatus.RUNNING.value,
+                        'progress': 0,
+                        'progress_msg': f'Rimesso in coda il {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+                    })
+                    
+                    # ✅ Rimuovi task vecchi se esistono (per evitare duplicati)
+                    deleted_tasks = TaskService.filter_delete([Task.doc_id == doc_id])
+                    if deleted_tasks:
+                        logging.info(f"[REQUEUE] Rimossi {deleted_tasks} task vecchi per documento {doc_id}")
+                    
+                    # ✅ Metti in coda Redis
+                    queue_tasks(doc, bucket, name, priority=0)
+                    queued += 1
+                    
+                    logging.info(f"[REQUEUE] ✅ Documento {doc_id} ({doc_name}) rimesso in coda")
+                    
+                    if queued % 100 == 0:
+                        logging.info(f"[REQUEUE] 📊 Progresso: {queued}/{total_found} documenti rimessi in coda")
+                        
+                except Exception as e:
+                    error_msg = f"Documento {doc_dict.get('id', 'unknown')} ({doc_dict.get('name', 'unknown')}): {str(e)}"
+                    errors.append(error_msg)
+                    logging.error(f"[REQUEUE] ❌ Errore: {error_msg}", exc_info=True)
+            
+            return get_json_result(data={
+                'dataset': dataset_name,
+                'total_found': total_found,
+                'queued': queued,
+                'errors': errors[:10],  # Limita errori mostrati
+                'errors_count': len(errors)
+            })
+            
+    except Exception as e:
+        logging.error(f"[REQUEUE] Errore generale: {e}", exc_info=True)
+        return server_error_response(e)
 
