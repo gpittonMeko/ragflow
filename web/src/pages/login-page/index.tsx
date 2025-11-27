@@ -1086,6 +1086,15 @@ const PresentationPage: React.FC = () => {
       {/* LOGO SGAI */}
       <div
         className={`${styles.heroSection} ${chatExpanded ? styles.heroPinned : ''} ${hideExtras ? styles.heroShrink : ''}`}
+        onClick={() => {
+          // Chiudi la chat se è espansa e si clicca sulla parte alta
+          if (chatExpanded) {
+            setChatExpanded(false);
+          }
+        }}
+        style={{
+          cursor: chatExpanded ? 'pointer' : 'default',
+        }}
       >
         <div className={styles.logoBox}>
           <SvgLogoInteractive flipped />
@@ -1129,20 +1138,43 @@ const PresentationPage: React.FC = () => {
             onClick={() => setChatExpanded(false)}
             style={{
               position: 'fixed',
-              top: 10,
-              right: 10,
-              zIndex: 10001,
-              background: 'rgba(0,0,0,0.7)',
+              top: 15,
+              right: 15,
+              zIndex: 99999, // ✅ Aumentato per essere sopra tutto
+              background: 'rgba(0, 0, 0, 0.85)', // ✅ Nero semi-trasparente
               color: 'white',
-              border: 'none',
+              border: '2px solid rgba(255, 255, 255, 0.9)', // ✅ Bordo bianco ben visibile
               borderRadius: '50%',
-              width: 40,
-              height: 40,
+              width: 48,
+              height: 48,
               cursor: 'pointer',
-              fontSize: 24,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+              boxShadow:
+                '0 4px 16px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.3)', // ✅ Doppia ombra per visibilità
+              pointerEvents: 'auto', // ✅ Assicura che sia cliccabile
             }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.95)';
+              e.currentTarget.style.border = '2px solid white';
+              e.currentTarget.style.transform = 'scale(1.15)';
+              e.currentTarget.style.boxShadow =
+                '0 6px 20px rgba(0,0,0,0.8), 0 0 0 3px rgba(255,255,255,0.5)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.85)';
+              e.currentTarget.style.border =
+                '2px solid rgba(255, 255, 255, 0.9)';
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow =
+                '0 4px 16px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.3)';
+            }}
+            aria-label="Chiudi chat"
           >
-            ×
+            <X size={28} strokeWidth={3} />{' '}
+            {/* ✅ Icona più grande e più spessa */}
           </button>
         )}
         <div
