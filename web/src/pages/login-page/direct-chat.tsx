@@ -16,6 +16,33 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'umi';
 import styles from '../chat/share/index.less';
 
+// Hook per adattare layout quando si apre la tastiera su mobile
+function useKeyboardOffset() {
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const initialHeight = useRef(
+    typeof window !== 'undefined' ? window.innerHeight : 0,
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    const vv = window.visualViewport;
+
+    const handler = () => {
+      const diff = initialHeight.current - vv.height;
+      setKeyboardOffset(diff > 80 ? diff : 0);
+    };
+    vv.addEventListener('resize', handler);
+    vv.addEventListener('scroll', handler);
+    handler();
+    return () => {
+      vv.removeEventListener('resize', handler);
+      vv.removeEventListener('scroll', handler);
+    };
+  }, []);
+
+  return keyboardOffset;
+}
+
 interface DirectChatProps {
   agentId: string;
   sessionId?: string; // ✅ Session ID unico per ogni browser
@@ -82,8 +109,8 @@ const DirectChat: React.FC<DirectChatProps> = ({
   const isGeneratingRef = useRef(false);
   const SIMULATED_TOTAL_MS = 180000; // 3 minuti
 
-  // Fetch avatar data
-  const { data: avatarData } = useFetchFlowSSE(agentId);
+  // Fetch avatar data - useFetchFlowSSE reads sharedId from URL params (set in useEffect above)
+  const { data: avatarData } = useFetchFlowSSE();
 
   // Progress bar logic
   useEffect(() => {
@@ -201,6 +228,8 @@ const DirectChat: React.FC<DirectChatProps> = ({
   }, [sessionId, agentId, setDerivedMessages]);
 
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
+  const keyboardOffset = useKeyboardOffset();
+  const inputWrapperRef = useRef<HTMLDivElement>(null);
 
   return (
     <>
@@ -214,15 +243,12 @@ const DirectChat: React.FC<DirectChatProps> = ({
               className={styles.loaderBarLiquid}
               style={{
                 width: '100%',
-                maxWidth: 600,
-                minWidth: 100,
+                maxWidth: 400,
+                minWidth: 80,
                 margin: '0 auto',
-                height: 16,
-                background: 'rgba(155,255,255,0.07)',
-                borderRadius: 10,
-                padding: 2,
-                boxSizing: 'border-box',
-                boxShadow: '0 0 24px #12c7f333',
+                height: 4,
+                background: 'var(--border-color, #e0e0e0)',
+                borderRadius: 2,
                 overflow: 'hidden',
               }}
             >
@@ -231,31 +257,23 @@ const DirectChat: React.FC<DirectChatProps> = ({
                 style={{
                   width: `${progress}%`,
                   height: '100%',
-                  borderRadius: 7,
-                  background:
-                    'linear-gradient(270deg, #12dbffBB 0%, #22ffb899 70%, #0078f0CC 100%)',
-                  boxShadow: '0 0 16px #22cfff88',
-                  transition: 'width 0.3s cubic-bezier(.4,1.1,.3,.96)',
-                  willChange: 'width',
-                  backgroundSize: '200% 100%',
-                  animation: 'loader-wave-glass 1.3s infinite linear',
+                  borderRadius: 2,
+                  background: 'var(--accent-color, #0f62fe)',
+                  transition: 'width 0.3s ease',
                 }}
               ></div>
             </div>
           </div>
-          <style>
-            {`@keyframes loader-wave-glass {
-                  0% { background-position: 0 0; }
-                  100% { background-position: 200% 0; }
-              }`}
-          </style>
         </div>
       )}
 
       <Flex
         flex={1}
         className={`${styles.chatContainer} ${styles[theme]} ${className}`}
-        style={style}
+        style={{
+          ...style,
+          paddingBottom: keyboardOffset > 0 ? keyboardOffset : undefined,
+        }}
         vertical
       >
         <Flex flex={1} vertical className={styles.messageContainer}>
@@ -308,6 +326,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
           showUploadIcon={false}
           stopOutputMessage={stopOutputMessage}
           autoFocus={false}
+          wrapperRef={inputWrapperRef}
         />
       </Flex>
 

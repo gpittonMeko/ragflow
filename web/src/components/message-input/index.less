@@ -6,14 +6,13 @@
   margin-bottom: 220px;
   margin-left: 8px;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, .06);
-  backdrop-filter: blur(14px) saturate(180%);
-  -webkit-backdrop-filter: blur(14px) saturate(180%);
-  border-radius: 14px;
-  border-top: 1px solid var(--border-color);
-  transition: background-color var(--transition-time), border-color var(--transition-time);
-  border: 1px solid var(--border-color, #333);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  background: var(--bg-secondary, #ffffff);
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   overflow: visible;
   position: relative;
   flex-shrink: 0;
@@ -21,8 +20,8 @@
   z-index: 1;
 
   &:hover {
-    box-shadow: 0 0 0 2px var(--accent-color, #40a9ff), 0 6px 16px rgba(64, 169, 255, 0.35);
-    border-color: var(--accent-color, #40a9ff);
+    border-color: var(--accent-color, #0f62fe);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
     z-index: 3;
   }
 
@@ -43,7 +42,9 @@
     padding: 8px 0 !important;
     margin: 0 !important;
     box-shadow: none !important;
-    transition: background-color 0.3s, color 0.3s;
+    transition:
+      background-color 0.3s,
+      color 0.3s;
     font-size: clamp(0.85rem, 2.5vw, 1rem);
 
     &::placeholder {
@@ -54,35 +55,34 @@
 
   :global(.ant-btn-primary) {
     border-radius: 6px;
-    box-shadow: 0 0 4px rgba(255, 255, 255, 0.05);
-    background-color: var(--button-bg, #333333);
-    border-color: var(--border-color, #333333);
-    color: var(--text-primary, #f0f0f0);
-    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+    background-color: var(--accent-color, #0f62fe);
+    border-color: var(--accent-color, #0f62fe);
+    color: #ffffff;
+    transition:
+      background-color 0.15s,
+      border-color 0.15s;
 
     &:hover,
     &:focus {
-      background-color: var(--button-hover, #404040);
-      border-color: var(--border-color, #404040);
-      box-shadow: 0 0 6px rgba(64, 169, 255, 0.3);
-      color: var(--text-primary, #f0f0f0);
+      background-color: #0043ce;
+      border-color: #0043ce;
+      color: #ffffff;
     }
 
     &:active {
-      background-color: var(--card-bg, #222222);
-      border-color: var(--border-color, #222222);
-      color: var(--text-primary, #f0f0f0);
+      background-color: #002d9c;
+      border-color: #002d9c;
+      color: #ffffff;
     }
 
     &:disabled {
-      background-color: var(--button-disabled, #555555);
-      border-color: var(--border-color, #555555);
-      color: var(--text-secondary, #999999);
+      background-color: var(--border-color, #e0e0e0);
+      border-color: var(--border-color, #e0e0e0);
+      color: var(--text-secondary, #525252);
     }
 
     svg[data-icon='send'] {
-      color: var(--text-primary, #f0f0f0);
-      transition: color 0.3s;
+      color: #ffffff;
     }
   }
 
@@ -90,12 +90,7 @@
     padding: 4px 0px 20px 0px;
     margin-bottom: 230px;
   }
-
-
-
-
 }
-
 
 .documentCard {
   :global(.ant-card-body) {
@@ -104,7 +99,9 @@
     width: 100%;
     background-color: var(--card-bg, #2c2c2c);
     color: var(--text-primary, #f0f0f0);
-    transition: background-color 0.3s, color 0.3s;
+    transition:
+      background-color 0.3s,
+      color 0.3s;
   }
 
   @media (max-width: 768px) {
@@ -147,7 +144,9 @@
   margin-bottom: 150px !important;
 }
 
-
-
-
-
+/* Wrapper per scroll-into-view su mobile (tastiera) */
+.inputScrollAnchor {
+  flex-shrink: 0;
+  /* iOS safe area per tastiera */
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}

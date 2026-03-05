@@ -40,22 +40,69 @@
 
 .cursor {
   display: inline-block;
-  width: 1px;
-  height: 16px;
-  background-color: black;
-  animation: blink 0.6s infinite;
-  vertical-align: text-top;
-  @keyframes blink {
-    0% {
-      opacity: 1;
+  width: 2px;
+  height: 1em;
+  background-color: var(--accent-color, #0f62fe);
+  animation: blink 0.8s ease-in-out infinite;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+  border-radius: 1px;
+}
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* Typing dots animati per stato loading */
+.typingDots {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+
+  span {
+    animation: typingBounce 0.6s ease-in-out infinite;
+    font-weight: bold;
+    opacity: 0.6;
+    &:nth-child(1) {
+      animation-delay: 0s;
     }
-    50% {
-      opacity: 0;
+    &:nth-child(2) {
+      animation-delay: 0.15s;
     }
-    100% {
-      opacity: 1;
+    &:nth-child(3) {
+      animation-delay: 0.3s;
     }
   }
+}
+@keyframes typingBounce {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.markdownWithLoading {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  width: 100%;
+}
+
+.loadingDotsWrap {
+  display: inline-flex;
+  align-items: baseline;
 }
 
 .fileThumbnail {

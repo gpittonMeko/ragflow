@@ -66,10 +66,20 @@ const countMatches = (text: string) => {
 // ─────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────
+// Typing indicator con dots animati
+const TypingDots = () => (
+  <span className={styles.typingDots}>
+    <span>.</span>
+    <span>.</span>
+    <span>.</span>
+  </span>
+);
+
 const MarkdownContent = ({
   reference,
   clickDocumentButton,
   content,
+  loading,
 }: {
   content: string;
   loading: boolean;
@@ -412,45 +422,55 @@ const MarkdownContent = ({
         </div>
       )}
 
-      <Markdown
-        rehypePlugins={[rehypeWrapReference, rehypeKatex, rehypeRaw]}
-        remarkPlugins={[remarkGfm, remarkMath]}
-        className={styles.markdownContentWrapper}
-        components={
-          {
-            'custom-typography': ({ children }: { children: any }) => {
-              const text = safeToText(children);
-              if (DEBUG && typeof children !== 'string') {
-                console.warn(
-                  '[MarkdownContent] custom-typography children non-string → coerced:',
-                  children,
+      <div className={styles.markdownWithLoading}>
+        <Markdown
+          rehypePlugins={[rehypeWrapReference, rehypeKatex, rehypeRaw]}
+          remarkPlugins={[remarkGfm, remarkMath]}
+          className={styles.markdownContentWrapper}
+          components={
+            {
+              'custom-typography': ({ children }: { children: any }) => {
+                const text = safeToText(children);
+                if (DEBUG && typeof children !== 'string') {
+                  console.warn(
+                    '[MarkdownContent] custom-typography children non-string → coerced:',
+                    children,
+                  );
+                }
+                return <>{renderReference(text)}</>;
+              },
+              code(props: any) {
+                const { children, className, ...rest } = props;
+                const match = /language-(\w+)/.exec(className || '');
+                return match ? (
+                  <SyntaxHighlighter
+                    {...rest}
+                    PreTag="div"
+                    language={match[1]}
+                    wrapLongLines
+                  >
+                    {String(children).replace(/\n$/, '')}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code
+                    {...rest}
+                    className={classNames(className, 'text-wrap')}
+                  >
+                    {children}
+                  </code>
                 );
-              }
-              return <>{renderReference(text)}</>;
-            },
-            code(props: any) {
-              const { children, className, ...rest } = props;
-              const match = /language-(\w+)/.exec(className || '');
-              return match ? (
-                <SyntaxHighlighter
-                  {...rest}
-                  PreTag="div"
-                  language={match[1]}
-                  wrapLongLines
-                >
-                  {String(children).replace(/\n$/, '')}
-                </SyntaxHighlighter>
-              ) : (
-                <code {...rest} className={classNames(className, 'text-wrap')}>
-                  {children}
-                </code>
-              );
-            },
-          } as any
-        }
-      >
-        {contentWithCursor}
-      </Markdown>
+              },
+            } as any
+          }
+        >
+          {contentWithCursor}
+        </Markdown>
+        {loading && (
+          <span className={styles.loadingDotsWrap}>
+            <TypingDots />
+          </span>
+        )}
+      </div>
     </div>
   );
 };

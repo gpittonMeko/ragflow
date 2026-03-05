@@ -1,42 +1,43 @@
 :root {
-  --bg-primary: #0a0a0a;
+  --bg-primary: #111111;
   --card-bg: #1c1c1e;
-  --text-primary: #f5f5f7;
-  --text-secondary: #a1a1a6;
-  --accent-color: #667eea;
-  --accent-secondary: #764ba2;
-  --feature-title-color: #ffffff;
-  --feature-text-color: #ffffff;
-  --border-radius: 16px;
-  --shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-  --card-transition: transform 0.3s ease, box-shadow 0.3s ease;
-  --button-bg: rgba(255, 255, 255, 0.1);
-  --button-hover: rgba(255, 255, 255, 0.2);
-  --nav-blur: blur(10px);
-  --disclaimer-bg: rgba(100, 100, 100, 0.15);
-  --toggle-bg: rgba(255, 255, 255, 0.18);
-  --toggle-border: rgba(255, 255, 255, 0.35);
+  --text-primary: #f4f4f4;
+  --text-secondary: #a8a8a8;
+  --accent-color: #0f62fe;
+  --accent-secondary: #0043ce;
+  --feature-title-color: #f4f4f4;
+  --feature-text-color: #e0e0e0;
+  --border-radius: 8px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --card-transition: transform 0.15s ease, box-shadow 0.15s ease;
+  --button-bg: #262626;
+  --button-hover: #333333;
+  --disclaimer-bg: #1c1c1e;
+  --toggle-bg: #262626;
+  --toggle-border: #393939;
   --modal-card-bg: #ffffff;
-  --modal-card-text: #000000;
-  --premium-btn-bg: linear-gradient(135deg, #667eea, #764ba2);
+  --modal-card-text: #161616;
+  --premium-btn-bg: #0f62fe;
+  --border-color: #393939;
 }
 
 [data-theme='light'] {
-  --bg-primary: #f5f5f7;
-  --card-bg: #ffffff;
-  --text-primary: #1d1d1f;
-  --text-secondary: #515154;
-  --feature-title-color: #1d1d1f;
-  --feature-text-color: #515154;
-  --shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-  --button-bg: rgba(0, 0, 0, 0.05);
-  --button-hover: rgba(0, 0, 0, 0.1);
-  --disclaimer-bg: rgba(200, 200, 200, 0.3);
-  --toggle-bg: rgba(0, 0, 0, 0.05);
-  --toggle-border: rgba(0, 0, 0, 0.15);
-  --modal-card-bg: #1e1e1e;
-  --modal-card-text: #f5f5f7;
-  --premium-btn-bg: linear-gradient(135deg, #ffb156, #ff7a3c);
+  --bg-primary: #ffffff;
+  --card-bg: #f4f4f4;
+  --text-primary: #161616;
+  --text-secondary: #525252;
+  --feature-title-color: #161616;
+  --feature-text-color: #525252;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --button-bg: #f4f4f4;
+  --button-hover: #e0e0e0;
+  --disclaimer-bg: #f4f4f4;
+  --toggle-bg: #f4f4f4;
+  --toggle-border: #e0e0e0;
+  --modal-card-bg: #1c1c1e;
+  --modal-card-text: #f4f4f4;
+  --premium-btn-bg: #0f62fe;
+  --border-color: #e0e0e0;
 }
 
 /* Chat History Sidebar */
@@ -51,8 +52,7 @@
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  backdrop-filter: var(--nav-blur);
-  box-shadow: -8px 0 30px rgba(0, 0, 0, 0.3);
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.15);
 }
 
 .chatHistoryHeader {
@@ -183,8 +183,7 @@
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  backdrop-filter: var(--nav-blur);
-  box-shadow: 8px 0 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.15);
   transform: translateX(-100%);
   transition: transform 0.3s ease;
 
@@ -354,12 +353,11 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  backdrop-filter: blur(8px);
 }
 
 .modalContent {
@@ -483,18 +481,12 @@ body {
 }
 
 .themeToggle {
-  /* RIMUOVI position: fixed, top, right, z-index */
   width: 44px;
   height: 44px;
   border-radius: 50%;
   flex-shrink: 0;
   background: var(--toggle-bg);
   border: 1px solid var(--toggle-border);
-
-  @supports (backdrop-filter: blur(8px)) {
-    backdrop-filter: blur(8px) saturate(180%);
-    -webkit-backdrop-filter: blur(8px) saturate(180%);
-  }
 
   display: flex;
   align-items: center;
@@ -612,8 +604,7 @@ body {
   transition:
     padding 0.3s ease,
     background 0.3s ease;
-  background: transparent;
-  backdrop-filter: blur(12px);
+  background: var(--bg-primary);
   overflow: visible;
 }
 .heroSection.heroPinned::after {
@@ -626,9 +617,9 @@ body {
   pointer-events: none;
   background: linear-gradient(
     180deg,
-    rgba(13, 19, 33, 0.92) 0%,
-    rgba(13, 19, 33, 0.7) 55%,
-    rgba(13, 19, 33, 0) 100%
+    var(--bg-primary) 0%,
+    var(--bg-primary) 60%,
+    transparent 100%
   );
   z-index: 1;
 }
@@ -709,6 +700,15 @@ body {
   max-width: 100%;
 }
 
+.sgaiLogoImg {
+  width: 100%;
+  max-width: min(280px, 70vw);
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
 @media (max-width: 768px) {
   .signInBtn {
     position: static;
@@ -742,9 +742,12 @@ body {
 .featureCard {
   background-color: var(--card-bg);
   padding: 10px !important;
-  border-radius: 20px !important;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
-  transition: var(--card-transition);
+  border-radius: 8px !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -752,8 +755,8 @@ body {
   margin: 0;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+    border-color: var(--accent-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   h3 {
@@ -808,11 +811,9 @@ body {
 
 .disclaimerSection {
   padding: 8px 12px !important;
-  border-radius: 14px !important;
+  border-radius: 8px !important;
   background-color: var(--disclaimer-bg);
   margin-top: 12px;
-  backdrop-filter: var(--nav-blur);
-  -webkit-backdrop-filter: var(--nav-blur);
 
   strong {
     color: #ff453a;
@@ -1045,15 +1046,13 @@ body {
 /* Banner FREE sotto al logo */
 .freeBanner {
   margin: 8px auto 0;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(10px) saturate(160%);
-  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: 8px;
   width: fit-content;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   font-size: 0.95rem;
 }
 
@@ -1138,29 +1137,26 @@ body {
 .glassBtn {
   --t: 0.3s;
 
-  background: rgba(255, 255, 255, 0.18); /* glass */
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(14px) saturate(180%);
-  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  background: var(--button-bg);
+  border: 1px solid var(--toggle-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 
-  color: #fff;
+  color: var(--text-primary);
   font-weight: 600;
   font-size: 14px;
   padding: 10px 22px;
-  border-radius: 12px;
+  border-radius: 8px;
   transition:
-    transform var(--t),
+    background var(--t),
     box-shadow var(--t);
   cursor: pointer;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 14px 24px rgba(0, 0, 0, 0.18);
+    background: var(--button-hover);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   }
   &:active {
-    transform: translateY(1px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   }
 }
 
@@ -1171,8 +1167,7 @@ body {
 
 /* Google modal centrato meglio */
 .googleModal {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(6px);
+  background: rgba(255, 255, 255, 0.95);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1189,15 +1184,10 @@ body {
   color: currentColor;
 }
 
-/* ---------- colore testi pulsanti = dinamico ---------- */
-.glassBtn {
-  color: var(--text-primary);
-
-  [data-theme='light'] & {
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    color: var(--text-primary);
-  }
+/* Light theme button style */
+[data-theme='light'] .glassBtn {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 /* pillola anonimo – resta fissa dove l’hai già messa */
@@ -1282,27 +1272,30 @@ body {
 }
 
 .glassSurface {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   border-radius: var(--border-radius);
 }
 
 .featureCard,
-.disclaimerSection,
-.iframeSection {
+.disclaimerSection {
   composes: glassSurface;
 }
 
-/* Override glassSurface when chat is expanded */
+/* iframeSection gets clean solid bg */
+.iframeSection {
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--border-radius);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Override when chat is expanded */
 .iframeSection[style*='position: fixed'] {
-  background: transparent !important;
+  background: var(--bg-primary) !important;
   border: none !important;
   box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
 }
 
 /* Removed complex chat wrap rules - simplified */
@@ -1473,8 +1466,7 @@ span {
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(4px);
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.5);
   pointer-events: auto;
 }
 
@@ -1592,8 +1584,7 @@ span {
   align-items: center;
   gap: 4px;
   border-radius: 10px;
-  backdrop-filter: blur(8px);
-  background-color: rgba(0, 0, 0, 0.6); // o compatibile con il tema
+  background-color: rgba(0, 0, 0, 0.6);
 
   svg {
     width: 16px;
@@ -1745,12 +1736,10 @@ span {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  display: grid; /* centraggio perfetto */
+  display: grid;
   place-items: center;
   overflow: visible;
-  background: rgba(8, 8, 12, 0.38);
-  backdrop-filter: blur(5px) saturate(130%);
-  .overlayGoo(); /* gradienti animati */
+  background: rgba(0, 0, 0, 0.6);
 }
 
 /* ===== CHAT OVERLAY (quota/limite) riusa stile del boot ===== */
@@ -2093,11 +2082,6 @@ span {
   border: 1px solid var(--toggle-border);
   color: var(--text-primary);
 
-  @supports (backdrop-filter: blur(8px)) {
-    backdrop-filter: blur(8px) saturate(180%);
-    -webkit-backdrop-filter: blur(8px) saturate(180%);
-  }
-
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2129,12 +2113,7 @@ span {
   padding: 8px;
   min-width: 280px;
   z-index: 999;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-
-  @supports (backdrop-filter: blur(8px)) {
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-  }
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 
   animation: slideDown 0.2s ease-out;
 
@@ -2200,17 +2179,16 @@ span {
 /* ======= LEGAL FOOTER ======= */
 .legalFooter {
   text-align: center;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
   padding: 10px 16px;
   margin: 8px auto 12px;
   max-width: 960px;
 
   p {
     margin: 0;
-    color: rgba(255, 255, 255, 0.95);
+    color: var(--text-secondary);
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.4px;
@@ -2242,14 +2220,9 @@ span {
 
 /* ======= SERVICE HOURS BANNER ======= */
 .serviceHoursBanner {
-  background: linear-gradient(
-    135deg,
-    rgba(18, 219, 255, 0.1),
-    rgba(34, 255, 184, 0.1)
-  );
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(120, 255, 255, 0.18);
-  border-radius: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color, #393939);
+  border-radius: 8px;
   padding: 8px 14px;
   margin: 6px auto;
   max-width: 560px;
@@ -2257,21 +2230,21 @@ span {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  box-shadow: 0 4px 16px rgba(0, 160, 255, 0.15);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 
   .bannerIcon {
     font-size: 18px;
   }
 
   .bannerText {
-    color: #e6ffff;
+    color: var(--text-primary);
     font-size: 13px;
     font-weight: 500;
     line-height: 1.35;
     letter-spacing: 0.01em;
 
     strong {
-      color: #12dbff;
+      color: var(--accent-color);
       font-weight: 600;
     }
   }
