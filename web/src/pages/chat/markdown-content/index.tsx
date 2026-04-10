@@ -336,6 +336,7 @@ const MarkdownContent = ({
       // FIX: usa lo stesso indice per avere il chunk corretto
       const chunkItem = reference?.chunks?.[chunkIndex - 1];
       const imageId = chunkItem?.image_id;
+      const popAffinityPct = affinityPercent(chunkItem?.similarity);
 
       if (DEBUG) {
         console.groupCollapsed(
