@@ -13,6 +13,8 @@ INSTANCES_CONFIG = {
         'id': 'i-0ec0704c7b36f7648',
         'host': '13.49.16.179',
         'user': 'ubuntu',
+        # Policy: spenta salvo force_start da SGAI Home; spegnimento su EC2 (auto_shutdown_monitor).
+        'on_demand': True,
         'ora_inizio': 8,
         'ora_fine': 22,
         'gestisci_docker': True,
@@ -29,7 +31,6 @@ INSTANCES_CONFIG = {
             'ragflow-es-02',
             'ragflow-es-01'
         ],
-        # NEW: ignora weekend e festivi per tenere la prod sempre su
         'ignora_weekend': False,
         'ignora_festivi': False,
     },
@@ -75,8 +76,9 @@ FESTIVI = [
 ]
 
 # NEW: Configurazione force_start
-FORCE_START_DURATION_MINUTES = 60  # Durata force_start (1 ora)
+FORCE_START_DURATION_MINUTES = 60  # Coerente con finestra minima monitor (documentazione)
 FORCE_START_FLAG_PATH = '/tmp/force_start_active'
+WAKE_AT_FILE_PATH = '/tmp/sgai_wake_at'  # timestamp wake per auto_shutdown_monitor (non rimosso fino a stop)
 
 # ------------------------------------------------------------------
 
@@ -147,6 +149,10 @@ def should_instance_be_on(instance_name, config, now_roma, force):
         print(f"[{instance_name}] Force mode: ignora orari e giorni")
         return True
 
+    if config.get('on_demand'):
+        print(f"[{instance_name}] On-demand: nessun avvio automatico da schedulazione (serve force_start)")
+        return False
+
     ignora_weekend = config.get('ignora_weekend', False)
     ignora_festivi = config.get('ignora_festivi', False)
 
@@ -167,19 +173,21 @@ def should_instance_be_on(instance_name, config, now_roma, force):
 
 def set_force_start_flag(ssh, instance_name, duration_minutes=FORCE_START_DURATION_MINUTES):
     """
-    Crea il file /tmp/force_start_active sull'EC2 con timestamp ISO.
-    Questo dice al monitor di NON spegnere l'istanza per N minuti.
+    Scrive timestamp ISO su EC2: legacy force_start + sgai_wake_at (stesso valore).
+    Il monitor usa sgai_wake_at per la finestra minima (MIN_UPTIME_AFTER_WAKE) dopo wake da Home.
     """
     now_utc = datetime.datetime.utcnow()
     timestamp_iso = now_utc.isoformat()
-    
-    cmd = f"echo '{timestamp_iso}' > {FORCE_START_FLAG_PATH}"
+
+    cmd = (
+        f"printf '%s\\n' '{timestamp_iso}' > {FORCE_START_FLAG_PATH} && "
+        f"printf '%s\\n' '{timestamp_iso}' > {WAKE_AT_FILE_PATH}"
+    )
     stdin, stdout, stderr = ssh.exec_command(cmd)
     exit_status = stdout.channel.recv_exit_status()
     
     if exit_status == 0:
-        print(f"[{instance_name}] ✅ Flag force_start settato per {duration_minutes} minuti")
-        print(f"[{instance_name}]    File: {FORCE_START_FLAG_PATH}")
+        print(f"[{instance_name}] ✅ Wake timestamp scritto ({FORCE_START_FLAG_PATH}, {WAKE_AT_FILE_PATH})")
         print(f"[{instance_name}]    Timestamp: {timestamp_iso}")
         return True
     else:
@@ -335,7 +343,7 @@ def process_instance(instance_name, config, now_roma, force, key_obj):
         elif state == 'running':
             print(f"[{instance_name}] *** EC2 ACCESA ***")
 
-            if not should_be_on and not force:
+            if not config.get('on_demand') and not should_be_on and not force:
                 print(f"[{instance_name}] Spengo: fuori orario/non lavorativo")
                 ec2.stop_instances(InstanceIds=[instance_id])
                 return (instance_name, "stopping", "fuori orario")
@@ -408,7 +416,7 @@ def lambda_handler(event, context):
     if force:
         print("⚠️  FORCE START attivato da API Gateway!")
         print(f"   → Ignora orari e giorni")
-        print(f"   → Flag force_start verrà settato per {FORCE_START_DURATION_MINUTES} minuti")
+        print(f"   → Timestamp wake su EC2 ({WAKE_AT_FILE_PATH}) per monitor auto-shutdown")
     
     print("-" * 40)
     

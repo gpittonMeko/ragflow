@@ -67,9 +67,9 @@ export function HomeHeader() {
     <section className="py-[12px] flex justify-between items-center">
       <div className="flex items-center gap-4">
         <img
-          src={'/logo.svg'}
-          alt="logo"
-          className="w-[100] h-[100] mr-[12]"
+          src={'/sgai-logo.png'}
+          alt="SGAI"
+          className="h-10 w-auto mr-3 object-contain"
           onClick={handleLogoClick}
         />
         <Button variant="secondary">

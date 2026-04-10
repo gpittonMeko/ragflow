@@ -3,7 +3,7 @@
 .messageInputWrapper {
   margin-top: 0;
   margin-right: 8px;
-  margin-bottom: 220px;
+  margin-bottom: 12px;
   margin-left: 8px;
   padding: 10px 14px;
   background: var(--bg-secondary, #ffffff);
@@ -87,8 +87,8 @@
   }
 
   @media (max-width: 768px) {
-    padding: 4px 0px 20px 0px;
-    margin-bottom: 230px;
+    padding: 4px 0px 12px 0px;
+    margin-bottom: max(80px, env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -138,10 +138,6 @@
   top: -4px;
   color: #ff4d4f;
   cursor: pointer;
-}
-
-.messageInputWrapper {
-  margin-bottom: 150px !important;
 }
 
 /* Wrapper per scroll-into-view su mobile (tastiera) */

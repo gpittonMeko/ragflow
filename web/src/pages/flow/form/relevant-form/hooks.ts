@@ -50,4 +50,8 @@ export const useWatchConnectionChanges = ({ nodeId, form }: IOperatorForm) => {
   useEffect(() => {
     watchFormChanges();
   }, [watchFormChanges]);
+
+  useEffect(() => {
+    watchConnectionChanges();
+  }, [watchConnectionChanges]);
 };

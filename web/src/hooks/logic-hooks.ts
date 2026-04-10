@@ -186,16 +186,21 @@ export const useSendMessageWithSse = (
       initializeSseRef();
       try {
         setDone(false);
+
+        const authHeader = getAuthorization();
+        const requestHeaders = {
+          ...(fetchOptions.headers || {}),
+          [Authorization]: authHeader,
+          'Content-Type': 'application/json',
+        };
+
+        const requestBody = JSON.stringify(body);
+
         const response = await fetch(url, {
           method: 'POST',
-          // Unisci i fetchOptions passati con i default
           ...fetchOptions,
-          headers: {
-            ...(fetchOptions.headers || {}), // 👈 prendi headers custom se ci sono
-            [Authorization]: getAuthorization(),
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
+          headers: requestHeaders,
+          body: requestBody,
           signal: controller?.signal || sseRef.current?.signal,
         });
 
@@ -280,8 +285,8 @@ export const useSpeechWithSse = (url: string = api.tts) => {
         if (res?.code !== 0) {
           message.error(res?.message);
         }
-      } catch (error) {
-        console.warn('🚀 ~ error:', error);
+      } catch {
+        // Silently ignore
       }
       return response;
     },

@@ -10,10 +10,7 @@ import classNames from 'classnames';
 import { useCallback } from 'react';
 import { Link, useParams } from 'umi';
 import { FlowSettingModal, useFlowSettingModal } from '../flow-setting';
-import {
-  useGetBeginNodeDataQuery,
-  useGetBeginNodeDataQueryIsSafe,
-} from '../hooks/use-get-begin-query';
+import { useGetBeginNodeDataQuery } from '../hooks/use-get-begin-query';
 import {
   useSaveGraph,
   useSaveGraphBeforeOpeningDebugDrawer,
@@ -29,10 +26,9 @@ import styles from './index.less';
 
 interface IProps {
   showChatDrawer(): void;
-  chatDrawerVisible: boolean;
 }
 
-const FlowHeader = ({ showChatDrawer, chatDrawerVisible }: IProps) => {
+const FlowHeader = ({ showChatDrawer }: IProps) => {
   const { saveGraph } = useSaveGraph();
   const { handleRun } = useSaveGraphBeforeOpeningDebugDrawer(showChatDrawer);
   const { data: userInfo } = useFetchUserInfo();
@@ -40,13 +36,12 @@ const FlowHeader = ({ showChatDrawer, chatDrawerVisible }: IProps) => {
   const { data } = useFetchFlow();
   const { t } = useTranslate('flow');
   const { id } = useParams();
-  const time = useWatchAgentChange(chatDrawerVisible);
+  const time = useWatchAgentChange();
   const getBeginNodeDataQuery = useGetBeginNodeDataQuery();
   const { showEmbedModal, hideEmbedModal, embedVisible, beta } =
     useShowEmbedModal();
   const { setVisibleSettingMModal, visibleSettingModal } =
     useFlowSettingModal();
-  const isBeginNodeDataQuerySafe = useGetBeginNodeDataQueryIsSafe();
   const { setVisibleHistoryVersionModal, visibleHistoryVersionModal } =
     useHistoryVersionModal();
   const handleShowEmbedModal = useCallback(() => {
@@ -98,17 +93,10 @@ const FlowHeader = ({ showChatDrawer, chatDrawerVisible }: IProps) => {
           </Space>
         </Badge.Ribbon>
         <Space size={'large'}>
-          <Button
-            disabled={false}
-            onClick={handleRunAgent}
-          >
+          <Button disabled={false} onClick={handleRunAgent}>
             <b>{t('run')}</b>
           </Button>
-          <Button
-            disabled={false}
-            type="primary"
-            onClick={() => saveGraph()}
-          >
+          <Button disabled={false} type="primary" onClick={() => saveGraph()}>
             <b>{t('save')}</b>
           </Button>
           <Button
@@ -118,11 +106,7 @@ const FlowHeader = ({ showChatDrawer, chatDrawerVisible }: IProps) => {
           >
             <b>{t('embedIntoSite', { keyPrefix: 'common' })}</b>
           </Button>
-          <Button
-            disabled={false}
-            type="primary"
-            onClick={showSetting}
-          >
+          <Button disabled={false} type="primary" onClick={showSetting}>
             <b>{t('setting')}</b>
           </Button>
           <Button type="primary" onClick={showListVersion}>

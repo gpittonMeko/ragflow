@@ -48,6 +48,26 @@ CANCEL_URL  = f"{APP_URL}/oauth"
 
 SESSION_COOKIE = "sgaai_session"
 
+
+def _cors_allowed_origins() -> list[str]:
+    """
+    Origini browser consentite per fetch con credentials verso /oauth.
+    Se usi sia apex che www (o app.), una sola APP_URL non basta: il browser manda Origin esatto.
+    Override: OAUTH_CORS_ORIGINS=https://a.com,https://b.com
+    """
+    extra = os.getenv("OAUTH_CORS_ORIGINS", "").strip()
+    if extra:
+        return sorted({x.strip() for x in extra.split(",") if x.strip()})
+    u = urlparse(APP_URL)
+    scheme = u.scheme or "https"
+    host = (u.hostname or "sgailegal.com").lower()
+    roots = {f"{scheme}://{host}"}
+    if host == "sgailegal.com" or host.endswith(".sgailegal.com"):
+        for h in ("sgailegal.com", "www.sgailegal.com", "app.sgailegal.com"):
+            roots.add(f"{scheme}://{h}")
+    return sorted(roots)
+
+
 def today_key() -> str:
     return time.strftime("%Y-%m-%d", time.localtime())
 
@@ -55,8 +75,7 @@ def today_key() -> str:
 # APP & CORS
 # ─────────────────────────────────────────────────────────────
 app = Flask(__name__)
-FRONT_ORIGIN = "{uri.scheme}://{uri.netloc}".format(uri=urlparse(APP_URL))
-CORS(app, supports_credentials=True, origins=[FRONT_ORIGIN])
+CORS(app, supports_credentials=True, origins=_cors_allowed_origins())
 
 # ─────────────────────────────────────────────────────────────
 # DB Peewee (utenti + sessioni)

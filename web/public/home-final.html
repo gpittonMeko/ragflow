@@ -624,16 +624,12 @@
         <div class="info-box service-hours-card">
           <div class="info-box-title">
             <span>🕐</span>
-            <span>Orario di Servizio</span>
+            <span>Come funziona</span>
           </div>
           <div class="info-box-content">
-            <div class="service-hours-detail">
-              <strong>Lunedì - Venerdì:</strong>
-              <span class="hours-highlight">8:00 - 22:00</span>
-            </div>
             <p class="service-description">
-              Il sistema si attiva automaticamente durante l'orario lavorativo.
-              Fuori orario, puoi riattivare manualmente il servizio (tempo di avvio: ~2 minuti).
+              Il server è <strong>spento</strong> di default. Usa «Prova ora» su questa pagina per accenderlo (~2 min).
+              Dopo l’uso si spegne da solo: minimo ~60 min acceso, poi 30 min dopo l’ultima chat.
             </p>
           </div>
         </div>
@@ -793,28 +789,59 @@
 
     const API_ENDPOINT = 'https://91k2hfw1n3.execute-api.eu-north-1.amazonaws.com/wake-up';
     const SGAI_URL = 'https://www.sgailegal.com';
+    const SGAI_URL_ALT = 'https://sgailegal.com';
+    const SGAI_APP_URL = SGAI_URL + '/';
+    const SGAI_APP_URL_ALT = SGAI_URL_ALT + '/';
+    const SGAI_BACKEND_PROBE = SGAI_URL + '/v1/user/login';
+    const SGAI_BACKEND_PROBE_ALT = SGAI_URL_ALT + '/v1/user/login';
     const CHECK_INTERVAL = 5000; // 5 secondi
     
     let systemState = 'checking';
     let startTime = null;
+    let wakeInProgress = false;
+
+    function parseApiGatewayJson(data) {
+      if (!data || typeof data !== 'object') return data;
+      if (typeof data.body === 'string') {
+        try {
+          const inner = JSON.parse(data.body);
+          return { ...data, ...inner };
+        } catch {
+          return data;
+        }
+      }
+      return data;
+    }
+
+    async function probeRagflowJson(url) {
+      try {
+        const r = await fetch(url, {
+          method: 'GET',
+          mode: 'cors',
+          cache: 'no-store',
+          credentials: 'omit',
+        });
+        const ct = (r.headers.get('content-type') || '').toLowerCase();
+        if (!ct.includes('application/json')) return false;
+        return r.ok || r.status === 401 || r.status === 400;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function isRagflowBackendUp() {
+      return (
+        (await probeRagflowJson(SGAI_BACKEND_PROBE)) ||
+        (await probeRagflowJson(SGAI_BACKEND_PROBE_ALT))
+      );
+    }
 
     // Controlla stato sistema
     async function checkSystemStatus() {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
-        
-        const response = await fetch(SGAI_URL, {
-          method: 'HEAD',
-          mode: 'no-cors',
-          cache: 'no-cache',
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
+      if (wakeInProgress) return;
+      if (await isRagflowBackendUp()) {
         showOnlineState();
-        
-      } catch (error) {
+      } else {
         showOfflineState();
       }
     }
@@ -828,9 +855,9 @@
       document.getElementById('status-text').textContent = 'Sistema Operativo';
       
       document.getElementById('main-buttons').innerHTML = `
-        <a href="${SGAI_URL}" class="btn btn-primary">
+        <a href="${SGAI_APP_URL}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" id="open-chat-btn">
           <span>💬</span>
-          <span>Accedi alla Chat SGAI</span>
+          <span>Prova ora — apri la chat</span>
         </a>
         <div class="info-box" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3);">
           <div class="info-box-title" style="color: #10b981;">
@@ -854,27 +881,43 @@
       document.getElementById('status-text').textContent = 'Sistema in Pausa';
       
       document.getElementById('main-buttons').innerHTML = `
-        <button onclick="wakeUpSystem()" class="btn btn-secondary" id="wake-btn">
-          <span>⚡</span>
-          <span>Riattiva Servizio (~2 minuti)</span>
+        <button type="button" class="btn btn-primary" id="wake-btn">
+          <span>💬</span>
+          <span>Prova ora — accendi SGAI (~2 min)</span>
         </button>
         <div class="info-box" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
           <div class="info-box-title" style="color: #ef4444;">
             <span>⏸️</span>
-            <span>Servizio Temporaneamente Non Disponibile</span>
+            <span>Server spento</span>
           </div>
           <div class="info-box-content">
-            Il sistema è attualmente in pausa per risparmio energetico.<br>
-            <strong>Si riattiverà automaticamente alle 8:00</strong> oppure puoi riattivarlo 
-            immediatamente cliccando il pulsante sopra.
+            Il production resta spento finché non lo avvii da qui. Nessun riavvio automatico fissato alle 8:00.
           </div>
         </div>
+        <p style="margin-top: 16px; font-size: 13px; color: var(--text-secondary); text-align: center;">
+          Già avviato altrove?
+          <a href="${SGAI_APP_URL}" target="_blank" rel="noopener noreferrer" style="color: var(--accent-color);">chat (www)</a>
+          ·
+          <a href="${SGAI_APP_URL_ALT}" target="_blank" rel="noopener noreferrer" style="color: var(--accent-color);">chat (senza www)</a>
+        </p>
       `;
+      const wb = document.getElementById('wake-btn');
+      if (wb) {
+        wb.addEventListener('click', function (e) {
+          e.preventDefault();
+          void wakeUpSystem();
+        });
+      }
     }
 
     async function wakeUpSystem() {
       const btn = document.getElementById('wake-btn');
+      if (!btn) {
+        console.error('[wake] wake-btn assente');
+        return;
+      }
       btn.disabled = true;
+      wakeInProgress = true;
       btn.innerHTML = '<span class="loading-spinner"></span><span>Riattivazione in corso...</span>';
       
       // Mostra progress
@@ -889,23 +932,33 @@
         // Chiama Lambda
         const response = await fetch(API_ENDPOINT, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ force_start: true })
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+          body: JSON.stringify({ force_start: true, target_instance: 'SGAI-Production' })
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+        const raw = await response.json().catch(() => ({}));
+        const data = parseApiGatewayJson(raw);
+        const sc = data.statusCode;
+        if (typeof sc === 'number' && sc >= 400) {
+          throw new Error(`Lambda statusCode ${sc}`);
+        }
+        const prod = data.instances && data.instances['SGAI-Production'];
+        if (!response.ok || (prod && prod.status === 'error')) {
+          const msg = prod && prod.message ? prod.message : `HTTP ${response.status}`;
+          throw new Error(msg);
         }
 
         // Inizia monitoraggio
         monitorStartup();
         
       } catch (error) {
+        wakeInProgress = false;
+        console.error('[wake]', error);
         badge.className = 'status-badge status-offline';
         document.getElementById('status-text').textContent = 'Errore Riattivazione';
-        updateProgress(0, '❌ Errore durante la riattivazione. Riprova tra qualche minuto.');
+        updateProgress(0, '❌ ' + (error && error.message ? error.message : 'Riprova tra qualche minuto.'));
         btn.disabled = false;
-        btn.innerHTML = '<span>⚡</span><span>Riattiva Servizio</span>';
+        btn.innerHTML = '<span>💬</span><span>Prova ora — accendi SGAI (~2 min)</span>';
       }
     }
 
@@ -924,14 +977,24 @@
     async function monitorStartup() {
       startTime = Date.now();
       const maxWait = 180000; // 3 minuti
-      
+      const fallbackRedirectMs = 150000;
+
       const checkLoop = setInterval(async () => {
         const elapsed = Date.now() - startTime;
         const seconds = Math.floor(elapsed / 1000);
         
         if (elapsed > maxWait) {
           clearInterval(checkLoop);
+          wakeInProgress = false;
           updateProgress(100, '⚠️ Avvio in corso... Ricarica la pagina tra poco');
+          return;
+        }
+
+        if (elapsed >= fallbackRedirectMs) {
+          clearInterval(checkLoop);
+          wakeInProgress = false;
+          updateProgress(100, '⏳ Apertura chat in corso…');
+          window.location.href = SGAI_APP_URL;
           return;
         }
         
@@ -947,28 +1010,15 @@
         updateProgress(percentage, message);
         updateTimer(seconds);
         
-        // Prova a connettersi
         try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000);
-          
-          await fetch(SGAI_URL, {
-            method: 'HEAD',
-            mode: 'no-cors',
-            cache: 'no-cache',
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
-          
-          // Sistema online!
+          if (await isRagflowBackendUp()) {
           clearInterval(checkLoop);
+          wakeInProgress = false;
           updateProgress(100, '✅ Sistema pronto! Reindirizzamento...');
-          
           setTimeout(() => {
-            window.location.href = SGAI_URL;
+            window.location.href = SGAI_APP_URL;
           }, 1500);
-          
+          }
         } catch (e) {
           // Ancora offline, continua
         }
@@ -986,6 +1036,9 @@
     window.addEventListener('load', () => {
       startPeriodicCheck();
     });
+    window.wakeUpSystem = wakeUpSystem;
+    window.wakeUpSGAI = wakeUpSystem;
+    window.wakeUp = wakeUpSystem;
   </script>
 </body>
 </html>

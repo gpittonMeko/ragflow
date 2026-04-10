@@ -21,48 +21,45 @@ body {
   min-height: 100%;
 }
 
-/* Scroll bar stylings */
+/* Scroll bar stylings - only for main app, NOT for chat iframe */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 
-/* Track */
 ::-webkit-scrollbar-track {
-  background: rgb(219, 218, 218);
+  background: transparent;
 }
 
-/* Handle */
 ::-webkit-scrollbar-thumb {
-  background: #aaaaaa;
-  border-radius: 5px;
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 3px;
 }
 
-/* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  background: #888;
+  background: rgba(128, 128, 128, 0.5);
 }
 
-/* Fix z-index for Ant Design Popover - must be above chat and other overlays */
+/* Fix z-index for Ant Design Popover - must be above chat, header, and other overlays */
 .ant-popover {
-  z-index: 10000 !important;
+  z-index: 999999 !important;
 }
 
 /* Ensure Popover content is also at high z-index */
 .ant-popover-content {
-  z-index: 10001 !important;
+  z-index: 999999 !important;
 }
 
 /* Ant Design Tooltip z-index fix */
 .ant-tooltip {
-  z-index: 10000 !important;
+  z-index: 999999 !important;
 }
 
-/* Ant Design Drawer z-index fix - must be above everything else */
+/* Ant Design Drawer z-index fix - must be above everything else (header, chat, etc) */
 .ant-drawer {
-  z-index: 10500 !important;
+  z-index: 999999 !important;
 }
 
 .ant-drawer-mask {
-  z-index: 10499 !important;
+  z-index: 999998 !important;
 }

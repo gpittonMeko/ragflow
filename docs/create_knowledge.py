@@ -66,7 +66,12 @@ def is_pdf_valid(pdf_path):
                 if txt.strip():
                     return True
         return False
-    except:
+    except ImportError:
+        # PyPDF2 non installato, considera tutti i PDF validi
+        return True
+    except Exception as e:
+        # Altri errori (PDF corrotto, etc.) - considera non valido
+        print(f"[WARN] Errore validazione PDF '{os.path.basename(pdf_path)}': {e}")
         return False
 
 def main():
@@ -134,24 +139,50 @@ def main():
                 "blob": blob_content
             }]
             try:
-                dataset.upload_documents(document_list=doc_data)
-                existing_names.add(pdf_name)
-                uploaded_count += 1
+                result = dataset.upload_documents(document_list=doc_data)
+                # Verifica che il documento sia stato effettivamente caricato
+                if result and len(result) > 0:
+                    existing_names.add(pdf_name)
+                    uploaded_count += 1
+                    if uploaded_count % 10 == 0:
+                        print(f"[INFO] Caricati {uploaded_count} PDF finora...")
+                else:
+                    print(f"[ERRORE] '{pdf_name}' upload completato ma nessun documento restituito")
             except Exception as e:
                 print(f"[ERRORE Upload] '{pdf_name}': {e}")
+                import traceback
+                traceback.print_exc()
 
     if pbar_global:
         pbar_global.close()
 
     print(f"\n[INFO] Caricamento completato. Inviati {uploaded_count} PDF nuovi al dataset '{DATASET_NAME}'.")
 
-    # 5) Avvia parse asincrono su TUTTI i documenti, se vuoi
+    # 5) Verifica documenti caricati
+    print(f"\n[VERIFICA] Verifico documenti nel dataset...")
+    try:
+        all_docs_after = dataset.list_documents(page=1, page_size=999999)
+        print(f"[INFO] Documenti totali nel dataset: {len(all_docs_after)}")
+        
+        # Conta documenti non parsati
+        unparsed = [doc for doc in all_docs_after if getattr(doc, 'run', '') == 'UNSTART' or getattr(doc, 'chunk_count', 0) == 0]
+        if unparsed:
+            print(f"[INFO] Documenti da parsare: {len(unparsed)}")
+    except Exception as e:
+        print(f"[ERRORE] Errore verifica documenti: {e}")
+        all_docs_after = []
+
+    # 6) Avvia parse asincrono su TUTTI i documenti, se vuoi
     #    (chunk_method='naive' => parsing automatico con PDFium)
-    all_docs_after = dataset.list_documents(page=1, page_size=999999)
     all_ids = [doc.id for doc in all_docs_after]
     if all_ids:
-        dataset.async_parse_documents(all_ids)
-        print("[INFO] Parsing asincrono avviato su tutti i documenti!")
+        try:
+            dataset.async_parse_documents(all_ids)
+            print(f"[INFO] Parsing asincrono avviato su {len(all_ids)} documenti!")
+        except Exception as e:
+            print(f"[ERRORE] Errore avvio parsing: {e}")
+            import traceback
+            traceback.print_exc()
     else:
         print("[ATTENZIONE] Nessun documento nel dataset, niente parsing.")
 

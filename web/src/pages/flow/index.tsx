@@ -26,10 +26,7 @@ function RagFlow() {
       <ReactFlowProvider>
         <Sider setCollapsed={setCollapsed} collapsed={collapsed}></Sider>
         <Layout>
-          <FlowHeader
-            showChatDrawer={showChatDrawer}
-            chatDrawerVisible={chatDrawerVisible}
-          ></FlowHeader>
+          <FlowHeader showChatDrawer={showChatDrawer}></FlowHeader>
           <Content style={{ margin: 0 }}>
             <FlowCanvas
               drawerVisible={chatDrawerVisible}

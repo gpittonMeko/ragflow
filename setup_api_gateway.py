@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """
 Crea API Gateway HTTP per il pulsante "Riattiva Servizio"
+
+Infra note (verifica 2026-04-10, account eu-north-1):
+- POST /wake-up su API 91k2hfw1n3 integra StartEC2InstanceAndForward (unica Lambda wake deployata
+  in questa regione; il manager multi-istanza del repo è lambda_ec2_manager_updated.py — da
+  deployare separatamente se servono on_demand + flag SSH su /tmp/sgai_wake_at).
+- EventBridge rule CheckEC2StateEveryHour invocava StartEC2InstanceAndForward ogni ~20m; rimosso
+  statement Lambda AllowEventBridgeInvocation così lo schedule non può più avviare EC2.
 """
 import boto3
 import json

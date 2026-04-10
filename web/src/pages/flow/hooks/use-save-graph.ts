@@ -1,10 +1,8 @@
 import { useFetchFlow, useResetFlow, useSetFlow } from '@/hooks/flow-hooks';
 import { RAGFlowNodeType } from '@/interfaces/database/flow';
-import { useDebounceEffect } from 'ahooks';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'umi';
-import useGraphStore from '../store';
 import { useBuildDslData } from './use-build-dsl';
 
 export const useSaveGraph = () => {
@@ -49,11 +47,8 @@ export const useSaveGraphBeforeOpeningDebugDrawer = (show: () => void) => {
   return { handleRun, loading };
 };
 
-export const useWatchAgentChange = (chatDrawerVisible: boolean) => {
+export const useWatchAgentChange = () => {
   const [time, setTime] = useState<string>();
-  const nodes = useGraphStore((state) => state.nodes);
-  const edges = useGraphStore((state) => state.edges);
-  const { saveGraph } = useSaveGraph();
   const { data: flowDetail } = useFetchFlow();
 
   const setSaveTime = useCallback((updateTime: number) => {
@@ -63,23 +58,6 @@ export const useWatchAgentChange = (chatDrawerVisible: boolean) => {
   useEffect(() => {
     setSaveTime(flowDetail?.update_time);
   }, [flowDetail, setSaveTime]);
-
-  const saveAgent = useCallback(async () => {
-    if (!chatDrawerVisible) {
-      const ret = await saveGraph();
-      setSaveTime(ret.data.update_time);
-    }
-  }, [chatDrawerVisible, saveGraph, setSaveTime]);
-
-  useDebounceEffect(
-    () => {
-      // saveAgent();
-    },
-    [nodes, edges],
-    {
-      wait: 1000 * 20,
-    },
-  );
 
   return time;
 };

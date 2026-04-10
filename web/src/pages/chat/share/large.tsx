@@ -198,22 +198,22 @@ const ChatContainer = ({ theme }) => {
       {barVisible && (
         <div className={styles.loaderBarWrapper}>
           <div className={styles.loaderGlass}>
+            <div className={styles.loaderSpinner} />
             <span className={styles.loaderGlassText}>
-              Generazione in corso...
+              {progress < 30
+                ? 'Analisi documenti...'
+                : progress < 60
+                  ? 'Elaborazione risposta...'
+                  : progress < 90
+                    ? 'Completamento in corso...'
+                    : 'Finalizzazione...'}
             </span>
             <div
               className={styles.loaderBarLiquid}
               style={{
-                width: '100%', // <-- QUESTA È LA CHIAVE!
-                maxWidth: 600, // limite desktop
-                minWidth: 100, // limite mobile
-                margin: '0 auto',
-                height: 16,
-                background: 'rgba(155,255,255,0.07)',
-                borderRadius: 10,
-                padding: 2,
-                boxSizing: 'border-box',
-                boxShadow: '0 0 24px #12c7f333',
+                height: 3,
+                background: 'var(--border-color)',
+                borderRadius: 2,
                 overflow: 'hidden',
               }}
             >
@@ -222,25 +222,12 @@ const ChatContainer = ({ theme }) => {
                 style={{
                   width: `${progress}%`,
                   height: '100%',
-                  borderRadius: 7,
-                  background:
-                    'linear-gradient(270deg, #12dbffBB 0%, #22ffb899 70%, #0078f0CC 100%)',
-                  boxShadow: '0 0 16px #22cfff88',
-                  transition: 'width 0.3s cubic-bezier(.4,1.1,.3,.96)',
-                  willChange: 'width',
-                  backgroundSize: '200% 100%',
-                  animation: 'loader-wave-glass 1.3s infinite linear',
+                  borderRadius: 2,
+                  transition: 'width 0.4s ease',
                 }}
-              ></div>
+              />
             </div>
           </div>
-          {/* CSS animation direttamente qui */}
-          <style>
-            {`@keyframes loader-wave-glass {
-                  0% { background-position: 0 0; }
-                  100% { background-position: 200% 0; }
-              }`}
-          </style>
         </div>
       )}
 
@@ -256,7 +243,11 @@ const ChatContainer = ({ theme }) => {
           ref={messagesContainerRef}
         >
           <div>
-            <Spin spinning={loading || sendLoading}>
+            <Spin
+              spinning={loading || sendLoading}
+              tip={loading ? 'Caricamento conversazione...' : undefined}
+              size="large"
+            >
               {derivedMessages?.map((message, i) => {
                 const isLastMessage = i === lastMessageIndex;
                 return (
@@ -297,14 +288,15 @@ const ChatContainer = ({ theme }) => {
         {blocked && (
           <div
             style={{
-              margin: '0 0 8px',
-              padding: '6px 12px',
+              margin: '0 16px 8px',
+              padding: '8px 16px',
               background: '#fff3cd',
               color: '#664d03',
-              border: '1px solid #ffecb5',
-              borderRadius: 6,
-              fontSize: 13,
-              fontWeight: 600,
+              border: '1px solid #ffc107',
+              borderRadius: 4,
+              fontSize: 14,
+              fontWeight: 500,
+              fontFamily: 'var(--font-sans)',
             }}
           >
             Limite gratuito raggiunto - effettua il login per continuare

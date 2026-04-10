@@ -1,25 +1,56 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const VIEWBOX_W = 13500;
 const VIEWBOX_H = 8500;
 
-export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped }) => {
+export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({
+  flipped,
+}) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const gradientRef = useRef<SVGLinearGradientElement>(null);
 
   // === NEW: refs/stato per centratura dinamica ===
   const logoFrameRef = useRef<SVGGElement>(null);
-  const [centerTx, setCenterTx] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [centerTx, setCenterTx] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
 
-  const [gradientTheme, setGradientTheme] = useState<'soft' | 'vivid' | 'ultra'>('soft');
+  const [gradientTheme, setGradientTheme] = useState<
+    'soft' | 'vivid' | 'ultra'
+  >('soft');
   const [transition, setTransition] = useState(0); // 0 = soft, 1 = vivid, 2 = ultra
 
-  const SOFT_GRADIENT = ["#8EC5FC", "#B0D2FA", "#D8B4F8", "#FFD6E8", "#C8FCEA", "#8EC5FC"];
-  const VIVID_GRADIENT = ["#7BB6F9", "#A0C8F5", "#CFA1F3", "#FFC8E0", "#B2F7DF", "#7BB6F9"];
-  const ULTRA_GRADIENT = ["#5CA0F5", "#8CB8F0", "#B07AEF", "#FF9FD0", "#90F5D3", "#5CA0F5"];
+  const SOFT_GRADIENT = [
+    '#4A90D9',
+    '#6BA3E0',
+    '#8B7FC7',
+    '#D4D4D4',
+    '#5BBAA7',
+    '#4A90D9',
+  ];
+  const VIVID_GRADIENT = [
+    '#2B6CB0',
+    '#4C8FD6',
+    '#6B5AC4',
+    '#A0C4E8',
+    '#3FA892',
+    '#2B6CB0',
+  ];
+  const ULTRA_GRADIENT = [
+    '#1A56A0',
+    '#3578C4',
+    '#5541B8',
+    '#7FB3E0',
+    '#2E9680',
+    '#1A56A0',
+  ];
 
   const gradientStops = (palette: string[]) =>
-    palette.map((color, i) => ({ offset: `${(i / (palette.length - 1)) * 100}%`, color }));
+    palette.map((color, i) => ({
+      offset: `${(i / (palette.length - 1)) * 100}%`,
+      color,
+    }));
 
   const SOFT_GRADIENT_STOPS = gradientStops(SOFT_GRADIENT);
   const VIVID_GRADIENT_STOPS = gradientStops(VIVID_GRADIENT);
@@ -36,7 +67,7 @@ export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped })
         x1: (50 + 25 * Math.sin(t * 0.25)) % 100,
         y1: (30 + 20 * Math.cos(t * 0.27)) % 100,
         x2: (80 + 18 * Math.sin(t * 0.16)) % 100,
-        y2: (60 + 22 * Math.cos(t * 0.22)) % 100
+        y2: (60 + 22 * Math.cos(t * 0.22)) % 100,
       });
     }, 40);
     return () => clearInterval(interval);
@@ -46,8 +77,11 @@ export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped })
   useEffect(() => {
     let anim: number;
     const animate = () => {
-      const target = gradientTheme === 'soft' ? 0 : gradientTheme === 'vivid' ? 1 : 2;
-      setTransition(tran => (Math.abs(tran - target) < 0.02 ? target : tran + (target - tran) * 0.12));
+      const target =
+        gradientTheme === 'soft' ? 0 : gradientTheme === 'vivid' ? 1 : 2;
+      setTransition((tran) =>
+        Math.abs(tran - target) < 0.02 ? target : tran + (target - tran) * 0.12,
+      );
       anim = requestAnimationFrame(animate);
     };
     animate();
@@ -58,9 +92,10 @@ export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped })
     let A = parseInt(a.substring(1), 16);
     let B = parseInt(b.substring(1), 16);
     let r = ((A >> 16) + ((B >> 16) - (A >> 16)) * t) | 0;
-    let g = (((A >> 8) & 0xff) + (((B >> 8) & 0xff) - ((A >> 8) & 0xff)) * t) | 0;
+    let g =
+      (((A >> 8) & 0xff) + (((B >> 8) & 0xff) - ((A >> 8) & 0xff)) * t) | 0;
     let b2 = ((A & 0xff) + ((B & 0xff) - (A & 0xff)) * t) | 0;
-    return `#${(1 << 24 | (r << 16) | (g << 8) | b2).toString(16).slice(1)}`;
+    return `#${((1 << 24) | (r << 16) | (g << 8) | b2).toString(16).slice(1)}`;
   }
 
   // mix tra soft → vivid → ultra
@@ -68,8 +103,15 @@ export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped })
   const ultraMix = Math.max(0, transition - 1);
 
   const currentStops = SOFT_GRADIENT_STOPS.map((s, i) => {
-    const vividColor = lerpColor(s.color, VIVID_GRADIENT_STOPS[i].color, vividMix);
-    return { offset: s.offset, color: lerpColor(vividColor, ULTRA_GRADIENT_STOPS[i].color, ultraMix) };
+    const vividColor = lerpColor(
+      s.color,
+      VIVID_GRADIENT_STOPS[i].color,
+      vividMix,
+    );
+    return {
+      offset: s.offset,
+      color: lerpColor(vividColor, ULTRA_GRADIENT_STOPS[i].color, ultraMix),
+    };
   });
 
   // === NEW: calcolo centratura nel viewBox ===
@@ -86,7 +128,7 @@ export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped })
     <svg
       ref={svgRef}
       viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`}
-      preserveAspectRatio="xMidYMid meet"  
+      preserveAspectRatio="xMidYMid meet"
       width="90%"
       role="img"
       aria-label="Logo SGAI"
@@ -98,7 +140,7 @@ export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped })
         margin: '0 auto',
         cursor: 'pointer',
         userSelect: 'none',
-        transition: 'box-shadow 0.6s'
+        transition: 'box-shadow 0.6s',
       }}
       onMouseEnter={() => setGradientTheme('vivid')}
       onMouseLeave={() => setGradientTheme('soft')}
@@ -117,14 +159,17 @@ export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped })
           x2={(gradient.x2 * VIEWBOX_W) / 100}
           y2={(gradient.y2 * VIEWBOX_H) / 100}
         >
-          {currentStops.map(s => (
+          {currentStops.map((s) => (
             <stop key={s.offset} offset={s.offset} stopColor={s.color} />
           ))}
         </linearGradient>
       </defs>
 
       <filter id="logo-glow" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation={transition >= 2 ? 140 : transition >= 1 ? 90 : 50} result="glow" />
+        <feGaussianBlur
+          stdDeviation={transition >= 2 ? 140 : transition >= 1 ? 90 : 50}
+          result="glow"
+        />
         <feMerge>
           <feMergeNode in="glow" />
           <feMergeNode in="SourceGraphic" />
@@ -132,7 +177,10 @@ export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped })
       </filter>
 
       {/* === NEW: frame centrato dinamicamente === */}
-      <g ref={logoFrameRef} transform={`translate(${centerTx.x}, ${centerTx.y})`}>
+      <g
+        ref={logoFrameRef}
+        transform={`translate(${centerTx.x}, ${centerTx.y})`}
+      >
         {/* gruppo originale MA senza l'offset -1700 che sballava il centro */}
         <g
           fill="url(#gradient-hover)"
@@ -140,7 +188,8 @@ export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped })
           transform={`scale(1.15,-1.15) translate(0,-${VIEWBOX_H}) translate(0,-600)`}
           vectorEffect="non-scaling-stroke"
         >
-    <path d="M2900 8409 c-117 -8 -234 -25 -260 -39 -10 -5 -28 -10 -39 -10 -11 0
+          <path
+            d="M2900 8409 c-117 -8 -234 -25 -260 -39 -10 -5 -28 -10 -39 -10 -11 0
         -37 -7 -58 -16 -37 -16 -55 -24 -138 -60 -164 -72 -346 -246 -419 -399 -10
         -22 -24 -49 -29 -60 -6 -11 -14 -36 -18 -55 -4 -19 -12 -53 -18 -75 -14 -52
         -14 -298 0 -350 6 -22 14 -56 18 -75 29 -130 164 -301 306 -387 77 -46 244
@@ -162,8 +211,10 @@ export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped })
         99 143 159 52 61 109 126 127 145 17 19 31 40 31 47 0 6 -21 29 -47 50 -27 21
         -50 40 -53 43 -34 38 -327 200 -360 200 -9 0 -20 4 -26 9 -5 4 -43 18 -84 31
         -41 12 -85 26 -97 31 -12 4 -46 11 -75 14 -29 3 -71 10 -93 15 -53 12 -217 16
-        -335 9z"/>
-        <path d="M5720 8400 c-14 -5 -54 -13 -90 -19 -73 -10 -145 -27 -175 -40 -11
+        -335 9z"
+          />
+          <path
+            d="M5720 8400 c-14 -5 -54 -13 -90 -19 -73 -10 -145 -27 -175 -40 -11
         -5 -42 -17 -70 -26 -71 -25 -188 -81 -264 -128 -59 -36 -92 -59 -186 -130
         -115 -87 -284 -295 -363 -447 -65 -127 -126 -296 -143 -398 -6 -32 -14 -79
         -19 -107 -11 -65 -11 -445 0 -510 5 -27 14 -79 20 -115 6 -35 15 -69 20 -74 6
@@ -182,8 +233,10 @@ export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped })
         85 -65 3 -3 15 -14 26 -24 22 -18 22 -18 90 70 38 48 74 94 81 101 7 7 13 17
         13 20 0 4 10 18 23 32 41 45 147 189 147 199 0 16 -25 39 -116 107 -121 92
         -354 224 -394 224 -9 0 -20 4 -26 8 -8 7 -96 36 -194 63 -108 30 -489 50 -550
-        29z"/>
-        <path d="M8624 8339 c-8 -8 -14 -25 -14 -36 0 -11 -7 -26 -15 -33 -8 -7 -15
+        29z"
+          />
+          <path
+            d="M8624 8339 c-8 -8 -14 -25 -14 -36 0 -11 -7 -26 -15 -33 -8 -7 -15
         -19 -15 -27 0 -8 -6 -27 -13 -41 -14 -26 -36 -77 -62 -137 -7 -16 -24 -55 -38
         -85 -13 -30 -44 -100 -67 -154 -23 -54 -45 -106 -49 -115 -5 -9 -15 -33 -24
         -54 -9 -20 -23 -52 -31 -70 -8 -17 -21 -48 -30 -67 -18 -43 -60 -138 -92 -207
@@ -222,12 +275,14 @@ export const SvgLogoInteractive: React.FC<{ flipped?: boolean }> = ({ flipped })
         5 11 18 43 30 70 12 28 25 59 30 70 5 11 18 43 30 70 11 28 25 58 30 67 6 10
         10 23 10 29 0 10 14 45 45 114 12 27 32 73 67 155 5 14 16 39 23 55 7 17 29
         71 49 120 21 50 42 101 48 115 5 14 16 39 22 55 20 48 49 109 59 123 12 16 37
-        -3 37 -27z"/>
-        <path d="M10922 6883 l3 -1468 287 -2 288 -3 6 27 c4 15 4 333 1 707 -4 375
-        -7 1024 -7 1444 l0 762 -290 0 -290 0 2 -1467z"/>
-
+        -3 37 -27z"
+          />
+          <path
+            d="M10922 6883 l3 -1468 287 -2 288 -3 6 27 c4 15 4 333 1 707 -4 375
+        -7 1024 -7 1444 l0 762 -290 0 -290 0 2 -1467z"
+          />
         </g>
-        </g>
+      </g>
     </svg>
   );
 };

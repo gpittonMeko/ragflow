@@ -16,7 +16,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'umi';
 import styles from '../chat/share/index.less';
 
-// Hook per adattare layout quando si apre la tastiera su mobile
+// Hook per adattare layout quando si apre la tastiera su mobile.
+// Soglia 250px: evita di attivarsi per la barra URL (100-150px) che causerebbe
+// l'input che "va verso l'alto" al reload. Solo la tastiera vera riduce >250px.
 function useKeyboardOffset() {
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const initialHeight = useRef(
@@ -29,12 +31,15 @@ function useKeyboardOffset() {
 
     const handler = () => {
       const diff = initialHeight.current - vv.height;
-      setKeyboardOffset(diff > 80 ? diff : 0);
+      // Solo tastiera aperta (riduzione >250px), non barra URL al reload
+      setKeyboardOffset(diff > 250 ? diff : 0);
     };
     vv.addEventListener('resize', handler);
     vv.addEventListener('scroll', handler);
-    handler();
+    // Ritardo iniziale: al reload la viewport può essere instabile
+    const t = setTimeout(handler, 100);
     return () => {
+      clearTimeout(t);
       vv.removeEventListener('resize', handler);
       vv.removeEventListener('scroll', handler);
     };
@@ -228,6 +233,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
   }, [sessionId, agentId, setDerivedMessages]);
 
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
+  const hasThread = (derivedMessages?.length ?? 0) > 0;
   const keyboardOffset = useKeyboardOffset();
   const inputWrapperRef = useRef<HTMLDivElement>(null);
 
@@ -269,46 +275,57 @@ const DirectChat: React.FC<DirectChatProps> = ({
 
       <Flex
         flex={1}
-        className={`${styles.chatContainer} ${styles[theme]} ${className}`}
+        className={`${styles.chatContainer} ${styles[theme]} ${styles.directChatEmbed} ${className ?? ''}`}
         style={{
           ...style,
           paddingBottom: keyboardOffset > 0 ? keyboardOffset : undefined,
         }}
         vertical
       >
-        <Flex flex={1} vertical className={styles.messageContainer}>
+        <Flex
+          vertical
+          justify="flex-end"
+          className={styles.messageContainer}
+          style={{
+            flex: hasThread ? '1 1 0%' : '0 0 auto',
+            minHeight: hasThread ? 0 : undefined,
+            overflowY: hasThread ? 'auto' : 'hidden',
+          }}
+        >
           <div>
-            <Spin spinning={loading}>
-              {derivedMessages?.map((message, i) => {
-                const isLastMessage = i === lastMessageIndex;
-                return (
-                  <div key={buildMessageUuidWithRole(message)}>
-                    <MessageItem
-                      visibleAvatar={false}
-                      avatarDialog={avatarData?.avatar}
-                      item={message}
-                      nickname="You"
-                      reference={buildMessageItemReference(
-                        {
-                          message: derivedMessages,
-                          reference: [],
-                        },
-                        message,
-                      )}
-                      loading={
-                        message.role === MessageType.Assistant &&
-                        sendLoading &&
-                        isLastMessage
-                      }
-                      index={i}
-                      clickDocumentButton={clickDocumentButton}
-                      showLikeButton={false}
-                      showLoudspeaker={false}
-                    />
-                  </div>
-                );
-              })}
-            </Spin>
+            {loading || hasThread ? (
+              <Spin spinning={loading}>
+                {derivedMessages?.map((message, i) => {
+                  const isLastMessage = i === lastMessageIndex;
+                  return (
+                    <div key={buildMessageUuidWithRole(message)}>
+                      <MessageItem
+                        visibleAvatar={false}
+                        avatarDialog={avatarData?.avatar}
+                        item={message}
+                        nickname="You"
+                        reference={buildMessageItemReference(
+                          {
+                            message: derivedMessages,
+                            reference: [],
+                          },
+                          message,
+                        )}
+                        loading={
+                          message.role === MessageType.Assistant &&
+                          sendLoading &&
+                          isLastMessage
+                        }
+                        index={i}
+                        clickDocumentButton={clickDocumentButton}
+                        showLikeButton={false}
+                        showLoudspeaker={false}
+                      />
+                    </div>
+                  );
+                })}
+              </Spin>
+            ) : null}
           </div>
           <div ref={ref} />
         </Flex>

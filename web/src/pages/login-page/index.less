@@ -40,6 +40,18 @@
   --border-color: #e0e0e0;
 }
 
+:root,
+[data-theme='light'] {
+  & * {
+    transition:
+      background-color 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      fill 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
 /* Chat History Sidebar */
 .chatHistorySidebar {
   position: fixed;
@@ -451,8 +463,16 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI',
-    Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family:
+    'IBM Plex Sans',
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
   margin: 0;
   padding: 0;
   background-color: var(--bg-primary);
@@ -467,11 +487,12 @@ body {
 }
 
 .pageContainer {
-  height: 100vh; /* tutta la viewport */
-  overflow: hidden; /* blocca scroll della pagina */
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-primary); /* default background */
+  background-color: var(--bg-primary);
+  padding-top: 52px;
 }
 
 /* Remove background when chat is expanded */
@@ -481,12 +502,13 @@ body {
 }
 
 .themeToggle {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   flex-shrink: 0;
   background: var(--toggle-bg);
   border: 1px solid var(--toggle-border);
+  color: var(--text-primary);
 
   display: flex;
   align-items: center;
@@ -497,7 +519,8 @@ body {
     transform 0.15s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: var(--button-hover);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   }
   &:active {
     transform: scale(0.96);
@@ -525,22 +548,26 @@ body {
 }
 
 .heroSubtitle {
-  color: #d1d1d6; // Apple light gray
-  font-size: 1.11rem;
-  max-width: 1000px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  max-width: 600px;
   font-weight: 400;
   text-align: center;
-  line-height: 1.35;
-  margin: 10px 0 24px;
-  letter-spacing: 0.02em;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.4;
+  margin: 6px 0 16px;
+  letter-spacing: 0.01em;
+  font-family:
+    'IBM Plex Sans',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   transition: font-size 0.2s;
 
   @media (max-width: 600px) {
-    font-size: 0.95rem; // più piccolo su mobile
-    margin-top: 50px;
-    margin-bottom: 16px; // meno spazio sotto
+    font-size: 0.82rem;
+    margin-top: 4px;
+    margin-bottom: 10px;
   }
 }
 
@@ -557,17 +584,17 @@ body {
 
 @media (max-width: 600px) {
   .heroSubtitle {
-    font-size: 0.9rem;
-    margin-bottom: 50px;
-    margin-top: 10px;
+    font-size: 0.82rem;
+    margin-bottom: 8px;
+    margin-top: 4px;
   }
 }
 
 @media (max-width: 400px) {
   .heroSubtitle {
-    font-size: 0.7rem;
-    margin-bottom: 50px;
-    margin-top: 10px;
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+    margin-top: 2px;
   }
   .heroSection {
     height: 180px; /* Aumentato da 150px a 180px */
@@ -655,13 +682,24 @@ body {
   width: 100%;
   max-height: 170px;
   max-width: 200px;
-  bottom: 12px; /* puoi alzarlo a 520px se vuoi più grande */
-  margin: 0 auto; /* niente bottom extra */
-
+  margin: 0 auto;
   display: grid;
   place-items: center;
   text-align: center;
   position: relative;
+}
+@media (max-width: 480px) {
+  .logoBox {
+    max-width: 140px !important;
+    max-height: 100px !important;
+    margin-bottom: 0 !important;
+  }
+}
+@media (min-width: 481px) and (max-width: 768px) {
+  .logoBox {
+    max-width: 160px !important;
+    max-height: 120px !important;
+  }
 }
 
 .homeButton {
@@ -741,13 +779,14 @@ body {
 
 .featureCard {
   background-color: var(--card-bg);
-  padding: 10px !important;
-  border-radius: 8px !important;
+  padding: 16px 14px !important;
+  border-radius: 12px !important;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.06);
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -756,20 +795,22 @@ body {
 
   &:hover {
     border-color: var(--accent-color);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
   }
 
   h3 {
-    font-size: 1.15rem;
-    margin-bottom: 0.4rem;
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
     font-weight: 600;
     color: var(--feature-title-color);
+    letter-spacing: -0.01em;
   }
 
   p {
     color: var(--feature-text-color);
-    font-size: 0.86rem;
-    line-height: 1.3;
+    font-size: 0.82rem;
+    line-height: 1.45;
   }
 }
 
@@ -780,12 +821,161 @@ body {
   color: var(--accent-color);
 }
 
+.chatFullHeader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200001;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: rgba(17, 17, 17, 0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.chatFullHeaderDropdown {
+  position: absolute;
+  top: 100%;
+  right: 12px;
+  margin-top: 4px;
+  min-width: 220px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  padding: 6px 0;
+  z-index: 200002;
+
+  .menuItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 16px;
+    border: none;
+    background: none;
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+
+    &:hover {
+      background: rgba(15, 98, 254, 0.1);
+    }
+  }
+}
+
+[data-theme='light'] .chatFullHeader {
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.chatFullHeaderLogo {
+  height: 32px;
+  min-width: 80px;
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 8px;
+
+  svg {
+    max-width: 100px !important;
+    max-height: 32px !important;
+    width: auto !important;
+    height: 28px !important;
+  }
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.chatFullHeaderBtnLabel {
+  display: none;
+  font-size: 13px;
+  font-weight: 500;
+  margin-left: 4px;
+}
+@media (min-width: 480px) {
+  .chatFullHeaderBtnLabel {
+    display: inline;
+  }
+}
+
+.chatFullHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chatFullHeaderBtn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 17px;
+  background: var(--toggle-bg);
+  border: 1px solid var(--toggle-border);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  gap: 4px;
+
+  &:hover {
+    background: var(--button-hover);
+    color: var(--accent-color);
+    text-decoration: none;
+  }
+}
+
+.closeChatBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--toggle-bg);
+  border: 1px solid var(--toggle-border);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #e53e3e;
+    color: white;
+    border-color: #e53e3e;
+  }
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
 .iframeSection {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   margin-top: -40px;
+
+  * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    &::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+  }
 }
 
 /* Stato normale: fissa a 300px */
@@ -880,10 +1070,8 @@ body {
   }
 
   .themeToggle {
-    top: 15px;
-    right: 15px;
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
   }
 }
 
@@ -920,10 +1108,8 @@ body {
   }
 
   .themeToggle {
-    top: 10px;
-    right: 10px;
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
   }
 
   .disclaimerSection {
@@ -959,9 +1145,15 @@ body {
 }
 .messageContainer {
   overflow-y: auto;
-  padding-right: 24px;
-  max-height: none; // solo se vuoi limite quando ci sono tanti messaggi
-  flex: 1 1 auto; // non allungare quando vuota
+  padding-right: 0;
+  max-height: none;
+  flex: 1 1 auto;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  &::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+  }
 }
 
 :global(.messageInputWrapper___nie1o) {
@@ -1072,10 +1264,9 @@ body {
     max-height: 140px !important;
   }
 
-  /* Rendi l'header anonimo più compatto */
   .anonHeader {
-    top: 10px;
-    padding: 0 10px;
+    padding: 6px 10px;
+    gap: 6px;
   }
 
   .googleBtnCustom {
@@ -1084,16 +1275,16 @@ body {
   }
 
   .freeCounter {
-    right: 10px;
-    top: 60px;
     font-size: 11px;
+    padding: 3px 10px;
   }
 }
 
-/* Mobile PICCOLO: margin 50px come richiesto */
+/* Mobile PICCOLO */
 @media (max-width: 480px) {
   .heroSection {
-    margin-top: 50px !important;
+    margin-top: 20px !important;
+    padding-bottom: 8px !important;
   }
 }
 
@@ -1192,25 +1383,21 @@ body {
 
 /* pillola anonimo – resta fissa dove l’hai già messa */
 .freeCounter {
-  position: fixed;
-  right: 80px;
-  top: 70px;
-  z-index: 1100;
   background: linear-gradient(135deg, #4285f4, #34a853);
   color: #fff;
-  padding: 3px 12px;
+  padding: 4px 14px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+  line-height: 1;
 }
 
 /* Mobile: counter più compatto */
 @media (max-width: 768px) {
   .freeCounter {
-    right: 60px;
-    top: 75px;
-    padding: 4px 10px;
+    padding: 3px 10px;
     font-size: 11px;
   }
 }
@@ -1382,18 +1569,28 @@ span {
 /* Contenitore azioni in alto a destra */
 .topActions {
   position: fixed;
-  top: 20px;
-  right: 20px; /* ← allineato al margine destro */
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 1100;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 10px;
-  height: 44px;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(17, 17, 17, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
-/* Forza altezza uniforme per tutti i figli */
+
+[data-theme='light'] .topActions {
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
 .topActions > * {
-  height: 44px !important;
+  height: 36px !important;
   display: flex !important;
   align-items: center !important;
   flex-shrink: 0 !important; /* ← AGGIUNGI */
@@ -1402,21 +1599,12 @@ span {
 /* Mobile: topActions più compatto */
 @media (max-width: 768px) {
   .topActions {
-    position: fixed; /* CAMBIATO da relative a fixed */
-    top: 15px;
-    right: 10px !important;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
+    padding: 8px 12px;
     gap: 6px;
-    padding-top: 0; /* RIMOSSO il padding */
-    max-width: min(270px, 100vw - 20px);
   }
 
   .topActions > * {
-    height: 38px !important;
+    height: 34px !important;
   }
 
   .topActions .userChip {
@@ -1687,20 +1875,19 @@ span {
     }
   }
 
-  /* Spazio sopra logo: 50px come richiesto */
   .heroSection {
-    margin-top: 50px !important;
+    margin-top: 20px !important;
+    padding-bottom: 6px !important;
   }
 
-  /* Header ancora più compatto */
   .anonHeader {
-    top: 8px;
-    gap: 8px;
+    padding: 8px 12px;
+    gap: 6px;
   }
 
   .hamburgerButton {
-    width: 40px;
-    height: 40px;
+    width: 34px;
+    height: 34px;
   }
 }
 
@@ -2063,19 +2250,55 @@ span {
 /* ======= HAMBURGER MENU ======= */
 .anonHeader {
   position: fixed;
-  top: 20px;
-  left: 20px;
-  right: 20px;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: flex-end;
+  gap: 8px;
   z-index: 1000;
+  padding: 10px 16px;
+  background: rgba(17, 17, 17, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='light'] .anonHeader {
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.homeLinkBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--toggle-border);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: auto;
+
+  &:hover {
+    background: var(--button-hover);
+    color: var(--accent-color);
+    text-decoration: none;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
 }
 
 .hamburgerButton {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   flex-shrink: 0;
   background: var(--toggle-bg);
@@ -2086,12 +2309,11 @@ span {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 
   &:hover {
-    transform: scale(1.05);
     background: var(--button-hover);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   }
 
   &:active {
@@ -2105,8 +2327,8 @@ span {
 
 .dropdownMenu {
   position: fixed;
-  top: 75px;
-  right: 20px;
+  top: 52px;
+  right: 16px;
   background: var(--card-bg);
   border: 1px solid var(--toggle-border);
   border-radius: 12px;

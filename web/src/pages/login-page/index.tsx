@@ -60,10 +60,15 @@ const addChatSession = (session: ChatSession) => {
   const existingIndex = history.findIndex((h) => h.id === session.id);
 
   if (existingIndex >= 0) {
-    history[existingIndex] = session;
+    // Rimuovi la chat esistente e aggiungila in cima con il nuovo timestamp
+    history.splice(existingIndex, 1);
+    history.unshift(session);
   } else {
     history.unshift(session);
   }
+
+  // Ordina per timestamp decrescente (più recenti prima)
+  history.sort((a, b) => b.timestamp - a.timestamp);
 
   // Keep only last 20 chats
   const limitedHistory = history.slice(0, 20);
@@ -86,6 +91,7 @@ const setCurrentSessionId = (sessionId: string) => {
   }
 };
 
+// Google Cloud → OAuth client: aggiungi tutte le origini usate in prod (www, apex, app.) in "Authorized JavaScript origins".
 const CLIENT_ID =
   '872236618020-3len9toeu389v3hkn4nbo198h7d5jk1c.apps.googleusercontent.com';
 
@@ -180,9 +186,6 @@ function getOrCreateSessionId(): string {
   if (!id) {
     id = uuidv4();
     sessionStorage.setItem('sgai-session-id', id);
-    console.log('[SESSION] Creato nuovo session_id:', id);
-  } else {
-    console.log('[SESSION] Riutilizzo session_id:', id);
   }
   return id;
 }
@@ -274,7 +277,12 @@ const PresentationPage: React.FC = () => {
 
   // --- CHAT HISTORY FUNCTIONS ---
   const loadChatHistory = () => {
-    setChatHistory(getChatHistory());
+    const history = getChatHistory();
+    // Ordina per timestamp decrescente (più recenti prima)
+    const sortedHistory = [...history].sort(
+      (a, b) => b.timestamp - a.timestamp,
+    );
+    setChatHistory(sortedHistory);
   };
 
   const createNewChat = () => {
@@ -285,7 +293,6 @@ const PresentationPage: React.FC = () => {
   };
 
   const switchToChat = (chat: ChatSession) => {
-    console.log('[INDEX] Switching to chat:', chat);
     setCurrentSessionId(chat.sessionId);
     setSessionId(chat.sessionId);
     sessionStorage.setItem(CURRENT_SESSION_KEY, chat.sessionId);
@@ -293,6 +300,14 @@ const PresentationPage: React.FC = () => {
     setHasMessages(true);
     setChatExpanded(true);
     setShowLeftSidebar(false); // Chiudi sidebar
+
+    // Aggiorna il timestamp quando si apre una chat esistente
+    const updatedChat: ChatSession = {
+      ...chat,
+      timestamp: Date.now(),
+    };
+    addChatSession(updatedChat);
+    loadChatHistory();
   };
 
   const updateCurrentChat = (title: string, lastMessage: string) => {
@@ -355,7 +370,6 @@ const PresentationPage: React.FC = () => {
   // Update sessionStorage when sessionId changes
   useEffect(() => {
     sessionStorage.setItem('sgai-session-id', sessionId);
-    console.log('[SESSION] Updated sessionId:', sessionId);
   }, [sessionId]);
 
   // derivati UI
@@ -830,6 +844,15 @@ const PresentationPage: React.FC = () => {
         <>
           {/* ───── Ramo ANONIMO ───── */}
           <div className={styles.anonHeader}>
+            <a
+              href="https://home.sgailegal.com"
+              className={styles.homeLinkBtn}
+              aria-label="SGAI Home"
+            >
+              <Home size={16} />
+              <span>SGAI</span>
+            </a>
+
             <button
               onClick={() => {
                 setShowLimitOverlay(false);
@@ -839,18 +862,35 @@ const PresentationPage: React.FC = () => {
               aria-label="Accedi con Google"
             >
               <GoogleGIcon size={18} />
-              <span>Accedi con Google</span>
+              <span>Accedi</span>
             </button>
 
             <div className={styles.freeCounter}>
               {!quota
                 ? '5 / 5'
                 : quota.scope === 'anon'
-                  ? `${(quota as QuotaAnon).remainingTotal} / ${(quota as QuotaAnon).totalLimit}`
-                  : `${(quota as QuotaUser).remainingToday} / ${(quota as QuotaUser).dailyLimit}`}
+                  ? `${Math.max(0, (quota as QuotaAnon).remainingTotal)} / ${(quota as QuotaAnon).totalLimit}`
+                  : (quota as QuotaUser).dailyLimit === -1
+                    ? '∞'
+                    : `${Math.max(0, (quota as QuotaUser).remainingToday)} / ${(quota as QuotaUser).dailyLimit}`}
             </div>
 
-            {/* Hamburger Menu per Anonimi */}
+            <button
+              onClick={toggleTheme}
+              className={styles.themeToggle}
+              aria-label={
+                theme === 'dark'
+                  ? 'Passa al tema chiaro'
+                  : 'Passa al tema scuro'
+              }
+            >
+              {theme === 'dark' ? (
+                <Sun size={18} aria-hidden />
+              ) : (
+                <Moon size={18} aria-hidden />
+              )}
+            </button>
+
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className={styles.hamburgerButton}
@@ -916,15 +956,17 @@ const PresentationPage: React.FC = () => {
                       : userData?.email) ?? 'utente'}
                   </span>
                   &nbsp;(<strong>{userPlan}</strong>)
-                  {userPlan === 'free' && quota?.scope === 'user' && (
-                    <span
-                      className={styles.userCounter}
-                      title={`Si azzera a mezzanotte (${(quota as QuotaUser).day})`}
-                    >
-                      {(quota as QuotaUser).remainingToday} /{' '}
-                      {(quota as QuotaUser).dailyLimit}
-                    </span>
-                  )}
+                  {userPlan === 'free' &&
+                    quota?.scope === 'user' &&
+                    (quota as QuotaUser).dailyLimit !== -1 && (
+                      <span
+                        className={styles.userCounter}
+                        title={`Si azzera a mezzanotte (${(quota as QuotaUser).day})`}
+                      >
+                        {Math.max(0, (quota as QuotaUser).remainingToday)} /{' '}
+                        {(quota as QuotaUser).dailyLimit}
+                      </span>
+                    )}
                 </>
               ) : (
                 <span className={styles.userIcon}>👤</span>
@@ -1036,12 +1078,10 @@ const PresentationPage: React.FC = () => {
               Benvenuto in <strong>SGAI Free</strong> —&nbsp;
               <strong>
                 {quota?.scope === 'user'
-                  ? (quota as QuotaUser).remainingToday
-                  : Math.max(FREE_LIMIT - genCount, 0)}
-                /
-                {quota?.scope === 'user'
-                  ? (quota as QuotaUser).dailyLimit
-                  : FREE_LIMIT}
+                  ? (quota as QuotaUser).dailyLimit === -1
+                    ? '∞'
+                    : `${Math.max(0, (quota as QuotaUser).remainingToday)} / ${(quota as QuotaUser).dailyLimit}`
+                  : `${Math.max(FREE_LIMIT - genCount, 0)} / ${FREE_LIMIT}`}
               </strong>
               &nbsp;oggi • Reset a mezzanotte
               {quota?.scope === 'user' && (quota as QuotaUser).day ? (
@@ -1110,73 +1150,113 @@ const PresentationPage: React.FC = () => {
           )}
         </div>
       </div>
+      {/* Header chat fullscreen */}
+      {chatExpanded && (
+        <div className={styles.chatFullHeader}>
+          <button
+            type="button"
+            onClick={() => setChatExpanded(false)}
+            className={styles.chatFullHeaderLogo}
+            aria-label="Chiudi chat e torna alla home"
+          >
+            <SvgLogoInteractive flipped={false} />
+          </button>
+          <div className={styles.chatFullHeaderActions}>
+            <a
+              href="https://home.sgailegal.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.chatFullHeaderBtn}
+              aria-label="Vai alla home SGAI"
+            >
+              <Home size={18} />
+              <span className={styles.chatFullHeaderBtnLabel}>Home</span>
+            </a>
+            <button
+              onClick={toggleTheme}
+              className={styles.chatFullHeaderBtn}
+              aria-label={theme === 'dark' ? 'Tema chiaro' : 'Tema scuro'}
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className={styles.chatFullHeaderBtn}
+              aria-label="Menu"
+            >
+              <Menu size={18} />
+            </button>
+            <button
+              onClick={() => setChatExpanded(false)}
+              className={styles.closeChatBtn}
+              aria-label="Chiudi chat"
+            >
+              <X size={20} strokeWidth={2.5} />
+            </button>
+          </div>
+          {menuOpen && (
+            <div className={styles.chatFullHeaderDropdown}>
+              <button
+                onClick={() => {
+                  navigate('/roadmap');
+                  setMenuOpen(false);
+                }}
+                className={styles.menuItem}
+              >
+                <MapPin size={20} />
+                <span>Roadmap & Sviluppi Futuri</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowLeftSidebar(!showLeftSidebar);
+                  setMenuOpen(false);
+                }}
+                className={styles.menuItem}
+              >
+                <Menu size={20} />
+                <span>Gestione Chat</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowBetaCodeModal(true);
+                  setMenuOpen(false);
+                }}
+                className={styles.menuItem}
+              >
+                <LockKeyhole size={20} />
+                <span>Codice Beta Tester</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* CHAT SOTTO IL LOGO */}
       <div
         className={styles.iframeSection}
         style={{
           position: chatExpanded ? 'fixed' : 'relative',
-          top: chatExpanded ? HERO_PINNED_HEIGHT : 'auto',
+          top: chatExpanded ? 52 : 'auto',
           left: chatExpanded ? 0 : 'auto',
           right: chatExpanded ? 0 : 'auto',
           bottom: chatExpanded ? 0 : 'auto',
-          zIndex: chatExpanded ? 9998 : 'auto',
-          background: 'transparent',
+          zIndex: chatExpanded ? 1050 : 'auto',
+          background: chatExpanded ? 'var(--bg-primary)' : 'transparent',
           width: chatExpanded ? '100vw' : 'auto',
           height: chatExpanded
-            ? `calc(100vh - ${HERO_PINNED_HEIGHT}px)`
+            ? 'calc(100vh - 52px)'
             : hasMessages
               ? '300px'
               : '150px',
-          padding: 0,
+          padding: chatExpanded
+            ? '0 0 max(12px, env(safe-area-inset-bottom, 0px)) 0'
+            : '0',
           margin: 0,
-          transition: 'height 0.3s ease',
-          overflow: chatExpanded ? 'hidden' : hasMessages ? 'auto' : 'hidden',
+          transition: 'height 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
+          boxSizing: 'border-box',
         }}
       >
-        {chatExpanded && (
-          <button
-            onClick={() => setChatExpanded(false)}
-            style={{
-              position: 'fixed',
-              top: 15,
-              right: 15,
-              zIndex: 99999, // ✅ Aumentato per essere sopra tutto
-              background: 'rgba(0, 0, 0, 0.85)', // ✅ Nero semi-trasparente
-              color: 'white',
-              border: '2px solid rgba(255, 255, 255, 0.9)', // ✅ Bordo bianco ben visibile
-              borderRadius: '50%',
-              width: 48,
-              height: 48,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s ease',
-              boxShadow:
-                '0 4px 16px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.3)', // ✅ Doppia ombra per visibilità
-              pointerEvents: 'auto', // ✅ Assicura che sia cliccabile
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.95)';
-              e.currentTarget.style.border = '2px solid white';
-              e.currentTarget.style.transform = 'scale(1.15)';
-              e.currentTarget.style.boxShadow =
-                '0 6px 20px rgba(0,0,0,0.8), 0 0 0 3px rgba(255,255,255,0.5)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.85)';
-              e.currentTarget.style.border =
-                '2px solid rgba(255, 255, 255, 0.9)';
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow =
-                '0 4px 16px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.3)';
-            }}
-            aria-label="Chiudi chat"
-          >
-            <X size={28} strokeWidth={3} />{' '}
-            {/* ✅ Icona più grande e più spessa */}
-          </button>
-        )}
         <div
           className={styles.chatWrap}
           style={{
@@ -1184,6 +1264,9 @@ const PresentationPage: React.FC = () => {
             width: '100%',
             padding: 0,
             margin: 0,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <div
@@ -1191,10 +1274,11 @@ const PresentationPage: React.FC = () => {
               borderRadius: chatExpanded ? 0 : 6,
               width: '100%',
               height: '100%',
+              minHeight: 0,
               display: 'flex',
               flexDirection: 'column',
               background: 'transparent',
-              overflow: chatExpanded ? 'hidden' : 'auto',
+              overflow: 'hidden',
               padding: 0,
               margin: 0,
             }}
@@ -1279,12 +1363,11 @@ const PresentationPage: React.FC = () => {
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
             </div>
-            <h3 className={styles.featureHighlight}>Tutela del Knowhow</h3>
+            <h3 className={styles.featureHighlight}>Riservatezza Totale</h3>
             <p className={styles.featureHighlight}>
-              Nessun dato viene acquisito.
+              Le tue conversazioni restano private.
               <br />
-              Quel che viene discusso con SGAI è accessibile solo
-              all&apos;utente.
+              Nessun dato viene acquisito o condiviso con terzi.
             </p>
           </div>
 
@@ -1303,11 +1386,11 @@ const PresentationPage: React.FC = () => {
                 <path d="M2 12l10 5 10-5" />
               </svg>
             </div>
-            <h3 className={styles.featureHighlight}>Personalizzazione</h3>
+            <h3 className={styles.featureHighlight}>Su Misura per Te</h3>
             <p className={styles.featureHighlight}>
-              SGAI può essere potenziato per il singolo Studio professionale:
+              Potenzia SGAI con i documenti del tuo Studio.
               <br />
-              addestralo con i tuoi atti e i tuoi documenti.
+              Risposte calibrate sulla tua operatività quotidiana.
             </p>
           </div>
 
@@ -1329,21 +1412,14 @@ const PresentationPage: React.FC = () => {
               </svg>
             </div>
             <h3 className={styles.featureHighlight}>
-              Indipendenza e Imparzialità
+              Indipendente e Imparziale
             </h3>
             <p className={styles.featureHighlight}>
-              SGAI non ha legami istituzionali per garantire la massima
-              trasparenza
+              Nessun legame istituzionale.
+              <br />
+              Analisi oggettiva al servizio del professionista.
             </p>
           </div>
-        </div>
-
-        {/* Service Hours Banner */}
-        <div className={styles.serviceHoursBanner}>
-          <span className={styles.bannerIcon}>🕐</span>
-          <span className={styles.bannerText}>
-            Servizio attivo dalle <strong>8:00 alle 22:00</strong>
-          </span>
         </div>
 
         <div className={styles.disclaimerSection}>
@@ -1415,7 +1491,29 @@ const PresentationPage: React.FC = () => {
                         {chat.lastMessage}
                       </div>
                       <div className={styles.chatTime}>
-                        {new Date(chat.timestamp).toLocaleString()}
+                        {(() => {
+                          const date = new Date(chat.timestamp);
+                          const today = new Date();
+                          const isToday =
+                            date.toDateString() === today.toDateString();
+                          const isYesterday =
+                            date.toDateString() ===
+                            new Date(today.getTime() - 86400000).toDateString();
+
+                          if (isToday) {
+                            return `Oggi alle ${date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+                          } else if (isYesterday) {
+                            return `Ieri alle ${date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+                          } else {
+                            return date.toLocaleString('it-IT', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            });
+                          }
+                        })()}
                       </div>
                     </div>
                   ))
@@ -1458,6 +1556,16 @@ const PresentationPage: React.FC = () => {
       )}
 
       <Helmet>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
         <script
           async
           src="https://www.googletagmanager.com/gtag/js?id=G-P9QCNBXQKP"

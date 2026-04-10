@@ -4,44 +4,59 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  user-select: none; /* Previene la selezione del testo durante il drag */
+  user-select: none;
   -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
+  animation: waSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 
   .whatsappButton {
-    background: #25d366 !important;
-    border-color: #25d366 !important;
-    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
-    transition: all 0.3s ease;
-    pointer-events: auto; /* Assicura che il click funzioni */
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: none;
+    background: #25d366;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow:
+      0 4px 14px rgba(37, 211, 102, 0.35),
+      0 1px 3px rgba(0, 0, 0, 0.12);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: auto;
 
     &:hover {
-      background: #20c55a !important;
-      border-color: #20c55a !important;
-      transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
+      background: #22c35e;
+      transform: scale(1.08);
+      box-shadow:
+        0 6px 20px rgba(37, 211, 102, 0.45),
+        0 2px 6px rgba(0, 0, 0, 0.15);
     }
 
     &:active {
       transform: scale(0.95);
+      box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+    }
+
+    svg {
+      flex-shrink: 0;
     }
   }
 
   .closeButton {
     position: absolute;
-    top: -8px;
-    right: -8px;
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 1px solid #d9d9d9 !important;
-    color: #666 !important;
+    top: -6px;
+    right: -6px;
+    background: rgba(30, 30, 30, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #ccc !important;
     width: 20px;
     height: 20px;
     min-width: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 9px;
+    transition: all 0.2s ease;
 
     &:hover {
       background: #ff4d4f !important;
@@ -51,15 +66,10 @@
   }
 }
 
-/* Animazione di entrata */
-.whatsappSupport {
-  animation: slideIn 0.5s ease-out;
-}
-
-@keyframes slideIn {
+@keyframes waSlideIn {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.8);
+    transform: translateY(16px) scale(0.85);
   }
   to {
     opacity: 1;
@@ -67,32 +77,19 @@
   }
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .whatsappSupport {
-    /* Rendi il pulsante più grande su mobile per facilitare il drag */
     .whatsappButton {
-      width: 56px !important;
-      height: 56px !important;
-      touch-action: none; /* Previene comportamenti di default del browser */
+      width: 50px;
+      height: 50px;
+      touch-action: none;
     }
 
     .closeButton {
       width: 22px;
       height: 22px;
-      top: -6px;
-      right: -6px;
-      /* Aumenta leggermente l'area di touch */
-      padding: 4px;
+      top: -5px;
+      right: -5px;
     }
   }
-}
-
-/* Effetto durante il drag */
-.whatsappSupport[style*='grabbing'] {
-  opacity: 0.8;
-  transform: scale(1.05);
-  transition:
-    opacity 0.1s ease,
-    transform 0.1s ease;
 }

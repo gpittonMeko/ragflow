@@ -13,6 +13,8 @@ STRIPE_SECRET_KEY=sk_live_TUA_CHIAVE_QUI
 STRIPE_WEBHOOK_SECRET=whsec_TUA_CHIAVE_QUI
 STRIPE_PRICE_PREMIUM=price_TUO_PRICE_ID_QUI
 APP_URL=https://www.sgailegal.com
+# Opzionale: elenco origini CORS per /oauth (default = apex+www+app su sgailegal.com)
+# OAUTH_CORS_ORIGINS=https://sgailegal.com,https://www.sgailegal.com,https://app.sgailegal.com
 
 # Stripe Portal Configuration ID (già configurato nel codice oauth_backend.py)
 # PORTAL_CONFIG_ID=bpc_1SMthDBo6bKd1aEWfVbZeRA9

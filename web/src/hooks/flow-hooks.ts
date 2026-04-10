@@ -204,22 +204,34 @@ export const useFetchFlowSSE = (): {
     isFetching: loading,
     refetch,
   } = useQuery({
-    queryKey: ['flowDetailSSE'],
+    queryKey: ['flowDetailSSE', sharedId],
     initialData: {} as IFlow,
     refetchOnReconnect: false,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     gcTime: 0,
+    enabled: !!sharedId, // Solo se c'è sharedId
     queryFn: async () => {
       if (!sharedId) return {};
-      const { data } = await flowService.getCanvasSSE({}, sharedId);
+      try {
+        const { data } = await flowService.getCanvasSSE({}, sharedId);
 
-      const messageList = buildMessageListWithUuid(
-        get(data, 'data.dsl.messages', []),
-      );
-      set(data, 'data.dsl.messages', messageList);
+        // Se il flow non esiste, restituisci oggetto vuoto invece di crashare
+        if (!data || data.code !== 0 || !data.data) {
+          console.warn('[useFetchFlowSSE] Flow non trovato:', sharedId);
+          return {};
+        }
 
-      return data?.data ?? {};
+        const messageList = buildMessageListWithUuid(
+          get(data, 'data.dsl.messages', []),
+        );
+        set(data, 'data.dsl.messages', messageList);
+
+        return data?.data ?? {};
+      } catch (error) {
+        console.warn('[useFetchFlowSSE] Errore nel recupero del flow:', error);
+        return {};
+      }
     },
   });
 

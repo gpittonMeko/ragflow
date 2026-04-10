@@ -13,8 +13,9 @@ INSTANCES_CONFIG = {
         'id': 'i-0ec0704c7b36f7648',
         'host': '13.49.16.179',
         'user': 'ubuntu',
+        'on_demand': True,
         'ora_inizio': 8,
-        'ora_fine': 22,
+        'ora_fine': 21,
         'gestisci_docker': True,
         'docker_path': '~/workspace/ragflow/docker',
         'compose_files': '-f docker-compose.yml -f docker-compose-base.yml',
@@ -29,16 +30,15 @@ INSTANCES_CONFIG = {
             'ragflow-es-02',
             'ragflow-es-01'
         ],
-        # NEW: ignora weekend e festivi per tenere la prod sempre su
         'ignora_weekend': False,
         'ignora_festivi': False,
     },
-    'Twenty-n8n': {
+    'MekoCrm': {
         'id': 'i-0230135b667de92bd',
         'host': '13.53.183.146',
         'user': 'ubuntu',
-        'ora_inizio': 8,
-        'ora_fine': 8,
+        'ora_inizio': 9,
+        'ora_fine': 19,
         'gestisci_docker': False,
         'docker_path': None,
         'compose_files': None,
@@ -53,7 +53,8 @@ INSTANCES_CONFIG = {
         'gestisci_docker': False,
         'docker_path': None,
         'compose_files': None,
-        'required_containers': []
+        'required_containers': [],
+        'disabled': True,  # Sempre spenta - ambiente dev non utilizzato
     }
 }
 
@@ -75,8 +76,9 @@ FESTIVI = [
 ]
 
 # NEW: Configurazione force_start
-FORCE_START_DURATION_MINUTES = 60  # Durata force_start (1 ora)
+FORCE_START_DURATION_MINUTES = 60  # Coerente con finestra minima monitor (documentazione)
 FORCE_START_FLAG_PATH = '/tmp/force_start_active'
+WAKE_AT_FILE_PATH = '/tmp/sgai_wake_at'
 
 # ------------------------------------------------------------------
 
@@ -147,6 +149,10 @@ def should_instance_be_on(instance_name, config, now_roma, force):
         print(f"[{instance_name}] Force mode: ignora orari e giorni")
         return True
 
+    if config.get('on_demand'):
+        print(f"[{instance_name}] On-demand: nessun avvio automatico da schedulazione (serve force_start)")
+        return False
+
     ignora_weekend = config.get('ignora_weekend', False)
     ignora_festivi = config.get('ignora_festivi', False)
 
@@ -167,19 +173,21 @@ def should_instance_be_on(instance_name, config, now_roma, force):
 
 def set_force_start_flag(ssh, instance_name, duration_minutes=FORCE_START_DURATION_MINUTES):
     """
-    Crea il file /tmp/force_start_active sull'EC2 con timestamp ISO.
-    Questo dice al monitor di NON spegnere l'istanza per N minuti.
+    Scrive timestamp ISO su EC2: legacy force_start + sgai_wake_at (stesso valore).
+    Il monitor usa sgai_wake_at per la finestra minima 60 min dopo wake da Home.
     """
     now_utc = datetime.datetime.utcnow()
     timestamp_iso = now_utc.isoformat()
-    
-    cmd = f"echo '{timestamp_iso}' > {FORCE_START_FLAG_PATH}"
+
+    cmd = (
+        f"printf '%s\\n' '{timestamp_iso}' > {FORCE_START_FLAG_PATH} && "
+        f"printf '%s\\n' '{timestamp_iso}' > {WAKE_AT_FILE_PATH}"
+    )
     stdin, stdout, stderr = ssh.exec_command(cmd)
     exit_status = stdout.channel.recv_exit_status()
     
     if exit_status == 0:
-        print(f"[{instance_name}] ✅ Flag force_start settato per {duration_minutes} minuti")
-        print(f"[{instance_name}]    File: {FORCE_START_FLAG_PATH}")
+        print(f"[{instance_name}] ✅ Wake timestamp scritto ({FORCE_START_FLAG_PATH}, {WAKE_AT_FILE_PATH})")
         print(f"[{instance_name}]    Timestamp: {timestamp_iso}")
         return True
     else:
@@ -237,9 +245,26 @@ def wait_containers_up(ssh, instance_name, required_containers, timeout=WAIT_CON
     print(f"[{instance_name}] ❌ Timeout. Container mancanti: {last_missing}")
     return False
 
+def fix_entrypoint_permissions(ssh, instance_name, docker_path):
+    """Verifica e fixa i permessi di entrypoint.sh se necessario"""
+    entrypoint_path = f"{docker_path}/entrypoint.sh"
+    check_cmd = f"test -x {entrypoint_path} || chmod +x {entrypoint_path}"
+    stdin, stdout, stderr = ssh.exec_command(check_cmd)
+    exit_status = stdout.channel.recv_exit_status()
+    if exit_status == 0:
+        print(f"[{instance_name}] ✅ Permessi entrypoint.sh verificati/fixati")
+        return True
+    else:
+        err = stderr.read().decode()
+        print(f"[{instance_name}] ⚠️  Errore fix permessi entrypoint.sh: {err}")
+        return False
+
 def run_docker_compose(ssh, instance_name, config):
     docker_path = config['docker_path']
     compose_files = config['compose_files']
+    
+    # Fix permessi entrypoint.sh prima di avviare i container
+    fix_entrypoint_permissions(ssh, instance_name, docker_path)
     
     docker_cmd = f"""
       set -ex
@@ -252,6 +277,24 @@ def run_docker_compose(ssh, instance_name, config):
     stdin, stdout, stderr = ssh.exec_command(docker_cmd, get_pty=True)
     out, err = stdout.read().decode(), stderr.read().decode()
     print(f"[{instance_name}] Docker compose output:\n{out}")
+    if err:
+        print(f"[{instance_name}] Docker compose errors:\n{err}")
+    return stdout.channel.recv_exit_status() == 0
+
+def run_docker_compose_down(ssh, instance_name, config):
+    """Esegue solo docker compose down per spegnimento pulito"""
+    docker_path = config['docker_path']
+    compose_files = config['compose_files']
+    docker_cmd = f"""
+      set -ex
+      export PATH=$PATH:/usr/local/bin
+      cd {docker_path}
+      sudo docker compose {compose_files} down || sudo docker-compose {compose_files} down || true
+      sudo docker ps -a
+    """
+    stdin, stdout, stderr = ssh.exec_command(docker_cmd, get_pty=True)
+    out, err = stdout.read().decode(), stderr.read().decode()
+    print(f"[{instance_name}] Docker compose down output:\n{out}")
     return stdout.channel.recv_exit_status() == 0
 
 def auto_heal_containers(ssh, instance_name, config, missing_containers):
@@ -287,6 +330,16 @@ def process_instance(instance_name, config, now_roma, force, key_obj):
         response = ec2.describe_instances(InstanceIds=[instance_id])
         state = response['Reservations'][0]['Instances'][0]['State']['Name']
         print(f"[{instance_name}] Stato EC2: {state}")
+
+        # ---------- Istanza disabilitata: sempre spenta ----------
+        if config.get('disabled', False):
+            if state == 'stopped':
+                print(f"[{instance_name}] Disabilitata - rimane spenta")
+                return (instance_name, "off", "disabilitata - sempre spenta")
+            else:
+                print(f"[{instance_name}] Disabilitata - spegnimento in corso...")
+                ec2.stop_instances(InstanceIds=[instance_id])
+                return (instance_name, "stopping", "disabilitata - spegnimento")
 
         should_be_on = should_instance_be_on(instance_name, config, now_roma, force)
 
@@ -335,7 +388,7 @@ def process_instance(instance_name, config, now_roma, force, key_obj):
         elif state == 'running':
             print(f"[{instance_name}] *** EC2 ACCESA ***")
 
-            if not should_be_on and not force:
+            if not config.get('on_demand') and not should_be_on and not force:
                 print(f"[{instance_name}] Spengo: fuori orario/non lavorativo")
                 ec2.stop_instances(InstanceIds=[instance_id])
                 return (instance_name, "stopping", "fuori orario")
@@ -379,6 +432,41 @@ def process_instance(instance_name, config, now_roma, force, key_obj):
         return (instance_name, "error", str(e))
 
 
+def process_instance_force_stop(instance_name, config, key_obj):
+    """Spegne forzatamente un'istanza: docker down + ec2 stop"""
+    instance_id = config['id']
+    host = config['host']
+    user = config['user']
+    gestisci_docker = config['gestisci_docker']
+
+    try:
+        response = ec2.describe_instances(InstanceIds=[instance_id])
+        state = response['Reservations'][0]['Instances'][0]['State']['Name']
+
+        if state == 'stopped':
+            return (instance_name, "off", "già spenta")
+
+        if state != 'running':
+            return (instance_name, "warning", f"stato: {state}")
+
+        # EC2 accesa: prima docker down, poi stop
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(host, username=user, pkey=key_obj)
+
+        if gestisci_docker:
+            run_docker_compose_down(ssh, instance_name, config)
+        ssh.close()
+
+        print(f"[{instance_name}] Spegnimento EC2...")
+        ec2.stop_instances(InstanceIds=[instance_id])
+        return (instance_name, "stopping", "spegnimento in corso")
+
+    except Exception as e:
+        print(f"[{instance_name}] Errore force_stop: {str(e)}")
+        return (instance_name, "error", str(e))
+
+
 def lambda_handler(event, context):
     print("=" * 60)
     print("INIZIO ESECUZIONE LAMBDA - EC2 MULTI-INSTANCE MANAGER")
@@ -392,41 +480,61 @@ def lambda_handler(event, context):
     now_utc = datetime.datetime.utcnow()
     now_roma = get_rome_time()
     
-    # NEW: Supporta force_start da API Gateway
+    # NEW: Supporta force_start e force_stop da API Gateway
     force = event.get('force_start', False)
+    force_stop = event.get('force_stop', False)
+    target_instance = event.get('target_instance', 'SGAI-Production')
     if isinstance(event.get('body'), str):
         try:
             body = json.loads(event['body'])
             force = body.get('force_start', False)
+            force_stop = body.get('force_stop', False)
+            target_instance = body.get('target_instance', 'SGAI-Production')
         except:
             pass
     
     print(f"Timestamp UTC: {now_utc.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Timestamp Roma: {now_roma.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"Force mode: {force}")
+    print(f"Force start: {force}, Force stop: {force_stop}, Target: {target_instance}")
     
     if force:
         print("⚠️  FORCE START attivato da API Gateway!")
         print(f"   → Ignora orari e giorni")
-        print(f"   → Flag force_start verrà settato per {FORCE_START_DURATION_MINUTES} minuti")
+        print(f"   → Timestamp wake su EC2 ({WAKE_AT_FILE_PATH}) per monitor auto-shutdown")
+    if force_stop:
+        print("⚠️  FORCE STOP attivato da API Gateway!")
+        print(f"   → Spegnimento forzato di {target_instance}")
     
     print("-" * 40)
     
     key_path = download_pem_from_s3()
     key_obj = paramiko.RSAKey.from_private_key_file(key_path)
     
-    # Processa tutte le istanze
-    results = []
-    for instance_name, config in INSTANCES_CONFIG.items():
-        result = process_instance(instance_name, config, now_roma, force, key_obj)
-        results.append(result)
-        time.sleep(1)
+    # Force stop: spegni solo l'istanza target
+    if force_stop:
+        if target_instance not in INSTANCES_CONFIG:
+            return create_response(400, {"error": f"target_instance '{target_instance}' non trovato"})
+        config = INSTANCES_CONFIG[target_instance]
+        result = process_instance_force_stop(target_instance, config, key_obj)
+        results = [result]
+    else:
+        # Processa tutte le istanze (o solo target se specificato con force_start)
+        instances_to_process = INSTANCES_CONFIG
+        if force and target_instance and target_instance in INSTANCES_CONFIG:
+            instances_to_process = {target_instance: INSTANCES_CONFIG[target_instance]}
+        results = []
+        for instance_name, config in instances_to_process.items():
+            result = process_instance(instance_name, config, now_roma, force, key_obj)
+            results.append(result)
+            time.sleep(1)
     
     # Riepilogo
     summary = {
         "timestamp_utc": now_utc.strftime('%Y-%m-%d %H:%M:%S'),
         "timestamp_roma": now_roma.strftime('%Y-%m-%d %H:%M:%S'),
-        "force_mode": force,
+        "force_start": force,
+        "force_stop": force_stop,
+        "target_instance": target_instance,
         "instances": {}
     }
     
@@ -437,6 +545,8 @@ def lambda_handler(event, context):
     
     if force:
         notification_lines.append("🚀 FORCE START attivato!")
+    if force_stop:
+        notification_lines.append("🔻 FORCE STOP attivato!")
     
     has_errors = False
     has_changes = False

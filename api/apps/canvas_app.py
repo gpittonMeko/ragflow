@@ -259,19 +259,30 @@ def run():
     logging.info(f"[SESSION] Canvas caricato, messages: {len(canvas.messages)}, history: {len(canvas.history)}")
     
     logging.info(f"[DEBUG-REQ] req keys: {list(req.keys())}, 'message' in req: {'message' in req}")
+    logging.info(f"[DEBUG-REQ] Full request: id={req.get('id')}, message={req.get('message', '')[:100] if req.get('message') else 'NONE'}, session_id={req.get('session_id')}, message_id={message_id}")
     
     try:
         if "message" in req:
-            logging.info(f"[CANVAS] Aggiunto messaggio utente: {req['message'][:100]}...")
-            canvas.messages.append({"role": "user", "content": req["message"], "id": message_id})
-            canvas.add_user_input(req["message"])
-            logging.info(f"[CANVAS] add_user_input chiamato, canvas.path: {canvas.path}")
+            user_message = req["message"]
+            logging.info(f"[CANVAS] ✅ Messaggio ricevuto: {user_message[:100]}...")
+            logging.info(f"[CANVAS] Canvas state prima: messages={len(canvas.messages)}, history={len(canvas.history)}, path={len(canvas.path) if canvas.path else 0}")
+            
+            canvas.messages.append({"role": "user", "content": user_message, "id": message_id})
+            logging.info(f"[CANVAS] ✅ Messaggio aggiunto a canvas.messages")
+            
+            canvas.add_user_input(user_message)
+            logging.info(f"[CANVAS] ✅ add_user_input chiamato, canvas.path dopo: {canvas.path}")
+            logging.info(f"[CANVAS] Canvas state dopo add_user_input: messages={len(canvas.messages)}, history={len(canvas.history)}, path={len(canvas.path) if canvas.path else 0}")
+            
             # Salva anche in conv.message
             if not conv.message:
                 conv.message = []
-            conv.message.append({"role": "user", "content": req["message"], "id": message_id, "created_at": time.time()})
-            logging.info(f"[HISTORY] Nuovo messaggio, totale history: {len(canvas.history)}")
+            conv.message.append({"role": "user", "content": user_message, "id": message_id, "created_at": time.time()})
+            logging.info(f"[HISTORY] ✅ Nuovo messaggio salvato, totale history: {len(canvas.history)}, totale messages: {len(canvas.messages)}")
+        else:
+            logging.warning(f"[CANVAS] ⚠️ ATTENZIONE: 'message' NON presente nella request! Keys disponibili: {list(req.keys())}")
     except Exception as e:
+        logging.error(f"[CANVAS] ❌ ERRORE nell'aggiunta del messaggio: {str(e)}", exc_info=True)
         return server_error_response(e)
 
     # ✅ FUNZIONE DI SERIALIZZAZIONE (usata sia stream che non-stream)

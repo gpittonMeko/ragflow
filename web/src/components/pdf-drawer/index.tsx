@@ -45,13 +45,6 @@ export const PdfDrawer = ({
   }, []);
 
   useEffect(() => {
-    console.log('[PdfDrawer] State change:', {
-      visible,
-      documentId,
-      chunkId: chunk?.id,
-      timestamp: new Date().toISOString(),
-    });
-
     if (visible) {
       setTimeout(() => {
         const drawerElement = document.querySelector(
@@ -59,18 +52,10 @@ export const PdfDrawer = ({
         );
         const drawerMask = document.querySelector('.ant-drawer-mask');
 
-        console.log('[PdfDrawer] Mount check:', {
-          drawerExists: !!drawerElement,
-          drawerVisible: drawerElement?.style?.transform === 'translateX(0px)',
-          maskVisible: drawerMask?.style?.opacity === '1',
-          drawerBody: !!drawerElement?.querySelector('.ant-drawer-body'),
-        });
-
         if (
           drawerElement &&
           drawerElement.style.transform !== 'translateX(0px)'
         ) {
-          console.warn('[PdfDrawer] Forcing drawer visibility');
           (drawerElement as HTMLElement).style.transform = 'translateX(0px)';
           (drawerElement as HTMLElement).style.visibility = 'visible';
 
@@ -84,7 +69,6 @@ export const PdfDrawer = ({
   }, [visible, documentId]);
 
   const handleClose = () => {
-    console.log('[PdfDrawer] Closing drawer');
     hideModal();
   };
 
@@ -100,7 +84,7 @@ export const PdfDrawer = ({
       maskClosable={false}
       placement="right"
       className="pdf-drawer-debug"
-      zIndex={11000}
+      zIndex={999999}
       styles={{
         body: {
           padding: '16px',
@@ -108,23 +92,7 @@ export const PdfDrawer = ({
           overflow: 'hidden',
         },
       }}
-      afterOpenChange={(open) => {
-        console.log('[PdfDrawer] After open change:', open);
-
-        if (open) {
-          setTimeout(() => {
-            const documentContainer = document.querySelector(
-              '[class*="documentContainer"]',
-            );
-            console.log('[PdfDrawer] Content check:', {
-              hasDocumentContainer: !!documentContainer,
-              containerVisible: documentContainer
-                ? window.getComputedStyle(documentContainer).display !== 'none'
-                : false,
-            });
-          }, 500);
-        }
-      }}
+      afterOpenChange={() => {}}
     >
       <DocumentPreviewer
         documentId={documentId}

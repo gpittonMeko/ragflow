@@ -73,6 +73,10 @@ services:
       - TZ=${TIMEZONE}
       - HF_ENDPOINT=${HF_ENDPOINT}
       - MACOS=${MACOS}
+      # 🚀 OTTIMIZZAZIONI PERFORMANCE
+      - MAX_CONCURRENT_TASKS=50
+      - MAX_CONCURRENT_CHUNK_BUILDERS=10
+      - WS=2  # Inizio conservativo: 2 worker (puoi aumentare a 3-5 se CPU OK)
     networks:
       - ragflow
     restart: on-failure

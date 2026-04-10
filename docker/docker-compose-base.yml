@@ -32,7 +32,7 @@ services:
         - "CMD-SHELL"
         - >
           curl -fsSL localhost:9200/_cluster/health?pretty |
-          grep '"status"\s*:\s*"green"'
+          grep -E '"status"[[:space:]]*:[[:space:]]*"green"'
       interval: 10s
       timeout: 5s
       retries: 20
@@ -180,9 +180,6 @@ services:
       MYSQL_USER: root
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DBNAME: rag_flow
-
-      # opzionale: se il frontend la usa davvero da qui, ok; altrimenti toglila
-      VITE_API_BASE: http://www.sgailegal.com:8000
 
       # (solo se davvero ti servono nel backend oauth; altrimenti rimuovi)
       REDIS_HOST: ${REDIS_HOST}

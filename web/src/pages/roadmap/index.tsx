@@ -14,28 +14,28 @@ const roadmapData: RoadmapItem[] = [
   {
     title: 'Database Giustizia Tributaria - 630.000+ Sentenze',
     description:
-      '✅ Completato: Integrato database completo con 631.263 sentenze della giustizia tributaria (Banca Dati MEF). Copertura completa di commissioni tributarie, TAR e giurisdizioni regionali.',
+      'Integrato database completo con 631.263 sentenze della giustizia tributaria (Banca Dati MEF). Copertura completa di commissioni tributarie, TAR e giurisdizioni regionali.',
     status: 'completed',
     quarter: 'Q3 2025',
   },
   {
     title: 'Database Cassazione e Massimari',
     description:
-      '✅ Completato: Integrati 2.368 sentenze della Corte di Cassazione Sezione Quinta, 8 Massimari della Cassazione e 154 Massimari delle Corti di Merito. Base giurisprudenziale solida per analisi normative.',
+      'Integrati 2.368 sentenze della Corte di Cassazione Sezione Quinta, 8 Massimari della Cassazione e 154 Massimari delle Corti di Merito.',
     status: 'completed',
     quarter: 'Q3 2025',
   },
   {
     title: 'Assistente AI per Interpretazione Documenti',
     description:
-      '✅ Completato: Assistente IA completamente funzionante che aiuta ad interpretare documenti giuridici, rispondere a domande complesse e fornire analisi contestuali basate sulla conoscenza integrata.',
+      'Assistente IA completamente funzionante per interpretare documenti giuridici, rispondere a domande complesse e fornire analisi contestuali.',
     status: 'completed',
     quarter: 'Q3 2025',
   },
   {
     title: 'Database Normativa e Prassi Fiscale',
     description:
-      '✅ Completato: Integrati 9.136 documenti di Prassi Agenzia delle Entrate, 135 documenti di normativa tributaria, 22 Informazioni Tariffarie Vincolanti (ITV) e Note Esplicative. Sistema completo per consulenza fiscale.',
+      'Integrati 9.136 documenti di Prassi Agenzia delle Entrate, 135 documenti di normativa tributaria, 22 ITV e Note Esplicative.',
     status: 'completed',
     quarter: 'Q3 2025',
   },
@@ -43,35 +43,35 @@ const roadmapData: RoadmapItem[] = [
     title: 'Espansione Database Sentenze',
     description:
       'Aggiunta di 50.000+ nuove sentenze dalla Corte di Cassazione, TAR e Tribunali amministrativi. Copertura completa 2020-2024.',
-    status: 'in-progress',
+    status: 'completed',
     quarter: 'Q4 2025',
   },
   {
     title: 'Database Storico Sentenze',
     description:
-      'Integrazione archivio storico sentenze dal 1950 al 2019. Ricerca su 70+ anni di giurisprudenza italiana per analisi evolutiva del diritto.',
-    status: 'in-progress',
+      'Integrazione archivio storico sentenze dal 1950 al 2019. Ricerca su 70+ anni di giurisprudenza italiana.',
+    status: 'completed',
     quarter: 'Q4 2025',
-  },
-  {
-    title: 'Applicazione Mobile Android',
-    description:
-      'App nativa Android per consultare SGAI in mobilità. Ricerca vocale, sincronizzazione cloud e modalità offline.',
-    status: 'planned',
-    quarter: 'Q1 2026',
   },
   {
     title: 'Installazione On-Premise',
     description:
       'Versione enterprise installabile nei server dello Studio. Privacy totale, personalizzazione completa, nessun dato su cloud esterno.',
-    status: 'planned',
+    status: 'completed',
     quarter: 'Q1 2026',
+  },
+  {
+    title: 'Applicazione Mobile Android',
+    description:
+      'App nativa Android per consultare SGAI in mobilit\u00e0. Ricerca vocale, sincronizzazione cloud e modalit\u00e0 offline.',
+    status: 'in-progress',
+    quarter: 'Q2 2026',
   },
   {
     title: 'Integrazione Normativa Europea',
     description:
       'Database completo di normative UE, CEDU e direttive comunitarie con traduzione automatica e cross-reference.',
-    status: 'planned',
+    status: 'in-progress',
     quarter: 'Q2 2026',
   },
   {
@@ -79,7 +79,7 @@ const roadmapData: RoadmapItem[] = [
     description:
       'Assistente IA specializzato nella stesura di atti giudiziari: ricorsi, memorie, controdeduzioni con suggerimenti di giurisprudenza pertinente.',
     status: 'planned',
-    quarter: 'Q2 2026',
+    quarter: 'Q3 2026',
   },
   {
     title: 'Analisi Predittiva Esiti',
@@ -93,12 +93,12 @@ const roadmapData: RoadmapItem[] = [
     description:
       'Estensione della mobile experience su iPhone e iPad con supporto Apple Pencil per annotazioni.',
     status: 'planned',
-    quarter: 'Q3 2026',
+    quarter: 'Q4 2026',
   },
   {
     title: 'Ricerca Semantica Avanzata',
     description:
-      'Motore di ricerca potenziato con comprensione del contesto giuridico, sinonimi legali e ricerca per concetti invece che per parole chiave.',
+      'Motore di ricerca potenziato con comprensione del contesto giuridico, sinonimi legali e ricerca per concetti.',
     status: 'planned',
     quarter: 'Q4 2026',
   },
@@ -132,13 +132,14 @@ const RoadmapPage: React.FC = () => {
   return (
     <div className={styles.roadmapContainer}>
       <button onClick={() => navigate('/')} className={styles.backButton}>
-        ← Torna alla Home
+        ← Torna alla Chat
       </button>
 
       <div className={styles.header}>
         <h1>Roadmap SGAI</h1>
         <p className={styles.subtitle}>
-          Il futuro dell&apos;intelligenza artificiale per l&apos;ambito legale
+          Sviluppi e priorità per l&apos;intelligenza artificiale nel settore
+          legale e tributario
         </p>
       </div>
 

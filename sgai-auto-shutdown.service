@@ -1,7 +1,7 @@
 [Unit]
 Description=SGAI Auto-Shutdown Monitor
-After=network.target docker.service
-Requires=docker.service
+After=network-online.target docker.service
+Wants=network-online.target docker.service
 
 [Service]
 Type=simple
@@ -10,6 +10,8 @@ WorkingDirectory=/home/ubuntu/workspace/ragflow
 ExecStart=/usr/bin/python3 /home/ubuntu/workspace/ragflow/auto_shutdown_monitor.py
 Restart=always
 RestartSec=10
+# Nessun limite: dopo un crash o reboot Docker, il monitor riparte sempre
+StartLimitIntervalSec=0
 StandardOutput=journal
 StandardError=journal
 
@@ -19,3 +21,5 @@ Environment="PYTHONUNBUFFERED=1"
 
 [Install]
 WantedBy=multi-user.target
+
+# Verifica deploy: systemctl is-active sgai-auto-shutdown.service (atteso: active)

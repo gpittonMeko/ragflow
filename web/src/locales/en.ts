@@ -412,7 +412,7 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       chat: 'Chat',
       newChat: 'New chat',
       send: 'Send',
-      sendPlaceholder: 'Buongiorno sono SGAI, scrivi qui la tua domanda!...',
+      sendPlaceholder: 'Scrivi qui la tua domanda...',
       chatConfiguration: 'Chat Configuration',
       chatConfigurationDescription:
         ' Set up a chat assistant for your selected datasets (knowledge bases) here! 💕',
@@ -506,7 +506,7 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       tokenError: 'Please create API key first.',
       betaError:
         'Please acquire a RAGFlow API key from the System Settings page first.',
-      searching: 'Searching...',
+      searching: 'Sto cercando nei documenti...',
       parsing: 'Parsing',
       uploading: 'Uploading',
       uploadFailed: 'Upload failed',

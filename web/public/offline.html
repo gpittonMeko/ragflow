@@ -219,8 +219,7 @@
     <div class="status-message" id="status"></div>
 
     <div class="footer">
-      <p>Il servizio si riattiverà automaticamente alle 8:00</p>
-      <p>oppure clicca il pulsante per un risveglio immediato (~ 2 minuti)</p>
+      <p>Servizio su richiesta: usa il pulsante per avviare (~ 2 minuti)</p>
     </div>
   </div>
 
@@ -228,10 +227,26 @@
     // CONFIGURAZIONE
     const API_ENDPOINT = 'https://91k2hfw1n3.execute-api.eu-north-1.amazonaws.com/wake-up';
     const SGAI_URL = 'https://sgai.me';
+    const SGAI_BACKEND_PROBE = SGAI_URL + '/v1/user/login';
     const POLL_INTERVAL = 5000; // 5 secondi
     const MAX_POLL_TIME = 180000; // 3 minuti
 
     let pollStartTime = null;
+
+    async function isRagflowBackendUp() {
+      try {
+        const r = await fetch(SGAI_BACKEND_PROBE, {
+          method: 'GET',
+          mode: 'cors',
+          cache: 'no-store',
+          credentials: 'omit',
+        });
+        const ct = (r.headers.get('content-type') || '').toLowerCase();
+        return ct.includes('application/json');
+      } catch (e) {
+        return false;
+      }
+    }
 
     function setStatus(message, isError = false) {
       const statusEl = document.getElementById('status');
@@ -303,7 +318,7 @@
         const response = await fetch(API_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ force_start: true })
+          body: JSON.stringify({ force_start: true, target_instance: 'SGAI-Production' })
         });
 
         if (!response.ok) {
@@ -346,23 +361,12 @@
       
       updateProgress(percentage, message, seconds);
 
-      try {
-        // Prova a fare una richiesta HEAD a SGAI
-        const response = await fetch(SGAI_URL, {
-          method: 'HEAD',
-          mode: 'no-cors',
-          cache: 'no-cache'
-        });
-
-        // Se arriviamo qui senza errori, SGAI è probabilmente online
+      if (await isRagflowBackendUp()) {
         updateProgress(100, '✅ SGAI è pronto! Reindirizzamento...', seconds);
-        
         setTimeout(() => {
           window.location.href = SGAI_URL;
         }, 1500);
-
-      } catch (error) {
-        // SGAI non è ancora pronto, riprova
+      } else {
         setTimeout(pollSGAIStatus, POLL_INTERVAL);
       }
     }

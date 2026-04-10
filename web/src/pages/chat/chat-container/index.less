@@ -1,11 +1,17 @@
 .chatContainer {
-  padding: 0;  // niente padding che gonfia il contenitore
+  padding: 0; // niente padding che gonfia il contenitore
   max-height: 0;
 }
 
 .messageContainer {
   overflow-y: auto;
-  padding: 0;    // rimosso padding extra
-  margin: 0;     // rimosso margine
-  flex: 0;       // non allungare quando vuota
+  padding: 0;
+  margin: 0;
+  flex: 0;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  &::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+  }
 }

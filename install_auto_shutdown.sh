@@ -21,13 +21,9 @@ sudo cp sgai-auto-shutdown.service /etc/systemd/system/
 echo "🔄 Reload systemd..."
 sudo systemctl daemon-reload
 
-# 4. Abilita il servizio
-echo "✅ Abilitando servizio..."
-sudo systemctl enable sgai-auto-shutdown.service
-
-# 5. Avvia il servizio
-echo "▶️  Avviando servizio..."
-sudo systemctl start sgai-auto-shutdown.service
+# 4–5. Abilita e avvia (persiste a ogni reboot)
+echo "✅ Abilitazione permanente + avvio ora..."
+sudo systemctl enable --now sgai-auto-shutdown.service
 
 # 6. Verifica status
 echo ""
@@ -44,4 +40,6 @@ echo "   sudo systemctl status sgai-auto-shutdown   # Verifica status"
 echo "   sudo systemctl stop sgai-auto-shutdown     # Ferma monitor"
 echo "   sudo systemctl start sgai-auto-shutdown    # Avvia monitor"
 echo "   sudo journalctl -u sgai-auto-shutdown -f   # Visualizza log in tempo reale"
+echo ""
+echo "Verifica su questa macchina: systemctl is-active sgai-auto-shutdown.service (atteso: active)"
 echo ""
