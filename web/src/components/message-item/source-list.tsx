@@ -19,13 +19,25 @@ interface SourceListProps {
 const MAX_PREVIEW = 180;
 
 function affinityPercent(sim: unknown): number | null {
-  if (sim == null || typeof sim !== 'number' || Number.isNaN(sim)) {
+  if (
+    sim === null ||
+    sim === undefined ||
+    typeof sim !== 'number' ||
+    Number.isNaN(sim)
+  ) {
     return null;
   }
   if (sim <= 1) {
     return Math.round(Math.max(0, Math.min(1, sim)) * 100);
   }
   return Math.min(100, Math.round(sim));
+}
+
+function buildDownloadUrl(docId?: string, fallbackUrl?: string) {
+  if (docId) {
+    return `/api/document/${docId}/download`;
+  }
+  return fallbackUrl || '#';
 }
 
 const SourceList: React.FC<SourceListProps> = ({
@@ -139,7 +151,7 @@ const SourceList: React.FC<SourceListProps> = ({
                 </Flex>
               </Flex>
 
-              {pct != null && (
+              {pct !== null && (
                 <div style={{ maxWidth: 280 }}>
                   <Flex
                     justify="space-between"
@@ -198,12 +210,3 @@ const SourceList: React.FC<SourceListProps> = ({
 };
 
 export default SourceList;
-
-// --- Se non hai un endpoint dedicato, usa doc.url. Se doc.url è HTML, serve un endpoint download.
-// Modifica in base al tuo backend (esempio generico /api/document/{doc_id}/download).
-function buildDownloadUrl(docId?: string, fallbackUrl?: string) {
-  if (docId) {
-    return `/api/document/${docId}/download`; // <-- ADATTA a tua API
-  }
-  return fallbackUrl || '#';
-}

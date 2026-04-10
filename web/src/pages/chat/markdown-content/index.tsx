@@ -113,7 +113,12 @@ const countMatches = (text: string) => {
 };
 
 function affinityPercent(sim: unknown): number | null {
-  if (sim == null || typeof sim !== 'number' || Number.isNaN(sim)) {
+  if (
+    sim === null ||
+    sim === undefined ||
+    typeof sim !== 'number' ||
+    Number.isNaN(sim)
+  ) {
     return null;
   }
   if (sim <= 1) {
@@ -370,7 +375,7 @@ const MarkdownContent = ({
                 className={classNames(styles.chunkContentText)}
               />
             )}
-            {popAffinityPct != null && (
+            {popAffinityPct !== null && (
               <div className={styles.popoverAffinityRow}>
                 <div className={styles.popoverAffinityMeta}>
                   <span>Rilevanza stimata</span>

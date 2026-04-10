@@ -45,7 +45,12 @@ const { Panel } = Collapse;
 
 /** Maps backend hybrid similarity to 0–100% for UI. */
 function affinityPercent(sim: unknown): number | null {
-  if (sim == null || typeof sim !== 'number' || Number.isNaN(sim)) {
+  if (
+    sim === null ||
+    sim === undefined ||
+    typeof sim !== 'number' ||
+    Number.isNaN(sim)
+  ) {
     return null;
   }
   if (sim <= 1) {
@@ -420,7 +425,7 @@ const MessageItem = ({
                                 )}
                               </Flex>
                             </Flex>
-                            {pct != null && (
+                            {pct !== null && (
                               <div className={styles.sourceAffinityRow}>
                                 <div className={styles.sourceAffinityMeta}>
                                   <span>Rilevanza stimata</span>
