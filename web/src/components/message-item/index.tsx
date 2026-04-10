@@ -43,6 +43,17 @@ import { humanizePdfName, replacePdfNamesInText } from './humanize-sentenza';
 const { Text } = Typography;
 const { Panel } = Collapse;
 
+/** Maps backend hybrid similarity to 0–100% for UI. */
+function affinityPercent(sim: unknown): number | null {
+  if (sim == null || typeof sim !== 'number' || Number.isNaN(sim)) {
+    return null;
+  }
+  if (sim <= 1) {
+    return Math.round(Math.max(0, Math.min(1, sim)) * 100);
+  }
+  return Math.min(100, Math.round(sim));
+}
+
 interface IProps extends Partial<IRemoveMessageById>, IRegenerateMessage {
   item: IMessage;
   reference: IReference;
@@ -347,7 +358,7 @@ const MessageItem = ({
                     dataSource={referenceDocumentList}
                     renderItem={(doc, idx) => {
                       const url = doc.url;
-                      console.log('DOC →', doc);
+                      const pct = affinityPercent(doc.similarity);
                       const displayName =
                         doc.original_name ||
                         doc.originalFilename ||
@@ -360,13 +371,7 @@ const MessageItem = ({
                       const dlUrl = buildDownloadUrl(doc.doc_id, url);
 
                       return (
-                        <List.Item
-                          style={{
-                            padding: '8px 0',
-                            border: 'none',
-                            borderBottom: '1px solid #f0f0f0',
-                          }}
-                        >
+                        <List.Item className={styles.sourceListItem}>
                           <Flex vertical gap={4}>
                             <Flex gap={'small'} align="center" wrap="wrap">
                               <FileIcon id={doc.doc_id} name={doc.doc_name} />
@@ -415,6 +420,20 @@ const MessageItem = ({
                                 )}
                               </Flex>
                             </Flex>
+                            {pct != null && (
+                              <div className={styles.sourceAffinityRow}>
+                                <div className={styles.sourceAffinityMeta}>
+                                  <span>Rilevanza stimata</span>
+                                  <span>{pct}%</span>
+                                </div>
+                                <div className={styles.sourceAffinityTrack}>
+                                  <div
+                                    className={styles.sourceAffinityFill}
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </Flex>
                         </List.Item>
                       );

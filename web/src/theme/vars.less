@@ -10,13 +10,16 @@
 
 /* Definizione delle variabili CSS per il tema */
 :root {
-  /* Dark theme (default) */
+  /* Dark theme (default) — link/accents: azzurro chiaro su nero */
   --bg-color: #0a0a0a;
   --card-bg: #1c1c1e;
   --text-primary: #f5f5f7;
   --text-secondary: #a1a1a6;
-  --accent-color: #338aff;
-  --accent-shadow: rgba(51, 138, 255, 0.5);
+  --accent-color: #9fd8ff;
+  --accent-shadow: rgba(159, 216, 255, 0.35);
+  --sgai-link-on-dark: #c5ebff;
+  --sgai-link-on-dark-hover: #e8f6ff;
+  --sgai-doc-link: #c5ebff;
   --border-color: #333333;
   --button-bg: rgba(255, 255, 255, 0.1);
   --button-hover: rgba(255, 255, 255, 0.2);
@@ -28,7 +31,7 @@
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
   --card-transition: transform 0.3s ease, box-shadow 0.3s ease;
   --disclaimer-bg: rgba(100, 100, 100, 0.15);
-  
+
   /* Mobile specific variables */
   --avatar-size-desktop: 40px;
   --avatar-size-tablet: 32px;
@@ -40,18 +43,21 @@
   --message-padding-tablet: 10px 12px;
   --message-padding-mobile: 8px 10px;
   --gap-desktop: 20px;
-  --gap-tablet: 10px; 
+  --gap-tablet: 10px;
   --gap-mobile: 8px;
 }
 
 /* Light theme variables */
-[data-theme="light"] {
+[data-theme='light'] {
   --bg-color: #f5f5f7;
   --card-bg: #ffffff;
   --text-primary: #1d1d1f;
   --text-secondary: #515154;
   --accent-color: #338aff;
   --accent-shadow: rgba(51, 138, 255, 0.5);
+  --sgai-link-on-dark: #1677ff;
+  --sgai-link-on-dark-hover: #0958d9;
+  --sgai-doc-link: #1677ff;
   --border-color: #d9d9d9;
   --button-bg: rgba(0, 0, 0, 0.05);
   --button-hover: rgba(0, 0, 0, 0.1);

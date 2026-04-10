@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SGAI | Agentic AI, Legal Intelligence e Automazione d'Impresa</title>
-  <meta name="sgai-home-build" content="2026-04-10d" />
+  <meta name="sgai-home-build" content="2026-04-07-plan" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
@@ -123,7 +123,8 @@
     details.acc summary::-webkit-details-marker { display: none; }
     details.acc summary::after { content: '+'; font-weight: 700; color: var(--color-accent); font-size: 1.1rem; line-height: 1; }
     details.acc[open] summary::after { content: '−'; }
-    details.acc[open] summary { background: var(--color-bg-alt); border-bottom: 1px solid var(--color-border); }
+    details.acc[open] summary { background: var(--color-bg-alt); border-bottom: none; box-shadow: inset 0 -1px 0 var(--color-border); }
+    .acc-body ::selection { background: rgba(184, 232, 255, 0.4); color: inherit; }
     .acc-hint { font-weight: 400; color: var(--color-text-muted); font-size: 0.82rem; flex: 1 1 auto; text-align: right; }
     @media (max-width: 520px) { .acc-hint { text-align: left; width: 100%; } }
     .acc-body { padding: 1rem; color: var(--color-text-secondary); font-size: 0.92rem; line-height: 1.58; }
@@ -301,7 +302,7 @@
         <a href="#sec-funz">Funzionalità</a>
         <a href="servizi.html">Servizi</a>
         <a href="https://www.linkedin.com/company/109376393/" target="_blank" rel="noopener">LinkedIn</a>
-        <a href="#sec-demo" class="btn-primary">Contatto aziendale</a>
+        <a href="#sec-demo" class="btn-primary">Contatti</a>
       </nav>
     </div>
   </header>
@@ -317,7 +318,7 @@
         </p>
         <div class="hero-ctas">
           <button type="button" class="hero-btn-primary" id="ctaProvaBtn">Accedi all'app</button>
-          <a href="#sec-demo" class="hero-btn-secondary">Contatto per organizzazioni</a>
+          <a href="#sec-demo" class="hero-btn-secondary">Richiedi una demo</a>
         </div>
       </div>
     </section>
@@ -524,17 +525,16 @@
               <li style="margin-bottom:0;"><strong>Consolida in cartella</strong> le bozze e le fonti verificate nel tuo workflow abituale — SGAI resta abilitatore, non sostituto della firma professionale.</li>
             </ol>
             <p style="margin-bottom:0;">
-              Per una presentazione strutturata, una PoC sui tuoi documenti o un perimetro dedicato, usa il <a href="#sec-demo" style="color:var(--color-accent);font-weight:600;">modulo contatto per organizzazioni</a> (studi legali e legali d'impresa).
+              Per una presentazione strutturata, una PoC sui tuoi documenti o un perimetro dedicato, <a href="#sec-demo" style="color:var(--color-accent);font-weight:600;">scrivici dal modulo contatti</a>.
             </p>
           </div>
         </details>
 
         <details class="acc" id="sec-demo">
-          <summary>Contatto riservato alle organizzazioni <span class="acc-hint">studi legali · legal team · enterprise</span></summary>
+          <summary>Contatti <span class="acc-hint">demo · informazioni · supporto commerciale</span></summary>
           <div class="acc-body">
             <p class="acc-intro" style="margin-top:0;margin-bottom:1rem;">
-              Il modulo è dedicato a <strong>studi legali</strong>, <strong>legali d'impresa</strong>, funzioni <strong>compliance</strong> e <strong>organizzazioni strutturate</strong> con esigenze professionali in legal intelligence.
-              Non utilizziamo questo canale per richieste da privati o non pertinenti all'offerta B2B.
+              Scrivici per una demo, una presentazione o una <strong>PoC sui tuoi documenti</strong>. Indica obiettivo, tipologia di organizzazione e come preferisci essere ricontattato: ti rispondiamo con un perimetro chiaro su tempi e passi successivi.
             </p>
         <form id="contactForm" class="contact-section" style="margin-top:0;">
           <div class="form-grid">
@@ -566,14 +566,8 @@
             </div>
             <div class="form-group full">
               <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-                <input type="checkbox" name="b2b_confirm" required style="width:20px;height:20px;min-width:20px;accent-color:#0f62fe;cursor:pointer;margin-top:2px;" />
-                <span style="font-size:0.95rem;line-height:1.4;color:var(--color-text-secondary);">Confermo di scrivere in qualità di rappresentante di uno <strong>studio legale</strong>, di un <strong>legal team d'impresa</strong> o di un'altra <strong>organizzazione B2B</strong> con esigenze coerenti con SGAI Legal.</span>
-              </label>
-            </div>
-            <div class="form-group full">
-              <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
                 <input type="checkbox" name="privacy" required style="width:20px;height:20px;min-width:20px;accent-color:#0f62fe;cursor:pointer;margin-top:2px;" />
-                <span style="font-size:0.95rem;line-height:1.4;color:var(--color-text-secondary);">Autorizzo il trattamento dei dati personali per essere ricontattato in ambito commerciale B2B.</span>
+                <span style="font-size:0.95rem;line-height:1.4;color:var(--color-text-secondary);">Autorizzo il trattamento dei dati personali per essere ricontattato in merito alla mia richiesta.</span>
               </label>
             </div>
           </div>
@@ -589,7 +583,7 @@
           <summary>Link rapidi</summary>
           <div class="acc-body">
             <div class="link-row">
-              <a href="#sec-demo">Contatto organizzazioni</a>
+              <a href="#sec-demo">Contatti</a>
               <a href="https://sgailegal.com/" target="_blank" rel="noopener">Apri sgailegal.com</a>
               <a href="servizi.html">Servizi</a>
               <a href="https://www.linkedin.com/company/109376393/" target="_blank" rel="noopener">LinkedIn</a>
@@ -618,7 +612,7 @@
       <span style="font-size:0.9rem;color:var(--color-text-muted);">SGAI Legal — Legal intelligence per studi legali e legali d'impresa</span>
       <a href="servizi.html">Servizi</a>
       <a href="assistente-legale.html">Assistente Legale</a>
-      <a href="#sec-demo">Contatto aziendale</a>
+      <a href="#sec-demo">Contatti</a>
       <a href="chi-siamo.html">Chi siamo</a>
       <a href="https://www.linkedin.com/company/109376393/" target="_blank" rel="noopener">LinkedIn</a>
     </div>

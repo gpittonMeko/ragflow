@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
-import { Flex, List, Typography, Tooltip, Button, Tag } from 'antd';
-import { CopyOutlined, DownloadOutlined, EyeOutlined, LinkOutlined } from '@ant-design/icons';
 import { IReference } from '@/interfaces/database/chat';
+import {
+  CopyOutlined,
+  DownloadOutlined,
+  EyeOutlined,
+  LinkOutlined,
+} from '@ant-design/icons';
+import { Button, Flex, List, Tooltip, Typography } from 'antd';
+import React, { useState } from 'react';
 
 const { Text } = Typography;
 
@@ -13,7 +18,21 @@ interface SourceListProps {
 
 const MAX_PREVIEW = 180;
 
-const SourceList: React.FC<SourceListProps> = ({ docs, onSourceClick, onCopyMarker }) => {
+function affinityPercent(sim: unknown): number | null {
+  if (sim == null || typeof sim !== 'number' || Number.isNaN(sim)) {
+    return null;
+  }
+  if (sim <= 1) {
+    return Math.round(Math.max(0, Math.min(1, sim)) * 100);
+  }
+  return Math.min(100, Math.round(sim));
+}
+
+const SourceList: React.FC<SourceListProps> = ({
+  docs,
+  onSourceClick,
+  onCopyMarker,
+}) => {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
 
   const toggle = (i: number) => setExpanded((p) => ({ ...p, [i]: !p[i] }));
@@ -25,8 +44,10 @@ const SourceList: React.FC<SourceListProps> = ({ docs, onSourceClick, onCopyMark
       dataSource={docs}
       renderItem={(doc, idx) => {
         const marker = `##${idx + 1}$$`;
-        const long = !!doc.chunk_preview && doc.chunk_preview.length > MAX_PREVIEW;
+        const long =
+          !!doc.chunk_preview && doc.chunk_preview.length > MAX_PREVIEW;
         const showAll = expanded[idx];
+        const pct = affinityPercent(doc.similarity);
 
         // Se hai un vero endpoint per il download binario, usa quello
         const downloadHref = buildDownloadUrl(doc.doc_id, doc.url);
@@ -36,18 +57,36 @@ const SourceList: React.FC<SourceListProps> = ({ docs, onSourceClick, onCopyMark
             style={{
               padding: '8px 0',
               border: 'none',
-              borderBottom: '1px solid #f0f0f0',
+              borderBottom: '1px solid var(--border-color, #333)',
             }}
           >
             <Flex vertical gap={4}>
               <Flex align="center" gap={8} wrap="wrap">
-                <Tag color="blue" style={{ marginRight: 0 }}>{marker}</Tag>
+                <span
+                  style={{
+                    marginRight: 0,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    padding: '0 8px',
+                    lineHeight: '22px',
+                    borderRadius: 4,
+                    border: '1px solid rgba(197, 235, 255, 0.45)',
+                    color: 'var(--sgai-link-on-dark, #c5ebff)',
+                    background: 'rgba(197, 235, 255, 0.08)',
+                  }}
+                >
+                  {marker}
+                </span>
 
                 <a
                   href={doc.url || '#'}
                   target={doc.url ? '_blank' : undefined}
                   rel={doc.url ? 'noreferrer' : undefined}
-                  style={{ color: '#0f4faa', wordBreak: 'break-word', fontWeight: 500 }}
+                  style={{
+                    color: 'var(--sgai-doc-link, #c5ebff)',
+                    wordBreak: 'break-word',
+                    fontWeight: 500,
+                  }}
                 >
                   {doc.doc_name || 'Documento senza nome'}
                 </a>
@@ -100,12 +139,43 @@ const SourceList: React.FC<SourceListProps> = ({ docs, onSourceClick, onCopyMark
                 </Flex>
               </Flex>
 
+              {pct != null && (
+                <div style={{ maxWidth: 280 }}>
+                  <Flex
+                    justify="space-between"
+                    style={{ fontSize: 11, marginBottom: 4 }}
+                  >
+                    <Text type="secondary">Rilevanza stimata</Text>
+                    <Text type="secondary">{pct}%</Text>
+                  </Flex>
+                  <div
+                    style={{
+                      height: 6,
+                      borderRadius: 999,
+                      background: 'rgba(255,255,255,0.08)',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${pct}%`,
+                        borderRadius: 999,
+                        background:
+                          'linear-gradient(90deg, #7ec8fa 0%, #c5ebff 100%)',
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
               {doc.chunk_preview && (
                 <>
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     {showAll
                       ? doc.chunk_preview
-                      : doc.chunk_preview.slice(0, MAX_PREVIEW) + (long ? '…' : '')}
+                      : doc.chunk_preview.slice(0, MAX_PREVIEW) +
+                        (long ? '…' : '')}
                   </Text>
                   {long && (
                     <Button

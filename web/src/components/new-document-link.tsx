@@ -17,7 +17,7 @@ const NewDocumentLink = ({
   children,
   link,
   preventDefault = false,
-  color = 'rgb(15, 79, 170)',
+  color = 'var(--sgai-doc-link, #c5ebff)',
   documentId,
   documentName,
   prefix = 'file',

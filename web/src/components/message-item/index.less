@@ -18,11 +18,14 @@
   }
 
   .messageTextBase() {
-    padding: 12px 16px; 
+    padding: 12px 16px;
     border-radius: 8px;
-    transition: background-color 0.3s, color 0.3s;
+    transition:
+      background-color 0.3s,
+      color 0.3s;
 
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+      'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     font-size: clamp(0.95rem, 1vw, 1.05rem); /* adattivo stile Apple */
     line-height: 1.55;
 
@@ -37,17 +40,24 @@
     background-color: var(--message-bg, #333333);
     color: var(--text-primary, #f0f0f0);
     word-break: break-word;
-    max-width: 100%; 
-    width: 100%; 
+    max-width: 100%;
+    width: 100%;
   }
   .messageTextDark {
     .chunkText();
     .messageTextBase();
-    background-color: var(--accent-color, #1668dc);
+    background-color: var(--message-bg, #333333);
     color: var(--text-primary, #f0f0f0);
     word-break: break-word;
     max-width: 100%;
     width: 100%;
+    :global(a),
+    :global(a:visited) {
+      color: var(--sgai-link-on-dark, #c5ebff);
+    }
+    :global(a:hover) {
+      color: var(--sgai-link-on-dark-hover, #e8f6ff);
+    }
     :global(section.think) {
       color: var(--text-secondary, #a0a0a0);
       border-left-color: var(--border-color, #555555);
@@ -87,7 +97,7 @@
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
   scroll-behavior: smooth; /* Per smooth autoscroll */
-  
+
   &::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
@@ -97,41 +107,39 @@
 @media (max-width: 768px) {
   .messageItem {
     padding: 18px 0; /* Ridotto padding verticale */
-    
+
     .messageItemSection {
       width: 100%; /* prende tutta la larghezza su mobile */
     }
-    
+
     .messageItemSectionLeft {
       width: 98%; /* ancora più largo su mobile */
     }
-    
+
     .messageTextBase() {
       padding: 10px 12px; /* Padding ridotto in mobile */
       font-size: 0.95rem; /* Testo più piccolo in mobile */
       line-height: 1.5;
     }
-    
+
     .messageItemContent {
       gap: 10px; /* riduce lo spazio tra avatar e testo su mobile */
     }
   }
-  
+
   /* Riduzione spazio avatar */
   :global(.ant-avatar) {
-    width: 32px !important; 
+    width: 32px !important;
     height: 32px !important;
     min-width: 32px !important;
   }
-  
+
   /* Regolazione dimensione SVG dell'assistente */
-  :global(svg[class*="assistant"]) {
+  :global(svg[class*='assistant']) {
     width: 32px !important;
     height: 32px !important;
   }
 }
-
-
 
 .sourcesWrapper {
   margin-top: 16px;
@@ -154,19 +162,25 @@
 }
 
 @keyframes flash-bg {
-  0% { background-color: rgba(255, 255, 0, 0.35); }
-  100% { background-color: transparent; }
+  0% {
+    background-color: rgba(255, 255, 0, 0.35);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
-
 
 .markerHighlight {
   animation: flash-bg 1.5s ease-in-out 1;
 }
 @keyframes flash-bg {
-  0% { background-color: rgba(255,255,0,.35); }
-  100% { background-color: transparent; }
+  0% {
+    background-color: rgba(255, 255, 0, 0.35);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
-
 
 .sourcesWrapper {
   margin-top: 16px;
@@ -177,12 +191,59 @@
 }
 
 @keyframes flash-bg {
-  0% { background-color: rgba(255,255,0,0.35); }
-  100% { background-color: transparent; }
+  0% {
+    background-color: rgba(255, 255, 0, 0.35);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
 
 .sourceActionBtn {
   padding: 0 6px;
   height: 24px;
   line-height: 24px;
+}
+
+.sourceListItem {
+  padding: 8px 0;
+  border: none;
+  border-bottom: 1px solid var(--border-color, #333);
+}
+
+.sourceAffinityRow {
+  width: 100%;
+  max-width: 280px;
+  margin-top: 4px;
+}
+
+.sourceAffinityMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-secondary, #a1a1a6);
+  margin-bottom: 4px;
+}
+
+.sourceAffinityTrack {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.sourceAffinityFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7ec8fa 0%, #c5ebff 100%);
+  transition: width 0.25s ease;
+}
+
+[data-theme='light'] .sourceListItem {
+  border-bottom-color: #f0f0f0;
+}
+
+[data-theme='light'] .sourceAffinityTrack {
+  background: rgba(0, 0, 0, 0.06);
 }

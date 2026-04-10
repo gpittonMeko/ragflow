@@ -709,7 +709,7 @@ class Dialog(DataBaseModel):
     similarity_threshold = FloatField(default=0.2)
     vector_similarity_weight = FloatField(default=0.3)
 
-    top_n = IntegerField(default=6)
+    top_n = IntegerField(default=10)
 
     top_k = IntegerField(default=1024)
 

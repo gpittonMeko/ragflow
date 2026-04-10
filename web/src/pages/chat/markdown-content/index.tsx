@@ -112,6 +112,16 @@ const countMatches = (text: string) => {
   }
 };
 
+function affinityPercent(sim: unknown): number | null {
+  if (sim == null || typeof sim !== 'number' || Number.isNaN(sim)) {
+    return null;
+  }
+  if (sim <= 1) {
+    return Math.round(Math.max(0, Math.min(1, sim)) * 100);
+  }
+  return Math.min(100, Math.round(sim));
+}
+
 // ─────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────
@@ -359,6 +369,20 @@ const MarkdownContent = ({
                 }}
                 className={classNames(styles.chunkContentText)}
               />
+            )}
+            {popAffinityPct != null && (
+              <div className={styles.popoverAffinityRow}>
+                <div className={styles.popoverAffinityMeta}>
+                  <span>Rilevanza stimata</span>
+                  <span>{popAffinityPct}%</span>
+                </div>
+                <div className={styles.popoverAffinityTrack}>
+                  <div
+                    className={styles.popoverAffinityFill}
+                    style={{ width: `${popAffinityPct}%` }}
+                  />
+                </div>
+              </div>
             )}
             {documentId && (
               <Flex gap={'small'}>

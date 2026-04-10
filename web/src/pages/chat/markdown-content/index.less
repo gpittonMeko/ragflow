@@ -77,7 +77,7 @@
   transition: background 0.15s ease;
 
   &:hover {
-    background: rgba(15, 98, 254, 0.12);
+    background: rgba(184, 232, 255, 0.14);
   }
 }
 
@@ -85,7 +85,7 @@
   display: inline-block;
   width: 2px;
   height: 1em;
-  background-color: var(--accent-color, #0f62fe);
+  background-color: var(--accent-color, #9fd8ff);
   animation: blink 0.8s ease-in-out infinite;
   vertical-align: text-bottom;
   margin-left: 2px;
@@ -151,4 +151,31 @@
 .fileThumbnail {
   display: inline-block;
   max-width: 40px;
+}
+
+.popoverAffinityRow {
+  width: 100%;
+  max-width: 320px;
+  margin-top: 8px;
+}
+
+.popoverAffinityMeta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-secondary, #a1a1a6);
+  margin-bottom: 4px;
+}
+
+.popoverAffinityTrack {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.popoverAffinityFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7ec8fa 0%, #c5ebff 100%);
 }

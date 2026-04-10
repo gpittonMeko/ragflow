@@ -41,6 +41,29 @@ from rag.utils import num_tokens_from_string, rmSpace
 from rag.utils.tavily_conn import Tavily
 
 
+def sync_reference_doc_aggs_to_chunks(kbinfos: dict) -> None:
+    """One doc_aggs row per chunk (same order) for citation index ↔ UI SourceList alignment."""
+    chunks = kbinfos.get("chunks") or []
+    out = []
+    for ck in chunks:
+        sim = ck.get("similarity")
+        try:
+            sim_f = float(sim) if sim is not None else None
+        except (TypeError, ValueError):
+            sim_f = None
+        out.append(
+            {
+                "doc_id": ck.get("doc_id"),
+                "doc_name": ck.get("docnm_kwd")
+                or ck.get("doc_name")
+                or ck.get("document_name", ""),
+                "count": 1,
+                "similarity": sim_f,
+            }
+        )
+    kbinfos["doc_aggs"] = out
+
+
 DEFAULT_VERBOSE_LLM_SETTING = {
     "temperature": 0.65,
     "top_p": 0.9,
@@ -309,6 +332,7 @@ def chat(dialog, messages, stream=True, **kwargs):
     retrieval_ts = timer()
     if not knowledges and prompt_config.get("empty_response"):
         empty_res = prompt_config["empty_response"]
+        sync_reference_doc_aggs_to_chunks(kbinfos)
         yield {"answer": empty_res, "reference": kbinfos, "prompt": "\n\n### Query:\n%s" % " ".join(questions), "audio_binary": tts(tts_mdl, empty_res)}
         return {"answer": prompt_config["empty_response"], "reference": kbinfos}
 
@@ -365,39 +389,9 @@ def chat(dialog, messages, stream=True, **kwargs):
                         idx.add(i)
                     answer = answer.replace(full_match, f"##{i}$$")
 
-            idx = set([kbinfos["chunks"][int(i)]["doc_id"] for i in idx])
+            logging.debug("decorate_answer citation chunk indices: %s", idx)
 
-
-            # ------------------------------------------------------------------
-            # Assicura che ogni documento presente nei chunks sia elencato
-            # anche in kbinfos["doc_aggs"] (usato dalla UI per mostrare i PDF)
-            # ------------------------------------------------------------------
-            if "doc_aggs" not in kbinfos or kbinfos["doc_aggs"] is None:
-                kbinfos["doc_aggs"] = []
-
-            existing_ids = {d["doc_id"] for d in kbinfos["doc_aggs"]}
-
-            for ck in kbinfos["chunks"]:
-                did = ck.get("doc_id")
-                if did and did not in existing_ids:
-                    kbinfos["doc_aggs"].append(
-                        {
-                            "doc_id": did,
-                            "doc_name": ck.get("doc_name")
-                                        or ck.get("docnm_kwd", "")
-                                        or ck.get("document_name", "")   # <-- aggiunta
-
-                        }
-                    )
-                    existing_ids.add(did)
-            # ------------------------------------------------------------------
-         # ----> rimuovi o commenta queste 4 righe <----
-        #recall_docs = [d for d in kbinfos["doc_aggs"] if d["doc_id"] in idx]
-        #if not recall_docs:
-        #    recall_docs = kbinfos["doc_aggs"]
-        #kbinfos["doc_aggs"] = recall_docs
-        # non filtriamo: manteniamo tutti i documenti aggregati
-        # kbinfos["doc_aggs"] resta quello restituito da retriever.retrieval()
+            sync_reference_doc_aggs_to_chunks(kbinfos)
 
             refs = deepcopy(kbinfos)
             for c in refs["chunks"]:
@@ -677,9 +671,8 @@ def ask(question, kb_ids, tenant_id):
                         idx.add(kbinfos["chunks"][i]["doc_id"])
 
             logging.debug(f"Document IDs actually used in citations: {idx}")
-            recall_docs = [d for d in ref_docs if d["doc_id"] in idx] if idx else ref_docs
-            logging.debug(f"Documents included in the final reference list: {len(recall_docs)}")
-            kbinfos["doc_aggs"] = recall_docs
+
+        sync_reference_doc_aggs_to_chunks(kbinfos)
 
         refs = deepcopy(kbinfos)
         for c in refs["chunks"]:

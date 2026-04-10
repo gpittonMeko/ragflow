@@ -108,6 +108,8 @@ export interface Docagg {
   doc_id: string;
   doc_name: string;
   url?: string;
+  /** Hybrid similarity for this chunk row (0–1), when provided by backend */
+  similarity?: number;
 }
 
 // interface Chunk {
