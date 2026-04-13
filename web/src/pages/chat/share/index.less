@@ -101,11 +101,29 @@
   top: 56px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 999999 !important;
+  z-index: 1200;
   display: flex;
   flex-direction: column;
   align-items: center;
   pointer-events: none;
+}
+
+/* Login-page: barra progresso dentro il box chat, non layer fisso sul nero */
+.directChatLayoutRoot {
+  position: relative;
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.directChatLayoutRoot .loaderBarWrapper {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8 !important;
 }
 
 .loaderGlass {
@@ -231,12 +249,23 @@
     }
   }
 
-  /* Login / DirectChat embed: meno vuoto sopra, meno scroll “vuoto”, messaggi ancorati in basso */
+  &.directChatEmbed {
+    min-height: 0;
+  }
+
+  /* Login / DirectChat embed: area messaggi deve crescere e scrollare (no flex:0 da Ant o CSS terzi) */
   &.directChatEmbed .messageContainer {
     padding: 0 12px;
-    min-height: 1px;
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
     overscroll-behavior-y: contain;
     scroll-behavior: auto;
+    /* iOS/Android: evita che il parent rubi il gesture verticale */
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
 
     :global(.ant-spin-nested-loading),
     :global(.ant-spin-container) {
@@ -302,6 +331,9 @@
     padding: 0 !important;
     &.directChatEmbed .messageContainer {
       padding: 0 8px;
+      flex: 1 1 0% !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
     }
     .messageContainer {
       padding: 12px 8px 4px 8px;

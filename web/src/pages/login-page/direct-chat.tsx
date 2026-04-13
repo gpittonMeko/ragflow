@@ -16,34 +16,35 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'umi';
 import styles from '../chat/share/index.less';
 
-// Hook per adattare layout quando si apre la tastiera su mobile.
-// Soglia 250px: evita di attivarsi per la barra URL (100-150px) che causerebbe
-// l'input che "va verso l'alto" al reload. Solo la tastiera vera riduce >250px.
-function useKeyboardOffset() {
+// Compatta: nessun inset. Espansa: spazio sotto = area coperta da tastiera (visualViewport, ok su iOS/Android).
+function useKeyboardOffset(omitInset: boolean) {
   const [keyboardOffset, setKeyboardOffset] = useState(0);
-  const initialHeight = useRef(
-    typeof window !== 'undefined' ? window.innerHeight : 0,
-  );
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return;
     const vv = window.visualViewport;
 
     const handler = () => {
-      const diff = initialHeight.current - vv.height;
-      // Solo tastiera aperta (riduzione >250px), non barra URL al reload
-      setKeyboardOffset(diff > 250 ? diff : 0);
+      if (omitInset) {
+        setKeyboardOffset(0);
+        return;
+      }
+      const innerH = window.innerHeight;
+      const inset = Math.max(0, innerH - vv.height - vv.offsetTop);
+      setKeyboardOffset(inset > 32 ? inset + 12 : 0);
     };
+
     vv.addEventListener('resize', handler);
     vv.addEventListener('scroll', handler);
-    // Ritardo iniziale: al reload la viewport può essere instabile
-    const t = setTimeout(handler, 100);
+    window.addEventListener('resize', handler);
+    const t = requestAnimationFrame(handler);
     return () => {
-      clearTimeout(t);
+      cancelAnimationFrame(t);
       vv.removeEventListener('resize', handler);
       vv.removeEventListener('scroll', handler);
+      window.removeEventListener('resize', handler);
     };
-  }, []);
+  }, [omitInset]);
 
   return keyboardOffset;
 }
@@ -56,6 +57,10 @@ interface DirectChatProps {
   onMessagesChange?: (count: number) => void;
   onGenerationComplete?: () => void;
   onChatUpdate?: (title: string, lastMessage: string) => void; // ✅ Callback per aggiornare chat history
+  /** Chat compatto: disattiva paddingBottom da visualViewport */
+  omitKeyboardInset?: boolean;
+  /** Chat a schermo intero: scroll messaggi/input all’apertura */
+  layoutExpanded?: boolean;
 }
 
 const DirectChat: React.FC<DirectChatProps> = ({
@@ -66,6 +71,8 @@ const DirectChat: React.FC<DirectChatProps> = ({
   onMessagesChange,
   onGenerationComplete,
   onChatUpdate,
+  omitKeyboardInset = false,
+  layoutExpanded = false,
 }) => {
   const { theme } = useTheme();
   const location = useLocation();
@@ -233,12 +240,48 @@ const DirectChat: React.FC<DirectChatProps> = ({
   }, [sessionId, agentId, setDerivedMessages]);
 
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
-  const hasThread = (derivedMessages?.length ?? 0) > 0;
-  const keyboardOffset = useKeyboardOffset();
+  const keyboardOffset = useKeyboardOffset(omitKeyboardInset);
   const inputWrapperRef = useRef<HTMLDivElement>(null);
+  const messageAreaRef = useRef<HTMLDivElement>(null);
+  const prevLayoutExpanded = useRef(false);
+
+  const scrollMessagesToBottom = () => {
+    const el = messageAreaRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  };
+
+  useEffect(() => {
+    scrollMessagesToBottom();
+  }, [derivedMessages?.length, sendLoading]);
+
+  useEffect(() => {
+    if (layoutExpanded && !prevLayoutExpanded.current) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scrollMessagesToBottom();
+          inputWrapperRef.current?.scrollIntoView({
+            block: 'end',
+            behavior: 'smooth',
+          });
+        });
+      });
+    }
+    prevLayoutExpanded.current = layoutExpanded;
+  }, [layoutExpanded]);
+
+  const handleInputFocus = () => {
+    scrollMessagesToBottom();
+    requestAnimationFrame(() => {
+      inputWrapperRef.current?.scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth',
+      });
+    });
+  };
 
   return (
-    <>
+    <div className={styles.directChatLayoutRoot}>
       {barVisible && (
         <div className={styles.loaderBarWrapper}>
           <div className={styles.loaderGlass}>
@@ -278,73 +321,77 @@ const DirectChat: React.FC<DirectChatProps> = ({
         className={`${styles.chatContainer} ${styles[theme]} ${styles.directChatEmbed} ${className ?? ''}`}
         style={{
           ...style,
+          minHeight: 0,
+          height: '100%',
           paddingBottom: keyboardOffset > 0 ? keyboardOffset : undefined,
         }}
         vertical
       >
-        <Flex
-          vertical
-          justify="flex-end"
+        <div
+          ref={messageAreaRef}
           className={styles.messageContainer}
           style={{
-            flex: hasThread ? '1 1 0%' : '0 0 auto',
-            minHeight: hasThread ? 0 : undefined,
-            overflowY: hasThread ? 'auto' : 'hidden',
+            flex: '1 1 0%',
+            minHeight: 0,
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
-          <div>
-            {loading || hasThread ? (
-              <Spin spinning={loading}>
-                {derivedMessages?.map((message, i) => {
-                  const isLastMessage = i === lastMessageIndex;
-                  return (
-                    <div key={buildMessageUuidWithRole(message)}>
-                      <MessageItem
-                        visibleAvatar={false}
-                        avatarDialog={avatarData?.avatar}
-                        item={message}
-                        nickname="You"
-                        reference={buildMessageItemReference(
-                          {
-                            message: derivedMessages,
-                            reference: [],
-                          },
-                          message,
-                        )}
-                        loading={
-                          message.role === MessageType.Assistant &&
-                          sendLoading &&
-                          isLastMessage
-                        }
-                        index={i}
-                        clickDocumentButton={clickDocumentButton}
-                        showLikeButton={false}
-                        showLoudspeaker={false}
-                      />
-                    </div>
-                  );
-                })}
-              </Spin>
-            ) : null}
+          <div style={{ marginTop: 'auto', minWidth: 0 }}>
+            <Spin spinning={loading}>
+              {derivedMessages?.map((message, i) => {
+                const isLastMessage = i === lastMessageIndex;
+                return (
+                  <div key={buildMessageUuidWithRole(message)}>
+                    <MessageItem
+                      visibleAvatar={false}
+                      avatarDialog={avatarData?.avatar}
+                      item={message}
+                      nickname="You"
+                      reference={buildMessageItemReference(
+                        {
+                          message: derivedMessages,
+                          reference: [],
+                        },
+                        message,
+                      )}
+                      loading={
+                        message.role === MessageType.Assistant &&
+                        sendLoading &&
+                        isLastMessage
+                      }
+                      index={i}
+                      clickDocumentButton={clickDocumentButton}
+                      showLikeButton={false}
+                      showLoudspeaker={false}
+                    />
+                  </div>
+                );
+              })}
+            </Spin>
+            <div ref={ref} />
           </div>
-          <div ref={ref} />
-        </Flex>
+        </div>
 
-        <MessageInput
-          isShared
-          value={value}
-          disabled={false}
-          sendDisabled={sendDisabled || sendLoading}
-          conversationId={agentId}
-          onInputChange={handleInputChange}
-          onPressEnter={handlePressEnter}
-          sendLoading={sendLoading}
-          uploadMethod="external_upload_and_parse"
-          showUploadIcon={false}
-          stopOutputMessage={stopOutputMessage}
-          autoFocus={false}
-          wrapperRef={inputWrapperRef}
-        />
+        <div style={{ flexShrink: 0, width: '100%' }}>
+          <MessageInput
+            isShared
+            value={value}
+            disabled={false}
+            sendDisabled={sendDisabled || sendLoading}
+            conversationId={agentId}
+            onInputChange={handleInputChange}
+            onPressEnter={handlePressEnter}
+            sendLoading={sendLoading}
+            uploadMethod="external_upload_and_parse"
+            showUploadIcon={false}
+            stopOutputMessage={stopOutputMessage}
+            autoFocus={false}
+            wrapperRef={inputWrapperRef}
+            onInputFocus={handleInputFocus}
+          />
+        </div>
       </Flex>
 
       {visible && (
@@ -355,7 +402,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
           chunk={selectedChunk}
         />
       )}
-    </>
+    </div>
   );
 };
 
