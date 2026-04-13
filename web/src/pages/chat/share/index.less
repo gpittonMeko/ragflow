@@ -128,23 +128,29 @@
 
 .loaderGlass {
   background: var(--bg-secondary);
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  padding: 10px 18px;
+  border-radius: 14px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 12px 40px rgba(0, 0, 0, 0.18);
+  padding: 12px 20px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   border: 1px solid var(--border-color);
-  min-width: 240px;
-  backdrop-filter: blur(12px);
+  min-width: 260px;
+  max-width: min(420px, 92vw);
+  backdrop-filter: blur(14px) saturate(1.2);
 }
 
 .loaderGlassText {
   font-family: var(--font-sans);
   color: var(--text-primary);
-  font-size: 0.85em;
+  font-size: 0.8125rem;
   font-weight: 500;
-  white-space: nowrap;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+  white-space: normal;
+  max-width: 280px;
 }
 
 .loaderSpinner {
@@ -176,8 +182,12 @@
   height: 100%;
   min-width: 3%;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--accent-color), #34a853);
-  animation: progressSlide 1.3s infinite linear alternate;
+  background: linear-gradient(
+    90deg,
+    var(--accent-color),
+    color-mix(in srgb, var(--accent-color) 55%, transparent)
+  );
+  animation: progressSlide 1.4s ease-in-out infinite alternate;
 }
 
 @keyframes progressSlide {

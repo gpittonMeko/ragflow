@@ -74,9 +74,8 @@ export const useSendSharedMessage = (
   const ragflowTokenForHeaders = getRagflowToken();
 
   // ✅ MODIFICA: Aggiungi Authorization header dinamicamente
-  const { send, answer, done, stopOutputMessage } = useSendMessageWithSse(
-    `/v1/canvas/completion`,
-    {
+  const { send, answer, done, stopOutputMessage, isGenerating } =
+    useSendMessageWithSse(`/v1/canvas/completion`, {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
@@ -85,8 +84,7 @@ export const useSendSharedMessage = (
         }),
       },
       credentials: 'include',
-    },
-  );
+    });
 
   const {
     derivedMessages,
@@ -232,5 +230,7 @@ export const useSendSharedMessage = (
     hasError,
     stopOutputMessage,
     setDerivedMessages,
+    isGenerating,
+    answer,
   };
 };

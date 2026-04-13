@@ -5,6 +5,7 @@ import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import { useTheme } from '@/components/theme-provider';
 import { MessageType } from '@/constants/chat';
 import { useFetchFlowSSE } from '@/hooks/flow-hooks';
+import { useSharedGenerationProgress } from '@/hooks/use-shared-generation-progress';
 import {
   useSendButtonDisabled,
   useSendSharedMessage,
@@ -110,52 +111,25 @@ const DirectChat: React.FC<DirectChatProps> = ({
     hasError,
     stopOutputMessage,
     setDerivedMessages,
+    isGenerating,
+    answer,
   } = useSendSharedMessage(agentId, sessionId);
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
     useClickDrawer();
   const sendDisabled = useSendButtonDisabled(value);
 
-  const [progress, setProgress] = useState(0);
-  const [barVisible, setBarVisible] = useState(false);
-  const isGeneratingRef = useRef(false);
-  const SIMULATED_TOTAL_MS = 180000; // 3 minuti
-
   // Fetch avatar data - useFetchFlowSSE reads sharedId from URL params (set in useEffect above)
   const { data: avatarData } = useFetchFlowSSE();
 
-  // Progress bar logic
-  useEffect(() => {
-    let interval: any = null;
-    const START = Date.now();
-
-    if (sendLoading) {
-      isGeneratingRef.current = true;
-      setBarVisible(true);
-      setProgress(0);
-
-      interval = setInterval(() => {
-        const elapsed = Date.now() - START;
-        const target = Math.min(90, (elapsed / SIMULATED_TOTAL_MS) * 90);
-        setProgress(target);
-      }, 200);
-    } else {
-      if (isGeneratingRef.current) {
-        isGeneratingRef.current = false;
-        // Notify parent that generation is complete
-        if (onGenerationComplete) {
-          onGenerationComplete();
-        }
-      }
-      setProgress(100);
-      setTimeout(() => setBarVisible(false), 650);
-      setTimeout(() => setProgress(0), 1200);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [sendLoading, onGenerationComplete]);
+  const { progress, barVisible, phaseLabel } = useSharedGenerationProgress(
+    sendLoading,
+    isGenerating,
+    answer,
+    {
+      onBusyEnd: () => onGenerationComplete?.(),
+    },
+  );
 
   // Notify parent when messages change
   useEffect(() => {
@@ -285,20 +259,17 @@ const DirectChat: React.FC<DirectChatProps> = ({
       {barVisible && (
         <div className={styles.loaderBarWrapper}>
           <div className={styles.loaderGlass}>
-            <span className={styles.loaderGlassText}>
-              Generazione in corso...
-            </span>
+            <div className={styles.loaderSpinner} />
+            <span className={styles.loaderGlassText}>{phaseLabel}</span>
             <div
               className={styles.loaderBarLiquid}
               style={{
-                width: '100%',
-                maxWidth: 400,
-                minWidth: 80,
-                margin: '0 auto',
-                height: 4,
-                background: 'var(--border-color, #e0e0e0)',
+                height: 3,
+                background: 'var(--border-color)',
                 borderRadius: 2,
                 overflow: 'hidden',
+                flex: 1,
+                minWidth: 72,
               }}
             >
               <div
@@ -307,10 +278,9 @@ const DirectChat: React.FC<DirectChatProps> = ({
                   width: `${progress}%`,
                   height: '100%',
                   borderRadius: 2,
-                  background: 'var(--accent-color, #0f62fe)',
-                  transition: 'width 0.3s ease',
+                  transition: 'width 0.35s ease',
                 }}
-              ></div>
+              />
             </div>
           </div>
         </div>
@@ -339,7 +309,11 @@ const DirectChat: React.FC<DirectChatProps> = ({
           }}
         >
           <div style={{ marginTop: 'auto', minWidth: 0 }}>
-            <Spin spinning={loading}>
+            <Spin
+              spinning={loading}
+              tip={loading ? 'Caricamento della conversazione' : undefined}
+              indicator={<div className={styles.loaderSpinner} />}
+            >
               {derivedMessages?.map((message, i) => {
                 const isLastMessage = i === lastMessageIndex;
                 return (

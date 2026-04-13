@@ -15,6 +15,7 @@ import PdfDrawer from '@/components/pdf-drawer';
 import WhatsAppSupport from '@/components/whatsapp-support';
 import { useFetchNextConversationSSE } from '@/hooks/chat-hooks';
 import { useFetchFlowSSE } from '@/hooks/flow-hooks';
+import { useSharedGenerationProgress } from '@/hooks/use-shared-generation-progress';
 import i18n from '@/locales/config';
 import { buildMessageUuidWithRole } from '@/utils/chat';
 import styles from './index.less';
@@ -37,24 +38,27 @@ const ChatContainer = ({ theme }) => {
     loading,
     ref,
     derivedMessages,
-    hasError,
     stopOutputMessage,
-    isGenerating, // <-- AGGIUNGI QUESTO!
+    isGenerating,
+    answer,
   } = useSendSharedMessage();
-  const SIMULATED_TOTAL_MS = 180000; // 3 minuti
-  const [barWidth, setBarWidth] = useState(370);
   const sendDisabled = useSendButtonDisabled(value);
   const messagesContainerRef = useRef(null);
-  const isGeneratingRef = useRef(false);
-  const inputRef = useRef(null);
-  const inputContainerRef = useRef(null);
   const lastMessageRef = useRef(null);
-  const [progress, setProgress] = useState(0); // <-- AGGIUNGI QUESTA RIGA
-  const [barVisible, setBarVisible] = useState(false); // <-- E QUESTA
-  const [hasMounted, setHasMounted] = useState(false);
-  const [hasFocusedOnce, setHasFocusedOnce] = useState(false);
 
   const [blocked, setBlocked] = useState(false);
+
+  const { progress, barVisible, phaseLabel } = useSharedGenerationProgress(
+    sendLoading,
+    isGenerating,
+    answer,
+    {
+      onBusyStart: () =>
+        window.parent?.postMessage({ type: 'generation-started' }, '*'),
+      onBusyEnd: () =>
+        window.parent?.postMessage({ type: 'generation-finished' }, '*'),
+    },
+  );
 
   const fetchAvatarHook = useMemo(() => {
     return from === SharedFrom.Agent
@@ -67,44 +71,6 @@ const ChatContainer = ({ theme }) => {
       i18n.changeLanguage(locale);
     }
   }, [locale, visibleAvatar]);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  useEffect(() => {
-    let interval: any = null;
-    const START = Date.now();
-
-    if (sendLoading || isGenerating) {
-      /*  stiamo GENERANDO  */
-      isGeneratingRef.current = true; // ★ salva stato precedente
-      setBarVisible(true);
-      setProgress(0);
-      window.parent?.postMessage({ type: 'generation-started' }, '*');
-
-      interval = setInterval(() => {
-        const elapsed = Date.now() - START;
-        const target = Math.min(90, (elapsed / SIMULATED_TOTAL_MS) * 90);
-        setProgress(target);
-      }, 200);
-    } else {
-      /*  la generazione è FINITA  */
-      if (isGeneratingRef.current) {
-        // ★ transizione true → false
-        window.parent?.postMessage({ type: 'generation-finished' }, '*');
-      }
-      isGeneratingRef.current = false; // ★ reset flag
-
-      setProgress(100);
-      setTimeout(() => setBarVisible(false), 650);
-      setTimeout(() => setProgress(0), 1200);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [sendLoading, isGenerating]);
 
   useEffect(() => {
     function handleParentMsg(e: MessageEvent) {
@@ -121,21 +87,6 @@ const ChatContainer = ({ theme }) => {
     // NON chiedere subito il token - aspetta che arrivi dal parent
 
     return () => window.removeEventListener('message', handleParentMsg);
-  }, []);
-
-  useEffect(() => {
-    const resize = () => {
-      if (window.innerWidth < 480) {
-        setBarWidth(Math.min(window.innerWidth * 0.85, 260)); // 👈 massimo 260px su mobile
-      } else if (window.innerWidth < 768) {
-        setBarWidth(300);
-      } else {
-        setBarWidth(370);
-      }
-    };
-    resize();
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
   }, []);
 
   //  // Prevenzione focus durante digitazione
@@ -156,11 +107,7 @@ const ChatContainer = ({ theme }) => {
   //    };
   //  }, [sendLoading]);
 
-  const { data: avatarData } = fetchAvatarHook(conversationId);
-
-  if (!conversationId) {
-    return <div>empty</div>;
-  }
+  const { data: avatarData } = fetchAvatarHook(conversationId ?? '');
 
   useEffect(() => {
     function handleLimitMsg(e: MessageEvent) {
@@ -193,21 +140,17 @@ const ChatContainer = ({ theme }) => {
   //  // Ultimo messaggio
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
 
+  if (!conversationId) {
+    return <div>empty</div>;
+  }
+
   return (
     <>
       {barVisible && (
         <div className={styles.loaderBarWrapper}>
           <div className={styles.loaderGlass}>
             <div className={styles.loaderSpinner} />
-            <span className={styles.loaderGlassText}>
-              {progress < 30
-                ? 'Analisi documenti...'
-                : progress < 60
-                  ? 'Elaborazione risposta...'
-                  : progress < 90
-                    ? 'Completamento in corso...'
-                    : 'Finalizzazione...'}
-            </span>
+            <span className={styles.loaderGlassText}>{phaseLabel}</span>
             <div
               className={styles.loaderBarLiquid}
               style={{
@@ -245,8 +188,9 @@ const ChatContainer = ({ theme }) => {
           <div>
             <Spin
               spinning={loading || sendLoading}
-              tip={loading ? 'Caricamento conversazione...' : undefined}
+              tip={loading ? 'Caricamento della conversazione' : undefined}
               size="large"
+              indicator={<div className={styles.loaderSpinner} />}
             >
               {derivedMessages?.map((message, i) => {
                 const isLastMessage = i === lastMessageIndex;
