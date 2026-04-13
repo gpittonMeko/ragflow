@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SGAI | Agentic AI, Legal Intelligence e Automazione d'Impresa</title>
-  <meta name="sgai-home-build" content="2026-04-07-plan" />
+  <meta name="sgai-home-build" content="2026-04-13-social-copy-ui" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
@@ -125,8 +125,37 @@
     details.acc[open] summary::after { content: '−'; }
     details.acc[open] summary { background: var(--color-bg-alt); border-bottom: none; box-shadow: inset 0 -1px 0 var(--color-border); }
     .acc-body ::selection { background: rgba(184, 232, 255, 0.4); color: inherit; }
-    .acc-hint { font-weight: 400; color: var(--color-text-muted); font-size: 0.82rem; flex: 1 1 auto; text-align: right; }
-    @media (max-width: 520px) { .acc-hint { text-align: left; width: 100%; } }
+    .acc-sum-main { font-weight: 600; flex-shrink: 0; }
+    .acc-hint {
+      font-weight: 400;
+      color: var(--color-text-secondary);
+      font-size: 0.78rem;
+      line-height: 1.4;
+      flex: 1 1 14rem;
+      text-align: right;
+      max-width: 28rem;
+    }
+    .acc-hint strong { color: var(--color-text); font-weight: 600; }
+    @media (max-width: 520px) {
+      .acc-hint { text-align: left; width: 100%; max-width: none; flex-basis: 100%; order: 3; }
+      .acc-sum-main { order: 1; }
+      details.acc summary::after { order: 2; margin-left: auto; }
+    }
+    .pillar-visual {
+      width: 108px;
+      height: 72px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      background: linear-gradient(145deg, rgba(15, 98, 254, 0.14), rgba(15, 98, 254, 0.04));
+      border: 1px solid rgba(15, 98, 254, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pillar-visual svg { width: 38px; height: 38px; color: var(--color-accent); opacity: 0.9; }
+    .acc-prose { margin: 0 0 0.85rem; font-size: 0.88rem; line-height: 1.58; color: var(--color-text-secondary); max-width: none; }
+    .acc-prose:last-child { margin-bottom: 0; }
+    .social-nav a { display: inline-flex; align-items: center; gap: 0.25rem; }
     .acc-body { padding: 1rem; color: var(--color-text-secondary); font-size: 0.92rem; line-height: 1.58; }
     .acc-intro { margin: 0 0 1rem; max-width: none; }
     .pillar-row { display: grid; grid-template-columns: 108px 1fr; gap: 0.85rem; margin-bottom: 1rem; align-items: start; }
@@ -301,7 +330,9 @@
         <a href="#sec-perche">Perché SGAI</a>
         <a href="#sec-funz">Funzionalità</a>
         <a href="servizi.html">Servizi</a>
-        <a href="https://www.linkedin.com/company/109376393/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://www.linkedin.com/company/109376393/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a href="https://www.instagram.com/sgai.legal/" target="_blank" rel="noopener noreferrer">Instagram</a>
+        <a href="https://www.facebook.com/sgailegal/" target="_blank" rel="noopener noreferrer">Facebook</a>
         <a href="#sec-demo" class="btn-primary">Contatti</a>
       </nav>
     </div>
@@ -312,7 +343,7 @@
         <div class="hero-label">Legal intelligence per studi e legali d'impresa</div>
         <h1>Decisioni legali più rapide, con le fonti sotto controllo</h1>
         <p class="hero-lead">
-          Il carico normativo e giurisprudenziale cresce ogni giorno: SGAI ti aiuta a <strong>mappare, interrogare e sintetizzare</strong> sentenze e testi di riferimento,
+          Il carico normativo e giurisprudenziale cresce ogni giorno: sul corpus lavoriamo oggi su <strong>oltre 600.000 sentenze processate</strong> (e counting) — SGAI ti aiuta a <strong>mappare, interrogare e sintetizzare</strong> sentenze e testi di riferimento,
           a preparare <strong>bozze e scalette</strong> già orientate al contesto, e a <strong>automatizzare i passaggi ripetitivi</strong> senza rinunciare alla verifica professionale.
           Non è un “motore di risposte generiche”: è un ambiente progettato per chi deve <strong>argomentare, citare e firmare</strong>.
         </p>
@@ -364,7 +395,7 @@
 
       <div class="accordion-stack">
         <details class="acc" id="sec-cose" open>
-          <summary>Cos'è SGAI <span class="acc-hint">problema · soluzione · per chi</span></summary>
+          <summary><span class="acc-sum-main">Cos'è SGAI</span> <span class="acc-hint">Da dove nasce il bisogno, cosa fa la piattaforma e per quali team legali è pensata.</span></summary>
           <div class="acc-body">
             <h4>Il contesto</h4>
             <p class="acc-intro">
@@ -395,59 +426,49 @@
         </details>
 
         <details class="acc" id="sec-perche">
-          <summary>Perché SGAI <span class="acc-hint">efficienza · qualità · governance</span></summary>
+          <summary><span class="acc-sum-main">Perché SGAI</span> <span class="acc-hint">Oltre <strong>600.000 sentenze</strong> già processate nel sistema — <em>and counting</em> — con ricerca sul corpus e output pensati per la verifica professionale.</span></summary>
           <div class="acc-body">
             <p class="acc-intro">
-              La pressione su tempi e margini dei servizi legali non è compatibile con strumenti frammentati. SGAI riduce il <strong>tempo di ciclo</strong> delle ricerche e delle prime analisi,
-              aumenta la <strong>coerenza interna</strong> delle bozze e rafforza la <strong>governance</strong> rispetto all'uso dell'AI in organizzazioni regolamentate.
+              La pressione su tempi e margini dei servizi legali non convive bene con strumenti frammentati. SGAI accorcia il percorso tra domanda e prima bozza strutturata, mantiene le risposte ancorate a un <strong>corpus curato in continua espansione</strong> (oggi <strong>oltre 600.000 sentenze processate</strong>, e il numero cresce) e lascia al legale il controllo su citazioni, strategia e firma.
             </p>
             <div class="pillar-row">
-              <img src="https://images.unsplash.com/photo-1563986768609-32da9bd64c49?auto=format&fit=crop&w=400&h=267&q=80" alt="Libri di diritto e ricerca giuridica" width="108" height="72" loading="lazy" decoding="async" />
+              <div class="pillar-visual" role="img" aria-label="Corpus giuridico e ricerca">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+              </div>
               <div>
                 <h3>Corpus giuridico strutturato</h3>
-                <p>
-                  Orientare la ricerca su un <strong>perimetro documentale definito</strong> (sentenze e normativa nel corpus) evita il rumore delle fonti non pertinenti e riduce il rischio di citazioni fuori contesto.
+                <p class="acc-prose">
+                  Orientare la ricerca su un <strong>perimetro documentale definito</strong> (sentenze e normativa nel corpus) riduce il rumore delle fonti non pertinenti e il rischio di citazioni fuori contesto. Puoi impostare <strong>domande articolate su più profili giurisprudenziali</strong>, confrontare in tempi brevi <strong>orientamenti diversi lungo la stessa linea argomentativa</strong> e limitare i continui salti tra portali e repository non collegati.
                 </p>
-                <ul class="detail-list">
-                  <li>Domande articolate su più profili giurisprudenziali</li>
-                  <li>Confronto rapido tra orientamenti per linee argomentative</li>
-                  <li>Meno salti tra portali e repository non collegati</li>
-                </ul>
               </div>
             </div>
             <div class="pillar-row">
-              <img src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=400&h=267&q=80" alt="Postazione di lavoro con documenti" width="108" height="72" loading="lazy" decoding="async" />
+              <div class="pillar-visual" role="img" aria-label="Sintesi e documenti">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+              </div>
               <div>
                 <h3>Ricerca e sintesi contestualizzate</h3>
-                <p>
-                  Il linguaggio naturale abbassa la barriera d'ingresso per associate e junior, mentre i senior mantengono il controllo sulla <strong>validazione delle fonti</strong> e sulla struttura dell'output.
+                <p class="acc-prose">
+                  Il linguaggio naturale abbassa la barriera per associate e junior, mentre i senior restano padroni della <strong>validazione delle fonti</strong> e della struttura dell'output. Il flusso tipico copre <strong>pareri, memo e note di lavoro</strong> (da bozza a revisione umana), <strong>due diligence</strong> su pacchetti documentali ricorrenti e <strong>briefing di reparto</strong> con tono e lessico allineati al team.
                 </p>
-                <ul class="detail-list">
-                  <li>Pareri, memo e note di lavoro: da bozza a revisione umana</li>
-                  <li>Due diligence su pacchetti documentali ricorrenti</li>
-                  <li>Briefing di reparto con linguaggio uniforme</li>
-                </ul>
               </div>
             </div>
             <div class="pillar-row">
-              <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=400&h=267&q=80" alt="Revisione e firma di documenti contrattuali" width="108" height="72" loading="lazy" decoding="async" />
+              <div class="pillar-visual" role="img" aria-label="Governance e responsabilità">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+              </div>
               <div>
                 <h3>Controllo, riservatezza, responsabilità</h3>
-                <p>
-                  L'adozione in studio o in azienda richiede <strong>ruoli</strong>, <strong>auditabilità</strong> e chiarezza su cosa resta interno al perimetro del servizio. SGAI è progettato come strumento di lavoro del professionista, non come sostituto della responsabilità verso il cliente.
+                <p class="acc-prose">
+                  L'adozione in studio o in azienda richiede <strong>ruoli</strong>, <strong>auditabilità</strong> e chiarezza su cosa resta nel perimetro del servizio. Le conversazioni e i caricamenti sono <strong>leve operative</strong>, non pubblicazione automatica; il modello si può <strong>estendere con knowledge base dedicate</strong> nei percorsi enterprise e, dove serve, con <strong>integrazioni nel tuo ecosistema IT</strong>.
                 </p>
-                <ul class="detail-list">
-                  <li>Conversazioni e caricamenti come leve operative, non come pubblicazione automatica</li>
-                  <li>Possibilità di estendere il modello con knowledge base dedicate (percorsi enterprise)</li>
-                  <li>Integrazioni su richiesta nel tuo ecosistema IT</li>
-                </ul>
               </div>
             </div>
           </div>
         </details>
 
         <details class="acc" id="sec-funz">
-          <summary>Funzionalità <span class="acc-hint">copilot · documenti · automazione</span></summary>
+          <summary><span class="acc-sum-main">Funzionalità</span> <span class="acc-hint">Copilot conversazionale, analisi documenti e workflow ripetibili nello stesso ambiente.</span></summary>
           <div class="acc-body">
             <p class="acc-intro" style="margin-top:0;">
               Le capacità sono organizzate in tre livelli che convivono nello stesso prodotto: <strong>interazione conversazionale</strong>, <strong>analisi documentale</strong> e
@@ -455,48 +476,48 @@
             </p>
             <div class="cards-grid-compact">
               <article class="card-mini">
-                <img class="card-photo" src="https://images.unsplash.com/photo-1455849318743-b223305719fc?auto=format&fit=crop&w=800&h=480&q=80" alt="Professionista al lavoro su documentazione" width="640" height="360" loading="lazy" decoding="async" />
+                <div class="card-photo" style="height:120px;margin:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,rgba(15,98,254,0.18),rgba(15,98,254,0.05));border-bottom:1px solid var(--color-border);" role="img" aria-label="Legal Copilot">
+                  <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="var(--color-accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
                 <div class="card-mini-body">
                   <h3>Legal Copilot</h3>
                   <p>
                     Interfaccia conversazionale per esplorare questioni giuridiche, chiarire definizioni, predisporre <strong>scalette argomentative</strong> e bozze di paragrafi.
                     Pensato per ridurre il tempo tra “ho un dubbio” e “ho una prima struttura da validare”.
                   </p>
-                  <ul class="detail-list">
-                    <li>Riformulazione in tono formale o semplificato (cliente interno / management)</li>
-                    <li>Sintesi di posizioni ricorrenti nel corpus</li>
-                    <li>Promemoria su passaggi di verifica prima della sottoscrizione</li>
-                  </ul>
+                  <p class="acc-prose" style="margin-top:0.5rem;">
+                    Supporta la <strong>riformulazione</strong> in tono formale o semplificato (cliente interno o management), offre <strong>sintesi di posizioni ricorrenti</strong> nel corpus e promemoria sui <strong>passaggi di verifica</strong> prima della sottoscrizione.
+                  </p>
                 </div>
               </article>
               <article class="card-mini">
-                <img class="card-photo" src="https://images.unsplash.com/photo-1454160805249-3aae6ba9498a?auto=format&fit=crop&w=800&h=480&q=80" alt="Analisi e confronto di documenti" width="640" height="360" loading="lazy" decoding="async" />
+                <div class="card-photo" style="height:120px;margin:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,rgba(15,98,254,0.16),rgba(15,98,254,0.04));border-bottom:1px solid var(--color-border);" role="img" aria-label="Document intelligence">
+                  <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="var(--color-accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg>
+                </div>
                 <div class="card-mini-body">
                   <h3>Document intelligence</h3>
                   <p>
                     Caricamento di <strong>contratti, policy, regolamenti</strong> e allegati: ricerca semantica, estrazione di passaggi rilevanti, confronto tra clausole omogenee.
                     Indicato per legali d'impresa, privacy officer e team che gestiscono versioni multiple di testi.
                   </p>
-                  <ul class="detail-list">
-                    <li>Mappatura rapida di temi ricorrenti (indennità, responsabilità, foro competente…)</li>
-                    <li>Supporto alla redazione di note di commento interne</li>
-                    <li>Coerenza terminologica tra documenti collegati</li>
-                  </ul>
+                  <p class="acc-prose" style="margin-top:0.5rem;">
+                    Utile per una <strong>mappatura rapida</strong> di temi ricorrenti (indennità, responsabilità, foro competente e affini), per le <strong>note di commento interne</strong> e per mantenere <strong>coerenza terminologica</strong> tra documenti collegati.
+                  </p>
                 </div>
               </article>
               <article class="card-mini">
-                <img class="card-photo" src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=800&h=480&q=80" alt="Team legale in collaborazione" width="640" height="360" loading="lazy" decoding="async" />
+                <div class="card-photo" style="height:120px;margin:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,rgba(15,98,254,0.17),rgba(15,98,254,0.05));border-bottom:1px solid var(--color-border);" role="img" aria-label="Automazione workflow">
+                  <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="var(--color-accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                </div>
                 <div class="card-mini-body">
                   <h3>Automazione e agentic workflow</h3>
                   <p>
                     Definizione di <strong>sequenze ripetibili</strong>: checklist, passaggi di validazione, notifiche e passaggio di consegne tra ruoli.
                     L'obiettivo non è “togliere persone dal processo”, ma eliminare copia-incolla e passaggi manuali identici centinaia di volte l'anno.
                   </p>
-                  <ul class="detail-list">
-                    <li>Integrazioni verso strumenti già in uso (su progetto)</li>
-                    <li>Parametrizzazione dei passaggi critici (chi approva, cosa viene loggato)</li>
-                    <li>Scalabilità quando cresce il numero di pratiche parallele</li>
-                  </ul>
+                  <p class="acc-prose" style="margin-top:0.5rem;">
+                    Su progetto sono possibili <strong>integrazioni</strong> con strumenti già in uso, <strong>parametrizzazione</strong> dei passaggi critici (chi approva, cosa viene tracciato) e <strong>scalabilità</strong> quando aumentano le pratiche parallele.
+                  </p>
                 </div>
               </article>
             </div>
@@ -504,7 +525,7 @@
         </details>
 
         <details class="acc" id="sec-sintesi">
-          <summary>In sintesi <span class="acc-hint">outcome · adozione · prossimo passo</span></summary>
+          <summary><span class="acc-sum-main">In sintesi</span> <span class="acc-hint">Cosa misuri sul campo, per chi scala e come iniziare in tre passi operativi.</span></summary>
           <div class="acc-body">
             <h4>Outcomes che misuri sul campo</h4>
             <ul class="detail-list" style="margin-top:0;">
@@ -531,7 +552,7 @@
         </details>
 
         <details class="acc" id="sec-demo">
-          <summary>Contatti <span class="acc-hint">demo · informazioni · supporto commerciale</span></summary>
+          <summary><span class="acc-sum-main">Contatti</span> <span class="acc-hint">Demo, informazioni commerciali e PoC sui vostri documenti.</span></summary>
           <div class="acc-body">
             <p class="acc-intro" style="margin-top:0;margin-bottom:1rem;">
               Scrivici per una demo, una presentazione o una <strong>PoC sui tuoi documenti</strong>. Indica obiettivo, tipologia di organizzazione e come preferisci essere ricontattato: ti rispondiamo con un perimetro chiaro su tempi e passi successivi.
@@ -584,9 +605,11 @@
           <div class="acc-body">
             <div class="link-row">
               <a href="#sec-demo">Contatti</a>
-              <a href="https://sgailegal.com/" target="_blank" rel="noopener">Apri sgailegal.com</a>
+              <a href="https://sgailegal.com/" target="_blank" rel="noopener noreferrer">Apri sgailegal.com</a>
               <a href="servizi.html">Servizi</a>
-              <a href="https://www.linkedin.com/company/109376393/" target="_blank" rel="noopener">LinkedIn</a>
+              <a href="https://www.linkedin.com/company/109376393/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+              <a href="https://www.instagram.com/sgai.legal/" target="_blank" rel="noopener noreferrer">Instagram</a>
+              <a href="https://www.facebook.com/sgailegal/" target="_blank" rel="noopener noreferrer">Facebook</a>
             </div>
           </div>
         </details>
@@ -608,13 +631,15 @@
     </div>
   </div>
   <footer class="site-footer">
-    <div class="footer-inner">
+    <div class="footer-inner social-nav">
       <span style="font-size:0.9rem;color:var(--color-text-muted);">SGAI Legal — Legal intelligence per studi legali e legali d'impresa</span>
       <a href="servizi.html">Servizi</a>
       <a href="assistente-legale.html">Assistente Legale</a>
       <a href="#sec-demo">Contatti</a>
       <a href="chi-siamo.html">Chi siamo</a>
-      <a href="https://www.linkedin.com/company/109376393/" target="_blank" rel="noopener">LinkedIn</a>
+      <a href="https://www.linkedin.com/company/109376393/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+      <a href="https://www.instagram.com/sgai.legal/" target="_blank" rel="noopener noreferrer">Instagram</a>
+      <a href="https://www.facebook.com/sgailegal/" target="_blank" rel="noopener noreferrer">Facebook</a>
     </div>
   </footer>
   <script>
