@@ -1,0 +1,30 @@
+# AWS CodeBuild: compila la web app su AWS (mai sulla macchina di sviluppo).
+# Console → CodeBuild → Create project → Source (GitHub/CodeCommit) → Environment: Ubuntu, Node 20.
+# Artifacts: tipo S3; opzionale fase post_build con `aws s3 sync` verso bucket statico / EC2.
+version: 0.2
+
+env:
+  variables:
+    NODE_OPTIONS: "--max-old-space-size=8192"
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo "=== npm ci (web) — build in cloud ==="
+      - cd web && npm ci --no-audit --no-fund
+  build:
+    commands:
+      - echo "=== umi build ==="
+      - cd web && npm run build
+      - test -f web/dist/index.html || (echo "dist/index.html mancante" && exit 1)
+  post_build:
+    commands:
+      - echo "BUILD_OK — artifact da web/dist"
+
+artifacts:
+  base-directory: web/dist
+  files:
+    - '**/*'
+  name: ragflow-web-dist
