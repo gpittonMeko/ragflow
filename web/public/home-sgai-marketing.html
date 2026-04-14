@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SGAI | Agentic AI, Legal Intelligence e Automazione d'Impresa</title>
-  <meta name="sgai-home-build" content="2026-04-13-social-copy-ui" />
+  <meta name="sgai-home-build" content="2026-04-14-glass-dock-rainbow" />
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-KEWG8VPD7D"></script>
   <script>
@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
       --color-text: #161616;
@@ -32,7 +32,7 @@
       --color-success: #24a148;
       --color-warning: #f1c21b;
       --color-error: #da1e28;
-      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       --font-serif: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       --max-width: 1120px;
       --spacing-xs: 0.5rem;
@@ -86,10 +86,71 @@
     .hero h1 { font-family: var(--font-sans); font-size: clamp(2.25rem, 4vw, 3.5rem); font-weight: 600; line-height: 1.2; margin: 0 0 var(--spacing-md); color: var(--color-text); }
     .hero-lead { font-size: 1.25rem; color: var(--color-text-secondary); margin: 0 0 var(--spacing-md); line-height: 1.6; }
     .hero-ctas { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); align-items: center; margin-top: var(--spacing-md); }
-    .hero-btn-primary { border: none; cursor: pointer; font-family: inherit; background: var(--color-accent); color: white; padding: 0.65rem 1.35rem; border-radius: 6px; font-weight: 600; font-size: 0.95rem; transition: background 0.15s; }
-    .hero-btn-primary:hover:not(:disabled) { background: var(--color-accent-hover); }
+    .hero-btn-primary { border: none; cursor: pointer; font-family: inherit; color: white; padding: 0.65rem 1.35rem; border-radius: 10px; font-weight: 600; font-size: 0.95rem; transition: transform 0.2s, box-shadow 0.25s, filter 0.2s, opacity 0.15s; }
+    .hero-btn-primary:not(.btn-godly) { background: var(--color-accent); }
+    .hero-btn-primary:not(.btn-godly):hover:not(:disabled) { background: var(--color-accent-hover); }
     .hero-btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
-    .hero-btn-secondary { display: inline-flex; align-items: center; padding: 0.65rem 1.35rem; border-radius: 6px; font-weight: 600; font-size: 0.95rem; text-decoration: none; border: 2px solid var(--color-accent); color: var(--color-accent); background: white; transition: background 0.15s, color 0.15s; }
+    /* CTA arcobaleno “fine”: bordo gradiente lento + fill scuro + alone molto leggero */
+    @keyframes godly-border-flow {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    .btn-godly {
+      position: relative;
+      isolation: isolate;
+      color: #f4f4f5 !important;
+      font-family: var(--font-sans);
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      background:
+        linear-gradient(165deg, #18181b 0%, #121214 45%, #0f0f12 100%) padding-box,
+        linear-gradient(95deg,
+          rgba(99, 102, 241, 0.85),
+          rgba(168, 85, 247, 0.75),
+          rgba(236, 72, 153, 0.7),
+          rgba(251, 146, 60, 0.75),
+          rgba(52, 211, 153, 0.8),
+          rgba(56, 189, 248, 0.85)) border-box;
+      background-size: 100% 100%, 220% 220%;
+      animation: godly-border-flow 14s ease-in-out infinite;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset;
+      overflow: visible;
+    }
+    .btn-godly::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: -28%;
+      width: 72%;
+      max-width: 220px;
+      height: 42%;
+      transform: translateX(-50%);
+      z-index: -1;
+      border-radius: 50%;
+      background: linear-gradient(95deg, rgba(99,102,241,0.5), rgba(168,85,247,0.45), rgba(236,72,153,0.4), rgba(52,211,153,0.45));
+      background-size: 200% 200%;
+      filter: blur(18px);
+      opacity: 0.28;
+      animation: godly-border-flow 14s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .btn-godly:hover:not(:disabled) {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 28px rgba(99, 102, 241, 0.12);
+    }
+    .btn-godly:active:not(:disabled) { transform: translateY(0); filter: brightness(0.98); }
+    .btn-godly:disabled {
+      opacity: 0.72;
+      cursor: wait;
+      animation: none;
+      filter: saturate(0.9);
+      box-shadow: none;
+    }
+    .btn-godly:disabled::before { opacity: 0.12; animation: none; }
+    .hero-btn-secondary { display: inline-flex; align-items: center; padding: 0.65rem 1.35rem; border-radius: 12px; font-weight: 600; font-size: 0.95rem; text-decoration: none; border: 2px solid var(--color-accent); color: var(--color-accent); background: white; transition: background 0.15s, color 0.15s; }
     .hero-btn-secondary:hover { background: rgba(15,98,254,0.08); }
     .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-md); margin: var(--spacing-xl) 0; }
     @media (max-width: 768px) { .pillars { grid-template-columns: 1fr; } }
@@ -103,53 +164,208 @@
     .logo-textmark.is-visible { display: flex !important; }
     .value-band { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 0 auto 1.75rem; max-width: 860px; padding: 0 1.25rem; }
     @media (max-width: 720px) { .value-band { grid-template-columns: 1fr; } }
-    .value-card { background: linear-gradient(145deg, #ffffff 0%, #f0f4fb 100%); border: 1px solid rgba(15, 98, 254, 0.12); border-radius: 12px; padding: 1.15rem 1.2rem; box-shadow: 0 4px 24px rgba(15, 98, 254, 0.06); }
+    .value-card { background: linear-gradient(145deg, #ffffff 0%, #f0f4fb 100%); border: 1px solid rgba(15, 98, 254, 0.12); border-radius: 16px; padding: 1.15rem 1.2rem; box-shadow: 0 4px 24px rgba(15, 98, 254, 0.06); }
     .value-card h3 { margin: 0 0 0.45rem; font-size: 0.95rem; font-weight: 600; color: var(--color-text); }
     .value-card p { margin: 0; font-size: 0.86rem; line-height: 1.55; color: var(--color-text-secondary); }
     .value-card .vk { display: inline-block; width: 28px; height: 28px; border-radius: 8px; background: rgba(15, 98, 254, 0.12); color: var(--color-accent); font-weight: 700; font-size: 0.75rem; line-height: 28px; text-align: center; margin-bottom: 0.5rem; }
     .hero { min-height: 300px; }
     .hero h1 { letter-spacing: -0.03em; max-width: 18ch; }
     .hero-lead { max-width: 52ch; font-size: 1.125rem; line-height: 1.65; }
-    details.acc { border-radius: 12px; border-color: rgba(22, 22, 22, 0.08); box-shadow: 0 1px 0 rgba(15, 98, 254, 0.04); }
-    details.acc summary { padding: 1rem 1.2rem; font-size: 1rem; letter-spacing: -0.01em; }
+    details.acc { border-radius: 16px; border-color: rgba(22, 22, 22, 0.08); box-shadow: 0 1px 0 rgba(15, 98, 254, 0.04); }
     .acc-body { font-size: 0.94rem; line-height: 1.62; }
     .acc-body h4 { margin: 1.25rem 0 0.5rem; font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-accent); }
     .acc-body h4:first-child { margin-top: 0; }
     .acc-body ul.detail-list { margin: 0.35rem 0 0.85rem; padding-left: 1.2rem; color: var(--color-text-secondary); }
     .acc-body ul.detail-list li { margin-bottom: 0.4rem; }
     .pillar-row img, .card-mini img.card-photo { background: linear-gradient(135deg, #e8eef8, #f4f7fc); }
-    .wake-strip { border: 1px solid rgba(15, 98, 254, 0.15); border-radius: 12px; padding: 0.75rem 1rem; margin: 1rem 0 1.25rem; background: var(--color-bg); box-shadow: 0 4px 20px rgba(15, 98, 254, 0.07); }
+    /* Scrim vetrato sotto il dock (solo mobile): simile a overlay siti tipo Gumroad */
+    .wake-dock-scrim {
+      display: none;
+    }
+    @media (max-width: 768px) {
+      .wake-dock-scrim {
+        display: block;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: min(45vh, 320px);
+        z-index: 49;
+        pointer-events: none;
+        border-top: 1px solid rgba(0, 0, 0, 0.04);
+        background: linear-gradient(to top, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.55) 45%, rgba(255, 255, 255, 0) 100%);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+    }
+    /* Dock stato servizio — desktop: card; mobile: fisso in basso, vetro */
+    .wake-dock {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 1.25rem;
+      font-family: var(--font-sans);
+    }
+    .wake-section-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--color-text-muted);
+      margin: 0 0 0.45rem;
+    }
+    .wake-strip {
+      border-radius: 16px;
+      padding: 0.7rem 0.95rem;
+      margin: 0 0 1.25rem;
+      border: 1px solid rgba(15, 98, 254, 0.12);
+      background: var(--color-bg);
+      box-shadow: 0 4px 24px rgba(15, 98, 254, 0.06);
+      transition: border-color 0.35s ease, background 0.35s ease, box-shadow 0.35s ease;
+    }
+    .wake-strip.wake-glass {
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .wake-strip.wake-strip--online {
+      border-color: rgba(16, 185, 129, 0.14);
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 4px 28px rgba(16, 185, 129, 0.07);
+    }
+    .wake-strip.wake-strip--offline {
+      border-color: rgba(248, 113, 113, 0.12);
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 4px 24px rgba(248, 113, 113, 0.05);
+    }
+    @media (max-width: 768px) {
+      .wake-dock {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 51;
+        max-width: none;
+        padding: 0 12px calc(10px + env(safe-area-inset-bottom, 0px));
+        pointer-events: none;
+      }
+      .wake-dock .wake-strip {
+        pointer-events: auto;
+        margin-bottom: 0;
+        border-radius: 18px;
+        padding: 0.65rem 0.85rem 0.75rem;
+        border-top: 1px solid rgba(16, 185, 129, 0.07);
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow: 0 -4px 40px rgba(0, 0, 0, 0.06), 0 8px 32px rgba(0, 0, 0, 0.04);
+      }
+      .wake-dock .wake-strip.wake-strip--online {
+        background: rgba(16, 185, 129, 0.07);
+        border-color: rgba(16, 185, 129, 0.1);
+        border-top-color: rgba(16, 185, 129, 0.08);
+      }
+      .wake-dock .wake-strip.wake-strip--offline {
+        background: rgba(255, 255, 255, 0.82);
+        border-color: rgba(0, 0, 0, 0.06);
+      }
+      .wake-dock .wake-section-title {
+        display: none;
+      }
+      .main {
+        padding-bottom: min(38vh, 220px);
+      }
+    }
+    .wake-context { font-size: 0.76rem; color: var(--color-text-muted); line-height: 1.48; margin: 0.55rem 0 0; font-family: var(--font-sans); }
+    .wake-context p { margin: 0 0 0.45rem; }
+    .wake-context p:last-child { margin-bottom: 0; }
+    .wake-context[hidden] { display: none !important; }
+    @media (max-width: 768px) {
+      .wake-dock .wake-context { font-size: 0.72rem; max-height: 4.8em; overflow: hidden; }
+    }
+    .wake-btn-godly { padding: 0.5rem 1rem !important; font-size: 0.82rem !important; border-radius: 12px !important; min-height: 2.65rem; }
+    .strip-btn-ghost {
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-weight: 500;
+      background: rgba(16, 185, 129, 0.08) !important;
+      border: 1px solid rgba(16, 185, 129, 0.12) !important;
+      color: rgba(5, 46, 22, 0.88) !important;
+      border-radius: 10px !important;
+      min-height: 2.65rem;
+      padding: 0.45rem 0.75rem !important;
+      font-size: 0.8rem !important;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .strip-btn-ghost:hover {
+      background: rgba(16, 185, 129, 0.12) !important;
+      border-color: rgba(16, 185, 129, 0.2) !important;
+      color: var(--color-text) !important;
+    }
     .wake-strip-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
+    @media (max-width: 768px) {
+      .wake-strip-inner { flex-direction: column; align-items: stretch; gap: 0.55rem; }
+      .wake-strip-actions {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 0.45rem;
+        width: 100%;
+      }
+      .wake-strip-actions .wake-btn-godly { flex: 1; min-width: 0; text-align: center; }
+      .wake-strip-actions #refreshBtn { flex-shrink: 0; padding-left: 0.65rem !important; padding-right: 0.65rem !important; }
+      .wake-strip-status #wakeStatus { font-size: 0.8rem; line-height: 1.35; }
+    }
     .wake-strip-status { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
     .wake-strip-status #wakeStatus { font-size: 0.88rem; color: var(--color-text-secondary); }
     .wake-strip-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
-    .strip-btn-ghost { border: 1px solid var(--color-border); background: var(--color-bg); padding: 0.45rem 0.85rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; cursor: pointer; font-family: inherit; }
-    .strip-btn-ghost:hover { border-color: var(--color-accent); color: var(--color-accent); }
-    .strip-link-app { font-size: 0.85rem; font-weight: 600; color: var(--color-accent); text-decoration: none; white-space: nowrap; }
+    .strip-link-app { font-size: 0.82rem; font-weight: 600; color: var(--color-accent); text-decoration: none; white-space: nowrap; font-family: var(--font-sans); }
     .strip-link-app:hover { text-decoration: underline; }
     .accordion-stack { display: flex; flex-direction: column; gap: 0.45rem; }
-    details.acc { border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-bg); overflow: hidden; }
-    details.acc summary { cursor: pointer; padding: 0.75rem 1rem; font-weight: 600; font-size: 0.95rem; list-style: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.35rem 0.75rem; user-select: none; }
+    details.acc { border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-bg); overflow: hidden; }
+    details.acc summary {
+      cursor: pointer;
+      padding: 0.85rem 1rem 0.85rem 1.1rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      list-style: none;
+      display: grid;
+      grid-template-columns: minmax(0, 220px) minmax(0, 1fr) auto;
+      align-items: start;
+      gap: 0.5rem 1.25rem;
+      user-select: none;
+    }
     details.acc summary::-webkit-details-marker { display: none; }
     details.acc summary::after { content: '+'; font-weight: 700; color: var(--color-accent); font-size: 1.1rem; line-height: 1; }
     details.acc[open] summary::after { content: '−'; }
     details.acc[open] summary { background: var(--color-bg-alt); border-bottom: none; box-shadow: inset 0 -1px 0 var(--color-border); }
     .acc-body ::selection { background: rgba(184, 232, 255, 0.4); color: inherit; }
-    .acc-sum-main { font-weight: 600; flex-shrink: 0; }
+    .acc-sum-main { font-weight: 600; font-size: 1rem; letter-spacing: -0.02em; line-height: 1.35; padding-top: 0.1rem; }
     .acc-hint {
       font-weight: 400;
       color: var(--color-text-secondary);
-      font-size: 0.78rem;
-      line-height: 1.4;
-      flex: 1 1 14rem;
-      text-align: right;
-      max-width: 28rem;
+      font-size: 0.875rem;
+      line-height: 1.55;
+      text-align: left;
+      max-width: none;
+      margin: 0;
+      padding: 0.15rem 0 0;
+      border-left: 3px solid rgba(15, 98, 254, 0.2);
+      padding-left: 1rem;
     }
     .acc-hint strong { color: var(--color-text); font-weight: 600; }
-    @media (max-width: 520px) {
-      .acc-hint { text-align: left; width: 100%; max-width: none; flex-basis: 100%; order: 3; }
-      .acc-sum-main { order: 1; }
-      details.acc summary::after { order: 2; margin-left: auto; }
+    @media (max-width: 720px) {
+      details.acc summary {
+        grid-template-columns: 1fr auto;
+        gap: 0.35rem 0.65rem;
+      }
+      .acc-sum-main { grid-column: 1; }
+      details.acc summary::after { grid-column: 2; grid-row: 1; align-self: start; justify-self: end; }
+      .acc-hint {
+        grid-column: 1 / -1;
+        border-left: none;
+        padding-left: 0;
+        padding-top: 0.35rem;
+        border-top: 1px solid var(--color-border);
+        margin-top: 0.25rem;
+        font-size: 0.82rem;
+      }
     }
     .pillar-visual {
       width: 108px;
@@ -166,6 +382,26 @@
     .acc-prose { margin: 0 0 0.85rem; font-size: 0.88rem; line-height: 1.58; color: var(--color-text-secondary); max-width: none; }
     .acc-prose:last-child { margin-bottom: 0; }
     .social-nav a { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .social-ico { width: 18px; height: 18px; flex-shrink: 0; }
+    .nav-links a.nav-social,
+    .footer-inner a.nav-social,
+    .link-row a.nav-social {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .nav-links a.nav-social .social-ico { width: 16px; height: 16px; }
+    .nav-social.nav-li .social-ico { color: #0a66c2; }
+    .nav-social.nav-ig .social-ico { color: #e4405f; }
+    .nav-social.nav-fb .social-ico { color: #1877f2; }
+    .footer-inner a.nav-social { color: var(--color-text-secondary); }
+    .footer-inner a.nav-social:hover .social-ico { color: inherit; }
+    .footer-inner a.nav-social.nav-li:hover { color: #0a66c2; }
+    .footer-inner a.nav-social.nav-ig:hover { color: #e4405f; }
+    .footer-inner a.nav-social.nav-fb:hover { color: #1877f2; }
+    .link-row a.nav-social .social-ico { width: 17px; height: 17px; }
+    .strip-link-app { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .strip-link-app .ico-ext { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.85; }
     .acc-body { padding: 1rem; color: var(--color-text-secondary); font-size: 0.92rem; line-height: 1.58; }
     .acc-intro { margin: 0 0 1rem; max-width: none; }
     .pillar-row { display: grid; grid-template-columns: 108px 1fr; gap: 0.85rem; margin-bottom: 1rem; align-items: start; }
@@ -340,14 +576,15 @@
         <a href="#sec-perche">Perché SGAI</a>
         <a href="#sec-funz">Funzionalità</a>
         <a href="servizi.html">Servizi</a>
-        <a href="https://www.linkedin.com/company/109376393/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-        <a href="https://www.instagram.com/sgai.legal/" target="_blank" rel="noopener noreferrer">Instagram</a>
-        <a href="https://www.facebook.com/sgailegal/" target="_blank" rel="noopener noreferrer">Facebook</a>
+        <a href="https://www.linkedin.com/company/109376393/" class="nav-social nav-li" target="_blank" rel="noopener noreferrer" title="LinkedIn — SGAI Legal"><svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>LinkedIn</a>
+        <a href="https://www.instagram.com/sgai.legal/" class="nav-social nav-ig" target="_blank" rel="noopener noreferrer" title="Instagram — @sgai.legal"><svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>Instagram</a>
+        <a href="https://www.facebook.com/sgailegal/" class="nav-social nav-fb" target="_blank" rel="noopener noreferrer" title="Facebook — SGAI Legal"><svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>Facebook</a>
         <a href="#sec-demo" class="btn-primary">Contatti</a>
       </nav>
     </div>
   </header>
   <main class="main">
+    <div class="wake-dock-scrim" aria-hidden="true"></div>
     <section class="hero">
       <div class="hero-inner">
         <div class="hero-label">Legal intelligence per studi e legali d'impresa</div>
@@ -358,11 +595,42 @@
           Non è un “motore di risposte generiche”: è un ambiente progettato per chi deve <strong>argomentare, citare e firmare</strong>.
         </p>
         <div class="hero-ctas">
-          <button type="button" class="hero-btn-primary" id="ctaProvaBtn">Accedi all'app</button>
+          <button type="button" class="hero-btn-primary btn-godly" id="ctaProvaBtn" disabled>Accedi all'app</button>
           <a href="#sec-demo" class="hero-btn-secondary">Richiedi una demo</a>
         </div>
       </div>
     </section>
+    <div class="wake-dock">
+      <p class="wake-section-title" id="wakeSectionLabel">Stato del servizio</p>
+      <div class="wake-strip wake-glass" id="stato-servizio" aria-live="polite" aria-labelledby="wakeSectionLabel">
+        <div class="wake-strip-inner">
+          <div class="wake-strip-status">
+            <span class="wake-dot loading" id="wakeDot"></span>
+            <span id="wakeStatus">Verifica stato piattaforma…</span>
+            <div class="wake-status-check" id="wakeStatusCheck"><div class="check-bar"></div></div>
+          </div>
+          <div class="wake-strip-actions">
+            <button type="button" class="hero-btn-primary btn-godly wake-btn-godly" id="wakeBtn" hidden>Riattiva il servizio</button>
+            <button type="button" class="strip-btn-ghost" id="refreshBtn">Aggiorna stato</button>
+            <a href="https://sgailegal.com/" class="strip-link-app" target="_blank" rel="noopener"><svg class="ico-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Apri app</a>
+          </div>
+        </div>
+        <div class="wake-progress" id="wakeProgress">
+          <div style="font-size:0.78rem;color:var(--color-text-secondary);" id="wakePhase">In attesa...</div>
+          <div class="bar"><div class="bar-fill" id="wakeBar"></div></div>
+        </div>
+        <div id="wakeCopyLoading" class="wake-context">
+          <p style="margin:0;">Stiamo controllando se l’applicazione su <strong>sgailegal.com</strong> è raggiungibile e se l’istanza è attiva.</p>
+        </div>
+        <div id="wakeCopyOffline" class="wake-context" hidden>
+          <p>Per <strong>consumi e impatto ambientale</strong>, non teniamo accese le macchine quando nessuno usa la piattaforma. La <strong>chat gratuita</strong> serve a <strong>valutare le potenzialità</strong> del servizio: se lo stato qui sopra è in pausa, usa <strong>Riattiva il servizio</strong> e attendi qualche minuto.</p>
+          <p>Per team servono anche <strong>soluzioni on premise</strong> in sede cliente con documenti <strong>isolati dall’esterno</strong>, oppure <strong>cloud sicuri</strong> — <a href="#sec-demo" style="color:var(--color-accent);font-weight:600;">contattaci</a> per un perimetro dedicato.</p>
+        </div>
+        <div id="wakeCopyOnline" class="wake-context" hidden>
+          <p style="margin:0;"><strong>Piattaforma operativa.</strong> Puoi aprire l’app con <strong>Accedi all’app</strong> qui sopra o con <strong>Apri app</strong>. Se qualcosa non risponde, usa <strong>Aggiorna stato</strong>.</p>
+        </div>
+      </div>
+    </div>
     <div class="value-band" aria-label="Valore per il team legale">
       <div class="value-card">
         <span class="vk">01</span>
@@ -381,27 +649,6 @@
       </div>
     </div>
     <div class="content-wrap one-pager" id="contenuti">
-      <div class="wake-strip" id="stato-servizio">
-        <div class="wake-strip-inner">
-          <div class="wake-strip-status">
-            <span class="wake-dot loading" id="wakeDot"></span>
-            <span id="wakeStatus">Stato piattaforma…</span>
-            <div class="wake-status-check" id="wakeStatusCheck"><div class="check-bar"></div></div>
-          </div>
-          <div class="wake-strip-actions">
-            <button type="button" class="hero-btn-primary" style="padding:0.45rem 1rem;font-size:0.85rem;" id="wakeBtn">Riattiva servizio</button>
-            <button type="button" class="strip-btn-ghost" id="refreshBtn">Aggiorna</button>
-            <a href="https://sgailegal.com/" class="strip-link-app" target="_blank" rel="noopener">Apri app</a>
-          </div>
-        </div>
-        <div class="wake-progress" id="wakeProgress">
-          <div style="font-size:0.78rem;color:var(--color-text-secondary);" id="wakePhase">In attesa...</div>
-          <div class="bar"><div class="bar-fill" id="wakeBar"></div></div>
-        </div>
-        <p style="font-size:0.78rem;color:var(--color-text-muted);margin:0.65rem 0 0;line-height:1.45;">
-          Se l'app su <strong>sgailegal.com</strong> non risponde, la piattaforma può essere in pausa: tocca <strong>Riattiva servizio</strong> e attendi alcuni minuti.
-        </p>
-      </div>
 
       <div class="accordion-stack">
         <details class="acc" id="sec-cose" open>
@@ -551,7 +798,7 @@
             </p>
             <h4>Come iniziare (tre passi operativi)</h4>
             <ol style="margin:0 0 0.75rem;padding-left:1.2rem;">
-              <li style="margin-bottom:0.45rem;"><strong>Verifica disponibilità</strong> dell'applicazione su sgailegal.com; se non risponde, usa <strong>Riattiva servizio</strong> qui sopra e attendi qualche minuto.</li>
+              <li style="margin-bottom:0.45rem;"><strong>Controlla lo stato</strong> nella sezione <strong>Stato del servizio</strong> qui sopra: se è operativa, usa <strong>Accedi all’app</strong>; se è in pausa, <strong>Riattiva il servizio</strong> per la chat gratuita.</li>
               <li style="margin-bottom:0.45rem;"><strong>Imposta il contesto</strong> di lavoro e inizia da una pratica reale: una domanda precisa vale più di dieci prove generiche.</li>
               <li style="margin-bottom:0;"><strong>Consolida in cartella</strong> le bozze e le fonti verificate nel tuo workflow abituale — SGAI resta abilitatore, non sostituto della firma professionale.</li>
             </ol>
@@ -611,15 +858,15 @@
         </details>
 
         <details class="acc" id="sec-link">
-          <summary>Link rapidi</summary>
+          <summary><span class="acc-sum-main">Link rapidi</span><span class="acc-hint">App, servizi e profili social ufficiali in un colpo d'occhio.</span></summary>
           <div class="acc-body">
             <div class="link-row">
               <a href="#sec-demo">Contatti</a>
-              <a href="https://sgailegal.com/" target="_blank" rel="noopener noreferrer">Apri sgailegal.com</a>
+              <a href="https://sgailegal.com/" class="nav-social" target="_blank" rel="noopener noreferrer"><svg class="social-ico" style="color:var(--color-accent)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Apri sgailegal.com</a>
               <a href="servizi.html">Servizi</a>
-              <a href="https://www.linkedin.com/company/109376393/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-              <a href="https://www.instagram.com/sgai.legal/" target="_blank" rel="noopener noreferrer">Instagram</a>
-              <a href="https://www.facebook.com/sgailegal/" target="_blank" rel="noopener noreferrer">Facebook</a>
+              <a href="https://www.linkedin.com/company/109376393/" class="nav-social nav-li" target="_blank" rel="noopener noreferrer"><svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>LinkedIn</a>
+              <a href="https://www.instagram.com/sgai.legal/" class="nav-social nav-ig" target="_blank" rel="noopener noreferrer"><svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>Instagram</a>
+              <a href="https://www.facebook.com/sgailegal/" class="nav-social nav-fb" target="_blank" rel="noopener noreferrer"><svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>Facebook</a>
             </div>
           </div>
         </details>
@@ -647,9 +894,9 @@
       <a href="assistente-legale.html">Assistente Legale</a>
       <a href="#sec-demo">Contatti</a>
       <a href="chi-siamo.html">Chi siamo</a>
-      <a href="https://www.linkedin.com/company/109376393/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-      <a href="https://www.instagram.com/sgai.legal/" target="_blank" rel="noopener noreferrer">Instagram</a>
-      <a href="https://www.facebook.com/sgailegal/" target="_blank" rel="noopener noreferrer">Facebook</a>
+      <a href="https://www.linkedin.com/company/109376393/" class="nav-social nav-li" target="_blank" rel="noopener noreferrer"><svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>LinkedIn</a>
+      <a href="https://www.instagram.com/sgai.legal/" class="nav-social nav-ig" target="_blank" rel="noopener noreferrer"><svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>Instagram</a>
+      <a href="https://www.facebook.com/sgailegal/" class="nav-social nav-fb" target="_blank" rel="noopener noreferrer"><svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>Facebook</a>
     </div>
   </footer>
   <script>
@@ -660,6 +907,8 @@
     const PROBE_URL = 'https://sgailegal.com/v1/user/login';
     const STATUS_FETCH_MS = 12000;
     const PROBE_FETCH_MS = 3500;
+    /** Attesa max dopo comando Lambda (avvio EC2 + Docker + app) */
+    const MAX_WAKE_WAIT_MS = 180000;
     const INSTANCE = 'SGAI-Production';
     const CONTACT_API = '/api/contact';
     const ctaProvaBtn = document.getElementById('ctaProvaBtn');
@@ -670,7 +919,33 @@
     const wakeProgress = document.getElementById('wakeProgress');
     const wakeBar = document.getElementById('wakeBar');
     const wakePhase = document.getElementById('wakePhase');
-    const wakeStatusCheck = document.getElementById('wakeStatusCheck'); function setWakeState(k, t) { wakeStatus.textContent = t; wakeDot.className = 'wake-dot ' + (k === 'ok' ? 'online' : k === 'run' ? '' : k === 'loading' ? 'loading' : 'offline'); if (wakeStatusCheck) { wakeStatusCheck.classList.toggle('active', k === 'loading'); wakeStatusCheck.classList.toggle('offline', k === 'off'); } }
+    const wakeStatusCheck = document.getElementById('wakeStatusCheck');
+    const wakeStrip = document.getElementById('stato-servizio');
+    const wakeCopyLoading = document.getElementById('wakeCopyLoading');
+    const wakeCopyOffline = document.getElementById('wakeCopyOffline');
+    const wakeCopyOnline = document.getElementById('wakeCopyOnline');
+    let platformOnline = false;
+    /** 'loading' | 'online' | 'offline' */
+    let platformState = 'loading';
+    function setWakeState(k, t) { wakeStatus.textContent = t; wakeDot.className = 'wake-dot ' + (k === 'ok' ? 'online' : k === 'run' ? '' : k === 'loading' ? 'loading' : 'offline'); if (wakeStatusCheck) { wakeStatusCheck.classList.toggle('active', k === 'loading'); wakeStatusCheck.classList.toggle('offline', k === 'off'); } }
+    function setWakeContext(mode) {
+      if (wakeCopyLoading) wakeCopyLoading.hidden = mode !== 'loading';
+      if (wakeCopyOffline) wakeCopyOffline.hidden = mode !== 'offline';
+      if (wakeCopyOnline) wakeCopyOnline.hidden = mode !== 'online';
+      if (wakeStrip) {
+        wakeStrip.classList.toggle('wake-strip--online', mode === 'online');
+        wakeStrip.classList.toggle('wake-strip--offline', mode === 'offline');
+      }
+      if (ctaProvaBtn) ctaProvaBtn.disabled = mode === 'loading';
+      if (wakeBtn) {
+        wakeBtn.hidden = mode === 'loading' || mode === 'online';
+      }
+    }
+    function applyPlatformState(online) {
+      platformOnline = !!online;
+      platformState = online ? 'online' : 'offline';
+      setWakeContext(platformState);
+    }
     function setProgress(v, phase) { wakeProgress.classList.add('visible'); wakeBar.style.width = Math.min(100, Math.max(0, v)) + '%'; if (phase) wakePhase.textContent = phase; }
     function fetchWithTimeout(url, options, ms) {
       var c = new AbortController();
@@ -683,51 +958,61 @@
       return ct.indexOf('application/json') !== -1 && (r.ok || r.status === 401 || r.status === 400);
     }
     async function isOnline() {
+      platformState = 'loading';
+      setWakeContext('loading');
       setWakeState('loading', 'Aggiornamento stato…');
       try {
         var rs = await fetchWithTimeout(EC2_STATUS_URL, { method: 'GET', mode: 'cors', cache: 'no-store', credentials: 'omit' }, STATUS_FETCH_MS);
         if (rs.ok) {
           var j = await rs.json();
           if (j && j.ok && j.instance_state === 'stopped') {
-            setWakeState('off', 'Piattaforma in pausa — riattivala da qui');
+            setWakeState('off', 'Stato: in pausa — puoi riattivare');
+            applyPlatformState(false);
             return false;
           }
           if (j && j.ok && (j.instance_state === 'stopping')) {
-            setWakeState('loading', 'Spegnimento in corso…');
+            setWakeState('loading', 'Stato: spegnimento in corso…');
+            applyPlatformState(false);
             return false;
           }
           if (j && j.ok && j.instance_state === 'pending') {
-            setWakeState('loading', 'Avvio in corso…');
+            setWakeState('loading', 'Stato: avvio in corso…');
+            applyPlatformState(false);
             return false;
           }
           if (j && j.ok && j.instance_state === 'running') {
             setWakeState('loading', 'Verifica applicazione…');
             try {
               if (await probeAppReachable()) {
-                setWakeState('ok', 'Piattaforma disponibile');
+                setWakeState('ok', 'Stato: operativa');
+                applyPlatformState(true);
                 return true;
               }
             } catch (_) {}
-            setWakeState('ok', 'Server attivo — servizi in avvio, riprova tra poco');
+            setWakeState('ok', 'Stato: server attivo — app in avvio');
+            applyPlatformState(true);
             return true;
           }
         }
       } catch (_) {}
       try {
         if (await probeAppReachable()) {
-          setWakeState('ok', 'Piattaforma disponibile');
+          setWakeState('ok', 'Stato: operativa');
+          applyPlatformState(true);
           return true;
         }
       } catch (_) {}
-      setWakeState('off', 'Piattaforma non raggiungibile');
+      setWakeState('off', 'Stato: non raggiungibile — riattiva se necessario');
+      applyPlatformState(false);
       return false;
     }
     /* text/plain: niente preflight CORS come con application/json */
-    async function callWake(bodyObj) {
+    async function callWake(payload) {
+      const bodyStr = payload && typeof payload.body === 'string' ? payload.body : JSON.stringify(payload);
       const r = await fetch(API, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-        body: JSON.stringify(bodyObj),
+        body: bodyStr,
       });
       const raw = await r.text();
       let data = {};
@@ -755,25 +1040,51 @@
       setTryButtonsDisabled(true);
       setWakeState('run', 'Avvio in corso...');
       setProgress(10, 'Preparazione avvio…');
-      const bodyObj = { force_start: true, target_instance: INSTANCE, source: 'home-sgai' };
-      let accepted = false;
-      try {
-        const x = await callWake(bodyObj);
-        if (x.ok) {
-          const inst = x.data?.instances?.[INSTANCE];
-          if (['ready', 'recovered'].includes(inst?.status)) accepted = true;
-        }
-      } catch (_) {}
+      const payloads = [
+        { force_start: true, target_instance: INSTANCE, source: 'home-sgai' },
+        { body: JSON.stringify({ force_start: true, target_instance: INSTANCE }) },
+        { force_start: true, body: JSON.stringify({ force_start: true, target_instance: INSTANCE }) },
+      ];
+      var accepted = false;
+      for (var pi = 0; pi < payloads.length; pi++) {
+        try {
+          var x = await callWake(payloads[pi]);
+          if (!x.ok) continue;
+          var inst = x.data && x.data.instances && x.data.instances[INSTANCE];
+          var forceOk = x.data && x.data.force_start === true;
+          var st = inst && inst.status;
+          if (forceOk || ['ready', 'recovered', 'partial'].indexOf(st) !== -1) {
+            accepted = true;
+            break;
+          }
+        } catch (_) {}
+      }
       if (!accepted) {
         setWakeState('off', 'Riattivazione non riuscita — riprova tra qualche minuto');
+        applyPlatformState(false);
         setProgress(0, 'Riprova tra qualche minuto');
         setTryButtonsDisabled(false);
         return;
       }
-      /* Risposta pronta: reindirizza senza attendere probe CORS su /v1/user/login da questa origine. */
-      setProgress(85, 'Apertura applicazione...');
-      setWakeState('ok', 'Reindirizzamento a sgailegal.com...');
-      setTimeout(goToApp, 1200);
+      setProgress(40, 'Attesa avvio infrastruttura…');
+      var t0 = Date.now();
+      while (Date.now() - t0 < MAX_WAKE_WAIT_MS) {
+        await new Promise(function (r) { setTimeout(r, 5000); });
+        try {
+          if (await isOnline()) {
+            setProgress(100, 'Sistema pronto');
+            setWakeState('ok', 'Reindirizzamento a sgailegal.com...');
+            setTimeout(goToApp, 1200);
+            setTryButtonsDisabled(false);
+            return;
+          }
+        } catch (_) {}
+        var p = 40 + Math.min(50, ((Date.now() - t0) / MAX_WAKE_WAIT_MS) * 50);
+        setProgress(p, 'Inizializzazione…');
+      }
+      setWakeState('run', 'Avvio in corso — riprova tra 1–2 minuti');
+      setProgress(96, 'Quasi pronto');
+      setTryButtonsDisabled(false);
     }
     document.getElementById('contactForm').addEventListener('submit', async function(e) {
       e.preventDefault();
@@ -801,7 +1112,11 @@
       btn.textContent = 'Invia richiesta';
     });
     if (wakeBtn) wakeBtn.addEventListener('click', wakeUp);
-    if (ctaProvaBtn) ctaProvaBtn.addEventListener('click', function () { void wakeUp(); });
+    if (ctaProvaBtn) ctaProvaBtn.addEventListener('click', function () {
+      if (platformState === 'loading') return;
+      if (platformOnline) goToApp();
+      else void wakeUp();
+    });
     if (refreshBtn) refreshBtn.addEventListener('click', function() { refreshBtn.disabled = true; isOnline().finally(function() { refreshBtn.disabled = false; }); });
     window.addEventListener('load', isOnline);
     (function openAccordionFromHash() {

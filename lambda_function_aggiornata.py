@@ -1,5 +1,5 @@
 """
-Lambda EC2 Manager with force_start support
+Lambda EC2 Manager with force_start and force_stop support
 File: lambda_function.py
 """
 import base64
@@ -14,6 +14,7 @@ INSTANCES_CONFIG = {
         'id': 'i-0ec0704c7b36f7648',
         'host': '13.49.16.179',
         'user': 'ubuntu',
+        # Modalita on-demand: la macchina si accende solo su force_start da API
         'on_demand': True,
         'ora_inizio': 8,
         'ora_fine': 21,
@@ -54,8 +55,7 @@ INSTANCES_CONFIG = {
         'gestisci_docker': False,
         'docker_path': None,
         'compose_files': None,
-        'required_containers': [],
-        'disabled': True,  # Sempre spenta - ambiente dev non utilizzato
+        'required_containers': []
     }
 }
 
@@ -64,7 +64,6 @@ S3_KEY              = 'LLM_14.pem'
 SNS_TOPIC_ARN       = 'arn:aws:sns:eu-north-1:940482440561:SGAI'
 
 # Offset per timezone Roma (UTC+1 o UTC+2 per ora legale)
-# Ottobre è ancora ora legale (UTC+2)
 ROME_UTC_OFFSET     = 2  
 
 WAIT_SSH_TIMEOUT    = 90
@@ -76,7 +75,7 @@ FESTIVI = [
     (8, 15), (11, 1), (12, 8), (12, 25), (12, 26),
 ]
 
-# NEW: Configurazione force_start
+# Configurazione force_start
 FORCE_START_DURATION_MINUTES = 60  # Coerente con finestra minima monitor (documentazione)
 FORCE_START_FLAG_PATH = '/tmp/force_start_active'
 WAKE_AT_FILE_PATH = '/tmp/sgai_wake_at'
@@ -150,8 +149,9 @@ def should_instance_be_on(instance_name, config, now_roma, force):
         print(f"[{instance_name}] Force mode: ignora orari e giorni")
         return True
 
-    if config.get('on_demand'):
-        print(f"[{instance_name}] On-demand: nessun avvio automatico da schedulazione (serve force_start)")
+    # In modalita on-demand l'istanza non segue orari: parte solo con force_start.
+    if config.get('on_demand', False):
+        print(f"[{instance_name}] On-demand mode: resta spenta senza force_start")
         return False
 
     ignora_weekend = config.get('ignora_weekend', False)
@@ -170,7 +170,7 @@ def should_instance_be_on(instance_name, config, now_roma, force):
 
     return in_hours
 
-# ---------- NEW: Force start flag management ----------------------
+# ---------- Force start flag management ----------------------
 
 def set_force_start_flag(ssh, instance_name, duration_minutes=FORCE_START_DURATION_MINUTES):
     """
@@ -195,6 +195,44 @@ def set_force_start_flag(ssh, instance_name, duration_minutes=FORCE_START_DURATI
         err = stderr.read().decode()
         print(f"[{instance_name}] ❌ Errore settaggio flag: {err}")
         return False
+
+
+def check_force_start_expired(ssh, instance_name, duration_minutes=FORCE_START_DURATION_MINUTES):
+    """
+    Legge il flag /tmp/force_start_active e verifica se e' scaduto.
+    
+    Ritorna:
+      - True  → il force_start e' SCADUTO (o il file non esiste) → si puo' spegnere
+      - False → il force_start e' ancora ATTIVO → NON spegnere
+    """
+    cmd = f"cat {FORCE_START_FLAG_PATH} 2>/dev/null"
+    stdin, stdout, stderr = ssh.exec_command(cmd)
+    out = stdout.read().decode().strip()
+    exit_status = stdout.channel.recv_exit_status()
+    
+    if exit_status != 0 or not out:
+        print(f"[{instance_name}] Flag force_start non trovato → scaduto")
+        return True
+    
+    try:
+        flag_time = datetime.datetime.fromisoformat(out)
+        now_utc = datetime.datetime.utcnow()
+        elapsed = now_utc - flag_time
+        elapsed_minutes = elapsed.total_seconds() / 60.0
+        
+        print(f"[{instance_name}] Flag force_start: creato {elapsed_minutes:.1f} min fa (limite: {duration_minutes} min)")
+        
+        if elapsed_minutes >= duration_minutes:
+            print(f"[{instance_name}] ⏰ Force_start SCADUTO ({elapsed_minutes:.1f} >= {duration_minutes} min)")
+            return True
+        else:
+            remaining = duration_minutes - elapsed_minutes
+            print(f"[{instance_name}] ⏳ Force_start ATTIVO (mancano {remaining:.1f} min)")
+            return False
+    except (ValueError, TypeError) as e:
+        print(f"[{instance_name}] ⚠️  Errore parsing timestamp flag: {e} → considero scaduto")
+        return True
+
 
 # ---------- Docker helpers ----------------------------------------
 
@@ -321,26 +359,17 @@ def process_instance(instance_name, config, now_roma, force, key_obj):
     user = config['user']
     gestisci_docker = config['gestisci_docker']
     required_containers = config.get('required_containers', [])
+    is_on_demand = config.get('on_demand', False)
 
     print(f"\n{'='*50}")
     print(f"PROCESSANDO: {instance_name} ({instance_id})")
-    print(f"Force mode: {force}")
+    print(f"Force mode: {force}, On-demand: {is_on_demand}")
     print(f"{'='*50}")
 
     try:
         response = ec2.describe_instances(InstanceIds=[instance_id])
         state = response['Reservations'][0]['Instances'][0]['State']['Name']
         print(f"[{instance_name}] Stato EC2: {state}")
-
-        # ---------- Istanza disabilitata: sempre spenta ----------
-        if config.get('disabled', False):
-            if state == 'stopped':
-                print(f"[{instance_name}] Disabilitata - rimane spenta")
-                return (instance_name, "off", "disabilitata - sempre spenta")
-            else:
-                print(f"[{instance_name}] Disabilitata - spegnimento in corso...")
-                ec2.stop_instances(InstanceIds=[instance_id])
-                return (instance_name, "stopping", "disabilitata - spegnimento")
 
         should_be_on = should_instance_be_on(instance_name, config, now_roma, force)
 
@@ -366,7 +395,7 @@ def process_instance(instance_name, config, now_roma, force, key_obj):
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(host, username=user, pkey=key_obj)
 
-            # NEW: Se force_start, setta il flag per il monitor
+            # Se force_start, setta il flag per il monitor
             if force:
                 set_force_start_flag(ssh, instance_name)
 
@@ -389,7 +418,45 @@ def process_instance(instance_name, config, now_roma, force, key_obj):
         elif state == 'running':
             print(f"[{instance_name}] *** EC2 ACCESA ***")
 
-            if not config.get('on_demand') and not should_be_on and not force:
+            # --- ISTANZE ON-DEMAND: spegni se force_start scaduto ---
+            if is_on_demand and not force:
+                ssh = paramiko.SSHClient()
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh.connect(host, username=user, pkey=key_obj)
+
+                expired = check_force_start_expired(ssh, instance_name)
+
+                if expired:
+                    print(f"[{instance_name}] 🔻 On-demand + force_start scaduto → SPENGO")
+
+                    if gestisci_docker:
+                        run_docker_compose_down(ssh, instance_name, config)
+                    ssh.close()
+
+                    ec2.stop_instances(InstanceIds=[instance_id])
+                    notify(f"⏰ {instance_name}: spegnimento automatico (force_start scaduto dopo {FORCE_START_DURATION_MINUTES} min)")
+                    return (instance_name, "stopping", f"on-demand: force_start scaduto ({FORCE_START_DURATION_MINUTES} min)")
+
+                # force_start ancora attivo: verifica container come al solito
+                all_running, missing = check_required_containers(ssh, instance_name, required_containers)
+
+                if all_running:
+                    ssh.close()
+                    return (instance_name, "ready", f"On-demand attivo, {len(required_containers)} container OK")
+
+                if auto_heal_containers(ssh, instance_name, config, missing):
+                    ssh.close()
+                    return (instance_name, "recovered", f"Container riavviati ({len(missing)} recuperati)")
+                else:
+                    all_running_after, still_missing = check_required_containers(ssh, instance_name, required_containers)
+                    ssh.close()
+                    if all_running_after:
+                        return (instance_name, "recovered", "Tutti i container riavviati")
+                    else:
+                        return (instance_name, "partial", f"Mancano ancora: {still_missing}")
+
+            # --- ISTANZE NON ON-DEMAND: logica oraria standard ---
+            if not should_be_on and not force:
                 print(f"[{instance_name}] Spengo: fuori orario/non lavorativo")
                 ec2.stop_instances(InstanceIds=[instance_id])
                 return (instance_name, "stopping", "fuori orario")
@@ -402,7 +469,7 @@ def process_instance(instance_name, config, now_roma, force, key_obj):
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(host, username=user, pkey=key_obj)
 
-            # NEW: Se force_start su istanza già accesa, aggiorna il flag
+            # Se force_start su istanza già accesa, aggiorna il flag
             if force:
                 set_force_start_flag(ssh, instance_name)
 
@@ -488,9 +555,9 @@ def lambda_handler(event, context):
     body_raw = event.get('body')
     if isinstance(body_raw, str) and event.get('isBase64Encoded'):
         try:
-            body_raw = base64.b64decode(body_raw).decode('utf-8')
+            body_raw = base64.b64decode(body_raw).decode("utf-8")
         except Exception as e:
-            print(f'Errore decode body base64: {e}')
+            print(f"Errore decode body base64: {e}")
     body = body_raw
     if isinstance(body, str):
         try:
@@ -599,4 +666,3 @@ def create_response(code, body):
         },
         "body": json.dumps(body)
     }
-

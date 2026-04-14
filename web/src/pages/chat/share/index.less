@@ -283,6 +283,174 @@
     }
   }
 
+  /* DirectChat (login): chip suggerite + pulsante invio stile marketing */
+  &.directChatEmbed .directChatInputColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 4px 4px;
+    min-width: 0;
+  }
+
+  &.directChatEmbed .suggestedChipsSection {
+    padding: 4px 8px 0;
+  }
+
+  &.directChatEmbed .sgaiApplicationsLead {
+    display: block;
+    font-size: 12px;
+    line-height: 1.45;
+    margin-bottom: 10px !important;
+    color: var(--text-secondary) !important;
+    font-family: var(--font-sans);
+  }
+
+  &.directChatEmbed .sgaiApplicationsTitle {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin-bottom: 8px !important;
+    color: var(--text-secondary) !important;
+    font-family: var(--font-sans);
+  }
+
+  &.directChatEmbed .sgaiApplicationsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  @media (min-width: 480px) {
+    &.directChatEmbed .sgaiApplicationsGrid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  &.directChatEmbed .sgaiAppCard {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 10px 10px;
+    margin: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: color-mix(
+      in srgb,
+      var(--bg-secondary) 94%,
+      var(--accent-color) 6%
+    );
+    cursor: pointer;
+    text-align: left;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease,
+      transform 0.12s ease;
+    min-height: 76px;
+  }
+
+  &.directChatEmbed .sgaiAppCard:hover {
+    border-color: color-mix(
+      in srgb,
+      var(--accent-color) 45%,
+      var(--border-color)
+    );
+    box-shadow: 0 2px 10px rgba(15, 98, 254, 0.14);
+    transform: translateY(-1px);
+  }
+
+  &.directChatEmbed .sgaiAppCardIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--accent-color) 14%, transparent);
+    color: var(--accent-color);
+    margin-bottom: 2px;
+  }
+
+  &.directChatEmbed .sgaiAppCardTitle {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  &.directChatEmbed .sgaiAppCardSub {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.3;
+  }
+
+  &.directChatEmbed .suggestedChipsHint {
+    display: block;
+    font-size: 12px;
+    line-height: 1.45;
+    margin-bottom: 6px !important;
+    color: var(--text-secondary) !important;
+    font-family: var(--font-sans);
+  }
+
+  &.directChatEmbed .suggestedChipsRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  &.directChatEmbed .suggestedChip {
+    border-radius: 999px !important;
+    font-size: 12px !important;
+    height: auto !important;
+    line-height: 1.35 !important;
+    padding: 6px 12px !important;
+    border-color: var(--border-color) !important;
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    font-family: var(--font-sans);
+    white-space: normal;
+    text-align: left;
+    max-width: 100%;
+  }
+
+  &.directChatEmbed .suggestedChip:hover {
+    border-color: color-mix(
+      in srgb,
+      var(--accent-color) 55%,
+      var(--border-color)
+    ) !important;
+    color: var(--accent-color) !important;
+  }
+
+  &.directChatEmbed
+    :global([class*='messageInputWrapper'])
+    :global(.ant-btn-primary:not(:disabled)) {
+    background: linear-gradient(
+      135deg,
+      #6366f1 0%,
+      #9333ea 35%,
+      #db2777 70%,
+      #0ea5e9 100%
+    ) !important;
+    background-size: 180% 180%;
+    border: none !important;
+    color: #fafafa !important;
+    box-shadow: 0 2px 12px rgba(99, 102, 241, 0.35);
+  }
+
+  &.directChatEmbed
+    :global([class*='messageInputWrapper'])
+    :global(.ant-btn-primary:not(:disabled):hover) {
+    filter: brightness(1.08);
+    color: #ffffff !important;
+  }
+
   :global(.messageInputWrapper___nie1o) {
     background: var(--bg-secondary);
     border-top: 1px solid var(--border-color);

@@ -12,10 +12,22 @@ import {
 } from '@/pages/chat/shared-hooks';
 import { buildMessageItemReference } from '@/pages/chat/utils';
 import { buildMessageUuidWithRole } from '@/utils/chat';
-import { Flex, Spin } from 'antd';
+import { Button, Flex, Spin, Typography } from 'antd';
+import { FileText, Scale, Search, Shield } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'umi';
 import styles from '../chat/share/index.less';
+import {
+  SGAI_APPLICATION_CARDS,
+  SHARED_SUGGESTED_PROMPTS,
+} from './shared-suggested-prompts';
+
+const APP_ICON_MAP = {
+  'modulo-contenzioso': Scale,
+  'modulo-compliance': Shield,
+  'modulo-contratti': FileText,
+  'modulo-ricerca': Search,
+} as const;
 
 // Compatta: nessun inset. Espansa: spazio sotto = area coperta da tastiera (visualViewport, ok su iOS/Android).
 function useKeyboardOffset(omitInset: boolean) {
@@ -104,6 +116,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
     handlePressEnter,
     handleInputChange,
     value,
+    setValue,
     sendLoading,
     ref,
     loading,
@@ -348,7 +361,85 @@ const DirectChat: React.FC<DirectChatProps> = ({
           </div>
         </div>
 
-        <div style={{ flexShrink: 0, width: '100%' }}>
+        <div
+          className={styles.directChatInputColumn}
+          style={{ flexShrink: 0, width: '100%' }}
+        >
+          {(!derivedMessages || derivedMessages.length === 0) &&
+            !sendLoading && (
+              <div className={styles.suggestedChipsSection}>
+                <Typography.Text
+                  type="secondary"
+                  className={styles.sgaiApplicationsLead}
+                >
+                  Scegli un modulo, uno scenario guidato o scrivi la tua
+                  domanda. Puoi allegare documenti con il pulsante «Allega».
+                </Typography.Text>
+                <Typography.Text className={styles.sgaiApplicationsTitle}>
+                  Applicazioni
+                </Typography.Text>
+                <div className={styles.sgaiApplicationsGrid}>
+                  {SGAI_APPLICATION_CARDS.map((app) => {
+                    const IconCmp =
+                      APP_ICON_MAP[app.id as keyof typeof APP_ICON_MAP] ||
+                      FileText;
+                    return (
+                      <button
+                        key={app.id}
+                        type="button"
+                        className={styles.sgaiAppCard}
+                        onClick={() => {
+                          setValue(app.body);
+                          requestAnimationFrame(() => {
+                            inputWrapperRef.current?.scrollIntoView({
+                              block: 'nearest',
+                              behavior: 'smooth',
+                            });
+                          });
+                        }}
+                      >
+                        <span className={styles.sgaiAppCardIcon} aria-hidden>
+                          <IconCmp size={18} strokeWidth={2} />
+                        </span>
+                        <span className={styles.sgaiAppCardTitle}>
+                          {app.title}
+                        </span>
+                        <span className={styles.sgaiAppCardSub}>
+                          {app.subtitle}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <Typography.Text
+                  type="secondary"
+                  className={styles.suggestedChipsHint}
+                >
+                  Scenari guidati (giurisprudenza / tributario)
+                </Typography.Text>
+                <div className={styles.suggestedChipsRow}>
+                  {SHARED_SUGGESTED_PROMPTS.map((p) => (
+                    <Button
+                      key={p.id}
+                      size="small"
+                      type="default"
+                      className={styles.suggestedChip}
+                      onClick={() => {
+                        setValue(p.body);
+                        requestAnimationFrame(() => {
+                          inputWrapperRef.current?.scrollIntoView({
+                            block: 'nearest',
+                            behavior: 'smooth',
+                          });
+                        });
+                      }}
+                    >
+                      {p.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
           <MessageInput
             isShared
             value={value}
@@ -359,7 +450,9 @@ const DirectChat: React.FC<DirectChatProps> = ({
             onPressEnter={handlePressEnter}
             sendLoading={sendLoading}
             uploadMethod="external_upload_and_parse"
-            showUploadIcon={false}
+            showUploadIcon={true}
+            showAttachLabel
+            uploadHint="Usa «Allega» per caricare PDF o altri documenti: dopo il parsing entrano nel contesto del messaggio."
             stopOutputMessage={stopOutputMessage}
             autoFocus={false}
             wrapperRef={inputWrapperRef}

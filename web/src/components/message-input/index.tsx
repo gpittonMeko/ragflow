@@ -77,6 +77,10 @@ interface IProps {
   onInputFocus?: () => void;
   /** Ref per il wrapper (per scroll into view) */
   wrapperRef?: React.RefObject<HTMLDivElement | null>;
+  /** Testo opzionale sotto l’input (es. istruzioni allegato documento) */
+  uploadHint?: string;
+  /** Mostra etichetta «Allega» accanto alla graffetta (es. home SGAI Legal) */
+  showAttachLabel?: boolean;
 }
 
 const getBase64 = (file: FileType): Promise<string> =>
@@ -102,6 +106,8 @@ const MessageInput = ({
   stopOutputMessage,
   onInputFocus,
   wrapperRef,
+  uploadHint,
+  showAttachLabel = false,
 }: IProps) => {
   const { t } = useTranslate('chat');
   const { removeDocument } = useRemoveNextDocument();
@@ -267,6 +273,19 @@ const MessageInput = ({
           onFocus={handleFocus}
         />
         <Divider style={{ margin: '5px 30px 10px 0px' }} />
+        {uploadHint && (
+          <Text
+            type="secondary"
+            style={{
+              display: 'block',
+              fontSize: 12,
+              lineHeight: 1.45,
+              padding: '0 10px 6px',
+            }}
+          >
+            {uploadHint}
+          </Text>
+        )}
         <Flex justify="space-between" align="center">
           {fileList.length > 0 && (
             <List
@@ -366,8 +385,22 @@ const MessageInput = ({
                   return false;
                 }}
               >
-                <Button type={'primary'} disabled={disabled}>
+                <Button
+                  type={'primary'}
+                  disabled={disabled}
+                  aria-label={
+                    showAttachLabel ? 'Allega documento alla chat' : undefined
+                  }
+                  title={
+                    showAttachLabel
+                      ? 'Allega documento (PDF, DOCX, …)'
+                      : undefined
+                  }
+                >
                   <Paperclip className="size-4" />
+                  {showAttachLabel && (
+                    <span className={styles.attachLabelText}>Allega</span>
+                  )}
                 </Button>
               </Upload>
             )}
