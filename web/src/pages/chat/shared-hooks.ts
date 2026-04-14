@@ -53,11 +53,21 @@ function getRagflowToken(): string | null {
   return auth || access || null;
 }
 
+export type SharedCompletionOptions = {
+  /** Deep search (fonti web) lato backend: Tavily se configurato, altrimenti DuckDuckGo */
+  getDeepSearch?: () => boolean;
+};
+
 // ✅ SOSTITUISCI TUTTA LA FUNZIONE useSendSharedMessage
 export const useSendSharedMessage = (
   overrideConversationId?: string,
   userSessionId?: string,
+  completionOptions?: SharedCompletionOptions,
 ) => {
+  const completionOptsRef = useRef<SharedCompletionOptions | undefined>(
+    completionOptions,
+  );
+  completionOptsRef.current = completionOptions;
   const {
     from,
     sharedId: conversationId,
@@ -139,6 +149,15 @@ export const useSendSharedMessage = (
         payload.session_id = actualSessionId;
       }
 
+      if (message.doc_ids && message.doc_ids.length > 0) {
+        payload.doc_ids = message.doc_ids.join(',');
+      }
+
+      const ds = completionOptsRef.current?.getDeepSearch?.();
+      if (ds === true) {
+        payload.deep_search = true;
+      }
+
       const res = await send(payload);
 
       const isError = isCompletionError(res);
@@ -152,13 +171,7 @@ export const useSendSharedMessage = (
         setHasError(true);
       }
     },
-    [
-      send,
-      actualConversationId,
-      derivedMessages,
-      setValue,
-      removeLatestMessage,
-    ],
+    [send, actualConversationId, setValue, removeLatestMessage],
   );
 
   const handleSendMessage = useCallback(
@@ -213,6 +226,7 @@ export const useSendSharedMessage = (
           content,
           id,
           role: MessageType.User,
+          doc_ids: documentIds.length ? documentIds : undefined,
         });
       }
     },
@@ -223,6 +237,7 @@ export const useSendSharedMessage = (
     handlePressEnter,
     handleInputChange,
     value,
+    setValue,
     sendLoading: !done,
     ref,
     loading: false,

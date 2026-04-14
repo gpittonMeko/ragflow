@@ -1,19 +1,27 @@
 import WhatsAppSupport from '@/components/whatsapp-support';
 import { loadStripe } from '@stripe/stripe-js';
-import { Button } from 'antd';
+import { Button, Collapse } from 'antd';
 import {
   BadgeDollarSign,
+  ChevronDown,
   CreditCard,
   Home,
   LockKeyhole,
   LogOut,
   MapPin,
+  Maximize2,
   Menu,
   Moon,
   Sun,
   X,
 } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { toast } from 'sonner';
 import { Helmet, useNavigate } from 'umi';
 import { v4 as uuidv4 } from 'uuid';
@@ -35,8 +43,6 @@ const CURRENT_SESSION_KEY = 'sgai-current-session';
 
 // ✅ Codice beta tester hardcoded
 const BETA_TESTER_CODE = 'SGAI2024BETA';
-const HERO_PINNED_HEIGHT = 150;
-
 // --- CHAT HISTORY FUNCTIONS ---
 const getChatHistory = (): ChatSession[] => {
   try {
@@ -225,6 +231,12 @@ const PresentationPage: React.FC = () => {
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [showLimitOverlay, setShowLimitOverlay] = useState(false);
   const [chatExpanded, setChatExpanded] = useState(false);
+  const [expandedShellFrame, setExpandedShellFrame] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [hasMessages, setHasMessages] = useState(false);
   const [chatHasBeenOpened, setChatHasBeenOpened] = useState(false);
 
@@ -255,6 +267,20 @@ const PresentationPage: React.FC = () => {
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [showLeftSidebar, setShowLeftSidebar] = useState(false);
   const [currentChatTitle, setCurrentChatTitle] = useState('Nuova Chat');
+
+  const handleExpandChat = useCallback(() => {
+    if (chatExpanded) return;
+    if (!hasMessages) {
+      const newSessionId = uuidv4().slice(0, 32);
+      sessionStorage.setItem(CURRENT_SESSION_KEY, newSessionId);
+      setSessionId(newSessionId);
+      setCurrentChatTitle('Nuova Chat');
+      setChatHasBeenOpened(true);
+    } else {
+      setChatHasBeenOpened(true);
+    }
+    setChatExpanded(true);
+  }, [chatExpanded, hasMessages]);
 
   useEffect(() => {
     const previousHtmlOverflowX = document.documentElement.style.overflowX;
@@ -835,6 +861,34 @@ const PresentationPage: React.FC = () => {
     }
   }, [chatExpanded]);
 
+  // iOS/Android: allinea la shell fullscreen a visualViewport così la tastiera non copre la chat
+  useLayoutEffect(() => {
+    if (!chatExpanded) {
+      setExpandedShellFrame(null);
+      return;
+    }
+    if (typeof window === 'undefined' || !window.visualViewport) {
+      setExpandedShellFrame(null);
+      return;
+    }
+    const vv = window.visualViewport;
+    const sync = () => {
+      setExpandedShellFrame({
+        top: vv.offsetTop,
+        left: vv.offsetLeft,
+        width: vv.width,
+        height: vv.height,
+      });
+    };
+    sync();
+    vv.addEventListener('resize', sync);
+    vv.addEventListener('scroll', sync);
+    return () => {
+      vv.removeEventListener('resize', sync);
+      vv.removeEventListener('scroll', sync);
+    };
+  }, [chatExpanded]);
+
   return (
     <div
       className={`${styles.pageContainer} ${hideExtras ? styles.fullscreen : ''} ${chatExpanded ? styles.chatExpandedMode : ''}`}
@@ -1125,16 +1179,7 @@ const PresentationPage: React.FC = () => {
       )}
       {/* LOGO SGAI */}
       <div
-        className={`${styles.heroSection} ${chatExpanded ? styles.heroPinned : ''} ${hideExtras ? styles.heroShrink : ''}`}
-        onClick={() => {
-          // Chiudi la chat se è espansa e si clicca sulla parte alta
-          if (chatExpanded) {
-            setChatExpanded(false);
-          }
-        }}
-        style={{
-          cursor: chatExpanded ? 'pointer' : 'default',
-        }}
+        className={`${styles.heroSection} ${chatExpanded ? styles.heroHiddenDuringChat : ''} ${hideExtras ? styles.heroShrink : ''}`}
       >
         <div className={styles.logoBox}>
           <SvgLogoInteractive flipped />
@@ -1150,196 +1195,227 @@ const PresentationPage: React.FC = () => {
           )}
         </div>
       </div>
-      {/* Header chat fullscreen */}
-      {chatExpanded && (
-        <div className={styles.chatFullHeader}>
-          <button
-            type="button"
-            onClick={() => setChatExpanded(false)}
-            className={styles.chatFullHeaderLogo}
-            aria-label="Chiudi chat e torna alla home"
-          >
-            <SvgLogoInteractive flipped={false} />
-          </button>
-          <div className={styles.chatFullHeaderActions}>
-            <a
-              href="https://home.sgailegal.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.chatFullHeaderBtn}
-              aria-label="Vai alla home SGAI"
-            >
-              <Home size={18} />
-              <span className={styles.chatFullHeaderBtnLabel}>Home</span>
-            </a>
+      {/* Un solo DirectChat: wrapper con display:contents quando compressa per non smontare il componente */}
+      <div
+        className={chatExpanded ? styles.chatExpandedShell : undefined}
+        style={
+          chatExpanded
+            ? expandedShellFrame
+              ? {
+                  top: expandedShellFrame.top,
+                  left: expandedShellFrame.left,
+                  width: expandedShellFrame.width,
+                  height: expandedShellFrame.height,
+                  right: 'auto',
+                  bottom: 'auto',
+                }
+              : undefined
+            : { display: 'contents' }
+        }
+      >
+        {chatExpanded && (
+          <div className={styles.chatFullHeader}>
             <button
-              onClick={toggleTheme}
-              className={styles.chatFullHeaderBtn}
-              aria-label={theme === 'dark' ? 'Tema chiaro' : 'Tema scuro'}
-            >
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className={styles.chatFullHeaderBtn}
-              aria-label="Menu"
-            >
-              <Menu size={18} />
-            </button>
-            <button
+              type="button"
               onClick={() => setChatExpanded(false)}
-              className={styles.closeChatBtn}
-              aria-label="Chiudi chat"
+              className={styles.chatFullHeaderLogo}
+              aria-label="Chiudi chat e torna alla home"
             >
-              <X size={20} strokeWidth={2.5} />
+              <SvgLogoInteractive flipped={false} />
             </button>
-          </div>
-          {menuOpen && (
-            <div className={styles.chatFullHeaderDropdown}>
-              <button
-                onClick={() => {
-                  navigate('/roadmap');
-                  setMenuOpen(false);
-                }}
-                className={styles.menuItem}
+            <div className={styles.chatFullHeaderActions}>
+              <a
+                href="https://home.sgailegal.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.chatFullHeaderBtn}
+                aria-label="Vai alla home SGAI"
               >
-                <MapPin size={20} />
-                <span>Roadmap & Sviluppi Futuri</span>
+                <Home size={18} />
+                <span className={styles.chatFullHeaderBtnLabel}>Home</span>
+              </a>
+              <button
+                onClick={toggleTheme}
+                className={styles.chatFullHeaderBtn}
+                aria-label={theme === 'dark' ? 'Tema chiaro' : 'Tema scuro'}
+              >
+                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               </button>
               <button
-                onClick={() => {
-                  setShowLeftSidebar(!showLeftSidebar);
-                  setMenuOpen(false);
-                }}
-                className={styles.menuItem}
+                onClick={() => setMenuOpen(!menuOpen)}
+                className={styles.chatFullHeaderBtn}
+                aria-label="Menu"
               >
-                <Menu size={20} />
-                <span>Gestione Chat</span>
+                <Menu size={18} />
               </button>
               <button
-                onClick={() => {
-                  setShowBetaCodeModal(true);
-                  setMenuOpen(false);
-                }}
-                className={styles.menuItem}
+                onClick={() => setChatExpanded(false)}
+                className={styles.closeChatBtn}
+                aria-label="Chiudi chat"
               >
-                <LockKeyhole size={20} />
-                <span>Codice Beta Tester</span>
+                <X size={20} strokeWidth={2.5} />
               </button>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* CHAT SOTTO IL LOGO */}
-      <div
-        className={styles.iframeSection}
-        style={{
-          position: chatExpanded ? 'fixed' : 'relative',
-          top: chatExpanded ? 52 : 'auto',
-          left: chatExpanded ? 0 : 'auto',
-          right: chatExpanded ? 0 : 'auto',
-          bottom: chatExpanded ? 0 : 'auto',
-          zIndex: chatExpanded ? 1050 : 'auto',
-          background: chatExpanded ? 'var(--bg-primary)' : 'transparent',
-          width: chatExpanded ? '100vw' : 'auto',
-          height: chatExpanded
-            ? 'calc(100vh - 52px)'
-            : hasMessages
-              ? '300px'
-              : '150px',
-          padding: chatExpanded
-            ? '0 0 max(12px, env(safe-area-inset-bottom, 0px)) 0'
-            : '0',
-          margin: 0,
-          transition: 'height 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-          overflow: 'hidden',
-          boxSizing: 'border-box',
-        }}
-      >
+            {menuOpen && (
+              <div className={styles.chatFullHeaderDropdown}>
+                <button
+                  onClick={() => {
+                    navigate('/roadmap');
+                    setMenuOpen(false);
+                  }}
+                  className={styles.menuItem}
+                >
+                  <MapPin size={20} />
+                  <span>Roadmap & Sviluppi Futuri</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowLeftSidebar(!showLeftSidebar);
+                    setMenuOpen(false);
+                  }}
+                  className={styles.menuItem}
+                >
+                  <Menu size={20} />
+                  <span>Gestione Chat</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowBetaCodeModal(true);
+                    setMenuOpen(false);
+                  }}
+                  className={styles.menuItem}
+                >
+                  <LockKeyhole size={20} />
+                  <span>Codice Beta Tester</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         <div
-          className={styles.chatWrap}
-          style={{
-            height: '100%',
-            width: '100%',
-            padding: 0,
-            margin: 0,
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
+          className={chatExpanded ? styles.chatExpandedMain : undefined}
+          style={chatExpanded ? undefined : { display: 'contents' }}
         >
           <div
+            className={`${styles.iframeSection} ${!chatExpanded ? styles.iframeSectionDocked : ''}`}
             style={{
-              borderRadius: chatExpanded ? 0 : 6,
-              width: '100%',
-              height: '100%',
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              background: 'transparent',
-              overflow: 'hidden',
+              position: 'relative',
               padding: 0,
               margin: 0,
-            }}
-            onClick={() => {
-              if (!chatExpanded && !hasMessages) {
-                // Crea un nuovo sessionId SOLO se la chat è vuota
-                const newSessionId = uuidv4().slice(0, 32);
-                sessionStorage.setItem(CURRENT_SESSION_KEY, newSessionId);
-                setSessionId(newSessionId);
-                setCurrentChatTitle('Nuova Chat');
-                setChatHasBeenOpened(true);
-                setChatExpanded(true);
-              } else if (!chatExpanded && hasMessages) {
-                // Se ci sono già messaggi, espandi senza cambiare sessionId
-                setChatHasBeenOpened(true);
-                setChatExpanded(true);
-              }
+              overflow: 'hidden',
+              boxSizing: 'border-box',
+              ...(chatExpanded
+                ? {
+                    flex: 1,
+                    minHeight: 0,
+                    height: '100%',
+                    width: '100%',
+                    zIndex: 1,
+                    background: 'var(--bg-primary)',
+                  }
+                : {
+                    zIndex: 10,
+                    background: 'transparent',
+                    width: 'auto',
+                    height: hasMessages ? '272px' : '156px',
+                    transition: 'height 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                  }),
             }}
           >
-            <DirectChat
-              agentId="a92b7464193811f09d527ebdee58e854"
-              sessionId={sessionId}
-              onMessagesChange={(count) => setHasMessages(count > 0)}
-              onChatUpdate={updateCurrentChat}
-              onGenerationComplete={() => {
-                console.log(
-                  '[INDEX] Generation completed, refreshing quota...',
-                );
-                void refreshQuota();
+            {!chatExpanded && (
+              <button
+                type="button"
+                className={styles.chatExpandBar}
+                onClick={handleExpandChat}
+                aria-label="Apri chat a tutto schermo"
+              >
+                <Maximize2 size={15} strokeWidth={2.5} aria-hidden />
+                <span>Apri chat a tutto schermo</span>
+                <ChevronDown
+                  size={16}
+                  className={styles.chatExpandBarChevron}
+                  aria-hidden
+                />
+              </button>
+            )}
+            <div
+              className={styles.chatWrap}
+              style={{
+                height: '100%',
+                width: '100%',
+                padding: 0,
+                margin: 0,
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                flex: 1,
               }}
-            />
-          </div>
-          {showLimitOverlay && (
-            <div className={styles.chatOverlay} role="dialog" aria-modal="true">
-              <div className={styles.chatOverlayCard}>
-                <h2>{overlayTitle}</h2>
-                {overlayBody && <p>{overlayBody}</p>}
-
-                {!isUser ? (
-                  <button
-                    onClick={() => {
-                      setShowLimitOverlay(false);
-                      setShowGoogleModal(true);
-                    }}
-                    className={styles.glassBtn}
-                  >
-                    <GoogleGIcon />
-                    &nbsp;Accedi con Google
-                  </button>
-                ) : !quotaLoading && isUserFree ? (
-                  <button
-                    onClick={() => handleCheckout('premium')}
-                    className={`${styles.glassBtn} ${styles.upgradeBtn}`}
-                  >
-                    <LockKeyhole size={18} className={styles.icon} />
-                    &nbsp;Passa a Premium
-                  </button>
-                ) : null}
+            >
+              <div
+                className={!chatExpanded ? styles.chatEmbedInner : undefined}
+                style={{
+                  borderRadius: chatExpanded ? 0 : 12,
+                  width: '100%',
+                  height: '100%',
+                  minHeight: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  background: 'transparent',
+                  overflow: 'hidden',
+                  padding: 0,
+                  margin: 0,
+                }}
+              >
+                <DirectChat
+                  agentId="a92b7464193811f09d527ebdee58e854"
+                  sessionId={sessionId}
+                  omitKeyboardInset={!chatExpanded}
+                  layoutExpanded={chatExpanded}
+                  onMessagesChange={(count) => setHasMessages(count > 0)}
+                  onChatUpdate={updateCurrentChat}
+                  onGenerationComplete={() => {
+                    console.log(
+                      '[INDEX] Generation completed, refreshing quota...',
+                    );
+                    void refreshQuota();
+                  }}
+                />
               </div>
+              {showLimitOverlay && (
+                <div
+                  className={styles.chatOverlay}
+                  role="dialog"
+                  aria-modal="true"
+                >
+                  <div className={styles.chatOverlayCard}>
+                    <h2>{overlayTitle}</h2>
+                    {overlayBody && <p>{overlayBody}</p>}
+
+                    {!isUser ? (
+                      <button
+                        onClick={() => {
+                          setShowLimitOverlay(false);
+                          setShowGoogleModal(true);
+                        }}
+                        className={styles.glassBtn}
+                      >
+                        <GoogleGIcon />
+                        &nbsp;Accedi con Google
+                      </button>
+                    ) : !quotaLoading && isUserFree ? (
+                      <button
+                        onClick={() => handleCheckout('premium')}
+                        className={`${styles.glassBtn} ${styles.upgradeBtn}`}
+                      >
+                        <LockKeyhole size={18} className={styles.icon} />
+                        &nbsp;Passa a Premium
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
       {/* FEATURE */}
@@ -1348,78 +1424,120 @@ const PresentationPage: React.FC = () => {
         style={{ display: chatExpanded ? 'none' : 'block' }}
       >
         <div className={styles.featuresSection}>
-          <div className={styles.featureCard}>
-            <div className={styles.featureIcon}>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-            </div>
-            <h3 className={styles.featureHighlight}>Riservatezza Totale</h3>
-            <p className={styles.featureHighlight}>
-              Le tue conversazioni restano private.
-              <br />
-              Nessun dato viene acquisito o condiviso con terzi.
-            </p>
-          </div>
-
-          <div className={styles.featureCard}>
-            <div className={styles.featureIcon}>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
-              </svg>
-            </div>
-            <h3 className={styles.featureHighlight}>Su Misura per Te</h3>
-            <p className={styles.featureHighlight}>
-              Potenzia SGAI con i documenti del tuo Studio.
-              <br />
-              Risposte calibrate sulla tua operatività quotidiana.
-            </p>
-          </div>
-
-          <div className={styles.featureCard}>
-            <div className={styles.featureIcon}>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M18 8h1a4 4 0 010 8h-1" />
-                <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
-                <line x1="6" y1="1" x2="6" y2="4" />
-                <line x1="10" y1="1" x2="10" y2="4" />
-                <line x1="14" y1="1" x2="14" y2="4" />
-              </svg>
-            </div>
-            <h3 className={styles.featureHighlight}>
-              Indipendente e Imparziale
-            </h3>
-            <p className={styles.featureHighlight}>
-              Nessun legame istituzionale.
-              <br />
-              Analisi oggettiva al servizio del professionista.
-            </p>
-          </div>
+          <Collapse
+            accordion
+            bordered={false}
+            expandIconPosition="end"
+            className={styles.featuresAccordion}
+            expandIcon={({ isActive }) => (
+              <ChevronDown
+                size={18}
+                className={
+                  isActive
+                    ? `${styles.featureAccordionIcon} ${styles.featureAccordionIconOpen}`
+                    : styles.featureAccordionIcon
+                }
+                aria-hidden
+              />
+            )}
+            items={[
+              {
+                key: 'privacy',
+                label: (
+                  <span className={styles.featureAccordionLabel}>
+                    <span
+                      className={styles.featureAccordionIconWrap}
+                      aria-hidden
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    </span>
+                    Riservatezza totale
+                  </span>
+                ),
+                children: (
+                  <p className={styles.featureAccordionBody}>
+                    Le tue conversazioni restano private. Nessun dato viene
+                    acquisito o condiviso con terzi.
+                  </p>
+                ),
+              },
+              {
+                key: 'studio',
+                label: (
+                  <span className={styles.featureAccordionLabel}>
+                    <span
+                      className={styles.featureAccordionIconWrap}
+                      aria-hidden
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                        <path d="M2 17l10 5 10-5" />
+                        <path d="M2 12l10 5 10-5" />
+                      </svg>
+                    </span>
+                    Su misura per te
+                  </span>
+                ),
+                children: (
+                  <p className={styles.featureAccordionBody}>
+                    Potenzia SGAI con i documenti del tuo Studio. Risposte
+                    calibrate sulla tua operatività quotidiana.
+                  </p>
+                ),
+              },
+              {
+                key: 'independent',
+                label: (
+                  <span className={styles.featureAccordionLabel}>
+                    <span
+                      className={styles.featureAccordionIconWrap}
+                      aria-hidden
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M18 8h1a4 4 0 010 8h-1" />
+                        <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
+                        <line x1="6" y1="1" x2="6" y2="4" />
+                        <line x1="10" y1="1" x2="10" y2="4" />
+                        <line x1="14" y1="1" x2="14" y2="4" />
+                      </svg>
+                    </span>
+                    Indipendente e imparziale
+                  </span>
+                ),
+                children: (
+                  <p className={styles.featureAccordionBody}>
+                    Nessun legame istituzionale. Analisi oggettiva al servizio
+                    del professionista.
+                  </p>
+                ),
+              },
+            ]}
+          />
         </div>
 
         <div className={styles.disclaimerSection}>
@@ -1563,7 +1681,7 @@ const PresentationPage: React.FC = () => {
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
           rel="stylesheet"
         />
         <script

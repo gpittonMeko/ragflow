@@ -12,7 +12,7 @@ import {
 } from '@/pages/chat/shared-hooks';
 import { buildMessageItemReference } from '@/pages/chat/utils';
 import { buildMessageUuidWithRole } from '@/utils/chat';
-import { Button, Flex, Spin, Typography } from 'antd';
+import { Button, Flex, Spin, Switch, Typography } from 'antd';
 import { FileText, Scale, Search, Shield } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'umi';
@@ -21,6 +21,8 @@ import {
   SGAI_APPLICATION_CARDS,
   SHARED_SUGGESTED_PROMPTS,
 } from './shared-suggested-prompts';
+
+const SGAI_DEEP_SEARCH_KEY = 'sgai-deep-search';
 
 const APP_ICON_MAP = {
   'modulo-contenzioso': Scale,
@@ -90,6 +92,25 @@ const DirectChat: React.FC<DirectChatProps> = ({
   const { theme } = useTheme();
   const location = useLocation();
 
+  const [deepSearch, setDeepSearch] = useState(() => {
+    try {
+      return (
+        typeof sessionStorage !== 'undefined' &&
+        sessionStorage.getItem(SGAI_DEEP_SEARCH_KEY) === '1'
+      );
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SGAI_DEEP_SEARCH_KEY, deepSearch ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }, [deepSearch]);
+
   // Imposta i parametri URL necessari per useSendSharedMessage (solo query params, NON cambia pathname)
   useEffect(() => {
     const currentParams = new URLSearchParams(location.search);
@@ -126,7 +147,9 @@ const DirectChat: React.FC<DirectChatProps> = ({
     setDerivedMessages,
     isGenerating,
     answer,
-  } = useSendSharedMessage(agentId, sessionId);
+  } = useSendSharedMessage(agentId, sessionId, {
+    getDeepSearch: () => deepSearch,
+  });
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
     useClickDrawer();
@@ -259,6 +282,8 @@ const DirectChat: React.FC<DirectChatProps> = ({
 
   const handleInputFocus = () => {
     scrollMessagesToBottom();
+    // Evita scroll della pagina quando la chat è compatta (embed): causava “salti” prima dell’apertura fullscreen
+    if (!layoutExpanded) return;
     requestAnimationFrame(() => {
       inputWrapperRef.current?.scrollIntoView({
         block: 'nearest',
@@ -365,6 +390,29 @@ const DirectChat: React.FC<DirectChatProps> = ({
           className={styles.directChatInputColumn}
           style={{ flexShrink: 0, width: '100%' }}
         >
+          <div className={styles.deepSearchRow}>
+            <Switch
+              id="sgai-deep-search-toggle"
+              checked={deepSearch}
+              onChange={setDeepSearch}
+              size="small"
+            />
+            <div className={styles.deepSearchTextCol}>
+              <label
+                htmlFor="sgai-deep-search-toggle"
+                className={styles.deepSearchLabel}
+              >
+                Deep search · fonti web
+              </label>
+              <Typography.Text
+                type="secondary"
+                className={styles.deepSearchSub}
+              >
+                Sul server: Tavily se configurato; altrimenti ricerca aperta
+                (nessuna chiave extra in chat).
+              </Typography.Text>
+            </div>
+          </div>
           {(!derivedMessages || derivedMessages.length === 0) &&
             !sendLoading && (
               <div className={styles.suggestedChipsSection}>
@@ -372,8 +420,8 @@ const DirectChat: React.FC<DirectChatProps> = ({
                   type="secondary"
                   className={styles.sgaiApplicationsLead}
                 >
-                  Scegli un modulo, uno scenario guidato o scrivi la tua
-                  domanda. Puoi allegare documenti con il pulsante «Allega».
+                  Moduli rapidi o domanda libera. Allega PDF/DOCX (pulsante
+                  «Allega»): dopo l’indicizzazione entrano nell’analisi.
                 </Typography.Text>
                 <Typography.Text className={styles.sgaiApplicationsTitle}>
                   Applicazioni
@@ -390,6 +438,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
                         className={styles.sgaiAppCard}
                         onClick={() => {
                           setValue(app.body);
+                          if (!layoutExpanded) return;
                           requestAnimationFrame(() => {
                             inputWrapperRef.current?.scrollIntoView({
                               block: 'nearest',
@@ -426,6 +475,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
                       className={styles.suggestedChip}
                       onClick={() => {
                         setValue(p.body);
+                        if (!layoutExpanded) return;
                         requestAnimationFrame(() => {
                           inputWrapperRef.current?.scrollIntoView({
                             block: 'nearest',
@@ -440,24 +490,26 @@ const DirectChat: React.FC<DirectChatProps> = ({
                 </div>
               </div>
             )}
-          <MessageInput
-            isShared
-            value={value}
-            disabled={false}
-            sendDisabled={sendDisabled || sendLoading}
-            conversationId={agentId}
-            onInputChange={handleInputChange}
-            onPressEnter={handlePressEnter}
-            sendLoading={sendLoading}
-            uploadMethod="external_upload_and_parse"
-            showUploadIcon={true}
-            showAttachLabel
-            uploadHint="Usa «Allega» per caricare PDF o altri documenti: dopo il parsing entrano nel contesto del messaggio."
-            stopOutputMessage={stopOutputMessage}
-            autoFocus={false}
-            wrapperRef={inputWrapperRef}
-            onInputFocus={handleInputFocus}
-          />
+          <div className={styles.embedChatInputShell}>
+            <MessageInput
+              isShared
+              value={value}
+              disabled={false}
+              sendDisabled={sendDisabled || sendLoading}
+              conversationId={agentId}
+              onInputChange={handleInputChange}
+              onPressEnter={handlePressEnter}
+              sendLoading={sendLoading}
+              uploadMethod="external_upload_and_parse"
+              showUploadIcon={true}
+              showAttachLabel
+              uploadHint="Allega PDF, DOCX o altri formati supportati: dopo parsing e indicizzazione, il testo segue la tua domanda."
+              stopOutputMessage={stopOutputMessage}
+              autoFocus={false}
+              wrapperRef={inputWrapperRef}
+              onInputFocus={handleInputFocus}
+            />
+          </div>
         </div>
       </Flex>
 

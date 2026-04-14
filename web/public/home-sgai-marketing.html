@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SGAI | Agentic AI, Legal Intelligence e Automazione d'Impresa</title>
-  <meta name="sgai-home-build" content="2026-04-14-glass-dock-rainbow" />
+  <meta name="sgai-home-build" content="2026-04-14-gomfy-marketing-v2" />
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-KEWG8VPD7D"></script>
   <script>
@@ -70,7 +70,7 @@
       .header-inner { position: relative; }
     }
 
-    .main { padding: 0 0 var(--spacing-2xl); }
+    .main { padding: 0 0 var(--spacing-xl); }
     .hero { min-height: 260px; display: flex; flex-direction: column; justify-content: center; padding: var(--spacing-lg) var(--spacing-lg); position: relative; overflow: hidden;
       background: linear-gradient(100deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.9) 42%, rgba(255,255,255,0.72) 100%),
         url("https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1920&h=900&q=80") right 22% center / cover no-repeat;
@@ -79,7 +79,8 @@
       background: url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 20h40M20 0v40' stroke='%230f62fe' stroke-opacity='0.05' stroke-width='1' fill='none'/%3E%3C/svg%3E");
     }
     .hero::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
-      background: linear-gradient(105deg, rgba(255,255,255,0.97) 0%, rgba(248,250,252,0.88) 40%, rgba(15,98,254,0.11) 100%);
+      background: linear-gradient(105deg, rgba(255,255,255,0.97) 0%, rgba(248,250,252,0.88) 38%,
+        rgba(99,102,241,0.07) 62%, rgba(236,72,153,0.06) 82%, rgba(15,98,254,0.12) 100%);
     }
     .hero-inner { position: relative; z-index: 1; max-width: var(--max-width); margin: 0 auto; }
     .hero-label { font-size: 0.875rem; font-weight: 600; color: var(--color-accent); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--spacing-sm); }
@@ -164,7 +165,14 @@
     .logo-textmark.is-visible { display: flex !important; }
     .value-band { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 0 auto 1.75rem; max-width: 860px; padding: 0 1.25rem; }
     @media (max-width: 720px) { .value-band { grid-template-columns: 1fr; } }
-    .value-card { background: linear-gradient(145deg, #ffffff 0%, #f0f4fb 100%); border: 1px solid rgba(15, 98, 254, 0.12); border-radius: 16px; padding: 1.15rem 1.2rem; box-shadow: 0 4px 24px rgba(15, 98, 254, 0.06); }
+    .value-card {
+      border-radius: 16px; padding: 1.15rem 1.2rem;
+      border: 1px solid transparent;
+      background:
+        linear-gradient(145deg, #ffffff 0%, #f0f4fb 100%) padding-box,
+        linear-gradient(125deg, rgba(99,102,241,0.35), rgba(59,130,246,0.28), rgba(16,185,129,0.26), rgba(236,72,153,0.28)) border-box;
+      box-shadow: 0 4px 24px rgba(99, 102, 241, 0.08);
+    }
     .value-card h3 { margin: 0 0 0.45rem; font-size: 0.95rem; font-weight: 600; color: var(--color-text); }
     .value-card p { margin: 0; font-size: 0.86rem; line-height: 1.55; color: var(--color-text-secondary); }
     .value-card .vk { display: inline-block; width: 28px; height: 28px; border-radius: 8px; background: rgba(15, 98, 254, 0.12); color: var(--color-accent); font-weight: 700; font-size: 0.75rem; line-height: 28px; text-align: center; margin-bottom: 0.5rem; }
@@ -269,7 +277,7 @@
         display: none;
       }
       .main {
-        padding-bottom: min(38vh, 220px);
+        padding-bottom: min(32vh, 180px);
       }
     }
     .wake-context { font-size: 0.76rem; color: var(--color-text-muted); line-height: 1.48; margin: 0.55rem 0 0; font-family: var(--font-sans); }
@@ -590,9 +598,8 @@
         <div class="hero-label">Legal intelligence per studi e legali d'impresa</div>
         <h1>Decisioni legali più rapide, con le fonti sotto controllo</h1>
         <p class="hero-lead">
-          Il carico normativo e giurisprudenziale cresce ogni giorno: sul corpus lavoriamo oggi su <strong>oltre 600.000 sentenze processate</strong> (e counting) — SGAI ti aiuta a <strong>mappare, interrogare e sintetizzare</strong> sentenze e testi di riferimento,
-          a preparare <strong>bozze e scalette</strong> già orientate al contesto, e a <strong>automatizzare i passaggi ripetitivi</strong> senza rinunciare alla verifica professionale.
-          Non è un “motore di risposte generiche”: è un ambiente progettato per chi deve <strong>argomentare, citare e firmare</strong>.
+          Oggi sul corpus: <strong>oltre 600.000 sentenze processate</strong> (e counting). SGAI <strong>mappa, interroga e sintetizza</strong> fonti e testi, accelera <strong>bozze e scalette</strong> nel tuo contesto, e <strong>automazione</strong> sui passaggi ripetitivi — con verifica professionale.
+          Pensato per chi deve <strong>argomentare, citare e firmare</strong>, non per risposte generiche.
         </p>
         <div class="hero-ctas">
           <button type="button" class="hero-btn-primary btn-godly" id="ctaProvaBtn" disabled>Accedi all'app</button>

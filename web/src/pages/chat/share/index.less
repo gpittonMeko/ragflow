@@ -1,3 +1,15 @@
+@keyframes sgaiGomfyBtnGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 :root {
   --bg-primary: #ffffff;
   --bg-secondary: #ffffff;
@@ -292,6 +304,40 @@
     min-width: 0;
   }
 
+  &.directChatEmbed .deepSearchRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 4px 8px 2px;
+    flex-wrap: nowrap;
+  }
+
+  &.directChatEmbed .deepSearchTextCol {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  &.directChatEmbed .deepSearchLabel {
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+    font-family: var(--font-sans);
+    font-weight: 600;
+  }
+
+  &.directChatEmbed .deepSearchSub {
+    display: block !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+    max-width: 100%;
+  }
+
   &.directChatEmbed .suggestedChipsSection {
     padding: 4px 8px 0;
   }
@@ -432,23 +478,66 @@
     :global([class*='messageInputWrapper'])
     :global(.ant-btn-primary:not(:disabled)) {
     background: linear-gradient(
-      135deg,
+      125deg,
       #6366f1 0%,
-      #9333ea 35%,
-      #db2777 70%,
-      #0ea5e9 100%
+      #8b5cf6 20%,
+      #9333ea 40%,
+      #db2777 60%,
+      #0ea5e9 85%,
+      #6366f1 100%
     ) !important;
-    background-size: 180% 180%;
+    background-size: 220% 220%;
+    animation: sgaiGomfyBtnGradient 14s ease-in-out infinite;
     border: none !important;
     color: #fafafa !important;
-    box-shadow: 0 2px 12px rgba(99, 102, 241, 0.35);
+    box-shadow: 0 2px 14px rgba(99, 102, 241, 0.38);
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.22s ease,
+      filter 0.2s ease;
   }
 
   &.directChatEmbed
     :global([class*='messageInputWrapper'])
     :global(.ant-btn-primary:not(:disabled):hover) {
-    filter: brightness(1.08);
+    filter: brightness(1.09) saturate(1.05);
     color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px rgba(147, 51, 234, 0.42);
+    animation-duration: 9s;
+  }
+
+  &.directChatEmbed
+    :global([class*='messageInputWrapper'])
+    :global(.ant-btn-primary:not(:disabled):active) {
+    transform: translateY(0);
+  }
+
+  /* Shell stabile da direct-chat: riga Allega + Invio non si schiaccia su mobile */
+  &.directChatEmbed .embedChatInputShell {
+    width: 100%;
+    min-width: 0;
+  }
+
+  &.directChatEmbed
+    .embedChatInputShell
+    :global([class*='messageInputWrapper']) {
+    min-width: 0;
+  }
+
+  /* Ultima riga del message input = flex con Allega + Invio */
+  @media (max-width: 480px) {
+    &.directChatEmbed
+      .embedChatInputShell
+      :global([class*='messageInputWrapper'])
+      > :global(div:last-child)
+      > :global(div:last-child) {
+      flex-wrap: wrap !important;
+      justify-content: flex-end !important;
+      row-gap: 8px;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
   }
 
   :global(.messageInputWrapper___nie1o) {

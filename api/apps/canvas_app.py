@@ -14,6 +14,7 @@
 #  limitations under the License.
 #
 import json
+import os
 import traceback
 from flask import request, Response
 from flask_login import login_required, current_user
@@ -28,6 +29,86 @@ from peewee import MySQLDatabase, PostgresqlDatabase
 from api.db.db_models import APIToken
 import logging
 import time
+
+
+def _enrich_canvas_user_message(raw_message: str, req: dict) -> str:
+    """
+    Opzioni da client: doc_ids (CSV), deep_search (bool).
+    - deep_search: arricchimento con fonti web. Ordine: (1) Tavily se TAVILY_API_KEY è
+      impostata; (2) altrimenti DuckDuckGo via duckduckgo_search (nessuna API key, come
+      agent/component/duckduckgo.py). Le chiavi OpenAI non servono per cercare sul web.
+    - doc_ids: antepone riferimento agli ID documento caricati in chat.
+    """
+    doc_ids_str = (req.get("doc_ids") or "").strip()
+    if doc_ids_str:
+        n = len([x for x in doc_ids_str.split(",") if x.strip()])
+        logging.debug("[CANVAS] completion doc_ids count=%s", n)
+    deep_search = bool(req.get("deep_search"))
+    text = raw_message
+
+    if deep_search:
+        web_enriched = False
+        tav_key = os.environ.get("TAVILY_API_KEY", "").strip()
+        if tav_key:
+            try:
+                from rag.utils.tavily_conn import Tavily
+
+                tav = Tavily(tav_key)
+                tav_res = tav.retrieve_chunks(raw_message)
+                chunks = tav_res.get("chunks") or []
+                if chunks:
+                    parts = []
+                    for c in chunks[:8]:
+                        title = c.get("docnm_kwd") or "fonte"
+                        body = (c.get("content_with_weight") or "")[:1000]
+                        url = c.get("url") or ""
+                        line = f"- **{title}**"
+                        if url:
+                            line += f" ({url})"
+                        line += f"\n  {body}"
+                        parts.append(line)
+                    text = (
+                        "## Fonti web (Deep search, Tavily)\n\n"
+                        + "\n\n".join(parts)
+                        + "\n\n---\n\n## Domanda utente\n\n"
+                        + raw_message
+                    )
+                    web_enriched = True
+            except Exception as e:
+                logging.warning("[CANVAS] deep_search Tavily: %s", e)
+
+        if not web_enriched:
+            try:
+                from duckduckgo_search import DDGS
+
+                parts = []
+                with DDGS() as ddgs:
+                    for r in ddgs.text(raw_message, max_results=6):
+                        title = (r.get("title") or "")[:220]
+                        href = r.get("href") or ""
+                        body = (r.get("body") or "")[:900]
+                        line = f"- **{title}**"
+                        if href:
+                            line += f" ({href})"
+                        line += f"\n  {body}"
+                        parts.append(line)
+                if parts:
+                    text = (
+                        "## Fonti web (Deep search, DuckDuckGo)\n\n"
+                        + "\n\n".join(parts)
+                        + "\n\n---\n\n## Domanda utente\n\n"
+                        + raw_message
+                    )
+                else:
+                    logging.info("[CANVAS] deep_search DuckDuckGo: nessun risultato")
+            except Exception as e:
+                logging.warning("[CANVAS] deep_search DuckDuckGo: %s", e)
+
+    if doc_ids_str:
+        text = f"[Documenti allegati: {doc_ids_str}]\n\n" + text
+
+    return text
+
 
 @manager.route('/templates', methods=['GET'])  # noqa: F821
 @login_required
@@ -263,7 +344,7 @@ def run():
     
     try:
         if "message" in req:
-            user_message = req["message"]
+            user_message = _enrich_canvas_user_message(req["message"], req)
             logging.info(f"[CANVAS] ✅ Messaggio ricevuto: {user_message[:100]}...")
             logging.info(f"[CANVAS] Canvas state prima: messages={len(canvas.messages)}, history={len(canvas.history)}, path={len(canvas.path) if canvas.path else 0}")
             
