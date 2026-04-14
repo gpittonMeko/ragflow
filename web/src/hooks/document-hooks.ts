@@ -441,19 +441,28 @@ export const useUploadAndParseDocument = (uploadMethod: string) => {
       conversationId: string;
       fileList: UploadFile[];
     }) => {
-      try {
-        const formData = new FormData();
-        formData.append('conversation_id', conversationId);
-        fileList.forEach((file: UploadFile) => {
-          formData.append('file', file as any);
-        });
-        if (uploadMethod === 'upload_and_parse') {
-          const data = await kbService.upload_and_parse(formData);
-          return data?.data;
+      const formData = new FormData();
+      formData.append('conversation_id', conversationId);
+      fileList.forEach((file: UploadFile) => {
+        formData.append('file', file as any);
+      });
+      if (uploadMethod === 'upload_and_parse') {
+        const { data: body } = await kbService.upload_and_parse(formData);
+        if (body?.code !== 0) {
+          message.error(body?.message || i18n.t('chat.uploadFailed'));
+          throw new Error(body?.message || 'upload_and_parse failed');
         }
-        const data = await chatService.uploadAndParseExternal(formData);
-        return data?.data;
-      } catch (error) {}
+        return body?.data;
+      }
+      const { data: body } = await chatService.uploadAndParseExternal(formData);
+      if (body?.code !== 0) {
+        message.error(
+          body?.message ||
+            'Caricamento non riuscito. Verifica di essere autenticato e che la chiave API sia valida.',
+        );
+        throw new Error(body?.message || 'upload_parse external failed');
+      }
+      return body?.data;
     },
   });
 

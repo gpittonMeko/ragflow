@@ -92,6 +92,38 @@
   }
 }
 
+/* Chat condivisa / login: testo allineato ai messaggi, non più grande del corpo UI */
+.messageInputShared {
+  textarea.ant-input,
+  .ant-input-affix-wrapper textarea.ant-input {
+    max-height: min(28vh, 168px);
+    overflow-y: auto !important;
+    resize: none;
+    font-size: 0.875rem !important;
+    line-height: 1.45 !important;
+  }
+}
+
+.messageInputFooter {
+  width: 100%;
+  min-width: 0;
+}
+
+.messageInputActions {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 2px 8px 0;
+  flex-shrink: 0;
+
+  :global(.ant-btn) {
+    min-height: 40px;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding-inline: 14px;
+  }
+}
+
 .documentCard {
   :global(.ant-card-body) {
     padding: 10px;

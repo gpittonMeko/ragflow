@@ -18,23 +18,23 @@ export const SGAI_APPLICATION_CARDS: SgaiApplicationCard[] = [
   {
     id: 'modulo-contenzioso',
     title: 'Contenzioso',
-    subtitle: 'Strategie e difese',
-    body: `Contesto: controversia tributaria in corso (accertamento / cartella / ricorso).
+    subtitle: 'Linee difensive e citazioni utili',
+    body: `Contesto: controversia tributaria in corso (accertamento, cartella o ricorso).
 
-Chiedi: quali sono le principali linee difensive e i riferimenti giurisprudenziali utili per impostare la strategia processuale, con attenzione a oneri e termini.`,
+Chiedi: quali sono le principali linee difensive e i richiami giurisprudenziali per impostare la strategia processuale, con oneri probatori e termini da rispettare.`,
   },
   {
     id: 'modulo-compliance',
     title: 'Compliance',
-    subtitle: 'Adempimenti e rischi',
-    body: `Contesto: adempimenti fiscali e gestione rischi per un soggetto economico in Italia.
+    subtitle: 'Obblighi, controlli e rischi',
+    body: `Contesto: adempimenti fiscali e gestione del rischio per un soggetto economico in Italia.
 
-Chiedi: quali sono gli obblighi ricorrenti, le criticità tipiche e i controlli consigliati per ridurre esposizione sanzionatoria.`,
+Chiedi: obblighi ricorrenti, criticità tipiche e controlli consigliati per contenere l’esposizione sanzionatoria.`,
   },
   {
     id: 'modulo-contratti',
     title: 'Contratti e operazioni',
-    subtitle: 'Clausole e imposte',
+    subtitle: 'Profili fiscali e clausole chiave',
     body: `Contesto: revisione o negoziazione di un contratto con impatti fiscali (prezzo, corrispettivi, split payment, IVA).
 
 Chiedi: quali elementi verificare e quali rischi emergono in dottrina e giurisprudenza.`,
@@ -42,10 +42,10 @@ Chiedi: quali elementi verificare e quali rischi emergono in dottrina e giurispr
   {
     id: 'modulo-ricerca',
     title: 'Ricerca sentenze',
-    subtitle: 'Principi e orientamenti',
-    body: `Argomento: [descrivi in una frase il tema, es. operazioni inesistenti / PEC / crediti d’imposta].
+    subtitle: 'Temi e orientamenti',
+    body: `Argomento: [una frase sul tema, es. operazioni inesistenti, PEC, crediti d’imposta].
 
-Chiedi: orientamenti delle Sezioni Unite o dei principali Tribunali amministrativi e un riepilogo sintetico dei criteri decisori.`,
+Chiedi: orientamenti rilevanti (Sezioni Unite o Tribunali amministrativi) e un riepilogo sintetico dei criteri decisori.`,
   },
 ];
 

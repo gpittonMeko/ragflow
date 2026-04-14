@@ -81,6 +81,8 @@ interface IProps {
   uploadHint?: string;
   /** Mostra etichetta «Allega» accanto alla graffetta (es. home SGAI Legal) */
   showAttachLabel?: boolean;
+  /** Override righe autoSize del textarea; se omesso: shared → max 4, altrimenti max 10 */
+  textareaAutoSize?: { minRows: number; maxRows: number };
 }
 
 const getBase64 = (file: FileType): Promise<string> =>
@@ -108,6 +110,7 @@ const MessageInput = ({
   wrapperRef,
   uploadHint,
   showAttachLabel = false,
+  textareaAutoSize,
 }: IProps) => {
   const { t } = useTranslate('chat');
   const { removeDocument } = useRemoveNextDocument();
@@ -145,21 +148,35 @@ const MessageInput = ({
       });
       return [...list];
     });
-    const ret = await uploadAndParseDocument({
-      conversationId: nextConversationId,
-      fileList: [file],
-    });
-    setFileList((list) => {
-      const nextList = list.filter((x) => x.uid !== file.uid);
-      nextList.push({
-        ...file,
-        originFileObj: file as any,
-        response: ret,
-        percent: 100,
-        status: ret?.code === 0 ? 'done' : 'error',
+    try {
+      const ret = await uploadAndParseDocument({
+        conversationId: nextConversationId,
+        fileList: [file],
       });
-      return nextList;
-    });
+      const dataArr = Array.isArray(ret) ? ret : ret != null ? [ret] : [];
+      setFileList((list) => {
+        const nextList = list.filter((x) => x.uid !== file.uid);
+        nextList.push({
+          ...file,
+          originFileObj: file as any,
+          response: { code: 0, data: dataArr },
+          percent: 100,
+          status: 'done',
+        });
+        return nextList;
+      });
+    } catch {
+      setFileList((list) => {
+        const nextList = list.filter((x) => x.uid !== file.uid);
+        nextList.push({
+          ...file,
+          originFileObj: file as any,
+          status: 'error',
+          percent: 100,
+        });
+        return nextList;
+      });
+    }
   };
 
   const isUploadingFile = fileList.some((x) => x.status === 'uploading');
@@ -248,15 +265,42 @@ const MessageInput = ({
     }
   }, [onInputFocus, scrollRef]);
 
+  const resolvedTextareaAutoSize =
+    textareaAutoSize ??
+    (isShared ? { minRows: 1, maxRows: 4 } : { minRows: 1, maxRows: 10 });
+
+  const handleTextAreaChange = useCallback<
+    ChangeEventHandler<HTMLTextAreaElement>
+  >(
+    (e) => {
+      onInputChange(e);
+      if (!isShared) return;
+      const el = e.target;
+      const atEnd =
+        el.selectionStart === el.value.length &&
+        el.selectionEnd === el.value.length;
+      if (atEnd) {
+        requestAnimationFrame(() => {
+          el.scrollTop = el.scrollHeight;
+        });
+      }
+    },
+    [onInputChange, isShared],
+  );
+
   return (
     <div ref={scrollRef} className={styles.inputScrollAnchor}>
       <Flex
         gap={1}
         vertical
-        className={cn(styles.messageInputWrapper, 'dark:bg-black')}
+        className={cn(
+          styles.messageInputWrapper,
+          isShared && styles.messageInputShared,
+          'dark:bg-black',
+        )}
       >
         <TextArea
-          size="large"
+          size={isShared ? 'middle' : 'large'}
           placeholder={t('sendPlaceholder')}
           value={value}
           allowClear
@@ -267,9 +311,9 @@ const MessageInput = ({
             padding: '0px 10px',
             marginTop: 2,
           }}
-          autoSize={{ minRows: 1, maxRows: 10 }}
+          autoSize={resolvedTextareaAutoSize}
           onKeyDown={handleKeyDown}
-          onChange={onInputChange}
+          onChange={handleTextAreaChange}
           onFocus={handleFocus}
         />
         <Divider style={{ margin: '5px 30px 10px 0px' }} />
@@ -286,7 +330,7 @@ const MessageInput = ({
             {uploadHint}
           </Text>
         )}
-        <Flex justify="space-between" align="center">
+        <Flex vertical gap={8} className={styles.messageInputFooter}>
           {fileList.length > 0 && (
             <List
               grid={{
@@ -365,14 +409,10 @@ const MessageInput = ({
             />
           )}
           <Flex
-            gap={5}
+            gap={8}
             align="center"
             justify="flex-end"
-            style={{
-              paddingRight: 10,
-              paddingBottom: 10,
-              width: fileList.length > 0 ? '50%' : '100%',
-            }}
+            className={styles.messageInputActions}
           >
             {showUploadIcon && (
               <Upload

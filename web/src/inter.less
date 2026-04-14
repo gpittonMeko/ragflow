@@ -271,3 +271,14 @@
   font-display: swap;
   src: url('@/assets/inter/InterDisplay-BlackItalic.woff2') format('woff2');
 }
+
+/* UI globale: Plus Jakarta Sans (caricato via .umirc links), fallback Inter */
+:root {
+  font-family: 'Plus Jakarta Sans', 'InterVariable', 'Inter', system-ui,
+    sans-serif;
+}
+@supports (font-variation-settings: normal) {
+  :root {
+    font-family: 'Plus Jakarta Sans', 'InterVariable', system-ui, sans-serif;
+  }
+}

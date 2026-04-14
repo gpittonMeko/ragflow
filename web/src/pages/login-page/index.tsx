@@ -1317,7 +1317,7 @@ const PresentationPage: React.FC = () => {
                     zIndex: 10,
                     background: 'transparent',
                     width: 'auto',
-                    height: hasMessages ? '272px' : '156px',
+                    height: hasMessages ? '360px' : '260px',
                     transition: 'height 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                   }),
             }}
@@ -1462,13 +1462,16 @@ const PresentationPage: React.FC = () => {
                         <line x1="12" y1="16" x2="12.01" y2="16" />
                       </svg>
                     </span>
-                    Riservatezza totale
+                    Privacy e trattamento dati
                   </span>
                 ),
                 children: (
                   <p className={styles.featureAccordionBody}>
-                    Le tue conversazioni restano private. Nessun dato viene
-                    acquisito o condiviso con terzi.
+                    Trattiamo i dati necessari a erogare il servizio (account,
+                    log tecnici, contenuti che inserisci) secondo l’informativa
+                    privacy. Non vendiamo i tuoi dati a terzi per fini
+                    commerciali; puoi esercitare i diritti previsti dalla
+                    normativa in qualsiasi momento.
                   </p>
                 ),
               },
@@ -1493,13 +1496,14 @@ const PresentationPage: React.FC = () => {
                         <path d="M2 12l10 5 10-5" />
                       </svg>
                     </span>
-                    Su misura per te
+                    Sul tuo materiale e sulle tue priorità
                   </span>
                 ),
                 children: (
                   <p className={styles.featureAccordionBody}>
-                    Potenzia SGAI con i documenti del tuo Studio. Risposte
-                    calibrate sulla tua operatività quotidiana.
+                    Carica atti, pareri e modelli: l’analisi si appoggia al
+                    contesto che scegli tu, così le bozze e i ragionamenti
+                    seguono le linee guida del tuo Studio.
                   </p>
                 ),
               },
@@ -1526,13 +1530,15 @@ const PresentationPage: React.FC = () => {
                         <line x1="14" y1="1" x2="14" y2="4" />
                       </svg>
                     </span>
-                    Indipendente e imparziale
+                    Strumento di supporto, non sostituto del giudizio
                   </span>
                 ),
                 children: (
                   <p className={styles.featureAccordionBody}>
-                    Nessun legame istituzionale. Analisi oggettiva al servizio
-                    del professionista.
+                    SGAI è un assistente: non sostituisce il parere di un
+                    avvocato né decisioni ufficiali. Ti aiuta a strutturare
+                    ricerche e bozze; la responsabilità professionale resta
+                    sempre tua.
                   </p>
                 ),
               },

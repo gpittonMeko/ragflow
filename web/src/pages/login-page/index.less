@@ -728,7 +728,7 @@ body {
   border-top-right-radius: 0;
 }
 
-/* Barra esplicita: apre la chat — stile Gomfy (gradiente arcobaleno subtle in movimento) */
+/* Barra: vetro + accento tenue (come UI “fine”, non arcobaleno pieno) */
 .chatExpandBar {
   flex-shrink: 0;
   display: flex;
@@ -736,14 +736,13 @@ body {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 8px 12px;
+  padding: 9px 14px;
   margin: 0;
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 0;
-  background: var(--sgai-gomfy-rainbow);
-  background-size: 220% 220%;
-  animation: sgaiGomfyGradientShift 20s ease-in-out infinite;
+  background: color-mix(in srgb, var(--card-bg) 88%, rgba(139, 92, 246, 0.12));
+  backdrop-filter: blur(12px) saturate(1.12);
   color: var(--text-primary);
   font-size: 12px;
   font-weight: 600;
@@ -752,14 +751,17 @@ body {
   box-sizing: border-box;
   transition:
     transform 0.2s ease,
-    box-shadow 0.25s ease;
+    box-shadow 0.25s ease,
+    background-color 0.2s ease;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow:
-      0 4px 20px rgba(99, 102, 241, 0.18),
-      0 0 0 1px rgba(255, 255, 255, 0.06) inset;
-    animation-duration: 12s;
+    background: color-mix(
+      in srgb,
+      var(--card-bg) 82%,
+      rgba(139, 92, 246, 0.18)
+    );
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
   }
 
   &:active {
@@ -773,20 +775,12 @@ body {
 }
 
 [data-theme='light'] .chatExpandBar {
-  border-bottom-color: rgba(0, 0, 0, 0.08);
-  background: linear-gradient(
-    115deg,
-    rgba(139, 92, 246, 0.16) 0%,
-    rgba(59, 130, 246, 0.14) 25%,
-    rgba(16, 185, 129, 0.13) 50%,
-    rgba(245, 158, 11, 0.12) 75%,
-    rgba(236, 72, 153, 0.15) 100%
-  );
-  background-size: 220% 220%;
-  animation: sgaiGomfyGradientShift 20s ease-in-out infinite;
+  border-bottom-color: rgba(0, 0, 0, 0.07);
+  background: color-mix(in srgb, #ffffff 92%, rgba(99, 102, 241, 0.08));
 
   &:hover {
-    box-shadow: 0 4px 22px rgba(59, 130, 246, 0.22);
+    background: color-mix(in srgb, #ffffff 88%, rgba(99, 102, 241, 0.12));
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
   }
 }
 
@@ -848,8 +842,9 @@ body {
 .featureAccordionBody {
   margin: 0;
   font-size: 0.84rem;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--feature-text-color);
+  max-width: 52ch;
 }
 
 .featureAccordionIcon {
@@ -1733,41 +1728,24 @@ body {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* Anteprima chat sulla home: bordo arcobaleno soft + contenimento scroll pagina */
+/* Anteprima chat: vetro + bordo tenue (no arcobaleno “pesante”) */
 .iframeSectionDocked {
-  contain: layout style;
-  border-radius: 12px;
-  border: 1px solid transparent;
-  background:
-    linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
-    linear-gradient(
-        125deg,
-        rgba(139, 92, 246, 0.45),
-        rgba(59, 130, 246, 0.4),
-        rgba(16, 185, 129, 0.38),
-        rgba(245, 158, 11, 0.35),
-        rgba(236, 72, 153, 0.42)
-      )
-      border-box;
+  contain: style;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: color-mix(in srgb, var(--card-bg) 96%, rgba(139, 92, 246, 0.06));
+  backdrop-filter: blur(14px) saturate(1.15);
   box-shadow:
-    0 4px 24px rgba(99, 102, 241, 0.14),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    0 4px 28px rgba(0, 0, 0, 0.22),
+    0 0 0 1px rgba(139, 92, 246, 0.12) inset;
 }
 
 [data-theme='light'] .iframeSectionDocked {
-  background:
-    linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
-    linear-gradient(
-        125deg,
-        rgba(139, 92, 246, 0.35),
-        rgba(59, 130, 246, 0.32),
-        rgba(16, 185, 129, 0.28),
-        rgba(236, 72, 153, 0.3)
-      )
-      border-box;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: color-mix(in srgb, var(--card-bg) 97%, rgba(59, 130, 246, 0.05));
   box-shadow:
-    0 4px 20px rgba(59, 130, 246, 0.12),
-    0 0 0 1px rgba(0, 0, 0, 0.04) inset;
+    0 4px 24px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(99, 102, 241, 0.08) inset;
 }
 
 .chatEmbedInner {

@@ -326,7 +326,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
 
       <Flex
         flex={1}
-        className={`${styles.chatContainer} ${styles[theme]} ${styles.directChatEmbed} ${className ?? ''}`}
+        className={`${styles.chatContainer} ${styles[theme]} ${styles.directChatEmbed} ${!layoutExpanded ? styles.directChatEmbedCompact : ''} ${className ?? ''}`}
         style={{
           ...style,
           minHeight: 0,
@@ -388,57 +388,145 @@ const DirectChat: React.FC<DirectChatProps> = ({
 
         <div
           className={styles.directChatInputColumn}
-          style={{ flexShrink: 0, width: '100%' }}
+          style={{
+            flexShrink: layoutExpanded ? 1 : 0,
+            minHeight: 0,
+            width: '100%',
+          }}
         >
-          <div className={styles.deepSearchRow}>
-            <Switch
-              id="sgai-deep-search-toggle"
-              checked={deepSearch}
-              onChange={setDeepSearch}
-              size="small"
-            />
-            <div className={styles.deepSearchTextCol}>
-              <label
-                htmlFor="sgai-deep-search-toggle"
-                className={styles.deepSearchLabel}
-              >
-                Deep search · fonti web
-              </label>
-              <Typography.Text
-                type="secondary"
-                className={styles.deepSearchSub}
-              >
-                Sul server: Tavily se configurato; altrimenti ricerca aperta
-                (nessuna chiave extra in chat).
-              </Typography.Text>
-            </div>
-          </div>
-          {(!derivedMessages || derivedMessages.length === 0) &&
-            !sendLoading && (
-              <div className={styles.suggestedChipsSection}>
+          <div className={styles.embedGlassPanel}>
+            <div className={styles.deepSearchRow}>
+              <Switch
+                id="sgai-deep-search-toggle"
+                checked={deepSearch}
+                onChange={setDeepSearch}
+                size="small"
+              />
+              <div className={styles.deepSearchTextCol}>
+                <label
+                  htmlFor="sgai-deep-search-toggle"
+                  className={styles.deepSearchLabel}
+                >
+                  Deep search · fonti web
+                </label>
                 <Typography.Text
                   type="secondary"
-                  className={styles.sgaiApplicationsLead}
+                  className={styles.deepSearchSub}
                 >
-                  Moduli rapidi o domanda libera. Allega PDF/DOCX (pulsante
-                  «Allega»): dopo l’indicizzazione entrano nell’analisi.
+                  {layoutExpanded
+                    ? 'Tavily sul server se configurato; altrimenti ricerca web aperta (senza chiavi aggiuntive in chat).'
+                    : 'Fonti web quando attivo.'}
                 </Typography.Text>
-                <Typography.Text className={styles.sgaiApplicationsTitle}>
-                  Applicazioni
-                </Typography.Text>
-                <div className={styles.sgaiApplicationsGrid}>
-                  {SGAI_APPLICATION_CARDS.map((app) => {
-                    const IconCmp =
-                      APP_ICON_MAP[app.id as keyof typeof APP_ICON_MAP] ||
-                      FileText;
-                    return (
-                      <button
-                        key={app.id}
-                        type="button"
-                        className={styles.sgaiAppCard}
+              </div>
+            </div>
+            {(!derivedMessages || derivedMessages.length === 0) &&
+              !sendLoading && (
+                <div className={styles.suggestedChipsSection}>
+                  <Typography.Text
+                    type="secondary"
+                    className={styles.sgaiApplicationsLead}
+                  >
+                    {layoutExpanded
+                      ? 'Scegli un modulo o scrivi sotto. Con «Allega» carichi PDF/DOCX: dopo l’indicizzazione il testo entra nell’analisi.'
+                      : 'Moduli rapidi o testo libero. Allega documenti dal campo sotto.'}
+                  </Typography.Text>
+                  <Typography.Text className={styles.sgaiApplicationsTitle}>
+                    {layoutExpanded ? 'Moduli' : 'Avvio rapido'}
+                  </Typography.Text>
+                  {layoutExpanded ? (
+                    <div className={styles.sgaiApplicationsGrid}>
+                      {SGAI_APPLICATION_CARDS.map((app) => {
+                        const IconCmp =
+                          APP_ICON_MAP[app.id as keyof typeof APP_ICON_MAP] ||
+                          FileText;
+                        return (
+                          <button
+                            key={app.id}
+                            type="button"
+                            className={styles.sgaiAppCard}
+                            onClick={() => {
+                              setValue(app.body);
+                              requestAnimationFrame(() => {
+                                inputWrapperRef.current?.scrollIntoView({
+                                  block: 'nearest',
+                                  behavior: 'smooth',
+                                });
+                              });
+                            }}
+                          >
+                            <span
+                              className={styles.sgaiAppCardIcon}
+                              aria-hidden
+                            >
+                              <IconCmp size={18} strokeWidth={2} />
+                            </span>
+                            <span className={styles.sgaiAppCardTitle}>
+                              {app.title}
+                            </span>
+                            <span className={styles.sgaiAppCardSub}>
+                              {app.subtitle}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div
+                      className={styles.sgaiApplicationsStrip}
+                      aria-label="Moduli rapidi"
+                    >
+                      {SGAI_APPLICATION_CARDS.map((app) => {
+                        const IconCmp =
+                          APP_ICON_MAP[app.id as keyof typeof APP_ICON_MAP] ||
+                          FileText;
+                        return (
+                          <button
+                            key={app.id}
+                            type="button"
+                            className={styles.sgaiAppStripBtn}
+                            onClick={() => {
+                              setValue(app.body);
+                              requestAnimationFrame(() => {
+                                inputWrapperRef.current?.scrollIntoView({
+                                  block: 'nearest',
+                                  behavior: 'smooth',
+                                });
+                              });
+                            }}
+                          >
+                            <span
+                              className={styles.sgaiAppStripIcon}
+                              aria-hidden
+                            >
+                              <IconCmp size={16} strokeWidth={2} />
+                            </span>
+                            <span className={styles.sgaiAppStripLabel}>
+                              {app.title}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <Typography.Text
+                    type="secondary"
+                    className={styles.suggestedChipsHint}
+                  >
+                    {layoutExpanded
+                      ? 'Scenari giurisprudenza / tributario'
+                      : 'Suggerimenti'}
+                  </Typography.Text>
+                  <div
+                    className={`${styles.suggestedChipsRow} ${!layoutExpanded ? styles.suggestedChipsRowScroll : ''}`}
+                  >
+                    {SHARED_SUGGESTED_PROMPTS.map((p) => (
+                      <Button
+                        key={p.id}
+                        size="small"
+                        type="default"
+                        className={styles.suggestedChip}
                         onClick={() => {
-                          setValue(app.body);
-                          if (!layoutExpanded) return;
+                          setValue(p.body);
                           requestAnimationFrame(() => {
                             inputWrapperRef.current?.scrollIntoView({
                               block: 'nearest',
@@ -447,49 +535,13 @@ const DirectChat: React.FC<DirectChatProps> = ({
                           });
                         }}
                       >
-                        <span className={styles.sgaiAppCardIcon} aria-hidden>
-                          <IconCmp size={18} strokeWidth={2} />
-                        </span>
-                        <span className={styles.sgaiAppCardTitle}>
-                          {app.title}
-                        </span>
-                        <span className={styles.sgaiAppCardSub}>
-                          {app.subtitle}
-                        </span>
-                      </button>
-                    );
-                  })}
+                        {p.label}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-                <Typography.Text
-                  type="secondary"
-                  className={styles.suggestedChipsHint}
-                >
-                  Scenari guidati (giurisprudenza / tributario)
-                </Typography.Text>
-                <div className={styles.suggestedChipsRow}>
-                  {SHARED_SUGGESTED_PROMPTS.map((p) => (
-                    <Button
-                      key={p.id}
-                      size="small"
-                      type="default"
-                      className={styles.suggestedChip}
-                      onClick={() => {
-                        setValue(p.body);
-                        if (!layoutExpanded) return;
-                        requestAnimationFrame(() => {
-                          inputWrapperRef.current?.scrollIntoView({
-                            block: 'nearest',
-                            behavior: 'smooth',
-                          });
-                        });
-                      }}
-                    >
-                      {p.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
+              )}
+          </div>
           <div className={styles.embedChatInputShell}>
             <MessageInput
               isShared
@@ -505,7 +557,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
               showAttachLabel
               uploadHint="Allega PDF, DOCX o altri formati supportati: dopo parsing e indicizzazione, il testo segue la tua domanda."
               stopOutputMessage={stopOutputMessage}
-              autoFocus={false}
+              textareaAutoSize={{ minRows: 1, maxRows: 4 }}
               wrapperRef={inputWrapperRef}
               onInputFocus={handleInputFocus}
             />
