@@ -6,30 +6,35 @@ import { useTheme } from '@/components/theme-provider';
 import { MessageType } from '@/constants/chat';
 import { useFetchFlowSSE } from '@/hooks/flow-hooks';
 import { useSharedGenerationProgress } from '@/hooks/use-shared-generation-progress';
+import { cn } from '@/lib/utils';
 import {
   useSendButtonDisabled,
   useSendSharedMessage,
 } from '@/pages/chat/shared-hooks';
 import { buildMessageItemReference } from '@/pages/chat/utils';
 import { buildMessageUuidWithRole } from '@/utils/chat';
-import { Button, Flex, Spin, Switch, Typography } from 'antd';
-import { FileText, Scale, Search, Shield } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import { Checkbox, Flex, Segmented, Spin, Switch, Typography } from 'antd';
+import get from 'lodash/get';
+import { ChevronDown } from 'lucide-react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useLocation } from 'umi';
 import styles from '../chat/share/index.less';
-import {
-  SGAI_APPLICATION_CARDS,
-  SHARED_SUGGESTED_PROMPTS,
-} from './shared-suggested-prompts';
+import { extractRetrievalKbOptions } from './direct-chat-knowledge';
+import { SHARED_SUGGESTED_PROMPTS } from './shared-suggested-prompts';
+import { useKbDisplayNames } from './use-kb-display-names';
 
 const SGAI_DEEP_SEARCH_KEY = 'sgai-deep-search';
+const SGAI_RETRIEVAL_MODE_KEY = 'sgai-retrieval-mode';
 
-const APP_ICON_MAP = {
-  'modulo-contenzioso': Scale,
-  'modulo-compliance': Shield,
-  'modulo-contratti': FileText,
-  'modulo-ricerca': Search,
-} as const;
+/** Modalità ricerca chunk: valori inviati come retrieval_top_n al canvas */
+const RETRIEVAL_TOP_N = { fast: 4, extended: 16 } as const;
+type RetrievalMode = keyof typeof RETRIEVAL_TOP_N;
 
 // Compatta: nessun inset. Espansa: spazio sotto = area coperta da tastiera (visualViewport, ok su iOS/Android).
 function useKeyboardOffset(omitInset: boolean) {
@@ -111,6 +116,25 @@ const DirectChat: React.FC<DirectChatProps> = ({
     }
   }, [deepSearch]);
 
+  const [retrievalMode, setRetrievalMode] = useState<RetrievalMode>(() => {
+    try {
+      const v =
+        typeof sessionStorage !== 'undefined' &&
+        sessionStorage.getItem(SGAI_RETRIEVAL_MODE_KEY);
+      return v === 'fast' ? 'fast' : 'extended';
+    } catch {
+      return 'extended';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SGAI_RETRIEVAL_MODE_KEY, retrievalMode);
+    } catch {
+      /* ignore */
+    }
+  }, [retrievalMode]);
+
   // Imposta i parametri URL necessari per useSendSharedMessage (solo query params, NON cambia pathname)
   useEffect(() => {
     const currentParams = new URLSearchParams(location.search);
@@ -132,6 +156,52 @@ const DirectChat: React.FC<DirectChatProps> = ({
     }
   }, [agentId, location.pathname, location.search]);
 
+  // Fetch avatar + DSL (shared_id da URL, impostato sopra)
+  const { data: avatarData } = useFetchFlowSSE();
+
+  const kbOptions = useMemo(
+    () => extractRetrievalKbOptions(get(avatarData, 'dsl')),
+    [avatarData],
+  );
+
+  const kbNameById = useKbDisplayNames(kbOptions.map((k) => k.id));
+
+  const kbCheckboxOptions = useMemo(
+    () =>
+      kbOptions.map((o) => {
+        const name = kbNameById.get(o.id);
+        const label = name ?? o.label;
+        return {
+          label: (
+            <Typography.Text
+              ellipsis={{ tooltip: label }}
+              style={{ maxWidth: 'min(100%, 42ch)', fontSize: 'inherit' }}
+            >
+              {label}
+            </Typography.Text>
+          ),
+          value: o.id,
+        };
+      }),
+    [kbOptions, kbNameById],
+  );
+
+  const [enabledKbIds, setEnabledKbIds] = useState<string[]>([]);
+  const [embedOptsOpen, setEmbedOptsOpen] = useState(false);
+
+  useEffect(() => {
+    setEnabledKbIds(kbOptions.map((k) => k.id));
+  }, [kbOptions]);
+
+  const getRetrievalKbIds = useCallback(() => {
+    if (kbOptions.length <= 1) return undefined;
+    const all = kbOptions.map((k) => k.id);
+    if (enabledKbIds.length === 0 || enabledKbIds.length === all.length) {
+      return undefined;
+    }
+    return enabledKbIds.join(',');
+  }, [kbOptions, enabledKbIds]);
+
   // ✅ Passa agentId E sessionId per gestire conversazioni separate
   const {
     handlePressEnter,
@@ -149,14 +219,33 @@ const DirectChat: React.FC<DirectChatProps> = ({
     answer,
   } = useSendSharedMessage(agentId, sessionId, {
     getDeepSearch: () => deepSearch,
+    getRetrievalKbIds,
+    getRetrievalTopN: () => RETRIEVAL_TOP_N[retrievalMode],
   });
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
     useClickDrawer();
   const sendDisabled = useSendButtonDisabled(value);
 
-  // Fetch avatar data - useFetchFlowSSE reads sharedId from URL params (set in useEffect above)
-  const { data: avatarData } = useFetchFlowSSE();
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
+
+  const idleForGhost =
+    (!derivedMessages || derivedMessages.length === 0) && !sendLoading;
+  const showGhost = idleForGhost && !value.trim();
+
+  useEffect(() => {
+    if (!showGhost || SHARED_SUGGESTED_PROMPTS.length <= 1) return;
+    const id = window.setInterval(() => {
+      setSuggestionIndex((i) => (i + 1) % SHARED_SUGGESTED_PROMPTS.length);
+    }, 12000);
+    return () => clearInterval(id);
+  }, [showGhost]);
+
+  const ghostBody = SHARED_SUGGESTED_PROMPTS[suggestionIndex]?.body ?? '';
+
+  const handleGhostAccept = useCallback(() => {
+    if (ghostBody) setValue(ghostBody);
+  }, [ghostBody, setValue]);
 
   const { progress, barVisible, phaseLabel } = useSharedGenerationProgress(
     sendLoading,
@@ -202,14 +291,6 @@ const DirectChat: React.FC<DirectChatProps> = ({
       prevSessionIdRef.current !== sessionId &&
       sessionId
     ) {
-      console.log(
-        '[DirectChat] SessionId changed from',
-        prevSessionIdRef.current,
-        'to',
-        sessionId,
-        '- loading messages',
-      );
-
       // Load messages from backend
       const loadHistoricalMessages = async () => {
         try {
@@ -219,27 +300,14 @@ const DirectChat: React.FC<DirectChatProps> = ({
           if (response.ok) {
             const result = await response.json();
             if (result.code === 0 && result.data?.messages) {
-              console.log(
-                '[DirectChat] Loaded',
-                result.data.messages.length,
-                'historical messages',
-              );
               setDerivedMessages(result.data.messages);
             } else {
-              console.log(
-                '[DirectChat] No historical messages found, resetting',
-              );
               setDerivedMessages([]);
             }
           } else {
-            console.error(
-              '[DirectChat] Failed to load messages:',
-              response.status,
-            );
             setDerivedMessages([]);
           }
-        } catch (error) {
-          console.error('[DirectChat] Error loading messages:', error);
+        } catch {
           setDerivedMessages([]);
         }
       };
@@ -291,6 +359,85 @@ const DirectChat: React.FC<DirectChatProps> = ({
       });
     });
   };
+
+  const directChatEmbedOptionsBody = useMemo(
+    () => (
+      <div className={styles.directChatOptsInner}>
+        <div className={styles.controlsToolbar}>
+          <div className={styles.deepSearchRow}>
+            <Switch
+              id="sgai-deep-search-toggle"
+              checked={deepSearch}
+              onChange={setDeepSearch}
+              size="small"
+            />
+            <div className={styles.deepSearchTextCol}>
+              <label
+                htmlFor="sgai-deep-search-toggle"
+                className={styles.deepSearchLabel}
+              >
+                Deep search (web)
+              </label>
+              <Typography.Text
+                type="secondary"
+                className={styles.deepSearchSub}
+              >
+                Arricchisce la domanda con estratti da internet (lato server).
+                Il testo della chat resta quello che scrivi tu.
+              </Typography.Text>
+            </div>
+          </div>
+          <div className={styles.retrievalModeRow}>
+            <Typography.Text className={styles.retrievalModeLabel}>
+              Knowledge nei documenti
+            </Typography.Text>
+            <Segmented<RetrievalMode>
+              size="small"
+              value={retrievalMode}
+              onChange={(v) => setRetrievalMode(v as RetrievalMode)}
+              options={[
+                { label: 'Fast', value: 'fast' },
+                { label: 'Deep', value: 'extended' },
+              ]}
+              className={styles.retrievalModeSegmented}
+            />
+            <Typography.Text
+              type="secondary"
+              className={styles.retrievalModeHint}
+            >
+              Fast: meno chunk, risposta più rapida. Deep: più contesto dai
+              documenti (consigliato).
+            </Typography.Text>
+          </div>
+          {kbOptions.length >= 1 ? (
+            <div className={styles.kbFilterBlock}>
+              <Typography.Text className={styles.kbFilterLabel}>
+                Documenti
+              </Typography.Text>
+              <Typography.Text type="secondary" className={styles.kbFilterSub}>
+                {kbOptions.length > 1
+                  ? 'Scegli quali basi usare per questa chat.'
+                  : 'Base collegata a questo agente.'}
+              </Typography.Text>
+              <Checkbox.Group
+                className={styles.kbFilterGroup}
+                value={enabledKbIds}
+                onChange={(v) => setEnabledKbIds(v as string[])}
+                options={kbCheckboxOptions}
+              />
+            </div>
+          ) : null}
+        </div>
+      </div>
+    ),
+    [
+      deepSearch,
+      retrievalMode,
+      kbOptions.length,
+      enabledKbIds,
+      kbCheckboxOptions,
+    ],
+  );
 
   return (
     <div className={styles.directChatLayoutRoot}>
@@ -357,6 +504,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
                 return (
                   <div key={buildMessageUuidWithRole(message)}>
                     <MessageItem
+                      embedChat
                       visibleAvatar={false}
                       avatarDialog={avatarData?.avatar}
                       item={message}
@@ -394,153 +542,36 @@ const DirectChat: React.FC<DirectChatProps> = ({
             width: '100%',
           }}
         >
-          <div className={styles.embedGlassPanel}>
-            <div className={styles.deepSearchRow}>
-              <Switch
-                id="sgai-deep-search-toggle"
-                checked={deepSearch}
-                onChange={setDeepSearch}
-                size="small"
+          <div
+            className={cn(
+              styles.embedGlassPanel,
+              !embedOptsOpen && styles.embedGlassPanelCollapsed,
+            )}
+          >
+            <button
+              type="button"
+              className={styles.directChatOptsToggle}
+              onClick={() => setEmbedOptsOpen((o) => !o)}
+              aria-expanded={embedOptsOpen}
+            >
+              <span className={styles.directChatOptsToggleLabel}>
+                {embedOptsOpen ? 'Chiudi' : 'Opzioni'}
+              </span>
+              <ChevronDown
+                className={cn(
+                  styles.directChatOptsChevron,
+                  embedOptsOpen && styles.directChatOptsChevronOpen,
+                )}
+                size={16}
+                strokeWidth={2}
+                aria-hidden
               />
-              <div className={styles.deepSearchTextCol}>
-                <label
-                  htmlFor="sgai-deep-search-toggle"
-                  className={styles.deepSearchLabel}
-                >
-                  Deep search · fonti web
-                </label>
-                <Typography.Text
-                  type="secondary"
-                  className={styles.deepSearchSub}
-                >
-                  {layoutExpanded
-                    ? 'Tavily sul server se configurato; altrimenti ricerca web aperta (senza chiavi aggiuntive in chat).'
-                    : 'Fonti web quando attivo.'}
-                </Typography.Text>
+            </button>
+            {embedOptsOpen ? (
+              <div className={styles.directChatOptsBody}>
+                {directChatEmbedOptionsBody}
               </div>
-            </div>
-            {(!derivedMessages || derivedMessages.length === 0) &&
-              !sendLoading && (
-                <div className={styles.suggestedChipsSection}>
-                  <Typography.Text
-                    type="secondary"
-                    className={styles.sgaiApplicationsLead}
-                  >
-                    {layoutExpanded
-                      ? 'Scegli un modulo o scrivi sotto. Con «Allega» carichi PDF/DOCX: dopo l’indicizzazione il testo entra nell’analisi.'
-                      : 'Moduli rapidi o testo libero. Allega documenti dal campo sotto.'}
-                  </Typography.Text>
-                  <Typography.Text className={styles.sgaiApplicationsTitle}>
-                    {layoutExpanded ? 'Moduli' : 'Avvio rapido'}
-                  </Typography.Text>
-                  {layoutExpanded ? (
-                    <div className={styles.sgaiApplicationsGrid}>
-                      {SGAI_APPLICATION_CARDS.map((app) => {
-                        const IconCmp =
-                          APP_ICON_MAP[app.id as keyof typeof APP_ICON_MAP] ||
-                          FileText;
-                        return (
-                          <button
-                            key={app.id}
-                            type="button"
-                            className={styles.sgaiAppCard}
-                            onClick={() => {
-                              setValue(app.body);
-                              requestAnimationFrame(() => {
-                                inputWrapperRef.current?.scrollIntoView({
-                                  block: 'nearest',
-                                  behavior: 'smooth',
-                                });
-                              });
-                            }}
-                          >
-                            <span
-                              className={styles.sgaiAppCardIcon}
-                              aria-hidden
-                            >
-                              <IconCmp size={18} strokeWidth={2} />
-                            </span>
-                            <span className={styles.sgaiAppCardTitle}>
-                              {app.title}
-                            </span>
-                            <span className={styles.sgaiAppCardSub}>
-                              {app.subtitle}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div
-                      className={styles.sgaiApplicationsStrip}
-                      aria-label="Moduli rapidi"
-                    >
-                      {SGAI_APPLICATION_CARDS.map((app) => {
-                        const IconCmp =
-                          APP_ICON_MAP[app.id as keyof typeof APP_ICON_MAP] ||
-                          FileText;
-                        return (
-                          <button
-                            key={app.id}
-                            type="button"
-                            className={styles.sgaiAppStripBtn}
-                            onClick={() => {
-                              setValue(app.body);
-                              requestAnimationFrame(() => {
-                                inputWrapperRef.current?.scrollIntoView({
-                                  block: 'nearest',
-                                  behavior: 'smooth',
-                                });
-                              });
-                            }}
-                          >
-                            <span
-                              className={styles.sgaiAppStripIcon}
-                              aria-hidden
-                            >
-                              <IconCmp size={16} strokeWidth={2} />
-                            </span>
-                            <span className={styles.sgaiAppStripLabel}>
-                              {app.title}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <Typography.Text
-                    type="secondary"
-                    className={styles.suggestedChipsHint}
-                  >
-                    {layoutExpanded
-                      ? 'Scenari giurisprudenza / tributario'
-                      : 'Suggerimenti'}
-                  </Typography.Text>
-                  <div
-                    className={`${styles.suggestedChipsRow} ${!layoutExpanded ? styles.suggestedChipsRowScroll : ''}`}
-                  >
-                    {SHARED_SUGGESTED_PROMPTS.map((p) => (
-                      <Button
-                        key={p.id}
-                        size="small"
-                        type="default"
-                        className={styles.suggestedChip}
-                        onClick={() => {
-                          setValue(p.body);
-                          requestAnimationFrame(() => {
-                            inputWrapperRef.current?.scrollIntoView({
-                              block: 'nearest',
-                              behavior: 'smooth',
-                            });
-                          });
-                        }}
-                      >
-                        {p.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
+            ) : null}
           </div>
           <div className={styles.embedChatInputShell}>
             <MessageInput
@@ -548,18 +579,25 @@ const DirectChat: React.FC<DirectChatProps> = ({
               value={value}
               disabled={false}
               sendDisabled={sendDisabled || sendLoading}
-              conversationId={agentId}
+              conversationId={sessionId ?? ''}
               onInputChange={handleInputChange}
               onPressEnter={handlePressEnter}
               sendLoading={sendLoading}
-              uploadMethod="external_upload_and_parse"
+              uploadMethod="upload_and_parse"
               showUploadIcon={true}
               showAttachLabel
-              uploadHint="Allega PDF, DOCX o altri formati supportati: dopo parsing e indicizzazione, il testo segue la tua domanda."
+              uploadHint={
+                showGhost
+                  ? 'Allega PDF/DOCX (parsing → retrieval).'
+                  : 'Allega PDF/DOCX: dopo indicizzazione il testo entra in analisi.'
+              }
               stopOutputMessage={stopOutputMessage}
-              textareaAutoSize={{ minRows: 1, maxRows: 4 }}
+              textareaAutoSize={{ minRows: 2, maxRows: 16 }}
               wrapperRef={inputWrapperRef}
               onInputFocus={handleInputFocus}
+              ghostSuggestion={showGhost ? ghostBody : null}
+              ghostHint="⇧ Invio: usa il suggerimento."
+              onGhostAccept={handleGhostAccept}
             />
           </div>
         </div>

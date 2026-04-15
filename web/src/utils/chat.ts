@@ -61,6 +61,21 @@ export function replaceThinkToSection(text: string = '') {
   return result;
 }
 
+/** Il modello spesso emette `…2==` invece di `~~2==`; senza prefisso, remark/GFM può rendere il testo “barrato”. */
+export function normalizeCitationMarkers(text: string): string {
+  if (!text) return text;
+  return text.replace(/(?<!~)(\d+)==/g, '~~$1==');
+}
+
+/** Rimuove righe finali rumorose tipo `>>>` lasciate dal modello. */
+export function stripAssistantOutputNoise(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/[ \t]*>{2,}[ \t]*$/gm, '')
+    .replace(/[ \t]*>{2,}[ \t]*\n/g, '\n')
+    .trimEnd();
+}
+
 export function setInitialChatVariableEnabledFieldValue(
   field: ChatVariableEnabledField,
 ) {

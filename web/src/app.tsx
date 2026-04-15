@@ -15,10 +15,11 @@ import localeData from 'dayjs/plugin/localeData';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import weekYear from 'dayjs/plugin/weekYear';
 import weekday from 'dayjs/plugin/weekday';
-import React, { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode, useEffect, useLayoutEffect, useState } from 'react';
 import { ThemeProvider, useTheme } from './components/theme-provider';
 import { TooltipProvider } from './components/ui/tooltip';
 import storage from './utils/authorization-util';
+import { startSgaiBackendHealthProbe } from './utils/sgai-backend-health-probe';
 
 dayjs.extend(customParseFormat);
 dayjs.extend(advancedFormat);
@@ -78,6 +79,10 @@ function Root({ children }: React.PropsWithChildren) {
 }
 
 const RootProvider = ({ children }: React.PropsWithChildren) => {
+  useLayoutEffect(() => {
+    startSgaiBackendHealthProbe();
+  }, []);
+
   useEffect(() => {
     // Because the language is saved in the backend, a token is required to obtain the api. However, the login page cannot obtain the language through the getUserInfo api, so the language needs to be saved in localstorage.
     const lng = storage.getLanguage();

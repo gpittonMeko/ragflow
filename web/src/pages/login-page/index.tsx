@@ -38,15 +38,66 @@ interface ChatSession {
   sessionId: string;
 }
 
-const CHAT_HISTORY_KEY = 'sgai-chat-history';
+const CHAT_HISTORY_KEY_LEGACY = 'sgai-chat-history';
+const SGAI_GOOGLE_EMAIL_KEY = 'sgai-google-email';
 const CURRENT_SESSION_KEY = 'sgai-current-session';
+
+function getChatHistoryStorageKey(): string {
+  try {
+    const email = localStorage
+      .getItem(SGAI_GOOGLE_EMAIL_KEY)
+      ?.trim()
+      .toLowerCase();
+    if (email) return `sgai-chat-history:${email}`;
+  } catch {
+    /* ignore */
+  }
+  try {
+    return `sgai-chat-history:anon:${getOrCreateClientId()}`;
+  } catch {
+    return CHAT_HISTORY_KEY_LEGACY;
+  }
+}
+
+function migrateLegacyChatHistoryIfNeeded(): void {
+  try {
+    const legacy = localStorage.getItem(CHAT_HISTORY_KEY_LEGACY);
+    if (!legacy) return;
+    const nk = getChatHistoryStorageKey();
+    if (!localStorage.getItem(nk)) {
+      localStorage.setItem(nk, legacy);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function getOrCreateClientId(): string {
+  let id = localStorage.getItem('sgai-client-id');
+  if (!id) {
+    id = uuidv4();
+    localStorage.setItem('sgai-client-id', id);
+  }
+  return id;
+}
+
+/** session_id lato UI: una per tab (sessionStorage) */
+function getOrCreateSessionId(): string {
+  let id = sessionStorage.getItem('sgai-session-id');
+  if (!id) {
+    id = uuidv4();
+    sessionStorage.setItem('sgai-session-id', id);
+  }
+  return id;
+}
 
 // ✅ Codice beta tester hardcoded
 const BETA_TESTER_CODE = 'SGAI2024BETA';
 // --- CHAT HISTORY FUNCTIONS ---
 const getChatHistory = (): ChatSession[] => {
   try {
-    const stored = localStorage.getItem(CHAT_HISTORY_KEY);
+    migrateLegacyChatHistoryIfNeeded();
+    const stored = localStorage.getItem(getChatHistoryStorageKey());
     return stored ? JSON.parse(stored) : [];
   } catch {
     return [];
@@ -55,7 +106,7 @@ const getChatHistory = (): ChatSession[] => {
 
 const saveChatHistory = (history: ChatSession[]) => {
   try {
-    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(history));
+    localStorage.setItem(getChatHistoryStorageKey(), JSON.stringify(history));
   } catch (e) {
     console.error('Error saving chat history:', e);
   }
@@ -177,25 +228,6 @@ type QuotaUser = {
   day: string;
 };
 
-function getOrCreateClientId(): string {
-  let id = localStorage.getItem('sgai-client-id');
-  if (!id) {
-    id = uuidv4();
-    localStorage.setItem('sgai-client-id', id);
-  }
-  return id;
-}
-
-// ✅ Genera session_id unico per ogni TAB (conversazioni separate)
-function getOrCreateSessionId(): string {
-  let id = sessionStorage.getItem('sgai-session-id');
-  if (!id) {
-    id = uuidv4();
-    sessionStorage.setItem('sgai-session-id', id);
-  }
-  return id;
-}
-
 const PresentationPage: React.FC = () => {
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const [hideExtras, setHideExtras] = useState(false);
@@ -310,6 +342,23 @@ const PresentationPage: React.FC = () => {
     );
     setChatHistory(sortedHistory);
   };
+
+  /** Storico sidebar: chiave localStorage per account Google vs anonimo (stesso browser). */
+  useEffect(() => {
+    if (!quota || quota.scope !== 'user') return;
+    const id = (quota as QuotaUser).id;
+    if (typeof id !== 'string' || !id.includes('@')) return;
+    try {
+      const norm = id.trim().toLowerCase();
+      const prev = localStorage.getItem(SGAI_GOOGLE_EMAIL_KEY);
+      if (prev !== norm) {
+        localStorage.setItem(SGAI_GOOGLE_EMAIL_KEY, norm);
+        loadChatHistory();
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [quota]);
 
   const createNewChat = () => {
     const newSessionId = uuidv4().slice(0, 32);
@@ -522,10 +571,7 @@ const PresentationPage: React.FC = () => {
       }
 
       // 2. ✅ NUOVO: Assicura token RAGFlow valido
-      const token = await ensureRagflowAuth();
-      if (token) {
-        console.log('✅ Token RAGFlow pronto:', token.substring(0, 20) + '...');
-      }
+      await ensureRagflowAuth();
     };
 
     syncOnLogin();
@@ -536,7 +582,6 @@ const PresentationPage: React.FC = () => {
       const existing = localStorage.getItem('Authorization');
 
       if (existing) {
-        console.log('🔑 Authorization già presente:', existing);
         return existing;
       }
 
@@ -552,19 +597,12 @@ const PresentationPage: React.FC = () => {
       });
 
       const data = await res.json();
-      console.log('[LOGIN RESPONSE]', data);
 
       // Prendi token dagli header OPPURE dal body
       const token = res.headers.get('Authorization') || data?.token;
       if (token) {
         localStorage.setItem('Authorization', token); // fonte di verità
         localStorage.setItem('access_token', token); // compat per l’iframe che legge da access_token
-        console.log('✅ Salvato Authorization + access_token:', token);
-        console.log(
-          '✅ [PARENT] Token salvato alle',
-          new Date().toISOString(),
-          token.substring(0, 20),
-        ); // ← AGGIUNGI SOLO QUESTA RIGA
 
         return token;
       } else {
@@ -587,23 +625,16 @@ const PresentationPage: React.FC = () => {
       if (authToken) {
         // Google OAuth token sempre con Bearer
         headers['Authorization'] = `Bearer ${authToken}`;
-        console.log(
-          '[QUOTA] Using Google Bearer token:',
-          authToken.substring(0, 20) + '...',
-        );
       } else {
         headers['X-Client-Id'] = clientIdRef.current;
-        console.log('[QUOTA] Using X-Client-Id:', clientIdRef.current);
       }
 
-      console.log('[QUOTA] Fetching from:', `${baseURL}/api/quota`);
       const res = await fetch(`${baseURL}/api/quota`, {
         headers,
         credentials: 'include',
       });
 
       const data = await res.json();
-      console.log('[QUOTA] Response:', data);
 
       if (res.ok) {
         setQuota(data);
@@ -649,15 +680,6 @@ const PresentationPage: React.FC = () => {
     };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
-  }, []);
-
-  useEffect(() => {
-    console.log('[API_BASE]', baseURL, {
-      quotaURL: `${baseURL}/api/quota`,
-      genURL: `${baseURL}/api/generate`,
-      authURL: `${baseURL}/api/auth/google`,
-      stripeURL: `${baseURL}/api/stripe/create-checkout-session`,
-    });
   }, []);
 
   useEffect(() => {
@@ -753,12 +775,6 @@ const PresentationPage: React.FC = () => {
       void refreshQuota(googleToken); // usa la versione con forceToken che hai già
     } else {
       // se ha pagato da anonimo, chiedi il login per collegare l’email premium
-      const email = localStorage.getItem('sgai-upgraded-email') || '';
-      console.log(
-        '[upgrade] pagamento ok per',
-        email,
-        '— serve login per associarlo',
-      );
       setShowGoogleModal(true);
     }
   }, [googleToken]);
@@ -786,6 +802,7 @@ const PresentationPage: React.FC = () => {
     localStorage.removeItem('sgai-gen-count');
     localStorage.removeItem('sgai-upgraded-email');
     localStorage.removeItem('userInfo');
+    localStorage.removeItem(SGAI_GOOGLE_EMAIL_KEY);
     localStorage.removeItem('sgai-client-id');
     localStorage.removeItem('sgai-upgraded');
 
@@ -1316,9 +1333,16 @@ const PresentationPage: React.FC = () => {
                 : {
                     zIndex: 10,
                     background: 'transparent',
-                    width: 'auto',
-                    height: hasMessages ? '360px' : '260px',
-                    transition: 'height 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                    alignSelf: 'center',
+                    width: '100%',
+                    maxWidth: 'min(780px, calc(100vw - 16px))',
+                    minHeight: hasMessages ? 320 : 280,
+                    height: hasMessages
+                      ? 'min(56vh, 560px)'
+                      : 'min(46vh, 440px)',
+                    maxHeight: 'min(70vh, 680px)',
+                    transition:
+                      'height 0.35s cubic-bezier(0.4, 0, 0.2, 1), min-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                   }),
             }}
           >
@@ -1374,9 +1398,6 @@ const PresentationPage: React.FC = () => {
                   onMessagesChange={(count) => setHasMessages(count > 0)}
                   onChatUpdate={updateCurrentChat}
                   onGenerationComplete={() => {
-                    console.log(
-                      '[INDEX] Generation completed, refreshing quota...',
-                    );
                     void refreshQuota();
                   }}
                 />

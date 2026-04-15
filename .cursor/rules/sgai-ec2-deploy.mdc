@@ -1,0 +1,38 @@
+---
+description: SGAI EC2 spenta = Lambda wake; deploy web = git push + build sul server
+alwaysApply: true
+---
+
+# SGAI — EC2 e deploy web
+
+## 1. Macchina spenta → wake con Lambda
+
+Se SSH verso l’EC2 (`ubuntu@13.49.16.179` o `SGAI_EC2_HOST`) va in **timeout**, l’istanza è quasi sempre **spenta**.
+
+- **Non** insistere solo con SSH: chiamare prima la **Lambda wake-up** (stesso flusso della home / control panel).
+- Endpoint di default: `https://91k2hfw1n3.execute-api.eu-north-1.amazonaws.com/wake-up` con body JSON `{"force_start":true,"target_instance":"SGAI-Production"}`.
+- Poi attendere che SSH risponda (boot + Docker richiede minuti).
+
+Gli script `scripts/deploy-sgai-remote-only-ec2.ps1` e `scripts/deploy-git-pull-build-ec2.ps1` eseguono già wake + attesa SSH (salvo `SGAI_SKIP_WAKE=1`).
+
+## 2. Build e deploy: repo condivisa = git, non tarball da Windows
+
+La macchina di produzione usa **la stessa repo** sotto `~/workspace/ragflow`.
+
+Flusso preferito dall’agente:
+
+1. Commit/push da qui: `git push origin <branch>`.
+2. Sull’EC2 (via SSH): `cd ~/workspace/ragflow && git pull && cd web && npm run build`.
+3. Se necessario riavvio/reload servizi (vedi script).
+
+**Evitare** come flusso principale: solo `scp` del `dist` da Windows quando si può fare pull + build sul server — salvo emergenze o repo non allineata.
+
+Script unificato: **`scripts/deploy-git-pull-build-ec2.ps1`** (wake → push → pull remoto → `npm run build`).
+
+## Variabili utili (PowerShell)
+
+- `SGAI_EC2_HOST`, `SGAI_SSH_KEY`, `SGAI_WAKE_URL`, `SGAI_WAKE_TARGET`
+- `SGAI_SKIP_WAKE=1` se l’EC2 è già accesa
+- `SGAI_GIT_REMOTE` (default `origin`), `SGAI_GIT_BRANCH` (default branch corrente locale)
+
+L’EC2 deve avere `git remote` verso lo stesso host del push e credenziali già configurate (`git pull` non interattivo).

@@ -28,6 +28,7 @@ import {
   UploadProps,
 } from 'antd';
 import get from 'lodash/get';
+import trim from 'lodash/trim';
 import { CircleStop, Paperclip, SendHorizontal } from 'lucide-react';
 import {
   ChangeEventHandler,
@@ -83,6 +84,10 @@ interface IProps {
   showAttachLabel?: boolean;
   /** Override righe autoSize del textarea; se omesso: shared → max 4, altrimenti max 10 */
   textareaAutoSize?: { minRows: number; maxRows: number };
+  /** Suggerimento in dissolvenza nel campo (Maiusc+Invio per accettare se il campo è vuoto) */
+  ghostSuggestion?: string | null;
+  ghostHint?: string;
+  onGhostAccept?: () => void;
 }
 
 const getBase64 = (file: FileType): Promise<string> =>
@@ -111,6 +116,9 @@ const MessageInput = ({
   uploadHint,
   showAttachLabel = false,
   textareaAutoSize,
+  ghostSuggestion,
+  ghostHint,
+  onGhostAccept,
 }: IProps) => {
   const { t } = useTranslate('chat');
   const { removeDocument } = useRemoveNextDocument();
@@ -191,15 +199,33 @@ const MessageInput = ({
 
   const handleKeyDown = useCallback(
     async (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      // check if it was shift + enter
-      if (event.key === 'Enter' && event.shiftKey) return;
+      if (event.key === 'Enter' && event.shiftKey) {
+        if (
+          ghostSuggestion &&
+          onGhostAccept &&
+          trim(value) === '' &&
+          trim(ghostSuggestion) !== ''
+        ) {
+          event.preventDefault();
+          onGhostAccept();
+        }
+        return;
+      }
       if (event.key !== 'Enter') return;
       if (sendDisabled || isUploadingFile || sendLoading) return;
 
       event.preventDefault();
       handlePressEnter();
     },
-    [sendDisabled, isUploadingFile, sendLoading, handlePressEnter],
+    [
+      sendDisabled,
+      isUploadingFile,
+      sendLoading,
+      handlePressEnter,
+      ghostSuggestion,
+      onGhostAccept,
+      value,
+    ],
   );
 
   const handleRemove = useCallback(
@@ -299,34 +325,56 @@ const MessageInput = ({
           'dark:bg-black',
         )}
       >
-        <TextArea
-          size={isShared ? 'middle' : 'large'}
-          placeholder={t('sendPlaceholder')}
-          value={value}
-          allowClear
-          disabled={disabled}
-          style={{
-            border: 'none',
-            boxShadow: 'none',
-            padding: '0px 10px',
-            marginTop: 2,
-          }}
-          autoSize={resolvedTextareaAutoSize}
-          onKeyDown={handleKeyDown}
-          onChange={handleTextAreaChange}
-          onFocus={handleFocus}
-        />
+        <div
+          className={cn(
+            styles.textareaWithGhost,
+            ghostSuggestion &&
+              trim(value) === '' &&
+              styles.textareaWithGhostActive,
+          )}
+        >
+          <TextArea
+            className={
+              ghostSuggestion && trim(value) === ''
+                ? styles.textareaOverGhost
+                : undefined
+            }
+            size={isShared ? 'middle' : 'large'}
+            placeholder={
+              ghostSuggestion && trim(value) === '' ? '' : t('sendPlaceholder')
+            }
+            value={value}
+            allowClear
+            disabled={disabled}
+            style={{
+              border: 'none',
+              boxShadow: 'none',
+              padding: '0px 10px',
+              marginTop: 2,
+            }}
+            autoSize={resolvedTextareaAutoSize}
+            onKeyDown={handleKeyDown}
+            onChange={handleTextAreaChange}
+            onFocus={handleFocus}
+          />
+          {ghostSuggestion && trim(value) === '' ? (
+            <div
+              key={ghostSuggestion.slice(0, 48)}
+              className={styles.inputGhostLayer}
+              aria-hidden
+            >
+              {ghostSuggestion}
+            </div>
+          ) : null}
+        </div>
+        {ghostHint && ghostSuggestion && trim(value) === '' ? (
+          <Text type="secondary" className={styles.ghostHint}>
+            {ghostHint}
+          </Text>
+        ) : null}
         <Divider style={{ margin: '5px 30px 10px 0px' }} />
         {uploadHint && (
-          <Text
-            type="secondary"
-            style={{
-              display: 'block',
-              fontSize: 12,
-              lineHeight: 1.45,
-              padding: '0 10px 6px',
-            }}
-          >
+          <Text type="secondary" className={styles.uploadHintLine}>
             {uploadHint}
           </Text>
         )}

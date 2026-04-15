@@ -69,7 +69,12 @@ import { useTranslation } from 'react-i18next';
 
 import 'katex/dist/katex.min.css';
 
-import { preprocessLaTeX, replaceThinkToSection } from '@/utils/chat';
+import {
+  normalizeCitationMarkers,
+  preprocessLaTeX,
+  replaceThinkToSection,
+  stripAssistantOutputNoise,
+} from '@/utils/chat';
 import { replaceTextByOldReg } from '../utils';
 
 import classNames from 'classnames';
@@ -83,7 +88,8 @@ const DEBUG = false; // metti a false in produzione
 // ─────────────────────────────────────────────────────────────
 // Regex referencing
 // ─────────────────────────────────────────────────────────────
-const reg = /(~~\d+==|##\d+\$\$)/g;
+/* Anche `N==` senza ~~ (output LLM); evita che resti testo grezzo / parsing GFM strano */
+const reg = /(~~\d+==|##\d+\$\$|(?<!~)\d+==)/g;
 const getChunkIndex = (match: string) => parseInt(match.replace(/\D/g, ''), 10);
 
 // ─────────────────────────────────────────────────────────────
@@ -219,6 +225,9 @@ const MarkdownContent = ({
       const nextText = replaceTextByOldReg(text);
       stage.afterOldReg = nextText;
 
+      const afterNoise = stripAssistantOutputNoise(nextText);
+      const afterCite = normalizeCitationMarkers(afterNoise);
+
       // voglio loggare anche i match del pattern
       const matchesBefore = countMatches(nextText);
       if (DEBUG) {
@@ -230,10 +239,10 @@ const MarkdownContent = ({
       let afterLatex = '';
 
       try {
-        afterThink = replaceThinkToSection(nextText);
+        afterThink = replaceThinkToSection(afterCite);
         stage.afterThinkToSection = afterThink;
       } catch (e) {
-        afterThink = nextText;
+        afterThink = afterCite;
         stage.afterThinkToSection = `[ERROR replaceThinkToSection] ${String(e)}`;
         if (DEBUG) console.error('replaceThinkToSection ERROR:', e);
       }
@@ -538,6 +547,12 @@ const MarkdownContent = ({
                   >
                     {children}
                   </code>
+                );
+              },
+              /* GFM strikethrough su testi legali è quasi sempre parsing errato (~~ sbilanciato). */
+              del(props: { children?: React.ReactNode }) {
+                return (
+                  <span className={styles.delAsPlain}>{props.children}</span>
                 );
               },
             } as any

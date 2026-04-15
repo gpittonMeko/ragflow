@@ -484,8 +484,43 @@ def queue_raptor_o_graphrag_tasks(doc, ty, priority):
     assert REDIS_CONN.queue_product(get_svr_queue_name(priority), message=task), "Can't access Redis. Please check the Redis' status."
 
 
+def _extract_kb_ids_from_canvas_dsl(dsl):
+    """Primi kb_id dai nodi Retrieval nel DSL canvas (stringa JSON o dict)."""
+    if dsl is None:
+        return []
+    root = dsl
+    if isinstance(root, str):
+        try:
+            root = json.loads(root)
+        except Exception:
+            return []
+    if not isinstance(root, dict):
+        return []
+    comps = root.get("components")
+    if not isinstance(comps, dict):
+        return []
+    seen = []
+    for node in comps.values():
+        if not isinstance(node, dict):
+            continue
+        obj = node.get("obj")
+        if not isinstance(obj, dict):
+            continue
+        if obj.get("component_name") != "Retrieval":
+            continue
+        params = obj.get("params") or {}
+        ids = params.get("kb_ids")
+        if not isinstance(ids, list):
+            continue
+        for kid in ids:
+            if isinstance(kid, str) and kid.strip() and kid not in seen:
+                seen.append(kid)
+    return seen
+
+
 def doc_upload_and_parse(conversation_id, file_objs, user_id):
     from api.db.services.api_service import API4ConversationService
+    from api.db.services.canvas_service import UserCanvasService
     from api.db.services.conversation_service import ConversationService
     from api.db.services.dialog_service import DialogService
     from api.db.services.file_service import FileService
@@ -498,11 +533,22 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
         e, conv = API4ConversationService.get_by_id(conversation_id)
     assert e, "Conversation not found!"
 
+    kb_id = None
     e, dia = DialogService.get_by_id(conv.dialog_id)
-    if not dia.kb_ids:
+    if e and dia and getattr(dia, "kb_ids", None):
+        kbs = dia.kb_ids
+        if isinstance(kbs, list) and len(kbs) > 0:
+            kb_id = kbs[0]
+    if not kb_id:
+        # Sessione agent/canvas: dialog_id punta al canvas (user_canvas), non a dialog
+        e_cvs, cvs = UserCanvasService.get_by_id(conv.dialog_id)
+        if e_cvs and cvs:
+            dsl_ids = _extract_kb_ids_from_canvas_dsl(cvs.dsl)
+            if dsl_ids:
+                kb_id = dsl_ids[0]
+    if not kb_id:
         raise LookupError("No knowledge base associated with this conversation. "
                           "Please add a knowledge base before uploading documents")
-    kb_id = dia.kb_ids[0]
     e, kb = KnowledgebaseService.get_by_id(kb_id)
     if not e:
         raise LookupError("Can't find this knowledgebase!")

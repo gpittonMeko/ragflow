@@ -108,22 +108,29 @@ request.interceptors.response.use(async (response: Response, options) => {
   }
 
   const data: ResponseType = await response?.clone()?.json();
+  const silentAuthFailure = (options as { silentAuthFailure?: boolean })
+    ?.silentAuthFailure;
+
   if (data?.code === 100) {
     message.error(data?.message);
   } else if (data?.code === 401) {
-    notification.error({
-      message: data?.message,
-      description: data?.message,
-      duration: 3,
-    });
-    authorizationUtil.removeAll();
-    redirectToLogin();
+    if (!silentAuthFailure) {
+      notification.error({
+        message: data?.message,
+        description: data?.message,
+        duration: 3,
+      });
+      authorizationUtil.removeAll();
+      redirectToLogin();
+    }
   } else if (data?.code !== 0) {
-    notification.error({
-      message: `${i18n.t('message.hint')} : ${data?.code}`,
-      description: data?.message,
-      duration: 3,
-    });
+    if (!silentAuthFailure) {
+      notification.error({
+        message: `${i18n.t('message.hint')} : ${data?.code}`,
+        description: data?.message,
+        duration: 3,
+      });
+    }
   }
   return response;
 });

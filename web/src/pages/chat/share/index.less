@@ -23,6 +23,15 @@
   }
 }
 
+@keyframes sgaiEmbedBtnAuraHue {
+  0% {
+    filter: hue-rotate(0deg) saturate(1.02);
+  }
+  100% {
+    filter: hue-rotate(360deg) saturate(1.06);
+  }
+}
+
 :root {
   --bg-primary: #ffffff;
   --bg-secondary: #ffffff;
@@ -318,10 +327,147 @@
       0 8px 26px rgba(15, 23, 42, 0.07);
   }
 
+  &.directChatEmbed .embedGlassPanelCollapsed {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  &.directChatEmbed .directChatOptsToggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+    padding: 6px 8px;
+    border: none;
+    border-radius: 10px;
+    background: color-mix(
+      in srgb,
+      var(--bg-secondary) 88%,
+      var(--accent-color) 8%
+    );
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: var(--dc-font-meta, 12px);
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition:
+      background-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  &.directChatEmbed .directChatOptsToggle:hover {
+    background: color-mix(
+      in srgb,
+      var(--bg-secondary) 82%,
+      var(--accent-color) 14%
+    );
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  &.directChatEmbed .directChatOptsToggleLabel {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.3;
+  }
+
+  &.directChatEmbed .directChatOptsChevron {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+  }
+
+  &.directChatEmbed .directChatOptsChevronOpen {
+    transform: rotate(180deg);
+  }
+
+  &.directChatEmbed .directChatOptsBody {
+    margin-top: 4px;
+    padding-top: 2px;
+    max-height: min(52dvh, 440px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Contenuto opzioni: stesso “vetro” del pannello, senza strisce separate */
+  &.directChatEmbed .directChatOptsInner {
+    margin: 0;
+    padding: 2px 4px 4px;
+    border-radius: 12px;
+    background: color-mix(
+      in srgb,
+      var(--bg-secondary) 88%,
+      rgba(139, 92, 246, 0.04)
+    );
+    border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
+  }
+
+  &.light.directChatEmbed .directChatOptsInner {
+    /* Stesso “vetro” del pannello: niente alone bianco isolato */
+    background: color-mix(
+      in srgb,
+      var(--bg-secondary) 94%,
+      rgba(99, 102, 241, 0.04)
+    );
+    border-color: color-mix(in srgb, var(--border-color) 92%, transparent);
+  }
+
+  /* Tema scuro: niente pannello opzioni bianco (Ant default) */
+  &.dark.directChatEmbed .directChatOptsInner {
+    background: color-mix(
+      in srgb,
+      var(--bg-secondary, #1c1c1e) 94%,
+      rgba(139, 92, 246, 0.08)
+    ) !important;
+    border-color: var(--border-color) !important;
+  }
+
+  &.dark.directChatEmbed .directChatOptsBody :global(.ant-checkbox-wrapper),
+  &.dark.directChatEmbed .directChatOptsBody :global(.ant-checkbox + span) {
+    color: var(--text-primary) !important;
+  }
+
+  &.dark.directChatEmbed .directChatOptsBody :global(.ant-segmented) {
+    background: color-mix(
+      in srgb,
+      var(--bg-message, #262626) 92%,
+      transparent
+    ) !important;
+  }
+
+  &.dark.directChatEmbed .directChatOptsBody :global(.ant-segmented-item) {
+    color: var(--text-secondary) !important;
+  }
+
+  &.dark.directChatEmbed
+    .directChatOptsBody
+    :global(.ant-segmented-item-selected) {
+    background: color-mix(
+      in srgb,
+      var(--bg-secondary, #1c1c1e) 88%,
+      var(--accent-color) 12%
+    ) !important;
+    color: var(--text-primary) !important;
+  }
+
   &.directChatEmbed.directChatEmbedCompact .embedGlassPanel {
-    padding: 8px 10px 6px;
-    margin-bottom: 4px;
+    padding: 6px 8px 4px;
+    margin-bottom: 3px;
     border-radius: 14px;
+  }
+
+  &.directChatEmbed.directChatEmbedCompact .directChatOptsToggle {
+    padding: 5px 6px;
+    font-size: 11px;
+  }
+
+  &.directChatEmbed.directChatEmbedCompact .directChatOptsBody {
+    max-height: min(48dvh, 400px);
+    margin-top: 4px;
   }
 
   &.directChatEmbed.directChatEmbedCompact .sgaiApplicationsLead {
@@ -356,10 +502,27 @@
     /* iOS/Android: evita che il parent rubi il gesture verticale */
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
+    /* alcuni browser non espandono l’area scroll senza altezza esplicita nel flex child */
+    position: relative;
 
     :global(.ant-spin-nested-loading),
     :global(.ant-spin-container) {
       min-height: 0;
+      height: auto;
+      max-height: none;
+    }
+
+    :global([class*='messageItemSection']) {
+      max-width: 100% !important;
+    }
+
+    :global([class*='messageItemSectionLeft']) {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    :global([class*='messageItemContent']) {
+      max-width: 100% !important;
     }
   }
 
@@ -372,7 +535,7 @@
     .directChatInputColumn {
       flex: 0 1 auto;
       min-height: 0;
-      max-height: min(48dvh, 400px);
+      max-height: min(58dvh, 520px);
       overflow: hidden;
     }
 
@@ -395,16 +558,16 @@
   &.directChatEmbed .directChatInputColumn {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     padding: 0 4px 4px;
     min-width: 0;
   }
 
   &.directChatEmbed .deepSearchRow {
     display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 4px 8px 2px;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 4px 2px;
     flex-wrap: nowrap;
   }
 
@@ -432,17 +595,142 @@
     line-height: 1.4 !important;
     margin: 0 !important;
     max-width: 100%;
+    white-space: normal !important;
+    word-break: break-word;
+  }
+
+  &.directChatEmbed .directChatOptionsCollapse .controlsToolbar {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  &.directChatEmbed .controlsToolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0;
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  &.directChatEmbed .retrievalModeRow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 4px 2px;
+  }
+
+  &.directChatEmbed .retrievalModeLabel {
+    font-size: var(--dc-font-meta, 12px);
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+  }
+
+  &.directChatEmbed .retrievalModeSegmented {
+    align-self: flex-start;
+    max-width: 100%;
+
+    :global(.ant-segmented) {
+      background: color-mix(
+        in srgb,
+        var(--bg-secondary) 90%,
+        var(--border-color) 10%
+      );
+    }
+
+    :global(.ant-segmented-item-selected) {
+      color: var(--text-primary) !important;
+    }
+  }
+
+  &.directChatEmbed .retrievalModeHint {
+    font-size: var(--dc-font-meta-sm, 11px) !important;
+    line-height: 1.35 !important;
+    margin: 0 !important;
+    white-space: normal !important;
+    word-break: break-word;
+  }
+
+  /* Dark embed: niente “pannello bianco” sulla knowledge */
+  &.directChatEmbed.dark .kbFilterBlock {
+    background: color-mix(
+      in srgb,
+      var(--bg-message, #262626) 94%,
+      var(--accent-color) 5%
+    ) !important;
+    border-color: var(--border-color) !important;
+  }
+
+  &.directChatEmbed .kbFilterBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 4px 6px 5px;
+    border-radius: 10px;
+    background: color-mix(
+      in srgb,
+      var(--bg-secondary) 94%,
+      var(--accent-color) 4%
+    );
+    border: 1px solid
+      color-mix(in srgb, var(--border-color) 90%, var(--accent-color) 10%);
+  }
+
+  &.light.directChatEmbed .kbFilterBlock {
+    background: color-mix(
+      in srgb,
+      var(--bg-secondary) 96%,
+      var(--accent-color) 3%
+    ) !important;
+    border-color: color-mix(
+      in srgb,
+      var(--border-color) 94%,
+      transparent
+    ) !important;
+  }
+
+  &.directChatEmbed .kbFilterLabel {
+    display: block;
+    font-size: var(--dc-font-meta, 12px);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    line-height: 1.3;
+  }
+
+  &.directChatEmbed .kbFilterSub {
+    white-space: normal !important;
+    word-break: break-word;
+    display: block !important;
+    font-size: var(--dc-font-meta-sm, 11px) !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+  }
+
+  &.directChatEmbed .kbFilterGroup {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px 10px !important;
+    row-gap: 4px !important;
+  }
+
+  &.directChatEmbed .kbFilterGroup :global(.ant-checkbox-wrapper) {
+    font-size: var(--dc-font-meta-sm, 11px);
+    color: var(--text-secondary);
+    margin-inline-end: 0 !important;
+    align-items: flex-start;
   }
 
   &.directChatEmbed .suggestedChipsSection {
-    padding: 4px 8px 0;
+    padding: 2px 4px 0;
   }
 
   &.directChatEmbed .sgaiApplicationsLead {
     display: block;
     font-size: var(--dc-font-meta, 12px);
-    line-height: 1.45;
-    margin-bottom: 10px !important;
+    line-height: 1.4;
+    margin-bottom: 6px !important;
     color: var(--text-secondary) !important;
     font-family: var(--font-sans);
   }
@@ -453,7 +741,7 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-weight: 600;
-    margin-bottom: 8px !important;
+    margin-bottom: 5px !important;
     color: var(--text-secondary) !important;
     font-family: var(--font-sans);
   }
@@ -461,8 +749,8 @@
   &.directChatEmbed .sgaiApplicationsGrid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: 6px;
+    margin-bottom: 8px;
   }
 
   @media (min-width: 480px) {
@@ -476,10 +764,10 @@
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    gap: 8px;
+    gap: 6px;
     overflow-x: auto;
     overflow-y: hidden;
-    margin-bottom: 8px;
+    margin-bottom: 5px;
     padding-bottom: 2px;
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x proximity;
@@ -489,9 +777,9 @@
     display: inline-flex;
     flex-direction: row;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     flex: 0 0 auto;
-    padding: 8px 11px;
+    padding: 6px 9px;
     min-height: 0;
     border-radius: 11px;
     border: 1px solid
@@ -548,7 +836,7 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
-    padding: 10px 10px;
+    padding: 8px 8px;
     margin: 0;
     border: 1px solid var(--border-color);
     border-radius: 10px;
@@ -565,7 +853,7 @@
       border-color 0.15s ease,
       box-shadow 0.15s ease,
       transform 0.12s ease;
-    min-height: 72px;
+    min-height: 64px;
   }
 
   &.directChatEmbed .sgaiAppCard:hover {
@@ -604,9 +892,9 @@
 
   &.directChatEmbed .suggestedChipsHint {
     display: block;
-    font-size: 12px;
-    line-height: 1.45;
-    margin-bottom: 6px !important;
+    font-size: 11px;
+    line-height: 1.4;
+    margin-bottom: 4px !important;
     color: var(--text-secondary) !important;
     font-family: var(--font-sans);
   }
@@ -690,7 +978,9 @@
     background-size:
       100% 100%,
       200% 200% !important;
-    animation: sgaiCtaBorderShift 24s ease-in-out infinite;
+    animation:
+      sgaiCtaBorderShift 24s ease-in-out infinite,
+      sgaiEmbedBtnAuraHue 22s linear infinite;
     color: #f4f4f4 !important;
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.06) inset,
@@ -773,6 +1063,20 @@
     transform: translateY(0);
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    &.directChatEmbed
+      :global([class*='messageInputWrapper'])
+      :global(.ant-btn-primary:not(:disabled)) {
+      animation: none !important;
+    }
+
+    &.directChatEmbed
+      :global([class*='messageInputWrapper'])
+      :global(.ant-btn-primary:not(:disabled):hover) {
+      animation: none !important;
+    }
+  }
+
   /* Shell stabile da direct-chat: riga Allega + Invio non si schiaccia su mobile */
   &.directChatEmbed .embedChatInputShell {
     width: 100%;
@@ -785,16 +1089,54 @@
     min-width: 0;
   }
 
-  /* Textarea: dimensione allineata ai messaggi, non 16px “enfatico” come il resto della UI */
+  /* Textarea: cresce con il testo fino a un tetto più alto */
   &.directChatEmbed
     :global([class*='messageInputWrapper'])
     :global(textarea.ant-input) {
-    max-height: min(28vh, 168px) !important;
+    max-height: min(55dvh, 420px) !important;
     overflow-y: auto !important;
     font-size: 0.9375rem !important;
     line-height: 1.45 !important;
-    min-height: 40px !important;
+    min-height: 44px !important;
     padding: 8px 10px !important;
+  }
+
+  /* Clear (X): allineata al testo su più righe */
+  &.directChatEmbed
+    :global([class*='messageInputWrapper'])
+    :global(.ant-input-affix-wrapper) {
+    align-items: flex-start !important;
+    padding-top: 4px !important;
+    padding-inline-end: 30px !important;
+  }
+
+  &.directChatEmbed
+    :global([class*='messageInputWrapper'])
+    :global(.ant-input-clear-icon) {
+    margin-top: 6px !important;
+    margin-inline-end: 2px !important;
+  }
+
+  &.directChatEmbed.dark
+    :global([class*='messageInputWrapper'])
+    :global(.ant-typography-secondary) {
+    color: var(--text-secondary, #a8a8a8) !important;
+  }
+
+  /* Corpo risposta embed: paragrafi più leggibili */
+  &.directChatEmbed :global([data-testid='markdown-content-root']) {
+    font-size: 0.9rem;
+    line-height: 1.52;
+
+    :global(p) {
+      margin: 0 0 0.65em !important;
+    }
+
+    :global(ul),
+    :global(ol) {
+      margin: 0.35em 0 0.65em !important;
+      padding-left: 1.15em !important;
+    }
   }
 
   /* Ultima riga del message input = flex con Allega + Invio */

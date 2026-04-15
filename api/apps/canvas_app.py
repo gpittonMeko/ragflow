@@ -33,7 +33,9 @@ import time
 
 def _enrich_canvas_user_message(raw_message: str, req: dict) -> str:
     """
-    Opzioni da client: doc_ids (CSV), deep_search (bool).
+    Opzioni da client: doc_ids (CSV), deep_search (bool), retrieval_kb_ids (CSV, vedi
+    _apply_retrieval_kb_filter — non modifica questo testo), retrieval_top_n (int, vedi
+    _apply_retrieval_top_n).
     - deep_search: arricchimento con fonti web. Ordine: (1) Tavily se TAVILY_API_KEY è
       impostata; (2) altrimenti DuckDuckGo via duckduckgo_search (nessuna API key, come
       agent/component/duckduckgo.py). Le chiavi OpenAI non servono per cercare sul web.
@@ -108,6 +110,62 @@ def _enrich_canvas_user_message(raw_message: str, req: dict) -> str:
         text = f"[Documenti allegati: {doc_ids_str}]\n\n" + text
 
     return text
+
+
+def _apply_retrieval_kb_filter(canvas, kb_csv):
+    """
+    Limita i nodi Retrieval ai kb_id richiesti dal client (sottoinsieme di quelli già
+    configurati nell'agent). Chiave request: retrieval_kb_ids (CSV). Non espande mai
+    oltre i kb già presenti nel canvas.
+    """
+    if not kb_csv or not str(kb_csv).strip():
+        return
+    allow = {x.strip() for x in str(kb_csv).split(",") if x.strip()}
+    if not allow:
+        return
+    try:
+        for _cid, cpn in canvas.components.items():
+            obj = cpn.get("obj")
+            if not obj or getattr(obj, "component_name", "") != "Retrieval":
+                continue
+            param = getattr(obj, "_param", None)
+            if param is None or not getattr(param, "kb_ids", None):
+                continue
+            orig = list(param.kb_ids)
+            if not orig:
+                continue
+            filt = [x for x in orig if x in allow]
+            param.kb_ids = filt if filt else orig
+            logging.info(
+                "[CANVAS] retrieval_kb_ids filter: %s -> %s", orig, param.kb_ids
+            )
+    except Exception as e:
+        logging.warning("[CANVAS] retrieval_kb_ids filter skipped: %s", e)
+
+
+def _apply_retrieval_top_n(canvas, top_n):
+    """Override top_n su tutti i nodi Retrieval (richiesta client, cap sicuro)."""
+    if top_n is None:
+        return
+    try:
+        n = int(top_n)
+        if n < 1:
+            return
+        n = min(n, 32)
+        applied = 0
+        for _cid, cpn in canvas.components.items():
+            obj = cpn.get("obj")
+            if not obj or getattr(obj, "component_name", "") != "Retrieval":
+                continue
+            param = getattr(obj, "_param", None)
+            if param is None:
+                continue
+            param.top_n = n
+            applied += 1
+        if applied:
+            logging.info("[CANVAS] retrieval_top_n=%s on %s Retrieval node(s)", n, applied)
+    except Exception as e:
+        logging.warning("[CANVAS] retrieval_top_n skipped: %s", e)
 
 
 @manager.route('/templates', methods=['GET'])  # noqa: F821
@@ -394,6 +452,8 @@ def run():
             
             try:
                 logging.info("[SSE] Starting stream...")
+                _apply_retrieval_kb_filter(canvas, req.get("retrieval_kb_ids"))
+                _apply_retrieval_top_n(canvas, req.get("retrieval_top_n"))
                 answer_count = 0
                 for ans in canvas.run(stream=True):
                     answer_count += 1
@@ -474,6 +534,8 @@ def run():
         return resp
 
     # Non-streaming
+    _apply_retrieval_kb_filter(canvas, req.get("retrieval_kb_ids"))
+    _apply_retrieval_top_n(canvas, req.get("retrieval_top_n"))
     for answer in canvas.run(stream=False):
         if answer.get("running_status"):
             continue

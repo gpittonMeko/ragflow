@@ -72,6 +72,8 @@ interface IProps extends Partial<IRemoveMessageById>, IRegenerateMessage {
   index: number;
   showLikeButton?: boolean;
   showLoudspeaker?: boolean;
+  /** Login embed: fonti compatte in riga, meno padding messaggio */
+  embedChat?: boolean;
 }
 
 const MessageItem = ({
@@ -88,6 +90,7 @@ const MessageItem = ({
   showLikeButton = true,
   showLoudspeaker = true,
   visibleAvatar = true,
+  embedChat = false,
 }: IProps) => {
   const { theme } = useTheme();
   const isAssistant = item.role === MessageType.Assistant;
@@ -178,14 +181,6 @@ const MessageItem = ({
         docIndex < allChunks.length
       ) {
         chunk = allChunks[docIndex] as IReferenceChunk;
-        console.debug(
-          '[MessageItem] Using chunk at index',
-          docIndex,
-          'for doc',
-          docId,
-          '-> chunk:',
-          chunk.id,
-        );
       } else {
         // Fallback: cerca per doc_id (per compatibilità)
         chunk = allChunks.find((c) => c.doc_id === docId) as IReferenceChunk;
@@ -202,13 +197,6 @@ const MessageItem = ({
       }
 
       if (chunk) {
-        console.debug(
-          '[MessageItem] openDrawer ->',
-          docId,
-          chunk,
-          'docIndex:',
-          docIndex,
-        );
         clickDocumentButton(docId, chunk);
       } else {
         console.warn('[MessageItem] Nessun chunk trovato per docId:', docId);
@@ -269,6 +257,7 @@ const MessageItem = ({
       className={classNames(styles.messageItem, {
         [styles.messageItemLeft]: isAssistant,
         [styles.messageItemRight]: isUser,
+        [styles.messageItemEmbed]: embedChat,
       })}
     >
       <section
@@ -347,103 +336,169 @@ const MessageItem = ({
               <Collapse
                 ghost
                 className={styles.sourcesCollapse}
-                defaultActiveKey={['fonti']}
+                defaultActiveKey={embedChat ? [] : ['fonti']}
               >
                 <Panel
                   header={
-                    <Text strong style={{ fontSize: 13 }}>
+                    <Text strong style={{ fontSize: embedChat ? 12 : 13 }}>
                       Fonti ({referenceDocumentList.length})
                     </Text>
                   }
                   key="fonti"
                 >
-                  <List
-                    size="small"
-                    itemLayout="vertical"
-                    dataSource={referenceDocumentList}
-                    renderItem={(doc, idx) => {
-                      const url = doc.url;
-                      const pct = affinityPercent(doc.similarity);
-                      const displayName =
-                        doc.original_name ||
-                        doc.originalFilename ||
-                        doc.file_name ||
-                        doc.name ||
-                        doc.doc_name;
+                  {embedChat ? (
+                    <div className={styles.sourcesEmbedRow}>
+                      {referenceDocumentList.map((doc, idx) => {
+                        const displayName =
+                          doc.original_name ||
+                          doc.originalFilename ||
+                          doc.file_name ||
+                          doc.name ||
+                          doc.doc_name;
+                        const prettyName =
+                          humanizePdfName(displayName) || displayName;
+                        const short =
+                          prettyName.length > 36
+                            ? `${prettyName.slice(0, 34)}…`
+                            : prettyName;
+                        const dlUrl = buildDownloadUrl(doc.doc_id, url);
+                        return (
+                          <div
+                            key={doc.doc_id || idx}
+                            className={styles.sourceEmbedChip}
+                          >
+                            <FileIcon id={doc.doc_id} name={doc.doc_name} />
+                            <NewDocumentLink
+                              documentId={doc.doc_id}
+                              documentName={prettyName}
+                              prefix="document"
+                              link={doc.url}
+                            >
+                              {short}
+                            </NewDocumentLink>
+                            <Button
+                              type="text"
+                              size="small"
+                              className={styles.sourceEmbedIconBtn}
+                              icon={<EyeOutlined />}
+                              onClick={() => openDrawer(doc.doc_id, idx)}
+                              aria-label="Anteprima"
+                            />
+                            <Button
+                              type="text"
+                              size="small"
+                              className={styles.sourceEmbedIconBtn}
+                              icon={<DownloadOutlined />}
+                              onClick={() => downloadPdf(dlUrl)}
+                              aria-label="Scarica"
+                            />
+                            {doc.url ? (
+                              <Button
+                                type="text"
+                                size="small"
+                                className={styles.sourceEmbedIconBtn}
+                                icon={<LinkOutlined />}
+                                href={doc.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                aria-label="Apri"
+                              />
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <List
+                      size="small"
+                      itemLayout="vertical"
+                      dataSource={referenceDocumentList}
+                      renderItem={(doc, idx) => {
+                        const url = doc.url;
+                        const pct = affinityPercent(doc.similarity);
+                        const displayName =
+                          doc.original_name ||
+                          doc.originalFilename ||
+                          doc.file_name ||
+                          doc.name ||
+                          doc.doc_name;
 
-                      const prettyName =
-                        humanizePdfName(displayName) || displayName;
-                      const dlUrl = buildDownloadUrl(doc.doc_id, url);
+                        const prettyName =
+                          humanizePdfName(displayName) || displayName;
+                        const dlUrl = buildDownloadUrl(doc.doc_id, url);
 
-                      return (
-                        <List.Item className={styles.sourceListItem}>
-                          <Flex vertical gap={4}>
-                            <Flex gap={'small'} align="center" wrap="wrap">
-                              <FileIcon id={doc.doc_id} name={doc.doc_name} />
+                        return (
+                          <List.Item className={styles.sourceListItem}>
+                            <Flex vertical gap={4}>
+                              <Flex gap={'small'} align="center" wrap="wrap">
+                                <FileIcon id={doc.doc_id} name={doc.doc_name} />
 
-                              <NewDocumentLink
-                                documentId={doc.doc_id}
-                                documentName={prettyName}
-                                prefix="document"
-                                link={doc.url}
-                              >
-                                {prettyName}
-                              </NewDocumentLink>
+                                <NewDocumentLink
+                                  documentId={doc.doc_id}
+                                  documentName={prettyName}
+                                  prefix="document"
+                                  link={doc.url}
+                                >
+                                  {prettyName}
+                                </NewDocumentLink>
 
-                              <Flex gap={6} align="center">
-                                <Tooltip title="Apri anteprima nel drawer">
-                                  <Button
-                                    className={styles.sourceActionBtn}
-                                    icon={<EyeOutlined />}
-                                    onClick={() => openDrawer(doc.doc_id, idx)}
-                                    size="small"
-                                  />
-                                </Tooltip>
-
-                                <Tooltip title="Scarica PDF">
-                                  <Button
-                                    className={styles.sourceActionBtn}
-                                    icon={<DownloadOutlined />}
-                                    size="small"
-                                    onClick={() => downloadPdf(dlUrl)}
-                                  >
-                                    Scarica
-                                  </Button>
-                                </Tooltip>
-
-                                {doc.url && (
-                                  <Tooltip title="Apri link esterno">
+                                <Flex gap={6} align="center">
+                                  <Tooltip title="Apri anteprima nel drawer">
                                     <Button
                                       className={styles.sourceActionBtn}
-                                      icon={<LinkOutlined />}
-                                      href={doc.url}
-                                      target="_blank"
-                                      rel="noreferrer"
+                                      icon={<EyeOutlined />}
+                                      onClick={() =>
+                                        openDrawer(doc.doc_id, idx)
+                                      }
                                       size="small"
                                     />
                                   </Tooltip>
-                                )}
+
+                                  <Tooltip title="Scarica PDF">
+                                    <Button
+                                      className={styles.sourceActionBtn}
+                                      icon={<DownloadOutlined />}
+                                      size="small"
+                                      onClick={() => downloadPdf(dlUrl)}
+                                    >
+                                      Scarica
+                                    </Button>
+                                  </Tooltip>
+
+                                  {doc.url && (
+                                    <Tooltip title="Apri link esterno">
+                                      <Button
+                                        className={styles.sourceActionBtn}
+                                        icon={<LinkOutlined />}
+                                        href={doc.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        size="small"
+                                      />
+                                    </Tooltip>
+                                  )}
+                                </Flex>
                               </Flex>
+                              {pct !== null && (
+                                <div className={styles.sourceAffinityRow}>
+                                  <div className={styles.sourceAffinityMeta}>
+                                    <span>Rilevanza stimata</span>
+                                    <span>{pct}%</span>
+                                  </div>
+                                  <div className={styles.sourceAffinityTrack}>
+                                    <div
+                                      className={styles.sourceAffinityFill}
+                                      style={{ width: `${pct}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
                             </Flex>
-                            {pct !== null && (
-                              <div className={styles.sourceAffinityRow}>
-                                <div className={styles.sourceAffinityMeta}>
-                                  <span>Rilevanza stimata</span>
-                                  <span>{pct}%</span>
-                                </div>
-                                <div className={styles.sourceAffinityTrack}>
-                                  <div
-                                    className={styles.sourceAffinityFill}
-                                    style={{ width: `${pct}%` }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </Flex>
-                        </List.Item>
-                      );
-                    }}
-                  />
+                          </List.Item>
+                        );
+                      }}
+                    />
+                  )}
                 </Panel>
               </Collapse>
             )}

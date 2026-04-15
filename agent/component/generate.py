@@ -374,6 +374,20 @@ class Generate(ComponentBase):
         prompt = prompt.replace("__DOCS_SECTION__", docs_section)   # se usi __DOCS_SECTION__
         # prompt = prompt.replace("{docs_section}", docs_section)    # oppure se usi {docs_section}
 
+        # Tono professionale: evita risposte “da call center” che rifiutano l’analisi
+        # invitando genericamente a consultare un tecnico/esperto senza contenuto utile.
+        _sgai_tone = """
+
+---
+[Regole di stile obbligatorie — SGAI]
+Sei uno strumento di supporto per operatori del diritto. Non usare come risposta principale
+frasi generiche del tipo «devi rivolgerti a un tecnico/un esperto/un avvocato» o «non posso
+sostituire un professionista» per eludere l’analisi. Fornisci sempre, quando le fonti o la
+domanda lo consentono, contenuto concreto e strutturato (punti, riferimenti, distinzioni).
+Se servono verifiche ulteriori o atti fuori dal testo disponibile, indica in modo sintetico
+cosa manca o cosa andrebbe verificato, senza sostituirti al giudizio professionale finale.
+"""
+        prompt = prompt + _sgai_tone
 
         # 3. AGGIORNA kwargs con knowledge aggregata per ciascun tag 
         #for tag_i, tag in enumerate(prompt_tags):

@@ -56,6 +56,10 @@ function getRagflowToken(): string | null {
 export type SharedCompletionOptions = {
   /** Deep search (fonti web) lato backend: Tavily se configurato, altrimenti DuckDuckGo */
   getDeepSearch?: () => boolean;
+  /** CSV di kb_id da usare nei nodi Retrieval (sottoinsieme di quelli dell’agent) */
+  getRetrievalKbIds?: () => string | undefined;
+  /** Override top_n sui nodi Retrieval (backend: 1–32) */
+  getRetrievalTopN?: () => number | undefined;
 };
 
 // ✅ SOSTITUISCI TUTTA LA FUNZIONE useSendSharedMessage
@@ -156,6 +160,16 @@ export const useSendSharedMessage = (
       const ds = completionOptsRef.current?.getDeepSearch?.();
       if (ds === true) {
         payload.deep_search = true;
+      }
+
+      const kbCsv = completionOptsRef.current?.getRetrievalKbIds?.();
+      if (kbCsv) {
+        payload.retrieval_kb_ids = kbCsv;
+      }
+
+      const topN = completionOptsRef.current?.getRetrievalTopN?.();
+      if (typeof topN === 'number' && topN > 0) {
+        payload.retrieval_top_n = topN;
       }
 
       const res = await send(payload);

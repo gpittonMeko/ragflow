@@ -914,8 +914,8 @@
     const PROBE_URL = 'https://sgailegal.com/v1/user/login';
     const STATUS_FETCH_MS = 12000;
     const PROBE_FETCH_MS = 3500;
-    /** Attesa max dopo comando Lambda (avvio EC2 + Docker + app) */
-    const MAX_WAKE_WAIT_MS = 180000;
+    /** Attesa max dopo comando Lambda (avvio EC2 + Docker + app; cold start spesso >3 min) */
+    const MAX_WAKE_WAIT_MS = 300000;
     const INSTANCE = 'SGAI-Production';
     const CONTACT_API = '/api/contact';
     const ctaProvaBtn = document.getElementById('ctaProvaBtn');
@@ -1034,6 +1034,9 @@
       }
       return { ok: r.ok, status: r.status, data };
     }
+    function isApiGatewayOverloadStatus(code) {
+      return code === 504 || code === 502 || code === 503;
+    }
     function setTryButtonsDisabled(disabled) {
       if (wakeBtn) wakeBtn.disabled = disabled;
       if (ctaProvaBtn) ctaProvaBtn.disabled = disabled;
@@ -1053,9 +1056,12 @@
         { force_start: true, body: JSON.stringify({ force_start: true, target_instance: INSTANCE }) },
       ];
       var accepted = false;
+      /** Se la Lambda supera il timeout API Gateway (~29s) con EC2 spenta, arriva 502/503/504 mentre l'avvio prosegue. */
+      var wakeMaybeStillRunning = false;
       for (var pi = 0; pi < payloads.length; pi++) {
         try {
           var x = await callWake(payloads[pi]);
+          if (isApiGatewayOverloadStatus(x.status)) wakeMaybeStillRunning = true;
           if (!x.ok) continue;
           var inst = x.data && x.data.instances && x.data.instances[INSTANCE];
           var forceOk = x.data && x.data.force_start === true;
@@ -1065,6 +1071,11 @@
             break;
           }
         } catch (_) {}
+      }
+      if (!accepted && wakeMaybeStillRunning) {
+        accepted = true;
+        setWakeState('run', 'Richiesta inviata — avvio in corso (può richiedere alcuni minuti)');
+        setProgress(25, 'Attesa infrastruttura…');
       }
       if (!accepted) {
         setWakeState('off', 'Riattivazione non riuscita — riprova tra qualche minuto');

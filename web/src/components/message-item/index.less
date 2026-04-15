@@ -1,5 +1,17 @@
 @import '../../theme/vars.less';
 
+.messageItemEmbed {
+  padding: 10px 0 !important;
+
+  .messageText,
+  .messageTextDark,
+  .messageUserText {
+    padding: 10px 12px !important;
+    font-size: 0.9rem !important;
+    line-height: 1.52 !important;
+  }
+}
+
 .messageItem {
   padding: 24px 0;
   .messageItemSection {
@@ -139,6 +151,49 @@
     width: 32px !important;
     height: 32px !important;
   }
+}
+
+.sourcesEmbedRow {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.sourceEmbedChip {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #393939);
+  background: color-mix(
+    in srgb,
+    var(--message-bg, #333) 92%,
+    var(--accent-color, #9fd8ff) 8%
+  );
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-primary, #f0f0f0);
+
+  :global(a) {
+    color: var(--sgai-link-on-dark, #c5ebff) !important;
+    max-width: min(200px, 55vw);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.sourceEmbedIconBtn {
+  padding: 0 4px !important;
+  min-width: 28px !important;
+  height: 26px !important;
+  color: var(--text-secondary, #a1a1a6) !important;
 }
 
 .sourcesWrapper {
