@@ -29,6 +29,12 @@ Flusso preferito dall’agente:
 
 Script unificato: **`scripts/deploy-git-pull-build-ec2.ps1`** (wake → push → pull remoto → `npm run build`).
 
+## Critico: mai `git reset --hard` sul server senza push da Windows
+
+Le modifiche **non committate** non esistono per `origin`. Se sul server si fa reset/pull verso `origin` **prima** che da qui sia stato fatto **`git commit` + `git push`**, la produzione torna a un commit vecchio mentre il lavoro resta solo in working tree locale → sensazione di “tutto indietro”.
+
+Ordine obbligatorio: **commit (solo sorgenti necessari) → `git push` → poi** pull/build su EC2 (o script).
+
 ## Variabili utili (PowerShell)
 
 - `SGAI_EC2_HOST`, `SGAI_SSH_KEY`, `SGAI_WAKE_URL`, `SGAI_WAKE_TARGET`
