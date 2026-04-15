@@ -611,8 +611,8 @@ const DirectChat: React.FC<DirectChatProps> = ({
         <div
           className={styles.directChatInputColumn}
           style={{
-            flexShrink: layoutExpanded ? 1 : 0,
-            minHeight: 0,
+            flexShrink: 0,
+            minHeight: 'auto',
             width: '100%',
           }}
         >

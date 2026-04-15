@@ -346,6 +346,16 @@ const MessageInput = ({
               styles.textareaWithGhostActive,
           )}
         >
+          {isShared && ghostSuggestion && trim(value) === '' ? (
+            <div
+              key={ghostSuggestion.slice(0, 48)}
+              className={styles.ghostSuggestionFlow}
+              title={ghostSuggestion}
+              aria-hidden
+            >
+              {ghostSuggestion}
+            </div>
+          ) : null}
           <TextArea
             className={
               ghostSuggestion && trim(value) === ''
@@ -370,7 +380,7 @@ const MessageInput = ({
             onChange={handleTextAreaChange}
             onFocus={handleFocus}
           />
-          {ghostSuggestion && trim(value) === '' ? (
+          {!isShared && ghostSuggestion && trim(value) === '' ? (
             <div
               key={ghostSuggestion.slice(0, 48)}
               className={styles.inputGhostLayer}

@@ -574,25 +574,11 @@
     }
   }
 
-  /* Fullscreen (login espanso): messaggi non collassano; colonna input + vetro hanno tetto */
+  /* Fullscreen (login espanso): tetto minimo messaggi; colonna input già gestita sotto */
   &.directChatEmbed:not(.directChatEmbedCompact) {
     .messageContainer {
-      min-height: min(30vh, 300px);
-    }
-
-    .directChatInputColumn {
-      flex: 0 1 auto;
-      min-height: 0;
-      max-height: min(58dvh, 520px);
-      overflow: hidden;
-    }
-
-    .embedChatInputShell {
-      flex: 1 1 0%;
-      min-height: 0;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      min-height: min(24vh, 220px);
+      flex: 1 1 0% !important;
     }
 
     .directChatOptsPanelAboveInput {
@@ -606,21 +592,27 @@
     }
   }
 
-  /* DirectChat (login): colonna messaggi + shell input (opzioni sopra, icona in footer) */
+  /* DirectChat (login): colonna messaggi + shell input — niente max-height/overflow che tagliano textarea o ghost */
   &.directChatEmbed .directChatInputColumn {
     display: flex;
     flex-direction: column;
     gap: 4px;
     padding: 0 4px 4px;
     min-width: 0;
+    flex-shrink: 0;
+    max-height: none;
+    overflow: visible;
   }
 
   &.directChatEmbed .embedChatInputShell {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    flex: 1 1 0%;
+    flex: 0 0 auto;
+    flex-shrink: 0;
     min-width: 0;
+    min-height: auto;
+    overflow: visible;
   }
 
   &.directChatEmbed .directChatOptsPanelAboveInput {

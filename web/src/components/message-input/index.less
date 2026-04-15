@@ -105,6 +105,9 @@
 /* Chat condivisa: il contenitore deve crescere in altezza con autoSize del textarea */
 .textareaWithGhostShared {
   overflow: visible;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .textareaWithGhostActive {
@@ -138,14 +141,34 @@
   animation: sgaiGhostFade 0.85s ease-out both;
 }
 
-/* Stessi padding/metriche del textarea in messageInputShared (login embed) */
-.messageInputShared .inputGhostLayer {
-  left: 10px;
-  right: 30px;
-  top: 6px;
-  max-height: min(38dvh, 280px);
-  font-size: 0.9375rem !important;
-  line-height: 1.45 !important;
+/* Chat embed: proposta in flusso (non overlay), così non invade i pulsanti sotto */
+.ghostSuggestionFlow {
+  position: relative;
+  z-index: 0;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 6px;
+  padding: 6px 10px;
+  max-height: min(32dvh, 220px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--text-secondary, #a1a1a6);
+  opacity: 0.88;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: color-mix(
+    in srgb,
+    var(--bg-secondary, #1c1c1e) 92%,
+    var(--accent-color, #0f62fe) 6%
+  );
+  border: 1px solid color-mix(in srgb, var(--border-color) 85%, transparent);
+  animation: sgaiGhostFade 0.85s ease-out both;
 }
 
 @keyframes sgaiGhostFade {
