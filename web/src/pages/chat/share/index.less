@@ -400,9 +400,9 @@
   }
 
   &.directChatEmbed .directChatOptsBody {
-    margin-top: 1px;
+    margin-top: 0;
     padding-top: 0;
-    max-height: min(20dvh, 148px);
+    max-height: min(16dvh, 120px);
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior-y: contain;
@@ -412,8 +412,8 @@
   /* Contenuto opzioni: stesso “vetro” del pannello, senza strisce separate */
   &.directChatEmbed .directChatOptsInner {
     margin: 0;
-    padding: 1px 2px 2px;
-    border-radius: 8px;
+    padding: 0 1px 1px;
+    border-radius: 6px;
     background: color-mix(
       in srgb,
       var(--bg-secondary) 88%,
@@ -493,14 +493,14 @@
   }
 
   &.directChatEmbed.directChatEmbedCompact .directChatOptsPanelAboveInput {
-    padding: 3px 5px !important;
+    padding: 2px 4px !important;
     margin-bottom: 2px;
-    border-radius: 12px;
-    max-height: min(18dvh, 132px);
+    border-radius: 10px;
+    max-height: min(14dvh, 108px);
   }
 
   &.directChatEmbed.directChatEmbedCompact .directChatOptsBody {
-    max-height: min(16dvh, 120px);
+    max-height: min(12dvh, 96px);
     margin-top: 0;
   }
 
@@ -584,7 +584,7 @@
     .directChatOptsPanelAboveInput {
       flex: 0 1 auto;
       min-height: 0;
-      max-height: min(30dvh, 240px);
+      max-height: min(22dvh, 168px);
       overflow-x: hidden;
       overflow-y: auto;
       overscroll-behavior-y: contain;
@@ -611,8 +611,8 @@
 
   &.directChatEmbed .directChatOptsPanelAboveInput {
     margin-bottom: 0;
-    padding: 4px 6px !important;
-    max-height: min(22dvh, 180px);
+    padding: 3px 4px !important;
+    max-height: min(18dvh, 132px);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -665,7 +665,7 @@
 
   @media (max-width: 520px) {
     &.directChatEmbed .directChatOptsBody {
-      max-height: min(28dvh, 200px);
+      max-height: min(18dvh, 128px);
     }
 
     &.directChatEmbed .kbCheckboxLabel:global(.ant-typography) {
@@ -683,8 +683,8 @@
   &.directChatEmbed .deepSearchRow {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px 0 1px;
+    gap: 3px;
+    padding: 0 0 1px;
     flex-wrap: nowrap;
   }
 
@@ -734,14 +734,14 @@
   &.directChatEmbed .controlsToolbar {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     padding: 0;
     border-bottom: none;
     margin-bottom: 0;
   }
 
   &.directChatEmbed .retrievalModeRow {
-    padding: 2px 0 1px;
+    padding: 1px 0 0;
   }
 
   &.directChatEmbed .retrievalModeHead {
@@ -749,8 +749,8 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 4px;
-    flex-wrap: wrap;
+    gap: 2px;
+    flex-wrap: nowrap;
     min-width: 0;
   }
 
@@ -773,19 +773,20 @@
 
   &.directChatEmbed .retrievalModeSegText {
     display: inline-block;
-    font-size: 8px;
+    font-size: 7px;
     font-weight: 600;
-    line-height: 1.2;
-    padding: 0 1px;
+    line-height: 1.15;
+    padding: 0;
   }
 
   &.directChatEmbed .retrievalModeSegmented {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-width: 0;
     max-width: 100%;
 
     :global(.ant-segmented) {
-      padding: 1px;
-      font-size: 9px;
+      padding: 0;
+      font-size: 8px;
       background: color-mix(
         in srgb,
         var(--bg-secondary) 90%,
@@ -794,9 +795,9 @@
     }
 
     :global(.ant-segmented-item) {
-      padding: 0 4px !important;
-      line-height: 18px !important;
-      min-height: 18px !important;
+      padding: 0 2px !important;
+      line-height: 15px !important;
+      min-height: 15px !important;
     }
 
     :global(.ant-segmented-item-selected) {
@@ -851,9 +852,9 @@
   &.directChatEmbed .kbFilterBlock {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 2px 4px 3px;
-    border-radius: 8px;
+    gap: 1px;
+    padding: 1px 3px 2px;
+    border-radius: 6px;
     background: color-mix(
       in srgb,
       var(--bg-secondary) 94%,

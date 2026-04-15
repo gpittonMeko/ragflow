@@ -50,9 +50,18 @@ function formatKnowledgeLabel(raw: string): string {
   );
 }
 
-/** Modalità ricerca chunk: valori inviati come retrieval_top_n al canvas (gap ampio Fast vs Deep) */
-const RETRIEVAL_TOP_N = { fast: 4, extended: 28 } as const;
-type RetrievalMode = keyof typeof RETRIEVAL_TOP_N;
+/**
+ * Modalità chunk lato documenti:
+ * - standard: non invia `retrieval_top_n` (comportamento predefinito del canvas / agente).
+ * - fast / extended: forza top_n ridotto o ampio.
+ */
+const RETRIEVAL_TOP_N_FORCED = { fast: 4, extended: 28 } as const;
+type RetrievalMode = 'standard' | keyof typeof RETRIEVAL_TOP_N_FORCED;
+
+function retrievalTopNForPayload(mode: RetrievalMode): number | undefined {
+  if (mode === 'standard') return undefined;
+  return RETRIEVAL_TOP_N_FORCED[mode];
+}
 
 // Compatta: nessun inset. Espansa: spazio sotto = area coperta da tastiera (visualViewport, ok su iOS/Android).
 function useKeyboardOffset(omitInset: boolean) {
@@ -139,9 +148,11 @@ const DirectChat: React.FC<DirectChatProps> = ({
       const v =
         typeof sessionStorage !== 'undefined' &&
         sessionStorage.getItem(SGAI_RETRIEVAL_MODE_KEY);
-      return v === 'fast' ? 'fast' : 'extended';
+      if (v === 'fast' || v === 'extended' || v === 'standard') return v;
+      /* default: come prima dell’override client (nessun top_n forzato) */
+      return 'standard';
     } catch {
-      return 'extended';
+      return 'standard';
     }
   });
 
@@ -248,7 +259,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
   } = useSendSharedMessage(agentId, sessionId, {
     getDeepSearch: () => deepSearch,
     getRetrievalKbIds,
-    getRetrievalTopN: () => RETRIEVAL_TOP_N[retrievalMode],
+    getRetrievalTopN: () => retrievalTopNForPayload(retrievalMode),
   });
 
   const { visible, hideModal, documentId, selectedChunk, clickDocumentButton } =
@@ -390,6 +401,17 @@ const DirectChat: React.FC<DirectChatProps> = ({
 
   const retrievalSegmentedOptions = useMemo(
     () => [
+      {
+        value: 'standard' as const,
+        label: (
+          <Tooltip
+            title="Predefinito: non forza quanti chunk recuperare (impostazioni del canvas)."
+            getPopupContainer={() => document.body}
+          >
+            <span className={styles.retrievalModeSegText}>Std</span>
+          </Tooltip>
+        ),
+      },
       {
         value: 'fast' as const,
         label: (
