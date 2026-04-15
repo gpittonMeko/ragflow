@@ -120,6 +120,26 @@ CONF_DIR="/ragflow/conf"
 TEMPLATE_FILE="${CONF_DIR}/service_conf.yaml.template"
 CONF_FILE="${CONF_DIR}/service_conf.yaml"
 
+# RSA key pair for password encryption (must match passphrase in api/utils/__init__.py).
+# Never commit conf/private.pem; generate on first start if missing.
+function ensure_conf_rsa_pem() {
+  local priv="${CONF_DIR}/private.pem"
+  local pub="${CONF_DIR}/public.pem"
+  if [[ -f "${priv}" && -f "${pub}" ]]; then
+    return 0
+  fi
+  if ! command -v openssl >/dev/null 2>&1; then
+    echo "ERROR: ${priv} missing and openssl not found. Run conf/generate_pem_keys.sh on the host or mount existing PEM files." >&2
+    exit 1
+  fi
+  echo "[entrypoint] Generating RSA PEM in ${CONF_DIR} (openssl genrsa, passphrase Welcome)."
+  openssl genrsa -des3 -passout pass:Welcome -out "${priv}" 2048
+  chmod 600 "${priv}"
+  openssl rsa -in "${priv}" -passin pass:Welcome -pubout -out "${pub}"
+  chmod 644 "${pub}"
+}
+ensure_conf_rsa_pem
+
 rm -f "${CONF_FILE}"
 while IFS= read -r line || [[ -n "$line" ]]; do
     eval "echo \"$line\"" >> "${CONF_FILE}"

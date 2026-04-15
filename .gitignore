@@ -47,3 +47,9 @@ nltk_data/
 .env
 *.env
 .env.secrets
+# non committare mai questi (PEM generati da entrypoint o conf/generate_pem_keys.sh)
+conf/private.pem
+conf/public.pem
+docker/.env
+docker/.env.secrets
+web/.env

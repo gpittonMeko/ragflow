@@ -170,7 +170,8 @@ services:
         condition: service_healthy
     env_file:
       - .env
-      - .env.secrets
+      - path: .env.secrets
+        required: false
     environment:
       TZ: ${TIMEZONE}
 

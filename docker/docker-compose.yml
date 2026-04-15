@@ -40,10 +40,11 @@ services:
       - ../web:/ragflow/web
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./entrypoint.sh:/ragflow/entrypoint.sh
-    # .env.secrets: TAVILY_API_KEY e altri segreti (stesso pattern di backendoauth)
+    # .env.secrets: TAVILY_API_KEY e altri segreti (copia da .env.secrets.example se assente)
     env_file:
       - .env
-      - .env.secrets
+      - path: .env.secrets
+        required: false
     environment:
       - TZ=${TIMEZONE}
       - HF_ENDPOINT=${HF_ENDPOINT}
