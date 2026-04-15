@@ -385,8 +385,8 @@ const MessageInput = ({
             {ghostHint}
           </Text>
         ) : null}
-        <Divider style={{ margin: '5px 30px 10px 0px' }} />
-        {uploadHint && (
+        {!isShared && <Divider style={{ margin: '5px 30px 10px 0px' }} />}
+        {!isShared && uploadHint && (
           <Text type="secondary" className={styles.uploadHintLine}>
             {uploadHint}
           </Text>
@@ -533,6 +533,11 @@ const MessageInput = ({
               </Button>
             )}
           </Flex>
+          {isShared && uploadHint ? (
+            <Text type="secondary" className={styles.uploadHintSharedBelow}>
+              {uploadHint}
+            </Text>
+          ) : null}
         </Flex>
       </Flex>
     </div>

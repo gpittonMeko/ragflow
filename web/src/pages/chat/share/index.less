@@ -310,6 +310,20 @@
     --dc-opts-border-light: rgba(15, 23, 42, 0.12);
   }
 
+  /* Opzioni in Popover (portal): evita .chatContainer { height:100% } sul contenuto */
+  &.directChatEmbed.directChatOptsPopoverScaffold {
+    height: auto !important;
+    min-height: 0 !important;
+    width: 100%;
+    max-width: min(88vw, 268px);
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+    flex: none !important;
+    box-shadow: none !important;
+  }
+
   /* Pannello vetro: Deep search + proposte (stile “fine”, tipo barra marketing) */
   &.directChatEmbed .embedGlassPanel {
     border-radius: 12px;
@@ -622,9 +636,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
-    min-width: 30px;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
     padding: 0;
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -1357,13 +1371,12 @@
     }
   }
 
-  /* Ultima riga del message input = flex con Allega + Invio */
+  /* Riga Allega + Invio (+ hint sotto): wrap su schermi stretti */
   @media (max-width: 480px) {
     &.directChatEmbed
       .embedChatInputShell
       :global([class*='messageInputWrapper'])
-      > :global(div:last-child)
-      > :global(div:last-child) {
+      :global([class*='messageInputActions']) {
       flex-wrap: wrap !important;
       justify-content: flex-end !important;
       row-gap: 8px;
@@ -1422,6 +1435,30 @@
       border-color: var(--border-color);
     }
   }
+}
+
+/* Popover opzioni: render su body — non deve stare dentro .chatContainer */
+.directChatOptsPopover:global(.ant-popover) {
+  max-width: min(92vw, 280px);
+  z-index: 2000;
+}
+
+.directChatOptsPopover {
+  :global(.ant-popover-inner) {
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
+.directChatPopoverScroll {
+  max-width: min(88vw, 268px);
+  max-height: min(42dvh, 260px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* --- CHAT - TABLET/MOBILE --- */

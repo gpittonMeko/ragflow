@@ -6,7 +6,6 @@ import { useTheme } from '@/components/theme-provider';
 import { MessageType } from '@/constants/chat';
 import { useFetchFlowSSE } from '@/hooks/flow-hooks';
 import { useSharedGenerationProgress } from '@/hooks/use-shared-generation-progress';
-import { cn } from '@/lib/utils';
 import {
   useSendButtonDisabled,
   useSendSharedMessage,
@@ -16,6 +15,7 @@ import { buildMessageUuidWithRole } from '@/utils/chat';
 import {
   Checkbox,
   Flex,
+  Popover,
   Segmented,
   Spin,
   Switch,
@@ -122,6 +122,8 @@ const DirectChat: React.FC<DirectChatProps> = ({
   layoutExpanded = false,
 }) => {
   const { theme } = useTheme();
+  /** Popover portale: classi tema esplicite (evita `system` senza modulo CSS). */
+  const embedOptsThemeClass = theme === 'light' ? styles.light : styles.dark;
   const location = useLocation();
 
   const [deepSearch, setDeepSearch] = useState(() => {
@@ -615,18 +617,6 @@ const DirectChat: React.FC<DirectChatProps> = ({
           }}
         >
           <div className={styles.embedChatInputShell}>
-            {embedOptsOpen ? (
-              <div
-                className={cn(
-                  styles.embedGlassPanel,
-                  styles.directChatOptsPanelAboveInput,
-                )}
-              >
-                <div className={styles.directChatOptsBody}>
-                  {directChatEmbedOptionsBody}
-                </div>
-              </div>
-            ) : null}
             <MessageInput
               isShared
               value={value}
@@ -640,29 +630,51 @@ const DirectChat: React.FC<DirectChatProps> = ({
               showUploadIcon={true}
               showAttachLabel
               leadingActions={
-                <button
-                  type="button"
-                  className={styles.directChatOptsIconBtn}
-                  onClick={() => setEmbedOptsOpen((o) => !o)}
-                  aria-expanded={embedOptsOpen}
-                  aria-label={
-                    embedOptsOpen
-                      ? 'Chiudi opzioni chat'
-                      : 'Apri opzioni (web, documenti, basi)'
-                  }
-                  title={
-                    embedOptsOpen
-                      ? 'Chiudi opzioni'
-                      : 'Web, documenti Fast/Deep, filtro basi'
+                <Popover
+                  open={embedOptsOpen}
+                  onOpenChange={setEmbedOptsOpen}
+                  trigger="click"
+                  placement="topLeft"
+                  arrow={false}
+                  getPopupContainer={() => document.body}
+                  overlayClassName={styles.directChatOptsPopover}
+                  content={
+                    <div
+                      className={`${styles.chatContainer} ${embedOptsThemeClass} ${styles.directChatEmbed} ${styles.directChatOptsPopoverScaffold}`}
+                    >
+                      <div className={styles.directChatPopoverScroll}>
+                        <div className={styles.directChatOptsBody}>
+                          {directChatEmbedOptionsBody}
+                        </div>
+                      </div>
+                    </div>
                   }
                 >
-                  <SlidersHorizontal size={15} strokeWidth={2} aria-hidden />
-                </button>
+                  <button
+                    type="button"
+                    className={styles.directChatOptsIconBtn}
+                    aria-expanded={embedOptsOpen}
+                    aria-label={
+                      embedOptsOpen
+                        ? 'Chiudi opzioni chat'
+                        : 'Apri opzioni (web, documenti, basi)'
+                    }
+                    title={
+                      embedOptsOpen
+                        ? 'Chiudi opzioni'
+                        : 'Web, documenti, filtro basi'
+                    }
+                  >
+                    <SlidersHorizontal size={14} strokeWidth={2} aria-hidden />
+                  </button>
+                </Popover>
               }
               uploadHint={
-                showGhost
-                  ? 'Allega: PDF, Word, Excel, PowerPoint, testo, Markdown, immagini, audio/video… (parsing → retrieval).'
-                  : 'Allega file supportati; dopo l’indicizzazione il contenuto entra in analisi.'
+                value.trim() === ''
+                  ? showGhost
+                    ? 'Allega: PDF, Word, Excel, testo, immagini, audio… (parsing → retrieval).'
+                    : 'Allega file supportati; dopo l’indicizzazione il contenuto entra in analisi.'
+                  : undefined
               }
               stopOutputMessage={stopOutputMessage}
               textareaAutoSize={{ minRows: 1, maxRows: 24 }}
