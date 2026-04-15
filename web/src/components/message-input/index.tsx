@@ -328,6 +328,7 @@ const MessageInput = ({
         <div
           className={cn(
             styles.textareaWithGhost,
+            isShared && styles.textareaWithGhostShared,
             ghostSuggestion &&
               trim(value) === '' &&
               styles.textareaWithGhostActive,

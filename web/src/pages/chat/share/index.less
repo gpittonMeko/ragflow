@@ -1298,7 +1298,7 @@
     min-width: 0;
   }
 
-  /* Textarea: cresce con il testo fino a un tetto più alto */
+  /* Textarea: autoSize Ant — min basso così cresce riga per riga con il testo */
   &.directChatEmbed
     :global([class*='messageInputWrapper'])
     :global(textarea.ant-input) {
@@ -1306,7 +1306,7 @@
     overflow-y: auto !important;
     font-size: 0.9375rem !important;
     line-height: 1.45 !important;
-    min-height: 44px !important;
+    min-height: 28px !important;
     padding: 8px 10px !important;
   }
 

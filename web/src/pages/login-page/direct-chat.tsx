@@ -40,8 +40,18 @@ import { useKbDisplayNames } from './use-kb-display-names';
 const SGAI_DEEP_SEARCH_KEY = 'sgai-deep-search';
 const SGAI_RETRIEVAL_MODE_KEY = 'sgai-retrieval-mode';
 
-/** Modalità ricerca chunk: valori inviati come retrieval_top_n al canvas */
-const RETRIEVAL_TOP_N = { fast: 4, extended: 16 } as const;
+/** Maiuscola solo sulla prima lettera, resto minuscolo (etichette knowledge). */
+function formatKnowledgeLabel(raw: string): string {
+  const t = String(raw ?? '').trim();
+  if (!t) return '';
+  return (
+    t.charAt(0).toLocaleUpperCase('it-IT') +
+    t.slice(1).toLocaleLowerCase('it-IT')
+  );
+}
+
+/** Modalità ricerca chunk: valori inviati come retrieval_top_n al canvas (gap ampio Fast vs Deep) */
+const RETRIEVAL_TOP_N = { fast: 4, extended: 28 } as const;
 type RetrievalMode = keyof typeof RETRIEVAL_TOP_N;
 
 // Compatta: nessun inset. Espansa: spazio sotto = area coperta da tastiera (visualViewport, ok su iOS/Android).
@@ -178,7 +188,8 @@ const DirectChat: React.FC<DirectChatProps> = ({
     () =>
       kbOptions.map((o) => {
         const name = kbNameById.get(o.id);
-        const label = name ?? o.label;
+        const raw = name ?? o.label;
+        const label = formatKnowledgeLabel(raw);
         return {
           label: (
             <Typography.Text
@@ -197,16 +208,25 @@ const DirectChat: React.FC<DirectChatProps> = ({
   const [enabledKbIds, setEnabledKbIds] = useState<string[]>([]);
   const [embedOptsOpen, setEmbedOptsOpen] = useState(false);
 
+  const kbOptionIdsKey = useMemo(
+    () =>
+      kbOptions
+        .map((k) => k.id)
+        .sort()
+        .join('\n'),
+    [kbOptions],
+  );
+
+  const prevKbOptionIdsKeyRef = useRef<string | null>(null);
   useEffect(() => {
+    if (prevKbOptionIdsKeyRef.current === kbOptionIdsKey) return;
+    prevKbOptionIdsKeyRef.current = kbOptionIdsKey;
     setEnabledKbIds(kbOptions.map((k) => k.id));
-  }, [kbOptions]);
+  }, [kbOptionIdsKey, kbOptions]);
 
   const getRetrievalKbIds = useCallback(() => {
     if (kbOptions.length <= 1) return undefined;
-    const all = kbOptions.map((k) => k.id);
-    if (enabledKbIds.length === 0 || enabledKbIds.length === all.length) {
-      return undefined;
-    }
+    if (enabledKbIds.length === 0) return undefined;
     return enabledKbIds.join(',');
   }, [kbOptions, enabledKbIds]);
 
@@ -374,7 +394,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
         value: 'fast' as const,
         label: (
           <Tooltip
-            title="Meno chunk dai documenti, risposta più rapida."
+            title="Circa 4 chunk dai documenti; risposta più rapida."
             getPopupContainer={() => document.body}
           >
             <span className={styles.retrievalModeSegText}>Fast</span>
@@ -385,7 +405,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
         value: 'extended' as const,
         label: (
           <Tooltip
-            title="Più chunk dai documenti (consigliato per domande complesse)."
+            title="Fino a 28 chunk dai documenti; più contesto (domande complesse)."
             getPopupContainer={() => document.body}
           >
             <span className={styles.retrievalModeSegText}>Deep</span>
@@ -625,7 +645,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
                     : 'Allega PDF/DOCX: dopo indicizzazione il testo entra in analisi.'
                 }
                 stopOutputMessage={stopOutputMessage}
-                textareaAutoSize={{ minRows: 2, maxRows: 16 }}
+                textareaAutoSize={{ minRows: 1, maxRows: 24 }}
                 wrapperRef={inputWrapperRef}
                 onInputFocus={handleInputFocus}
                 ghostSuggestion={showGhost ? ghostBody : null}
