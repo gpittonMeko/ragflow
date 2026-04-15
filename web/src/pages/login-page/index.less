@@ -1048,6 +1048,17 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+@keyframes chatExpandedShellIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Shell fullscreen: header in flusso flex, niente gap con l’area chat sotto */
 .chatExpandedShell {
   position: fixed;
@@ -1061,6 +1072,13 @@ body {
   padding-right: env(safe-area-inset-right, 0px);
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: chatExpandedShellIn 0.38s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chatExpandedShell {
+    animation: none;
+  }
 }
 
 .chatExpandedShell .chatFullHeader {

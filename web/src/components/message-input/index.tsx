@@ -98,6 +98,8 @@ interface IProps {
   leadingActions?: ReactNode;
   /** Estensioni per attributo `accept` del file input (default: tipi supportati da upload_and_parse) */
   uploadAccept?: string;
+  /** Chat embed minimizzata: compositore compatto (max righe / altezza proposta) */
+  embedComposerCompact?: boolean;
 }
 
 const getBase64 = (file: FileType): Promise<string> =>
@@ -131,6 +133,7 @@ const MessageInput = ({
   onGhostAccept,
   leadingActions,
   uploadAccept = CHAT_UPLOAD_ACCEPT,
+  embedComposerCompact = false,
 }: IProps) => {
   const { t } = useTranslate('chat');
   const { removeDocument } = useRemoveNextDocument();
@@ -305,7 +308,11 @@ const MessageInput = ({
 
   const resolvedTextareaAutoSize =
     textareaAutoSize ??
-    (isShared ? { minRows: 1, maxRows: 4 } : { minRows: 1, maxRows: 10 });
+    (isShared
+      ? embedComposerCompact
+        ? { minRows: 1, maxRows: 6 }
+        : { minRows: 1, maxRows: 4 }
+      : { minRows: 1, maxRows: 10 });
 
   const handleTextAreaChange = useCallback<
     ChangeEventHandler<HTMLTextAreaElement>
@@ -337,59 +344,114 @@ const MessageInput = ({
           'dark:bg-black',
         )}
       >
-        <div
-          className={cn(
-            styles.textareaWithGhost,
-            isShared && styles.textareaWithGhostShared,
-            ghostSuggestion &&
-              trim(value) === '' &&
-              styles.textareaWithGhostActive,
-          )}
-        >
-          {isShared && ghostSuggestion && trim(value) === '' ? (
+        {isShared ? (
+          <div
+            className={cn(
+              styles.embedComposer,
+              embedComposerCompact && styles.embedComposerCompact,
+              ghostSuggestion &&
+                trim(value) === '' &&
+                styles.textareaWithGhostActive,
+            )}
+          >
+            {ghostSuggestion && trim(value) === '' ? (
+              <>
+                <div className={styles.embedComposerProposal}>
+                  <span className={styles.embedComposerProposalLabel}>
+                    Proposta testuale
+                  </span>
+                  <div
+                    key={ghostSuggestion.slice(0, 48)}
+                    className={styles.embedComposerProposalBody}
+                    title={ghostSuggestion}
+                  >
+                    {ghostSuggestion}
+                  </div>
+                </div>
+                <div className={styles.embedComposerSeparator} aria-hidden />
+              </>
+            ) : null}
             <div
-              key={ghostSuggestion.slice(0, 48)}
-              className={styles.ghostSuggestionFlow}
-              title={ghostSuggestion}
-              aria-hidden
+              className={cn(
+                styles.embedComposerEditor,
+                styles.textareaWithGhost,
+                styles.textareaWithGhostShared,
+              )}
             >
-              {ghostSuggestion}
+              <TextArea
+                className={
+                  ghostSuggestion && trim(value) === ''
+                    ? styles.textareaOverGhost
+                    : undefined
+                }
+                size="middle"
+                placeholder={
+                  ghostSuggestion && trim(value) === ''
+                    ? ''
+                    : t('sendPlaceholder')
+                }
+                value={value}
+                allowClear
+                disabled={disabled}
+                style={{
+                  border: 'none',
+                  boxShadow: 'none',
+                  padding: '8px 10px',
+                  marginTop: 0,
+                }}
+                autoSize={resolvedTextareaAutoSize}
+                onKeyDown={handleKeyDown}
+                onChange={handleTextAreaChange}
+                onFocus={handleFocus}
+              />
             </div>
-          ) : null}
-          <TextArea
-            className={
-              ghostSuggestion && trim(value) === ''
-                ? styles.textareaOverGhost
-                : undefined
-            }
-            size={isShared ? 'middle' : 'large'}
-            placeholder={
-              ghostSuggestion && trim(value) === '' ? '' : t('sendPlaceholder')
-            }
-            value={value}
-            allowClear
-            disabled={disabled}
-            style={{
-              border: 'none',
-              boxShadow: 'none',
-              padding: '0px 10px',
-              marginTop: 2,
-            }}
-            autoSize={resolvedTextareaAutoSize}
-            onKeyDown={handleKeyDown}
-            onChange={handleTextAreaChange}
-            onFocus={handleFocus}
-          />
-          {!isShared && ghostSuggestion && trim(value) === '' ? (
-            <div
-              key={ghostSuggestion.slice(0, 48)}
-              className={styles.inputGhostLayer}
-              aria-hidden
-            >
-              {ghostSuggestion}
-            </div>
-          ) : null}
-        </div>
+          </div>
+        ) : (
+          <div
+            className={cn(
+              styles.textareaWithGhost,
+              ghostSuggestion &&
+                trim(value) === '' &&
+                styles.textareaWithGhostActive,
+            )}
+          >
+            <TextArea
+              className={
+                ghostSuggestion && trim(value) === ''
+                  ? styles.textareaOverGhost
+                  : undefined
+              }
+              size="large"
+              placeholder={
+                ghostSuggestion && trim(value) === ''
+                  ? ''
+                  : t('sendPlaceholder')
+              }
+              value={value}
+              allowClear
+              disabled={disabled}
+              style={{
+                border: 'none',
+                boxShadow: 'none',
+                padding: '0px 10px',
+                marginTop: 2,
+              }}
+              autoSize={resolvedTextareaAutoSize}
+              onKeyDown={handleKeyDown}
+              onChange={handleTextAreaChange}
+              onFocus={handleFocus}
+            />
+            {ghostSuggestion && trim(value) === '' ? (
+              <div
+                key={ghostSuggestion.slice(0, 48)}
+                className={styles.inputGhostLayer}
+                aria-hidden
+              >
+                {ghostSuggestion}
+              </div>
+            ) : null}
+          </div>
+        )}
         {ghostHint && ghostSuggestion && trim(value) === '' ? (
           <Text type="secondary" className={styles.ghostHint}>
             {ghostHint}

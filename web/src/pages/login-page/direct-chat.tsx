@@ -677,7 +677,11 @@ const DirectChat: React.FC<DirectChatProps> = ({
                   : undefined
               }
               stopOutputMessage={stopOutputMessage}
-              textareaAutoSize={{ minRows: 1, maxRows: 24 }}
+              textareaAutoSize={{
+                minRows: 1,
+                maxRows: layoutExpanded ? 24 : 6,
+              }}
+              embedComposerCompact={!layoutExpanded}
               wrapperRef={inputWrapperRef}
               onInputFocus={handleInputFocus}
               ghostSuggestion={showGhost ? ghostBody : null}

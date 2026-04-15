@@ -141,34 +141,126 @@
   animation: sgaiGhostFade 0.85s ease-out both;
 }
 
-/* Chat embed: proposta in flusso (non overlay), così non invade i pulsanti sotto */
-.ghostSuggestionFlow {
-  position: relative;
-  z-index: 0;
-  flex-shrink: 0;
+/* Unico compositore embed: proposta + editor (stessa tipografia del textarea) */
+.embedComposer {
+  --embed-composer-font: 0.9375rem;
+  --embed-composer-lh: 1.45;
+  --embed-composer-pad-x: 10px;
+
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
-  margin: 0 0 6px;
-  padding: 6px 10px;
-  max-height: min(32dvh, 220px);
+  border-radius: 8px;
+  border: none;
+  background: color-mix(
+    in srgb,
+    var(--bg-input, #262626) 88%,
+    var(--accent-color, #0f62fe) 5%
+  );
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  animation: embedComposerReveal 0.45s ease-out both;
+}
+
+.embedComposerProposal {
+  flex-shrink: 0;
+  padding: 8px var(--embed-composer-pad-x) 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.embedComposerProposalLabel {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: var(--accent-color, #0f62fe);
+  font-family: var(--font-sans);
+}
+
+.embedComposerProposalBody {
+  font-size: var(--embed-composer-font);
+  line-height: var(--embed-composer-lh);
+  font-family: var(--font-sans);
+  color: color-mix(
+    in srgb,
+    var(--text-primary, #f4f4f4) 72%,
+    var(--text-secondary, #a8a8a8)
+  );
+  font-style: italic;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: min(36dvh, 280px);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  line-height: 1.45;
-  color: var(--text-secondary, #a1a1a6);
-  opacity: 0.88;
-  white-space: pre-wrap;
-  word-break: break-word;
-  background: color-mix(
-    in srgb,
-    var(--bg-secondary, #1c1c1e) 92%,
-    var(--accent-color, #0f62fe) 6%
-  );
-  border: 1px solid color-mix(in srgb, var(--border-color) 85%, transparent);
-  animation: sgaiGhostFade 0.85s ease-out both;
+  padding: 0 0 2px;
+  margin: 0;
+}
+
+.embedComposerCompact .embedComposerProposalBody {
+  max-height: min(20dvh, 140px);
+}
+
+.embedComposerSeparator {
+  flex-shrink: 0;
+  height: 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px dashed
+    color-mix(in srgb, var(--border-color) 75%, transparent);
+}
+
+.embedComposerEditor {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.embedComposerEditor.textareaWithGhost {
+  overflow: visible;
+  border-radius: 0 0 9px 9px;
+}
+
+.embedComposer.textareaWithGhostActive
+  .embedComposerEditor
+  :global(.ant-input-affix-wrapper) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.embedComposer.textareaWithGhostActive
+  .embedComposerEditor
+  :global(.ant-input-affix-wrapper .ant-input) {
+  background: transparent !important;
+  -webkit-text-fill-color: var(--text-primary, #f0f0f0) !important;
+}
+
+.messageInputShared .embedComposerEditor textarea.ant-input,
+.messageInputShared
+  .embedComposerEditor
+  .ant-input-affix-wrapper
+  textarea.ant-input {
+  font-size: var(--embed-composer-font, 0.9375rem) !important;
+  line-height: var(--embed-composer-lh, 1.45) !important;
+}
+
+@keyframes embedComposerReveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes sgaiGhostFade {
