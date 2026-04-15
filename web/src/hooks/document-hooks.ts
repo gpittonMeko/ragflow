@@ -444,7 +444,11 @@ export const useUploadAndParseDocument = (uploadMethod: string) => {
       const formData = new FormData();
       formData.append('conversation_id', conversationId);
       fileList.forEach((file: UploadFile) => {
-        formData.append('file', file as any);
+        const blob = file.originFileObj ?? file;
+        if (!blob) {
+          throw new Error('File mancante (originFileObj)');
+        }
+        formData.append('file', blob as Blob);
       });
       if (uploadMethod === 'upload_and_parse') {
         const { data: body } = await kbService.upload_and_parse(formData);

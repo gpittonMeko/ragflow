@@ -6,6 +6,10 @@ import {
   useUploadAndParseDocument,
 } from '@/hooks/document-hooks';
 import { cn } from '@/lib/utils';
+import {
+  CHAT_UPLOAD_ACCEPT,
+  isAllowedChatUploadFilename,
+} from '@/utils/chat-upload-accept';
 import { getExtension } from '@/utils/document-util';
 import { formatBytes } from '@/utils/file-util';
 import {
@@ -26,12 +30,14 @@ import {
   Typography,
   Upload,
   UploadProps,
+  message,
 } from 'antd';
 import get from 'lodash/get';
 import trim from 'lodash/trim';
 import { CircleStop, Paperclip, SendHorizontal } from 'lucide-react';
 import {
   ChangeEventHandler,
+  ReactNode,
   memo,
   useCallback,
   useEffect,
@@ -88,6 +94,10 @@ interface IProps {
   ghostSuggestion?: string | null;
   ghostHint?: string;
   onGhostAccept?: () => void;
+  /** Contenuto a sinistra di Allega/Invio (es. icona opzioni login embed) */
+  leadingActions?: ReactNode;
+  /** Estensioni per attributo `accept` del file input (default: tipi supportati da upload_and_parse) */
+  uploadAccept?: string;
 }
 
 const getBase64 = (file: FileType): Promise<string> =>
@@ -119,6 +129,8 @@ const MessageInput = ({
   ghostSuggestion,
   ghostHint,
   onGhostAccept,
+  leadingActions,
+  uploadAccept = CHAT_UPLOAD_ACCEPT,
 }: IProps) => {
   const { t } = useTranslate('chat');
   const { removeDocument } = useRemoveNextDocument();
@@ -458,19 +470,32 @@ const MessageInput = ({
             />
           )}
           <Flex
-            gap={8}
+            gap={6}
             align="center"
             justify="flex-end"
+            wrap="wrap"
             className={styles.messageInputActions}
           >
+            {leadingActions ? (
+              <div className={styles.messageInputLeadingSlot}>
+                {leadingActions}
+              </div>
+            ) : null}
             {showUploadIcon && (
               <Upload
+                accept={uploadAccept}
                 onPreview={handlePreview}
                 onChange={handleChange}
                 multiple={false}
                 onRemove={handleRemove}
                 showUploadList={false}
-                beforeUpload={() => {
+                beforeUpload={(file) => {
+                  if (!isAllowedChatUploadFilename(file.name)) {
+                    message.error(
+                      'Formato non supportato. Usa PDF, Office (Word/Excel/PowerPoint), testo, codice, immagini, audio o video previsti dal sistema.',
+                    );
+                    return Upload.LIST_IGNORE;
+                  }
                   return false;
                 }}
               >

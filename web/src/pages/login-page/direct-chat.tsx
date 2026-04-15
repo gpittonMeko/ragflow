@@ -23,7 +23,7 @@ import {
   Typography,
 } from 'antd';
 import get from 'lodash/get';
-import { ChevronDown } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import React, {
   useCallback,
   useEffect,
@@ -592,67 +592,64 @@ const DirectChat: React.FC<DirectChatProps> = ({
             width: '100%',
           }}
         >
-          <div className={styles.directChatInputRow}>
-            <div className={styles.directChatOptsRail}>
+          <div className={styles.embedChatInputShell}>
+            {embedOptsOpen ? (
               <div
                 className={cn(
                   styles.embedGlassPanel,
-                  !embedOptsOpen && styles.embedGlassPanelCollapsed,
+                  styles.directChatOptsPanelAboveInput,
                 )}
               >
+                <div className={styles.directChatOptsBody}>
+                  {directChatEmbedOptionsBody}
+                </div>
+              </div>
+            ) : null}
+            <MessageInput
+              isShared
+              value={value}
+              disabled={false}
+              sendDisabled={sendDisabled || sendLoading}
+              conversationId={sessionId ?? ''}
+              onInputChange={handleInputChange}
+              onPressEnter={handlePressEnter}
+              sendLoading={sendLoading}
+              uploadMethod="upload_and_parse"
+              showUploadIcon={true}
+              showAttachLabel
+              leadingActions={
                 <button
                   type="button"
-                  className={styles.directChatOptsToggle}
+                  className={styles.directChatOptsIconBtn}
                   onClick={() => setEmbedOptsOpen((o) => !o)}
                   aria-expanded={embedOptsOpen}
+                  aria-label={
+                    embedOptsOpen
+                      ? 'Chiudi opzioni chat'
+                      : 'Apri opzioni (web, documenti, basi)'
+                  }
+                  title={
+                    embedOptsOpen
+                      ? 'Chiudi opzioni'
+                      : 'Web, documenti Fast/Deep, filtro basi'
+                  }
                 >
-                  <span className={styles.directChatOptsToggleLabel}>
-                    {embedOptsOpen ? 'Chiudi' : 'Opzioni'}
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      styles.directChatOptsChevron,
-                      embedOptsOpen && styles.directChatOptsChevronOpen,
-                    )}
-                    size={14}
-                    strokeWidth={2}
-                    aria-hidden
-                  />
+                  <SlidersHorizontal size={15} strokeWidth={2} aria-hidden />
                 </button>
-                {embedOptsOpen ? (
-                  <div className={styles.directChatOptsBody}>
-                    {directChatEmbedOptionsBody}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            <div className={styles.embedChatInputShell}>
-              <MessageInput
-                isShared
-                value={value}
-                disabled={false}
-                sendDisabled={sendDisabled || sendLoading}
-                conversationId={sessionId ?? ''}
-                onInputChange={handleInputChange}
-                onPressEnter={handlePressEnter}
-                sendLoading={sendLoading}
-                uploadMethod="upload_and_parse"
-                showUploadIcon={true}
-                showAttachLabel
-                uploadHint={
-                  showGhost
-                    ? 'Allega PDF/DOCX (parsing → retrieval).'
-                    : 'Allega PDF/DOCX: dopo indicizzazione il testo entra in analisi.'
-                }
-                stopOutputMessage={stopOutputMessage}
-                textareaAutoSize={{ minRows: 1, maxRows: 24 }}
-                wrapperRef={inputWrapperRef}
-                onInputFocus={handleInputFocus}
-                ghostSuggestion={showGhost ? ghostBody : null}
-                ghostHint="⇧ Invio: usa il suggerimento."
-                onGhostAccept={handleGhostAccept}
-              />
-            </div>
+              }
+              uploadHint={
+                showGhost
+                  ? 'Allega: PDF, Word, Excel, PowerPoint, testo, Markdown, immagini, audio/video… (parsing → retrieval).'
+                  : 'Allega file supportati; dopo l’indicizzazione il contenuto entra in analisi.'
+              }
+              stopOutputMessage={stopOutputMessage}
+              textareaAutoSize={{ minRows: 1, maxRows: 24 }}
+              wrapperRef={inputWrapperRef}
+              onInputFocus={handleInputFocus}
+              ghostSuggestion={showGhost ? ghostBody : null}
+              ghostHint="⇧ Invio: usa il suggerimento."
+              onGhostAccept={handleGhostAccept}
+            />
           </div>
         </div>
       </Flex>
