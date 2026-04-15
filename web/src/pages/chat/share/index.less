@@ -299,18 +299,23 @@
     --dc-font-meta: 12px;
     --dc-font-meta-sm: 11px;
     --dc-font-input: clamp(0.9375rem, 2.4vw, 1rem);
-  }
-
-  /* Pannello vetro: Deep search + proposte (stile “fine”, tipo barra marketing) */
-  &.directChatEmbed .embedGlassPanel {
-    border-radius: 18px;
-    padding: 10px 12px 8px;
-    margin: 0 2px 6px;
-    background: color-mix(
+    /* Opzioni: surface dedicate (non usare --bg-secondary light = bianco) */
+    --dc-opts-surface: color-mix(
       in srgb,
       var(--bg-secondary) 93%,
       rgba(139, 92, 246, 0.07)
     );
+    --dc-opts-surface-light: #e2e8f0;
+    --dc-opts-surface-light-2: #cbd5e1;
+    --dc-opts-border-light: rgba(15, 23, 42, 0.12);
+  }
+
+  /* Pannello vetro: Deep search + proposte (stile “fine”, tipo barra marketing) */
+  &.directChatEmbed .embedGlassPanel {
+    border-radius: 12px;
+    padding: 4px 6px 4px;
+    margin: 0 0 2px;
+    background: var(--dc-opts-surface);
     border: 1px solid
       color-mix(in srgb, var(--border-color) 92%, rgba(139, 92, 246, 0.12));
     backdrop-filter: blur(18px) saturate(1.12);
@@ -319,12 +324,13 @@
       0 8px 28px rgba(0, 0, 0, 0.12);
   }
 
+  /* Light: --bg-secondary è #fff → color-mix resta bianco; forziamo grigio-bluastro */
   &.light.directChatEmbed .embedGlassPanel {
-    background: color-mix(in srgb, #ffffff 97%, rgba(99, 102, 241, 0.05));
-    border-color: rgba(0, 0, 0, 0.07);
+    background: var(--dc-opts-surface-light) !important;
+    border-color: var(--dc-opts-border-light) !important;
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.9) inset,
-      0 8px 26px rgba(15, 23, 42, 0.07);
+      0 1px 0 rgba(255, 255, 255, 0.5) inset,
+      0 4px 14px rgba(15, 23, 42, 0.08) !important;
   }
 
   &.directChatEmbed .embedGlassPanelCollapsed {
@@ -336,12 +342,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 3px;
     width: 100%;
     margin: 0;
-    padding: 6px 8px;
+    padding: 3px 5px;
     border: none;
-    border-radius: 10px;
+    border-radius: 8px;
     background: color-mix(
       in srgb,
       var(--bg-secondary) 88%,
@@ -349,13 +355,18 @@
     );
     color: var(--text-primary);
     font-family: var(--font-sans);
-    font-size: var(--dc-font-meta, 12px);
+    font-size: 9px;
     font-weight: 600;
     cursor: pointer;
     text-align: left;
     transition:
       background-color 0.15s ease,
       box-shadow 0.15s ease;
+  }
+
+  &.light.directChatEmbed .directChatOptsToggle {
+    background: var(--dc-opts-surface-light-2) !important;
+    color: #0f172a !important;
   }
 
   &.directChatEmbed .directChatOptsToggle:hover {
@@ -365,6 +376,11 @@
       var(--accent-color) 14%
     );
     box-shadow: 0 1px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  &.light.directChatEmbed .directChatOptsToggle:hover {
+    background: #94a3b8 !important;
+    color: #0f172a !important;
   }
 
   &.directChatEmbed .directChatOptsToggleLabel {
@@ -384,9 +400,9 @@
   }
 
   &.directChatEmbed .directChatOptsBody {
-    margin-top: 4px;
-    padding-top: 2px;
-    max-height: min(52dvh, 440px);
+    margin-top: 1px;
+    padding-top: 0;
+    max-height: min(20dvh, 148px);
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior-y: contain;
@@ -396,8 +412,8 @@
   /* Contenuto opzioni: stesso “vetro” del pannello, senza strisce separate */
   &.directChatEmbed .directChatOptsInner {
     margin: 0;
-    padding: 2px 4px 4px;
-    border-radius: 12px;
+    padding: 1px 2px 2px;
+    border-radius: 8px;
     background: color-mix(
       in srgb,
       var(--bg-secondary) 88%,
@@ -407,13 +423,23 @@
   }
 
   &.light.directChatEmbed .directChatOptsInner {
-    /* Stesso “vetro” del pannello: niente alone bianco isolato */
-    background: color-mix(
-      in srgb,
-      var(--bg-secondary) 94%,
-      rgba(99, 102, 241, 0.04)
-    );
-    border-color: color-mix(in srgb, var(--border-color) 92%, transparent);
+    background: #f1f5f9 !important;
+    border-color: var(--dc-opts-border-light) !important;
+  }
+
+  &.directChatEmbed .directChatOptsBody :global(.ant-typography) {
+    font-size: 9px !important;
+    line-height: 1.3 !important;
+  }
+
+  &.light.directChatEmbed
+    .directChatOptsBody
+    :global(.ant-typography-secondary) {
+    color: #64748b !important;
+  }
+
+  &.light.directChatEmbed .directChatOptsBody :global(.ant-checkbox-group) {
+    background: transparent !important;
   }
 
   /* Tema scuro: niente pannello opzioni bianco (Ant default) */
@@ -432,42 +458,54 @@
   }
 
   &.dark.directChatEmbed .directChatOptsBody :global(.ant-segmented) {
-    background: color-mix(
-      in srgb,
-      var(--bg-message, #262626) 92%,
-      transparent
-    ) !important;
+    background: #0f172a !important;
   }
 
   &.dark.directChatEmbed .directChatOptsBody :global(.ant-segmented-item) {
-    color: var(--text-secondary) !important;
+    color: rgba(248, 250, 252, 0.5) !important;
+  }
+
+  &.dark.directChatEmbed
+    .directChatOptsBody
+    :global(.ant-segmented-item .ant-segmented-item-label) {
+    color: inherit !important;
   }
 
   &.dark.directChatEmbed
     .directChatOptsBody
     :global(.ant-segmented-item-selected) {
-    background: color-mix(
-      in srgb,
-      var(--bg-secondary, #1c1c1e) 88%,
-      var(--accent-color) 12%
-    ) !important;
-    color: var(--text-primary) !important;
+    background: #334155 !important;
+    color: #f8fafc !important;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.35) !important;
+  }
+
+  &.dark.directChatEmbed
+    .directChatOptsBody
+    :global(.ant-segmented-item:not(.ant-segmented-item-selected)) {
+    color: rgba(248, 250, 252, 0.55) !important;
+  }
+
+  &.dark.directChatEmbed
+    .directChatOptsBody
+    :global(.ant-segmented-item-selected .ant-segmented-item-label) {
+    color: #f8fafc !important;
+    font-weight: 600;
   }
 
   &.directChatEmbed.directChatEmbedCompact .embedGlassPanel {
-    padding: 6px 8px 4px;
-    margin-bottom: 3px;
-    border-radius: 14px;
+    padding: 4px 6px 3px;
+    margin-bottom: 2px;
+    border-radius: 12px;
   }
 
   &.directChatEmbed.directChatEmbedCompact .directChatOptsToggle {
-    padding: 5px 6px;
-    font-size: 11px;
+    padding: 3px 4px;
+    font-size: 9px;
   }
 
   &.directChatEmbed.directChatEmbedCompact .directChatOptsBody {
-    max-height: min(48dvh, 400px);
-    margin-top: 4px;
+    max-height: min(18dvh, 132px);
+    margin-top: 2px;
   }
 
   &.directChatEmbed.directChatEmbedCompact .sgaiApplicationsLead {
@@ -539,6 +577,13 @@
       overflow: hidden;
     }
 
+    .directChatInputRow {
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: 100%;
+      overflow: hidden;
+    }
+
     .embedGlassPanel {
       flex: 1 1 auto;
       min-height: 0;
@@ -549,54 +594,128 @@
     }
 
     .embedChatInputShell {
-      flex: 0 0 auto;
+      flex: 1 1 0%;
       min-height: 0;
     }
   }
 
-  /* DirectChat (login): chip suggerite + pulsante invio stile marketing */
+  /* DirectChat (login): opzioni a sinistra, input + invio a destra */
   &.directChatEmbed .directChatInputColumn {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     padding: 0 4px 4px;
     min-width: 0;
+  }
+
+  &.directChatEmbed .directChatInputRow {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 6px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  &.directChatEmbed .directChatOptsRail {
+    flex: 0 0 auto;
+    width: clamp(64px, 18vw, 112px);
+    max-width: 112px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+  }
+
+  &.directChatEmbed .directChatOptsRail .embedGlassPanel {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+  }
+
+  &.directChatEmbed .embedChatInputShell {
+    flex: 1 1 0%;
+    min-width: 0;
+  }
+
+  @media (max-width: 520px) {
+    &.directChatEmbed .directChatInputRow {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    &.directChatEmbed .directChatOptsRail {
+      width: 100%;
+      max-width: none;
+    }
+
+    &.directChatEmbed .directChatOptsRail .embedGlassPanel {
+      max-height: min(36dvh, 260px);
+    }
+
+    /* A colonna piena: un po’ più di scroll per le knowledge */
+    &.directChatEmbed .directChatOptsBody {
+      max-height: min(28dvh, 200px);
+    }
+
+    &.directChatEmbed .kbCheckboxLabel:global(.ant-typography) {
+      max-width: min(100%, 42ch) !important;
+      font-size: 8px !important;
+    }
+  }
+
+  &.directChatEmbed .deepSearchSwitchWrap {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
   }
 
   &.directChatEmbed .deepSearchRow {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 4px 2px;
+    gap: 4px;
+    padding: 2px 0 1px;
     flex-wrap: nowrap;
   }
 
   &.directChatEmbed .deepSearchTextCol {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 0;
     min-width: 0;
     flex: 1;
+    line-height: 1.2;
   }
 
   &.directChatEmbed .deepSearchLabel {
-    font-size: var(--dc-font-meta, 12px);
-    line-height: 1.35;
-    color: var(--text-secondary);
+    font-size: 8px;
+    line-height: 1.2;
+    color: var(--text-primary);
     cursor: pointer;
     user-select: none;
     font-family: var(--font-sans);
     font-weight: 600;
   }
 
+  &.light.directChatEmbed .deepSearchLabel {
+    color: #0f172a !important;
+  }
+
   &.directChatEmbed .deepSearchSub {
     display: block !important;
-    font-size: var(--dc-font-meta-sm, 11px) !important;
-    line-height: 1.4 !important;
+    font-size: 7px !important;
+    line-height: 1.2 !important;
     margin: 0 !important;
     max-width: 100%;
+    color: var(--text-secondary) !important;
     white-space: normal !important;
     word-break: break-word;
+  }
+
+  &.light.directChatEmbed .deepSearchSub {
+    color: #64748b !important;
   }
 
   &.directChatEmbed .directChatOptionsCollapse .controlsToolbar {
@@ -607,31 +726,58 @@
   &.directChatEmbed .controlsToolbar {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 3px;
     padding: 0;
     border-bottom: none;
     margin-bottom: 0;
   }
 
   &.directChatEmbed .retrievalModeRow {
+    padding: 2px 0 1px;
+  }
+
+  &.directChatEmbed .retrievalModeHead {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 4px 4px 2px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    flex-wrap: wrap;
+    min-width: 0;
   }
 
   &.directChatEmbed .retrievalModeLabel {
-    font-size: var(--dc-font-meta, 12px);
+    font-size: 8px;
     font-weight: 600;
     color: var(--text-secondary);
     font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+  }
+
+  &.light.directChatEmbed .retrievalModeLabel {
+    color: #475569 !important;
+  }
+
+  &.directChatEmbed .retrievalModeSegText {
+    display: inline-block;
+    font-size: 8px;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 0 1px;
   }
 
   &.directChatEmbed .retrievalModeSegmented {
-    align-self: flex-start;
+    flex: 0 0 auto;
     max-width: 100%;
 
     :global(.ant-segmented) {
+      padding: 1px;
+      font-size: 9px;
       background: color-mix(
         in srgb,
         var(--bg-secondary) 90%,
@@ -639,17 +785,49 @@
       );
     }
 
+    :global(.ant-segmented-item) {
+      padding: 0 4px !important;
+      line-height: 18px !important;
+      min-height: 18px !important;
+    }
+
     :global(.ant-segmented-item-selected) {
       color: var(--text-primary) !important;
     }
   }
 
-  &.directChatEmbed .retrievalModeHint {
-    font-size: var(--dc-font-meta-sm, 11px) !important;
-    line-height: 1.35 !important;
-    margin: 0 !important;
-    white-space: normal !important;
-    word-break: break-word;
+  /* Fast / Deep: contrasto chiaro su track grigio (no bianco su bianco) */
+  &.light.directChatEmbed .retrievalModeSegmented :global(.ant-segmented) {
+    background: #94a3b8 !important;
+  }
+
+  &.light.directChatEmbed
+    .retrievalModeSegmented
+    :global(.ant-segmented-item:not(.ant-segmented-item-selected)) {
+    color: #1e293b !important;
+  }
+
+  &.light.directChatEmbed
+    .retrievalModeSegmented
+    :global(
+      .ant-segmented-item:not(.ant-segmented-item-selected)
+        .ant-segmented-item-label
+    ) {
+    color: #1e293b !important;
+  }
+
+  &.light.directChatEmbed
+    .retrievalModeSegmented
+    :global(.ant-segmented-item-selected) {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+  }
+
+  &.light.directChatEmbed
+    .retrievalModeSegmented
+    :global(.ant-segmented-item-selected .ant-segmented-item-label) {
+    color: #f8fafc !important;
+    font-weight: 600;
   }
 
   /* Dark embed: niente “pannello bianco” sulla knowledge */
@@ -665,9 +843,9 @@
   &.directChatEmbed .kbFilterBlock {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    padding: 4px 6px 5px;
-    border-radius: 10px;
+    gap: 2px;
+    padding: 2px 4px 3px;
+    border-radius: 8px;
     background: color-mix(
       in srgb,
       var(--bg-secondary) 94%,
@@ -678,48 +856,79 @@
   }
 
   &.light.directChatEmbed .kbFilterBlock {
-    background: color-mix(
-      in srgb,
-      var(--bg-secondary) 96%,
-      var(--accent-color) 3%
-    ) !important;
-    border-color: color-mix(
-      in srgb,
-      var(--border-color) 94%,
-      transparent
-    ) !important;
+    background: #cbd5e1 !important;
+    border-color: var(--dc-opts-border-light) !important;
   }
 
   &.directChatEmbed .kbFilterLabel {
     display: block;
-    font-size: var(--dc-font-meta, 12px);
+    font-size: 8px;
     font-weight: 600;
     color: var(--text-primary);
     font-family: var(--font-sans);
-    line-height: 1.3;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  &.light.directChatEmbed .kbFilterLabel {
+    color: #0f172a !important;
   }
 
   &.directChatEmbed .kbFilterSub {
     white-space: normal !important;
     word-break: break-word;
     display: block !important;
-    font-size: var(--dc-font-meta-sm, 11px) !important;
-    line-height: 1.4 !important;
+    font-size: 8px !important;
+    line-height: 1.25 !important;
     margin: 0 !important;
   }
 
   &.directChatEmbed .kbFilterGroup {
     display: flex !important;
     flex-wrap: wrap !important;
-    gap: 6px 10px !important;
-    row-gap: 4px !important;
+    gap: 2px 4px !important;
+    row-gap: 0 !important;
   }
 
   &.directChatEmbed .kbFilterGroup :global(.ant-checkbox-wrapper) {
-    font-size: var(--dc-font-meta-sm, 11px);
+    font-size: 8px !important;
+    line-height: 1.15 !important;
     color: var(--text-secondary);
     margin-inline-end: 0 !important;
     align-items: flex-start;
+    padding: 0 !important;
+  }
+
+  &.light.directChatEmbed .kbFilterGroup :global(.ant-checkbox-wrapper) {
+    color: #334155 !important;
+  }
+
+  &.light.directChatEmbed .kbFilterGroup :global(.ant-checkbox-inner) {
+    background: #f8fafc !important;
+    border-color: #64748b !important;
+  }
+
+  &.light.directChatEmbed
+    .kbFilterGroup
+    :global(.ant-checkbox-checked .ant-checkbox-inner) {
+    background: #0f172a !important;
+    border-color: #0f172a !important;
+  }
+
+  /* Nomi knowledge: molto piccoli, colonna stretta opzioni */
+  &.directChatEmbed .kbCheckboxLabel:global(.ant-typography) {
+    font-size: 7px !important;
+    line-height: 1.15 !important;
+    max-width: min(100%, 72px) !important;
+  }
+
+  &.light.directChatEmbed .kbCheckboxLabel:global(.ant-typography) {
+    color: #1e293b !important;
+  }
+
+  &.dark.directChatEmbed .kbCheckboxLabel:global(.ant-typography) {
+    color: rgba(248, 250, 252, 0.88) !important;
   }
 
   &.directChatEmbed .suggestedChipsSection {

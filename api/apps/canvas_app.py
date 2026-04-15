@@ -164,6 +164,11 @@ def _apply_retrieval_top_n(canvas, top_n):
             applied += 1
         if applied:
             logging.info("[CANVAS] retrieval_top_n=%s on %s Retrieval node(s)", n, applied)
+        else:
+            logging.warning(
+                "[CANVAS] retrieval_top_n=%s ignored: no Retrieval nodes in canvas.components",
+                n,
+            )
     except Exception as e:
         logging.warning("[CANVAS] retrieval_top_n skipped: %s", e)
 

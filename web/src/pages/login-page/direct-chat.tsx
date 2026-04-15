@@ -13,7 +13,15 @@ import {
 } from '@/pages/chat/shared-hooks';
 import { buildMessageItemReference } from '@/pages/chat/utils';
 import { buildMessageUuidWithRole } from '@/utils/chat';
-import { Checkbox, Flex, Segmented, Spin, Switch, Typography } from 'antd';
+import {
+  Checkbox,
+  Flex,
+  Segmented,
+  Spin,
+  Switch,
+  Tooltip,
+  Typography,
+} from 'antd';
 import get from 'lodash/get';
 import { ChevronDown } from 'lucide-react';
 import React, {
@@ -175,7 +183,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
           label: (
             <Typography.Text
               ellipsis={{ tooltip: label }}
-              style={{ maxWidth: 'min(100%, 42ch)', fontSize: 'inherit' }}
+              className={styles.kbCheckboxLabel}
             >
               {label}
             </Typography.Text>
@@ -360,64 +368,85 @@ const DirectChat: React.FC<DirectChatProps> = ({
     });
   };
 
+  const retrievalSegmentedOptions = useMemo(
+    () => [
+      {
+        value: 'fast' as const,
+        label: (
+          <Tooltip
+            title="Meno chunk dai documenti, risposta più rapida."
+            getPopupContainer={() => document.body}
+          >
+            <span className={styles.retrievalModeSegText}>Fast</span>
+          </Tooltip>
+        ),
+      },
+      {
+        value: 'extended' as const,
+        label: (
+          <Tooltip
+            title="Più chunk dai documenti (consigliato per domande complesse)."
+            getPopupContainer={() => document.body}
+          >
+            <span className={styles.retrievalModeSegText}>Deep</span>
+          </Tooltip>
+        ),
+      },
+    ],
+    [],
+  );
+
   const directChatEmbedOptionsBody = useMemo(
     () => (
       <div className={styles.directChatOptsInner}>
         <div className={styles.controlsToolbar}>
           <div className={styles.deepSearchRow}>
-            <Switch
-              id="sgai-deep-search-toggle"
-              checked={deepSearch}
-              onChange={setDeepSearch}
-              size="small"
-            />
+            <Tooltip
+              title="Aggiunge estratti da web (Tavily o fallback) al contesto lato server, senza cambiare il testo che invii."
+              getPopupContainer={() => document.body}
+            >
+              <span className={styles.deepSearchSwitchWrap}>
+                <Switch
+                  id="sgai-deep-search-toggle"
+                  checked={deepSearch}
+                  onChange={setDeepSearch}
+                  size="small"
+                />
+              </span>
+            </Tooltip>
             <div className={styles.deepSearchTextCol}>
               <label
                 htmlFor="sgai-deep-search-toggle"
                 className={styles.deepSearchLabel}
               >
-                Deep search (web)
+                Web
               </label>
-              <Typography.Text
-                type="secondary"
-                className={styles.deepSearchSub}
-              >
-                Arricchisce la domanda con estratti da internet (lato server).
-                Il testo della chat resta quello che scrivi tu.
-              </Typography.Text>
+              <span className={styles.deepSearchSub}>Fonti online</span>
             </div>
           </div>
           <div className={styles.retrievalModeRow}>
-            <Typography.Text className={styles.retrievalModeLabel}>
-              Knowledge nei documenti
-            </Typography.Text>
-            <Segmented<RetrievalMode>
-              size="small"
-              value={retrievalMode}
-              onChange={(v) => setRetrievalMode(v as RetrievalMode)}
-              options={[
-                { label: 'Fast', value: 'fast' },
-                { label: 'Deep', value: 'extended' },
-              ]}
-              className={styles.retrievalModeSegmented}
-            />
-            <Typography.Text
-              type="secondary"
-              className={styles.retrievalModeHint}
-            >
-              Fast: meno chunk, risposta più rapida. Deep: più contesto dai
-              documenti (consigliato).
-            </Typography.Text>
+            <div className={styles.retrievalModeHead}>
+              <Typography.Text className={styles.retrievalModeLabel}>
+                Documenti
+              </Typography.Text>
+              <Segmented<RetrievalMode>
+                size="small"
+                value={retrievalMode}
+                onChange={(v) => setRetrievalMode(v as RetrievalMode)}
+                options={[...retrievalSegmentedOptions]}
+                className={styles.retrievalModeSegmented}
+              />
+            </div>
           </div>
           {kbOptions.length >= 1 ? (
             <div className={styles.kbFilterBlock}>
               <Typography.Text className={styles.kbFilterLabel}>
-                Documenti
+                Basi
               </Typography.Text>
               <Typography.Text type="secondary" className={styles.kbFilterSub}>
                 {kbOptions.length > 1
-                  ? 'Scegli quali basi usare per questa chat.'
-                  : 'Base collegata a questo agente.'}
+                  ? 'Filtra le knowledge attive.'
+                  : 'Collegata all’agente.'}
               </Typography.Text>
               <Checkbox.Group
                 className={styles.kbFilterGroup}
@@ -436,6 +465,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
       kbOptions.length,
       enabledKbIds,
       kbCheckboxOptions,
+      retrievalSegmentedOptions,
     ],
   );
 
@@ -542,63 +572,67 @@ const DirectChat: React.FC<DirectChatProps> = ({
             width: '100%',
           }}
         >
-          <div
-            className={cn(
-              styles.embedGlassPanel,
-              !embedOptsOpen && styles.embedGlassPanelCollapsed,
-            )}
-          >
-            <button
-              type="button"
-              className={styles.directChatOptsToggle}
-              onClick={() => setEmbedOptsOpen((o) => !o)}
-              aria-expanded={embedOptsOpen}
-            >
-              <span className={styles.directChatOptsToggleLabel}>
-                {embedOptsOpen ? 'Chiudi' : 'Opzioni'}
-              </span>
-              <ChevronDown
+          <div className={styles.directChatInputRow}>
+            <div className={styles.directChatOptsRail}>
+              <div
                 className={cn(
-                  styles.directChatOptsChevron,
-                  embedOptsOpen && styles.directChatOptsChevronOpen,
+                  styles.embedGlassPanel,
+                  !embedOptsOpen && styles.embedGlassPanelCollapsed,
                 )}
-                size={16}
-                strokeWidth={2}
-                aria-hidden
-              />
-            </button>
-            {embedOptsOpen ? (
-              <div className={styles.directChatOptsBody}>
-                {directChatEmbedOptionsBody}
+              >
+                <button
+                  type="button"
+                  className={styles.directChatOptsToggle}
+                  onClick={() => setEmbedOptsOpen((o) => !o)}
+                  aria-expanded={embedOptsOpen}
+                >
+                  <span className={styles.directChatOptsToggleLabel}>
+                    {embedOptsOpen ? 'Chiudi' : 'Opzioni'}
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      styles.directChatOptsChevron,
+                      embedOptsOpen && styles.directChatOptsChevronOpen,
+                    )}
+                    size={14}
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                </button>
+                {embedOptsOpen ? (
+                  <div className={styles.directChatOptsBody}>
+                    {directChatEmbedOptionsBody}
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </div>
-          <div className={styles.embedChatInputShell}>
-            <MessageInput
-              isShared
-              value={value}
-              disabled={false}
-              sendDisabled={sendDisabled || sendLoading}
-              conversationId={sessionId ?? ''}
-              onInputChange={handleInputChange}
-              onPressEnter={handlePressEnter}
-              sendLoading={sendLoading}
-              uploadMethod="upload_and_parse"
-              showUploadIcon={true}
-              showAttachLabel
-              uploadHint={
-                showGhost
-                  ? 'Allega PDF/DOCX (parsing → retrieval).'
-                  : 'Allega PDF/DOCX: dopo indicizzazione il testo entra in analisi.'
-              }
-              stopOutputMessage={stopOutputMessage}
-              textareaAutoSize={{ minRows: 2, maxRows: 16 }}
-              wrapperRef={inputWrapperRef}
-              onInputFocus={handleInputFocus}
-              ghostSuggestion={showGhost ? ghostBody : null}
-              ghostHint="⇧ Invio: usa il suggerimento."
-              onGhostAccept={handleGhostAccept}
-            />
+            </div>
+            <div className={styles.embedChatInputShell}>
+              <MessageInput
+                isShared
+                value={value}
+                disabled={false}
+                sendDisabled={sendDisabled || sendLoading}
+                conversationId={sessionId ?? ''}
+                onInputChange={handleInputChange}
+                onPressEnter={handlePressEnter}
+                sendLoading={sendLoading}
+                uploadMethod="upload_and_parse"
+                showUploadIcon={true}
+                showAttachLabel
+                uploadHint={
+                  showGhost
+                    ? 'Allega PDF/DOCX (parsing → retrieval).'
+                    : 'Allega PDF/DOCX: dopo indicizzazione il testo entra in analisi.'
+                }
+                stopOutputMessage={stopOutputMessage}
+                textareaAutoSize={{ minRows: 2, maxRows: 16 }}
+                wrapperRef={inputWrapperRef}
+                onInputFocus={handleInputFocus}
+                ghostSuggestion={showGhost ? ghostBody : null}
+                ghostHint="⇧ Invio: usa il suggerimento."
+                onGhostAccept={handleGhostAccept}
+              />
+            </div>
           </div>
         </div>
       </Flex>
