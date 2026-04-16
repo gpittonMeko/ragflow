@@ -1336,11 +1336,11 @@ const PresentationPage: React.FC = () => {
                     alignSelf: 'center',
                     width: '100%',
                     maxWidth: 'min(780px, calc(100vw - 16px))',
-                    minHeight: hasMessages ? 320 : 280,
+                    minHeight: hasMessages ? 300 : 240,
                     height: hasMessages
-                      ? 'min(56vh, 560px)'
-                      : 'min(46vh, 440px)',
-                    maxHeight: 'min(70vh, 680px)',
+                      ? 'min(54vh, 520px)'
+                      : 'min(40vh, 400px)',
+                    maxHeight: 'min(68vh, 640px)',
                     transition:
                       'height 0.35s cubic-bezier(0.4, 0, 0.2, 1), min-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                   }),

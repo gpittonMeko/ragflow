@@ -49,50 +49,41 @@ Chiedi: orientamenti rilevanti (Sezioni Unite o Tribunali amministrativi) e un r
   },
 ];
 
+/** Corpi brevi (anteprima compatta); dettaglio si può chiedere in chat. */
 export const SHARED_SUGGESTED_PROMPTS: SharedSuggestedPrompt[] = [
   {
     id: 'platts-frode',
     label: 'Platts e frode (op. inesistente)',
-    body: `Caso: una societ\u00e0 italiana acquista carburante da un fornitore che l\u2019Agenzia qualifica come \u201ccartiera\u201d; il prezzo \u00e8 inferiore alle quotazioni Platts del periodo. L\u2019Amministratore contesta la detrazione IVA per operazione soggettivamente inesistente e consapevolezza della frode.
+    body: `Prezzo carburante sotto Platts e fornitore “cartiera”: il solo scarto dall’indice basta per presunzione di consapevolezza nella frode?
 
-Domanda: il differenziale tra prezzo praticato e indice Platts pu\u00f2 fondare da solo la presunzione di partecipazione consapevole alla frode?
-
-Chiedi orientamenti giurisprudenziali (CTP Venezia/Verona, diligenza dell\u2019operatore, elementi integrativi oltre al Platts) e un principio sintetico utile in contenzioso.`,
+Chiedi criteri giurisprudenziali (CTP, diligenza operatore) in 5 bullet.`,
   },
   {
     id: 'onere-prova-cartiera',
     label: 'Onere della prova (cartiera)',
-    body: `Caso: acquisto da fornitore poi identificato come cartiera; contestazione detrazione IVA per operazioni soggettivamente inesistenti.
+    body: `Acquisto da cartiera contestato: cosa deve provare l’acquirente su buona fede e detrazione?
 
-Domanda: quale onere di verifica grava sull\u2019acquirente per dimostrare buona fede e detrazione?
-
-Chiedi riferimenti a Cass. ord. 14102/2024 e 23118/2024, ruolo dell\u2019Amministratore nella prova della consapevolezza, e standard della diligenza dell\u2019operatore economico medio.`,
+Chiedi sintesi Cass. 14102/2024 e 23118/2024 e standard diligenza.`,
   },
   {
     id: 'pec-mittente',
     label: 'PEC mittente non in IPA',
-    body: `Caso: cartella di pagamento notificata via PEC da indirizzo dell\u2019ente non presente in INI-PEC / registri pubblici; il contribuente eccepisce nullit\u00e0.
+    body: `Cartella via PEC da indirizzo ente non in IPA: la notifica regge?
 
-Domanda: la notifica \u00e8 valida se il mittente non risulta nei pubblici registri?
-
-Chiedi Cass. 26682/2024, 6015/2023, condizioni (certezza provenienza, tutela difensiva) e principio sintetico.`,
+Chiedi in sintesi Cass. 26682/2024 e 6015/2023 (certezza provenienza, tutela).`,
   },
   {
     id: 'contraddittorio-recupero',
     label: 'Contraddittorio e atto di recupero',
-    body: `Caso: atto di recupero su credito d\u2019imposta R&S gi\u00e0 compensato, con sanzioni e interessi, senza previo contraddittorio.
+    body: `Atto di recupero su credito R&S già compensato senza contraddittorio: è legittimo?
 
-Domanda: pu\u00f2 essere emesso senza contraddittorio preventivo se contiene pretesa impositiva sostanziale?
-
-Chiedi SS.UU. 25510/2021, Cass. 24620/2023 e 27162/2023, DM 24 aprile 2024 (art. 6-bis L. 212/2000), distinzione tra atto meramente automatizzato e atto con valutazione discrezionale.`,
+Chiedi in sintesi SS.UU. 25510/2021 e distinzione automatizzato / discrezionale.`,
   },
   {
     id: 'crediti-non-spettanti',
     label: 'Crediti non spettanti vs inesistenti',
-    body: `Caso: utilizzo in compensazione di credito R&S contestato; Amministrazione qualifica il credito come inesistente e applica sanzione 100%; il contribuente sostiene al pi\u00f9 \u201cnon spettanza\u201d con sanzione 30%.
+    body: `Compensazione R&S contestata: 100% vs 30% — come distinguere inesistente da non spettante?
 
-Domanda: criteri distintivi tra credito non spettante e inesistente e conseguenze sanzionatorie?
-
-Chiedi definizioni, Cass. SU 34419/2023, e come distinguere documentazione carente da assenza totale del presupposto.`,
+Chiedi in sintesi Cass. SU 34419/2023 e criteri pratici.`,
   },
 ];

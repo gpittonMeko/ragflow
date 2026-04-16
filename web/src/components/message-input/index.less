@@ -144,10 +144,9 @@
 /* Unico compositore embed: proposta + editor (stessa tipografia del textarea) */
 .embedComposer {
   --embed-composer-font: 0.9375rem;
-  /* Un gradino sotto il textarea: aspetto “suggerimento”, non corpo definitivo */
-  --embed-proposal-font: 0.8125rem;
   --embed-composer-lh: 1.45;
   --embed-composer-pad-x: 10px;
+  --embed-composer-pad-y: 8px;
 
   width: 100%;
   min-width: 0;
@@ -204,20 +203,27 @@
   white-space: nowrap;
 }
 
-/* Ghost nel solo “foglio” input: stessa area del textarea, scroll se lungo */
+/* Ghost sopra il textarea: stesso font/righe del campo (solo colore/opacità da “suggerimento”) */
 .inputGhostLayerEmbed {
+  left: var(--embed-composer-pad-x) !important;
+  right: 32px !important;
+  top: var(--embed-composer-pad-y) !important;
   max-height: min(36dvh, 280px);
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  font-size: var(--embed-proposal-font, 0.8125rem);
-  font-style: italic;
+  font-size: var(--embed-composer-font, 0.9375rem) !important;
+  line-height: var(--embed-composer-lh, 1.45) !important;
+  font-family: var(--font-sans) !important;
+  font-style: normal;
+  font-weight: 400;
   animation: sgaiGhostFade 0.55s ease-out both;
 }
 
 .embedComposerCompact .inputGhostLayerEmbed {
-  max-height: min(20dvh, 160px);
+  /* Allineato a maxRows compatti (~10 righe) */
+  max-height: min(28dvh, 220px);
 }
 
 @media (prefers-reduced-motion: reduce) {

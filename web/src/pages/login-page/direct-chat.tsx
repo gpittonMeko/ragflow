@@ -551,7 +551,8 @@ const DirectChat: React.FC<DirectChatProps> = ({
         style={{
           ...style,
           minHeight: 0,
-          height: '100%',
+          /* Compatta: altezza da contenuto così non resta un “buco” nero sotto l’iframe */
+          height: layoutExpanded ? '100%' : 'auto',
           paddingBottom: keyboardOffset > 0 ? keyboardOffset : undefined,
         }}
         vertical
@@ -567,7 +568,13 @@ const DirectChat: React.FC<DirectChatProps> = ({
             flexDirection: 'column',
           }}
         >
-          <div style={{ marginTop: 'auto', minWidth: 0 }}>
+          <div
+            style={{
+              /* Compatta: niente margin-top auto (evita grande vuoto scuro sopra l’input) */
+              marginTop: layoutExpanded ? 'auto' : 0,
+              minWidth: 0,
+            }}
+          >
             <Spin
               spinning={loading}
               tip={loading ? 'Caricamento della conversazione' : undefined}
@@ -669,17 +676,11 @@ const DirectChat: React.FC<DirectChatProps> = ({
                   </button>
                 </Popover>
               }
-              uploadHint={
-                value.trim() === ''
-                  ? showGhost
-                    ? 'Allega: PDF, Word, Excel, testo, immagini, audio… (parsing → retrieval).'
-                    : 'Allega file supportati; dopo l’indicizzazione il contenuto entra in analisi.'
-                  : undefined
-              }
+              uploadHint={undefined}
               stopOutputMessage={stopOutputMessage}
               textareaAutoSize={{
                 minRows: 1,
-                maxRows: layoutExpanded ? 24 : 6,
+                maxRows: layoutExpanded ? 24 : 10,
               }}
               embedComposerCompact={!layoutExpanded}
               wrapperRef={inputWrapperRef}

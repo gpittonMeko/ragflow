@@ -574,6 +574,13 @@
     }
   }
 
+  /* Chat minimizzata: area messaggi non “mangia” tutta l’altezza (niente fascia nera enorme) */
+  &.directChatEmbed.directChatEmbedCompact .messageContainer {
+    flex: 0 1 auto !important;
+    max-height: min(36vh, 280px) !important;
+    min-height: 0 !important;
+  }
+
   /* Fullscreen (login espanso): tetto minimo messaggi; colonna input già gestita sotto */
   &.directChatEmbed:not(.directChatEmbedCompact) {
     .messageContainer {
