@@ -278,7 +278,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
     if (!showGhost || SHARED_SUGGESTED_PROMPTS.length <= 1) return;
     const id = window.setInterval(() => {
       setSuggestionIndex((i) => (i + 1) % SHARED_SUGGESTED_PROMPTS.length);
-    }, 12000);
+    }, 7000);
     return () => clearInterval(id);
   }, [showGhost]);
 

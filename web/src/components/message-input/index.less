@@ -144,6 +144,8 @@
 /* Unico compositore embed: proposta + editor (stessa tipografia del textarea) */
 .embedComposer {
   --embed-composer-font: 0.9375rem;
+  /* Un gradino sotto il textarea: aspetto “suggerimento”, non corpo definitivo */
+  --embed-proposal-font: 0.8125rem;
   --embed-composer-lh: 1.45;
   --embed-composer-pad-x: 10px;
 
@@ -157,19 +159,23 @@
     var(--bg-input, #262626) 88%,
     var(--accent-color, #0f62fe) 5%
   );
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   animation: embedComposerReveal 0.45s ease-out both;
 }
 
-.embedComposerProposal {
-  flex-shrink: 0;
-  padding: 8px var(--embed-composer-pad-x) 4px;
+/* Barra sopra il campo: etichetta + azione esplicita (⇧ Invio resta in hint) */
+.embedComposerTopBar {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 6px var(--embed-composer-pad-x) 2px;
   min-width: 0;
 }
 
@@ -182,40 +188,42 @@
   line-height: 1.2;
   color: var(--accent-color, #0f62fe);
   font-family: var(--font-sans);
+  opacity: 0.85;
+  min-width: 0;
 }
 
-.embedComposerProposalBody {
-  font-size: var(--embed-composer-font);
-  line-height: var(--embed-composer-lh);
-  font-family: var(--font-sans);
-  color: color-mix(
-    in srgb,
-    var(--text-primary, #f4f4f4) 72%,
-    var(--text-secondary, #a8a8a8)
-  );
-  font-style: italic;
-  white-space: pre-wrap;
-  word-break: break-word;
+.embedComposerAcceptBtn {
+  flex-shrink: 0;
+  padding: 0 4px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  line-height: 1.35 !important;
+  font-size: 0.75rem !important;
+  font-weight: 600;
+  color: var(--accent-color, #0f62fe) !important;
+  white-space: nowrap;
+}
+
+/* Ghost nel solo “foglio” input: stessa area del textarea, scroll se lungo */
+.inputGhostLayerEmbed {
   max-height: min(36dvh, 280px);
-  overflow-x: hidden;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 0 0 2px;
-  margin: 0;
+  font-size: var(--embed-proposal-font, 0.8125rem);
+  font-style: italic;
+  animation: sgaiGhostFade 0.55s ease-out both;
 }
 
-.embedComposerCompact .embedComposerProposalBody {
-  max-height: min(20dvh, 140px);
+.embedComposerCompact .inputGhostLayerEmbed {
+  max-height: min(20dvh, 160px);
 }
 
-.embedComposerSeparator {
-  flex-shrink: 0;
-  height: 0;
-  margin: 0;
-  border: 0;
-  border-top: 1px dashed
-    color-mix(in srgb, var(--border-color) 75%, transparent);
+@media (prefers-reduced-motion: reduce) {
+  .inputGhostLayerEmbed {
+    animation: none;
+  }
 }
 
 .embedComposerEditor {
@@ -307,7 +315,17 @@
   line-height: 1.35 !important;
   padding: 2px 10px 0 !important;
   margin: 0 !important;
-  opacity: 0.85;
+  font-family: var(--font-sans, inherit);
+  color: var(--text-secondary, #a8a8a8) !important;
+  opacity: 0.95;
+}
+
+.messageInputWrapper .ghostHint {
+  color: var(--text-secondary, #a8a8a8) !important;
+}
+
+[data-theme='dark'] .messageInputWrapper .ghostHint {
+  color: var(--text-secondary, #a1a1a6) !important;
 }
 
 /* Chat condivisa / login: testo allineato ai messaggi, non più grande del corpo UI */

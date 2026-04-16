@@ -1385,7 +1385,9 @@ const PresentationPage: React.FC = () => {
                   display: 'flex',
                   flexDirection: 'column',
                   background: 'transparent',
-                  overflow: 'hidden',
+                  /* Docked: scroll interno così proposta + textarea autoSize non vengono tagliati */
+                  overflowX: 'hidden',
+                  overflowY: chatExpanded ? 'hidden' : 'auto',
                   padding: 0,
                   margin: 0,
                 }}

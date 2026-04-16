@@ -32,6 +32,7 @@ import {
   UploadProps,
   message,
 } from 'antd';
+import type { TextAreaRef } from 'antd/es/input/TextArea';
 import get from 'lodash/get';
 import trim from 'lodash/trim';
 import { CircleStop, Paperclip, SendHorizontal } from 'lucide-react';
@@ -212,9 +213,27 @@ const MessageInput = ({
     setFileList([]);
   }, [fileList, onPressEnter, isUploadingFile]);
 
+  const embedTextAreaRef = useRef<TextAreaRef | null>(null);
+
+  const handleGhostAcceptClick = useCallback(() => {
+    onGhostAccept?.();
+    window.setTimeout(() => {
+      const ta = embedTextAreaRef.current?.resizableTextArea?.textArea;
+      ta?.focus();
+    }, 0);
+  }, [onGhostAccept]);
+
   const handleKeyDown = useCallback(
     async (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (event.key === 'Enter' && event.shiftKey) {
+      if (event.nativeEvent.isComposing || event.keyCode === 229) {
+        return;
+      }
+      const isEnter =
+        event.key === 'Enter' ||
+        event.key === 'NumpadEnter' ||
+        event.code === 'Enter' ||
+        event.code === 'NumpadEnter';
+      if (isEnter && event.shiftKey) {
         if (
           ghostSuggestion &&
           onGhostAccept &&
@@ -222,11 +241,16 @@ const MessageInput = ({
           trim(ghostSuggestion) !== ''
         ) {
           event.preventDefault();
+          event.stopPropagation();
           onGhostAccept();
+          window.setTimeout(() => {
+            const ta = embedTextAreaRef.current?.resizableTextArea?.textArea;
+            ta?.focus();
+          }, 0);
         }
         return;
       }
-      if (event.key !== 'Enter') return;
+      if (!isEnter) return;
       if (sendDisabled || isUploadingFile || sendLoading) return;
 
       event.preventDefault();
@@ -355,21 +379,21 @@ const MessageInput = ({
             )}
           >
             {ghostSuggestion && trim(value) === '' ? (
-              <>
-                <div className={styles.embedComposerProposal}>
-                  <span className={styles.embedComposerProposalLabel}>
-                    Proposta testuale
-                  </span>
-                  <div
-                    key={ghostSuggestion.slice(0, 48)}
-                    className={styles.embedComposerProposalBody}
-                    title={ghostSuggestion}
+              <div className={styles.embedComposerTopBar}>
+                <span className={styles.embedComposerProposalLabel}>
+                  Proposta testuale
+                </span>
+                {onGhostAccept ? (
+                  <Button
+                    type="link"
+                    size="small"
+                    className={styles.embedComposerAcceptBtn}
+                    onClick={handleGhostAcceptClick}
                   >
-                    {ghostSuggestion}
-                  </div>
-                </div>
-                <div className={styles.embedComposerSeparator} aria-hidden />
-              </>
+                    Usa nel campo
+                  </Button>
+                ) : null}
+              </div>
             ) : null}
             <div
               className={cn(
@@ -378,7 +402,20 @@ const MessageInput = ({
                 styles.textareaWithGhostShared,
               )}
             >
+              {ghostSuggestion && trim(value) === '' ? (
+                <div
+                  key={ghostSuggestion}
+                  className={cn(
+                    styles.inputGhostLayer,
+                    styles.inputGhostLayerEmbed,
+                  )}
+                  aria-hidden
+                >
+                  {ghostSuggestion}
+                </div>
+              ) : null}
               <TextArea
+                ref={embedTextAreaRef}
                 className={
                   ghostSuggestion && trim(value) === ''
                     ? styles.textareaOverGhost
@@ -453,9 +490,7 @@ const MessageInput = ({
           </div>
         )}
         {ghostHint && ghostSuggestion && trim(value) === '' ? (
-          <Text type="secondary" className={styles.ghostHint}>
-            {ghostHint}
-          </Text>
+          <span className={styles.ghostHint}>{ghostHint}</span>
         ) : null}
         {!isShared && <Divider style={{ margin: '5px 30px 10px 0px' }} />}
         {!isShared && uploadHint && (
