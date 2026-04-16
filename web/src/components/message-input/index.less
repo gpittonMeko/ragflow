@@ -100,17 +100,38 @@
   flex-direction: column;
 }
 
-/* Login embed compatta: meno margini, allineato al box messaggi */
-.messageInputEmbedTight.messageInputWrapper {
-  margin: 0 0 6px;
-  padding: 4px 6px;
+/* Login embed compatta: margini esterni minimi (sovrascrive .messageInputWrapper 8px/12px) */
+.messageInputShared.messageInputEmbedTight.messageInputWrapper {
+  margin: 0 !important;
+  padding: 2px 2px 4px !important;
+  border-radius: 6px;
+
+  :global(.ant-input-affix-wrapper) {
+    padding: 2px 4px 0 !important;
+  }
+}
+
+/* Compatta: altezza da contenuto così autoSize del textarea non resta “bloccato” nel flex */
+.messageInputShared.messageInputEmbedTight.messageInputEmbedGrow.messageInputWrapper {
+  flex: 0 1 auto !important;
+  min-height: 0;
+}
+
+.messageInputEmbedTight .embedComposerFlexFill {
+  flex: 0 1 auto !important;
+  min-height: auto !important;
+}
+
+.messageInputEmbedTight .embedComposerEditorFlexFill {
+  flex: 0 1 auto !important;
+  min-height: auto !important;
 }
 
 @media (max-width: 768px) {
-  .messageInputEmbedTight.messageInputWrapper {
-    margin-bottom: max(72px, env(safe-area-inset-bottom, 0px));
-    padding-left: 2px;
-    padding-right: 2px;
+  .messageInputShared.messageInputEmbedTight.messageInputWrapper {
+    margin-bottom: max(12px, env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: 1px !important;
+    padding-right: 1px !important;
   }
 }
 
@@ -264,6 +285,11 @@
 .embedGhostCycleShell {
   transform-origin: left top;
   animation: ghostPromptSwap 0.55s ease-out both;
+}
+
+.embedComposerCompact.embedComposer {
+  --embed-composer-pad-x: 6px;
+  --embed-composer-pad-y: 5px;
 }
 
 .embedComposerCompact .inputGhostLayerEmbed {
@@ -469,9 +495,23 @@
   flex-direction: column;
 }
 
+/* Tight: niente flex column sull’affix — lascia che rc-textarea/autoSize controlli l’altezza */
+.messageInputEmbedTight.messageInputEmbedGrow
+  .embedComposerEditorFlexFill
+  :global(.ant-input-textarea-affix-wrapper) {
+  flex: unset !important;
+  display: block !important;
+  height: auto !important;
+  min-height: 0;
+}
+
 .messageInputFooter {
   width: 100%;
   min-width: 0;
+}
+
+.messageInputEmbedTight .messageInputActions {
+  padding: 0 0 4px !important;
 }
 
 .messageInputActions {
@@ -551,9 +591,9 @@
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
-/* Embed compatto: riempie embedChatInputShell (evita banda vuota sotto il footer) */
+/* Embed compatto: larghezza piena, altezza dal contenuto (no buco sotto con colonna flex 0) */
 .inputScrollAnchor.inputScrollAnchorEmbedFill {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   flex-shrink: 1;
   min-height: 0;
   width: 100%;
@@ -563,7 +603,7 @@
 }
 
 .inputScrollAnchorEmbedFill > :global(.ant-flex) {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
   min-width: 0;
 }

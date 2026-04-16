@@ -475,7 +475,7 @@ const MessageInput = ({
                 style={{
                   border: 'none',
                   boxShadow: 'none',
-                  padding: '8px 10px',
+                  padding: embedComposerCompact ? '6px 6px' : '8px 10px',
                   marginTop: 0,
                 }}
                 autoSize={resolvedTextareaAutoSize}
