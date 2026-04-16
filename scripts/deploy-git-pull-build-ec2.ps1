@@ -82,6 +82,8 @@ if (-not $env:SGAI_SKIP_PUSH) {
 $remoteBash = @"
 set -e
 cd '$remoteRoot'
+echo '=== git stash (se working tree sporco, evita fallimento pull) ==='
+git stash push -u -m 'auto-stash-before-deploy' || true
 echo '=== git pull ==='
 git pull --ff-only
 cd '$remoteWeb'
