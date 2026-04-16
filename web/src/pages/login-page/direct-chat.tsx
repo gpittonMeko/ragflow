@@ -278,7 +278,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
     if (!showGhost || SHARED_SUGGESTED_PROMPTS.length <= 1) return;
     const id = window.setInterval(() => {
       setSuggestionIndex((i) => (i + 1) % SHARED_SUGGESTED_PROMPTS.length);
-    }, 7000);
+    }, 4000);
     return () => clearInterval(id);
   }, [showGhost]);
 
@@ -514,7 +514,9 @@ const DirectChat: React.FC<DirectChatProps> = ({
   );
 
   return (
-    <div className={styles.directChatLayoutRoot}>
+    <div
+      className={`${styles.directChatLayoutRoot} ${!layoutExpanded ? styles.directChatLayoutRootCompact : ''}`}
+    >
       {barVisible && (
         <div className={styles.loaderBarWrapper}>
           <div className={styles.loaderGlass}>
@@ -561,7 +563,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
           ref={messageAreaRef}
           className={styles.messageContainer}
           style={{
-            flex: '1 1 0%',
+            flex: layoutExpanded ? '1 1 0%' : '0 1 auto',
             minHeight: 0,
             overflowY: 'auto',
             display: 'flex',
@@ -618,9 +620,12 @@ const DirectChat: React.FC<DirectChatProps> = ({
         <div
           className={styles.directChatInputColumn}
           style={{
-            flexShrink: 0,
-            minHeight: 'auto',
+            flexShrink: layoutExpanded ? 0 : undefined,
+            flex: layoutExpanded ? undefined : '1 1 auto',
+            minHeight: layoutExpanded ? 'auto' : 0,
             width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <div className={styles.embedChatInputShell}>
@@ -679,12 +684,13 @@ const DirectChat: React.FC<DirectChatProps> = ({
               uploadHint={undefined}
               stopOutputMessage={stopOutputMessage}
               textareaAutoSize={{
-                minRows: 1,
-                maxRows: layoutExpanded ? 24 : 10,
+                minRows: layoutExpanded ? 1 : 4,
+                maxRows: layoutExpanded ? 24 : 16,
               }}
               embedComposerCompact={!layoutExpanded}
               wrapperRef={inputWrapperRef}
               onInputFocus={handleInputFocus}
+              ghostSuggestionCycleKey={showGhost ? suggestionIndex : undefined}
               ghostSuggestion={showGhost ? ghostBody : null}
               ghostHint="⇧ Invio: usa il suggerimento."
               onGhostAccept={handleGhostAccept}

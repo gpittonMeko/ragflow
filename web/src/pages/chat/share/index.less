@@ -152,6 +152,12 @@
   flex-direction: column;
 }
 
+/* Login embed compatta: propagare altezza nel flex parent senza forzare overflow strani */
+.directChatLayoutRootCompact {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .directChatLayoutRoot .loaderBarWrapper {
   position: absolute;
   top: 10px;
@@ -619,6 +625,13 @@
     flex-shrink: 0;
     min-width: 0;
     min-height: auto;
+    overflow: visible;
+  }
+
+  /* Colonna input assorbe lo spazio verticale residuo in compatta */
+  &.directChatEmbed.directChatEmbedCompact .embedChatInputShell {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: visible;
   }
 

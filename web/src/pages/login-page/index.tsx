@@ -1380,7 +1380,7 @@ const PresentationPage: React.FC = () => {
                 style={{
                   borderRadius: chatExpanded ? 0 : 12,
                   width: '100%',
-                  height: '100%',
+                  height: chatExpanded ? '100%' : 'auto',
                   minHeight: 0,
                   display: 'flex',
                   flexDirection: 'column',

@@ -93,6 +93,8 @@ interface IProps {
   textareaAutoSize?: { minRows: number; maxRows: number };
   /** Suggerimento in dissolvenza nel campo (Maiusc+Invio per accettare se il campo è vuoto) */
   ghostSuggestion?: string | null;
+  /** Indice rotazione suggerimenti (animazione dissolvenza/scala a ogni cambio) */
+  ghostSuggestionCycleKey?: number;
   ghostHint?: string;
   onGhostAccept?: () => void;
   /** Contenuto a sinistra di Allega/Invio (es. icona opzioni login embed) */
@@ -130,6 +132,7 @@ const MessageInput = ({
   showAttachLabel = false,
   textareaAutoSize,
   ghostSuggestion,
+  ghostSuggestionCycleKey,
   ghostHint,
   onGhostAccept,
   leadingActions,
@@ -334,7 +337,7 @@ const MessageInput = ({
     textareaAutoSize ??
     (isShared
       ? embedComposerCompact
-        ? { minRows: 1, maxRows: 6 }
+        ? { minRows: 4, maxRows: 16 }
         : { minRows: 1, maxRows: 4 }
       : { minRows: 1, maxRows: 10 });
 
@@ -365,6 +368,7 @@ const MessageInput = ({
         className={cn(
           styles.messageInputWrapper,
           isShared && styles.messageInputShared,
+          isShared && embedComposerCompact && styles.messageInputEmbedGrow,
           'dark:bg-black',
         )}
       >
@@ -373,6 +377,7 @@ const MessageInput = ({
             className={cn(
               styles.embedComposer,
               embedComposerCompact && styles.embedComposerCompact,
+              embedComposerCompact && styles.embedComposerFlexFill,
               ghostSuggestion &&
                 trim(value) === '' &&
                 styles.textareaWithGhostActive,
@@ -398,16 +403,23 @@ const MessageInput = ({
             <div
               className={cn(
                 styles.embedComposerEditor,
+                embedComposerCompact && styles.embedComposerEditorFlexFill,
                 styles.textareaWithGhost,
                 styles.textareaWithGhostShared,
               )}
             >
               {ghostSuggestion && trim(value) === '' ? (
                 <div
-                  key={ghostSuggestion}
+                  key={
+                    typeof ghostSuggestionCycleKey === 'number'
+                      ? ghostSuggestionCycleKey
+                      : ghostSuggestion
+                  }
                   className={cn(
                     styles.inputGhostLayer,
                     styles.inputGhostLayerEmbed,
+                    typeof ghostSuggestionCycleKey === 'number' &&
+                      styles.embedGhostCycleShell,
                   )}
                   aria-hidden
                 >

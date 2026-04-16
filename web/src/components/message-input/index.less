@@ -92,6 +92,14 @@
   }
 }
 
+/* Colonna input embed: riempie lo spazio verticale residuo nel flex parent */
+.messageInputEmbedGrow {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .textareaWithGhost {
   position: relative;
   z-index: 0;
@@ -166,6 +174,18 @@
   animation: embedComposerReveal 0.45s ease-out both;
 }
 
+.embedComposerFlexFill {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.embedComposerEditorFlexFill {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Barra sopra il campo: etichetta + azione esplicita (⇧ Invio resta in hint) */
 .embedComposerTopBar {
   display: flex;
@@ -203,7 +223,7 @@
   white-space: nowrap;
 }
 
-/* Ghost sopra il textarea: stesso font/righe del campo (solo colore/opacità da “suggerimento”) */
+/* Ghost sopra il textarea: stesso font/righe del campo; colore solo più tenue */
 .inputGhostLayerEmbed {
   left: var(--embed-composer-pad-x) !important;
   right: 32px !important;
@@ -218,17 +238,28 @@
   font-family: var(--font-sans) !important;
   font-style: normal;
   font-weight: 400;
-  animation: sgaiGhostFade 0.55s ease-out both;
+  letter-spacing: normal;
+  color: color-mix(
+    in srgb,
+    var(--text-primary, #f4f4f4) 48%,
+    transparent
+  ) !important;
+  opacity: 1;
+}
+
+.embedGhostCycleShell {
+  transform-origin: left top;
+  animation: ghostPromptSwap 0.55s ease-out both;
 }
 
 .embedComposerCompact .inputGhostLayerEmbed {
-  /* Allineato a maxRows compatti (~10 righe) */
-  max-height: min(28dvh, 220px);
+  max-height: min(42dvh, 300px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .inputGhostLayerEmbed {
+  .embedGhostCycleShell {
     animation: none;
+    opacity: 0.55;
   }
 }
 
@@ -274,6 +305,21 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes ghostPromptSwap {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.96);
+  }
+  45% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.52;
+    transform: scale(0.99);
   }
 }
 
@@ -346,6 +392,22 @@
     field-sizing: content;
     min-height: 28px;
   }
+}
+
+.messageInputEmbedGrow.messageInputShared {
+  textarea.ant-input,
+  .ant-input-affix-wrapper textarea.ant-input {
+    max-height: min(52dvh, 480px);
+  }
+}
+
+.messageInputEmbedGrow
+  .embedComposerEditorFlexFill
+  :global(.ant-input-textarea-affix-wrapper) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .messageInputFooter {
