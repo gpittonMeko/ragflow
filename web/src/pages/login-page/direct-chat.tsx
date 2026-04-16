@@ -359,6 +359,18 @@ const DirectChat: React.FC<DirectChatProps> = ({
   }, [sessionId, agentId, setDerivedMessages]);
 
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
+
+  /** Embed dockato senza messaggi: evita che l’area messaggi mangi tutta l’altezza (fascia vuota sopra il compositore). */
+  const compactEmbedEmpty =
+    !layoutExpanded && (derivedMessages?.length ?? 0) === 0;
+
+  const embedTextareaAutoSize = useMemo(
+    () =>
+      layoutExpanded
+        ? { minRows: 1, maxRows: 24 }
+        : { minRows: 2, maxRows: 28 },
+    [layoutExpanded],
+  );
   const keyboardOffset = useKeyboardOffset(omitKeyboardInset);
   const inputWrapperRef = useRef<HTMLDivElement>(null);
   const messageAreaRef = useRef<HTMLDivElement>(null);
@@ -549,7 +561,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
 
       <Flex
         flex={1}
-        className={`${styles.chatContainer} ${styles[theme]} ${styles.directChatEmbed} ${!layoutExpanded ? styles.directChatEmbedCompact : ''} ${className ?? ''}`}
+        className={`${styles.chatContainer} ${styles[theme]} ${styles.directChatEmbed} ${!layoutExpanded ? styles.directChatEmbedCompact : ''} ${compactEmbedEmpty ? styles.directChatEmbedCompactEmpty : ''} ${className ?? ''}`}
         style={{
           ...style,
           minHeight: 0,
@@ -628,7 +640,10 @@ const DirectChat: React.FC<DirectChatProps> = ({
             flexDirection: 'column',
           }}
         >
-          <div className={styles.embedChatInputShell}>
+          <div
+            className={styles.embedChatInputShell}
+            data-sgai-compact-empty={compactEmbedEmpty ? '' : undefined}
+          >
             <MessageInput
               isShared
               value={value}
@@ -683,10 +698,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
               }
               uploadHint={undefined}
               stopOutputMessage={stopOutputMessage}
-              textareaAutoSize={{
-                minRows: layoutExpanded ? 1 : 4,
-                maxRows: layoutExpanded ? 24 : 28,
-              }}
+              textareaAutoSize={embedTextareaAutoSize}
               embedComposerCompact={!layoutExpanded}
               wrapperRef={inputWrapperRef}
               onInputFocus={handleInputFocus}
