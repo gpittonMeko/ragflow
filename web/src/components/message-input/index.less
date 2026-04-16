@@ -456,7 +456,7 @@
 .messageInputEmbedGrow.messageInputShared {
   textarea.ant-input,
   .ant-input-affix-wrapper textarea.ant-input {
-    max-height: min(58dvh, 560px);
+    max-height: min(62dvh, 640px);
   }
 }
 
@@ -549,6 +549,23 @@
   flex-shrink: 0;
   /* iOS safe area per tastiera */
   padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Embed compatto: riempie embedChatInputShell (evita banda vuota sotto il footer) */
+.inputScrollAnchor.inputScrollAnchorEmbedFill {
+  flex: 1 1 auto;
+  flex-shrink: 1;
+  min-height: 0;
+  width: 100%;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+.inputScrollAnchorEmbedFill > :global(.ant-flex) {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
 }
 
 .attachLabelText {

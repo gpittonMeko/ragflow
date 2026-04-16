@@ -553,8 +553,8 @@ const DirectChat: React.FC<DirectChatProps> = ({
         style={{
           ...style,
           minHeight: 0,
-          /* Compatta: altezza da contenuto così non resta un “buco” nero sotto l’iframe */
-          height: layoutExpanded ? '100%' : 'auto',
+          /* Compatta: stessa altezza del parent (chatEmbedInner) per flex 1 sui messaggi */
+          height: '100%',
           paddingBottom: keyboardOffset > 0 ? keyboardOffset : undefined,
         }}
         vertical
@@ -563,8 +563,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
           ref={messageAreaRef}
           className={styles.messageContainer}
           style={{
-            flex: layoutExpanded ? '1 1 0%' : '0 1 auto',
-            minHeight: 0,
+            flex: '1 1 0%',
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
@@ -620,9 +619,10 @@ const DirectChat: React.FC<DirectChatProps> = ({
         <div
           className={styles.directChatInputColumn}
           style={{
-            flexShrink: layoutExpanded ? 0 : undefined,
-            flex: layoutExpanded ? undefined : '1 1 auto',
-            minHeight: layoutExpanded ? 'auto' : 0,
+            flexShrink: 0,
+            /* Compatta: solo altezza contenuto; lo spazio verticale resta all’area messaggi */
+            flex: layoutExpanded ? undefined : '0 0 auto',
+            minHeight: 0,
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
@@ -685,7 +685,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
               stopOutputMessage={stopOutputMessage}
               textareaAutoSize={{
                 minRows: layoutExpanded ? 1 : 4,
-                maxRows: layoutExpanded ? 24 : 24,
+                maxRows: layoutExpanded ? 24 : 28,
               }}
               embedComposerCompact={!layoutExpanded}
               wrapperRef={inputWrapperRef}

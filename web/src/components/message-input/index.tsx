@@ -337,7 +337,7 @@ const MessageInput = ({
     textareaAutoSize ??
     (isShared
       ? embedComposerCompact
-        ? { minRows: 4, maxRows: 24 }
+        ? { minRows: 4, maxRows: 28 }
         : { minRows: 1, maxRows: 4 }
       : { minRows: 1, maxRows: 10 });
 
@@ -361,7 +361,13 @@ const MessageInput = ({
   );
 
   return (
-    <div ref={scrollRef} className={styles.inputScrollAnchor}>
+    <div
+      ref={scrollRef}
+      className={cn(
+        styles.inputScrollAnchor,
+        isShared && embedComposerCompact && styles.inputScrollAnchorEmbedFill,
+      )}
+    >
       <Flex
         gap={1}
         vertical

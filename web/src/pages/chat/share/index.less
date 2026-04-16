@@ -152,10 +152,11 @@
   flex-direction: column;
 }
 
-/* Login embed compatta: propagare altezza nel flex parent senza forzare overflow strani */
+/* Login embed compatta: stessa propagazione altezza del layout espanso */
 .directChatLayoutRootCompact {
-  flex: 1 1 auto;
+  flex: 1 1 0%;
   min-height: 0;
+  height: 100%;
 }
 
 .directChatLayoutRoot .loaderBarWrapper {
@@ -580,11 +581,11 @@
     }
   }
 
-  /* Chat minimizzata: area messaggi non “mangia” tutta l’altezza (niente fascia nera enorme) */
+  /* Chat minimizzata: messaggi prendono lo spazio residuo (scroll); niente tetto 36vh */
   &.directChatEmbed.directChatEmbedCompact .messageContainer {
-    flex: 0 1 auto !important;
-    max-height: min(36vh, 280px) !important;
-    min-height: 0 !important;
+    flex: 1 1 0% !important;
+    max-height: none !important;
+    min-height: 80px !important;
   }
 
   /* Fullscreen (login espanso): tetto minimo messaggi; colonna input già gestita sotto */
@@ -620,6 +621,8 @@
   &.directChatEmbed.directChatEmbedCompact .directChatInputColumn {
     gap: 2px;
     padding: 0 2px 2px;
+    flex: 0 0 auto !important;
+    align-self: stretch;
   }
 
   &.directChatEmbed .embedChatInputShell {
@@ -633,9 +636,9 @@
     overflow: visible;
   }
 
-  /* Colonna input assorbe lo spazio verticale residuo in compatta */
+  /* Compatta: shell alto quanto il compositore (il flex “1” è su messageContainer) */
   &.directChatEmbed.directChatEmbedCompact .embedChatInputShell {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: 0;
     overflow: visible;
   }

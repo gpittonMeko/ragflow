@@ -1380,14 +1380,15 @@ const PresentationPage: React.FC = () => {
                 style={{
                   borderRadius: chatExpanded ? 0 : 12,
                   width: '100%',
-                  height: chatExpanded ? '100%' : 'auto',
+                  height: '100%',
                   minHeight: 0,
+                  /* Riempie chatWrap; scroll delegato a messageContainer in DirectChat */
+                  flex: 1,
                   display: 'flex',
                   flexDirection: 'column',
                   background: 'transparent',
-                  /* Docked: scroll interno così proposta + textarea autoSize non vengono tagliati */
                   overflowX: 'hidden',
-                  overflowY: chatExpanded ? 'hidden' : 'auto',
+                  overflowY: 'hidden',
                   padding: 0,
                   margin: 0,
                 }}
