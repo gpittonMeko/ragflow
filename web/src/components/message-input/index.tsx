@@ -337,7 +337,7 @@ const MessageInput = ({
     textareaAutoSize ??
     (isShared
       ? embedComposerCompact
-        ? { minRows: 4, maxRows: 16 }
+        ? { minRows: 4, maxRows: 24 }
         : { minRows: 1, maxRows: 4 }
       : { minRows: 1, maxRows: 10 });
 
@@ -369,6 +369,7 @@ const MessageInput = ({
           styles.messageInputWrapper,
           isShared && styles.messageInputShared,
           isShared && embedComposerCompact && styles.messageInputEmbedGrow,
+          isShared && embedComposerCompact && styles.messageInputEmbedTight,
           'dark:bg-black',
         )}
       >
@@ -383,7 +384,7 @@ const MessageInput = ({
                 styles.textareaWithGhostActive,
             )}
           >
-            {ghostSuggestion && trim(value) === '' ? (
+            {ghostSuggestion && trim(value) === '' && !embedComposerCompact ? (
               <div className={styles.embedComposerTopBar}>
                 <span className={styles.embedComposerProposalLabel}>
                   Proposta testuale
@@ -404,10 +405,31 @@ const MessageInput = ({
               className={cn(
                 styles.embedComposerEditor,
                 embedComposerCompact && styles.embedComposerEditorFlexFill,
+                ghostSuggestion &&
+                  trim(value) === '' &&
+                  embedComposerCompact &&
+                  styles.embedComposerEditorOverlayHost,
                 styles.textareaWithGhost,
                 styles.textareaWithGhostShared,
               )}
             >
+              {ghostSuggestion && trim(value) === '' && embedComposerCompact ? (
+                <div className={styles.embedComposerTopBarOverlay}>
+                  <span className={styles.embedComposerProposalLabel}>
+                    Proposta testuale
+                  </span>
+                  {onGhostAccept ? (
+                    <Button
+                      type="link"
+                      size="small"
+                      className={styles.embedComposerAcceptBtn}
+                      onClick={handleGhostAcceptClick}
+                    >
+                      Usa nel campo
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
               {ghostSuggestion && trim(value) === '' ? (
                 <div
                   key={
@@ -418,6 +440,8 @@ const MessageInput = ({
                   className={cn(
                     styles.inputGhostLayer,
                     styles.inputGhostLayerEmbed,
+                    embedComposerCompact &&
+                      styles.inputGhostLayerEmbedBelowOverlayBar,
                     typeof ghostSuggestionCycleKey === 'number' &&
                       styles.embedGhostCycleShell,
                   )}

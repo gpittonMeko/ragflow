@@ -100,6 +100,20 @@
   flex-direction: column;
 }
 
+/* Login embed compatta: meno margini, allineato al box messaggi */
+.messageInputEmbedTight.messageInputWrapper {
+  margin: 0 0 6px;
+  padding: 4px 6px;
+}
+
+@media (max-width: 768px) {
+  .messageInputEmbedTight.messageInputWrapper {
+    margin-bottom: max(72px, env(safe-area-inset-bottom, 0px));
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+}
+
 .textareaWithGhost {
   position: relative;
   z-index: 0;
@@ -256,6 +270,51 @@
   max-height: min(42dvh, 300px);
 }
 
+/* Barra “Proposta” sopra lo stesso rettangolo del textarea (solo compatta + ghost) */
+.embedComposerEditorOverlayHost {
+  --embed-overlay-bar-h: 30px;
+  position: relative;
+}
+
+.embedComposerTopBarOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: var(--embed-overlay-bar-h);
+  max-height: var(--embed-overlay-bar-h);
+  padding: 0 8px 0 10px;
+  box-sizing: border-box;
+  background: color-mix(
+    in srgb,
+    var(--bg-input, #262626) 94%,
+    var(--accent-color, #0f62fe) 4%
+  );
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--border-color) 45%, transparent);
+  pointer-events: auto;
+}
+
+.embedComposerEditorOverlayHost :global(.ant-input-textarea-affix-wrapper) {
+  padding-top: calc(var(--embed-overlay-bar-h) + 4px) !important;
+}
+
+.inputGhostLayerEmbedBelowOverlayBar {
+  top: calc(
+    var(--embed-overlay-bar-h) + var(--embed-composer-pad-y)
+  ) !important;
+}
+
+.embedComposerCompact .inputGhostLayerEmbedBelowOverlayBar {
+  max-height: min(48dvh, 340px);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .embedGhostCycleShell {
     animation: none;
@@ -397,7 +456,7 @@
 .messageInputEmbedGrow.messageInputShared {
   textarea.ant-input,
   .ant-input-affix-wrapper textarea.ant-input {
-    max-height: min(52dvh, 480px);
+    max-height: min(58dvh, 560px);
   }
 }
 
