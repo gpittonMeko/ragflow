@@ -349,6 +349,7 @@ const MessageItem = ({
                   {embedChat ? (
                     <div className={styles.sourcesEmbedRow}>
                       {referenceDocumentList.map((doc, idx) => {
+                        const url = doc.url;
                         const displayName =
                           doc.original_name ||
                           doc.originalFilename ||

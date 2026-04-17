@@ -133,9 +133,19 @@ export const useSendSharedMessage = (
         });
 
         if (!quotaRes.ok) {
-          const quotaData = await quotaRes.json();
-          console.warn('[QUOTA] Generazione bloccata:', quotaData);
-          return;
+          try {
+            const quotaData = await quotaRes.json();
+            console.warn('[QUOTA] Generazione bloccata:', quotaData);
+            return;
+          } catch {
+            console.warn(
+              '[QUOTA] HTTP',
+              quotaRes.status,
+              '(es. 502): corpo non JSON — consenti invio; verificare proxy/oauth',
+            );
+            // Se il servizio quota è giù, non bloccare la chat (comportamento già
+            // ottenuto in precedenza quando .json() lanciava nel try esterno).
+          }
         }
       } catch (e) {
         console.error('[QUOTA] Errore:', e);

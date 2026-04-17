@@ -634,7 +634,16 @@ const PresentationPage: React.FC = () => {
         credentials: 'include',
       });
 
-      const data = await res.json();
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        console.warn(
+          '[quota] risposta non JSON (spesso 502/HTML dal proxy):',
+          res.status,
+        );
+        return;
+      }
 
       if (res.ok) {
         setQuota(data);
