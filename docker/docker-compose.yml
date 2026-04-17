@@ -1,5 +1,5 @@
-include:
-  - ./docker-compose-base.yml
+# Usa sempre: docker compose -f docker-compose.yml -f docker-compose-base.yml up -d
+# (niente `include:` così funziona anche con docker-compose / plugin vecchi su EC2)
 services:
   ragflow:
     depends_on:

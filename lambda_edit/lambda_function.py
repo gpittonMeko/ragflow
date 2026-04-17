@@ -18,7 +18,7 @@ INSTANCES_CONFIG = {
         'ora_inizio': 8,
         'ora_fine': 21,
         'gestisci_docker': True,
-        'docker_path': '~/workspace/ragflow/docker',
+        'docker_path': '/home/ubuntu/workspace/ragflow/docker',
         'compose_files': '-f docker-compose.yml -f docker-compose-base.yml',
         # Lista container RICHIESTI che DEVONO essere attivi
         'required_containers': [
@@ -68,7 +68,7 @@ SNS_TOPIC_ARN       = 'arn:aws:sns:eu-north-1:940482440561:SGAI'
 ROME_UTC_OFFSET     = 2  
 
 WAIT_SSH_TIMEOUT    = 90
-WAIT_CONTAINERS_UP  = 90
+WAIT_CONTAINERS_UP  = 180
 
 # Festivi italiani 2025
 FESTIVI = [
@@ -260,6 +260,28 @@ def fix_entrypoint_permissions(ssh, instance_name, docker_path):
         print(f"[{instance_name}] ⚠️  Errore fix permessi entrypoint.sh: {err}")
         return False
 
+def run_docker_compose_up_only(ssh, instance_name, config):
+    """Solo `compose up -d` (niente down): meno downtime, spesso basta per container Exited."""
+    docker_path = config['docker_path']
+    compose_files = config['compose_files']
+    fix_entrypoint_permissions(ssh, instance_name, docker_path)
+    docker_cmd = f"""
+      set -ex
+      export PATH=$PATH:/usr/local/bin
+      cd {docker_path}
+      ENV_ARG=""
+      if [ -f .env ]; then ENV_ARG="--env-file .env"; fi
+      sudo docker compose $ENV_ARG {compose_files} up -d || sudo docker-compose $ENV_ARG {compose_files} up -d
+      sudo docker ps -a
+    """
+    stdin, stdout, stderr = ssh.exec_command(docker_cmd, get_pty=True)
+    out, err = stdout.read().decode(), stderr.read().decode()
+    print(f"[{instance_name}] Docker compose up-only output:\n{out}")
+    if err:
+        print(f"[{instance_name}] Docker compose up-only errors:\n{err}")
+    return stdout.channel.recv_exit_status() == 0
+
+
 def run_docker_compose(ssh, instance_name, config):
     docker_path = config['docker_path']
     compose_files = config['compose_files']
@@ -271,8 +293,10 @@ def run_docker_compose(ssh, instance_name, config):
       set -ex
       export PATH=$PATH:/usr/local/bin
       cd {docker_path}
-      sudo docker compose {compose_files} down || sudo docker-compose {compose_files} down || true
-      sudo docker compose {compose_files} up -d || sudo docker-compose {compose_files} up -d
+      ENV_ARG=""
+      if [ -f .env ]; then ENV_ARG="--env-file .env"; fi
+      sudo docker compose $ENV_ARG {compose_files} down || sudo docker-compose $ENV_ARG {compose_files} down || true
+      sudo docker compose $ENV_ARG {compose_files} up -d || sudo docker-compose $ENV_ARG {compose_files} up -d
       sudo docker ps -a
     """
     stdin, stdout, stderr = ssh.exec_command(docker_cmd, get_pty=True)
@@ -290,7 +314,9 @@ def run_docker_compose_down(ssh, instance_name, config):
       set -ex
       export PATH=$PATH:/usr/local/bin
       cd {docker_path}
-      sudo docker compose {compose_files} down || sudo docker-compose {compose_files} down || true
+      ENV_ARG=""
+      if [ -f .env ]; then ENV_ARG="--env-file .env"; fi
+      sudo docker compose $ENV_ARG {compose_files} down || sudo docker-compose $ENV_ARG {compose_files} down || true
       sudo docker ps -a
     """
     stdin, stdout, stderr = ssh.exec_command(docker_cmd, get_pty=True)
@@ -299,19 +325,27 @@ def run_docker_compose_down(ssh, instance_name, config):
     return stdout.channel.recv_exit_status() == 0
 
 def auto_heal_containers(ssh, instance_name, config, missing_containers):
-    print(f"[{instance_name}] 🔧 AUTO-HEALING: Riavvio docker-compose")
-    
-    if not run_docker_compose(ssh, instance_name, config):
-        print(f"[{instance_name}] ❌ Errore docker-compose")
-        return False
-    
     required_containers = config.get('required_containers', [])
-    if wait_containers_up(ssh, instance_name, required_containers):
-        print(f"[{instance_name}] ✅ Auto-healing completato!")
+    print(
+        f"[{instance_name}] AUTO-HEALING phase1: compose up -d only "
+        f"(missing={missing_containers})"
+    )
+    if run_docker_compose_up_only(ssh, instance_name, config) and wait_containers_up(
+        ssh, instance_name, required_containers
+    ):
+        print(f"[{instance_name}] AUTO-HEALING phase1 OK")
         return True
-    else:
-        print(f"[{instance_name}] ⚠️  Auto-healing parziale")
+
+    print(f"[{instance_name}] AUTO-HEALING phase2: full down + up -d")
+    if not run_docker_compose(ssh, instance_name, config):
+        print(f"[{instance_name}] ERROR: docker-compose full cycle failed")
         return False
+
+    if wait_containers_up(ssh, instance_name, required_containers):
+        print(f"[{instance_name}] AUTO-HEALING phase2 OK")
+        return True
+    print(f"[{instance_name}] WARNING: auto-heal still partial after phase2")
+    return False
 
 # ---------- Process instance --------------------------------------
 
@@ -374,16 +408,41 @@ def process_instance(instance_name, config, now_roma, force, key_obj):
                 ssh.close()
                 return (instance_name, "ready", "EC2 accesa (no Docker)")
 
+            # Cold start: up -d prima (meno fragile di down immediato), poi wait, poi down+up se serve
+            print(f"[{instance_name}] COLD START phase1: compose up -d only")
+            if run_docker_compose_up_only(ssh, instance_name, config):
+                ok = wait_containers_up(ssh, instance_name, required_containers)
+                if ok:
+                    ssh.close()
+                    return (
+                        instance_name,
+                        "ready",
+                        f"EC2 + Docker avviati ({len(required_containers)} containers)",
+                    )
+
+            print(f"[{instance_name}] COLD START phase2: full down + up -d")
             if not run_docker_compose(ssh, instance_name, config):
                 ssh.close()
-                return (instance_name, "error", "compose fail")
+                return (
+                    instance_name,
+                    "partial",
+                    "compose fail - EC2 running; check docker/.env and compose logs",
+                )
 
             ok = wait_containers_up(ssh, instance_name, required_containers)
             ssh.close()
 
             if ok:
-                return (instance_name, "ready", f"EC2 + Docker avviati ({len(required_containers)} containers)")
-            return (instance_name, "error", "containers down")
+                return (
+                    instance_name,
+                    "ready",
+                    f"EC2 + Docker avviati ({len(required_containers)} containers)",
+                )
+            return (
+                instance_name,
+                "partial",
+                "containers missing after cold start - EC2 running; home will poll",
+            )
 
         # ---------- EC2 accesa ----------
         elif state == 'running':
