@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SGAI | Agentic AI, Legal Intelligence e Automazione d'Impresa</title>
-  <meta name="sgai-home-build" content="2026-04-14-gomfy-marketing-v2" />
+  <meta name="sgai-home-build" content="2026-04-16-no-dock-scrim" />
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-KEWG8VPD7D"></script>
   <script>
@@ -186,26 +186,7 @@
     .acc-body ul.detail-list { margin: 0.35rem 0 0.85rem; padding-left: 1.2rem; color: var(--color-text-secondary); }
     .acc-body ul.detail-list li { margin-bottom: 0.4rem; }
     .pillar-row img, .card-mini img.card-photo { background: linear-gradient(135deg, #e8eef8, #f4f7fc); }
-    /* Scrim vetrato sotto il dock (solo mobile): simile a overlay siti tipo Gumroad */
-    .wake-dock-scrim {
-      display: none;
-    }
-    @media (max-width: 768px) {
-      .wake-dock-scrim {
-        display: block;
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: min(45vh, 320px);
-        z-index: 49;
-        pointer-events: none;
-        border-top: 1px solid rgba(0, 0, 0, 0.04);
-        background: linear-gradient(to top, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.55) 45%, rgba(255, 255, 255, 0) 100%);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-      }
-    }
+    /* Nessuno scrim full-width: copriva troppo il contenuto; lo strip .wake-dock ha già ombra/sfondo. */
     /* Dock stato servizio — desktop: card; mobile: fisso in basso, vetro */
     .wake-dock {
       max-width: 860px;
@@ -231,8 +212,8 @@
       transition: border-color 0.35s ease, background 0.35s ease, box-shadow 0.35s ease;
     }
     .wake-strip.wake-glass {
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
     .wake-strip.wake-strip--online {
       border-color: rgba(16, 185, 129, 0.14);
@@ -277,7 +258,8 @@
         display: none;
       }
       .main {
-        padding-bottom: min(32vh, 180px);
+        /* Solo spazio per la card dock in basso (header sticky resta sopra, z-index 100) */
+        padding-bottom: min(12vh, 96px);
       }
     }
     .wake-context { font-size: 0.76rem; color: var(--color-text-muted); line-height: 1.48; margin: 0.55rem 0 0; font-family: var(--font-sans); }
@@ -592,7 +574,6 @@
     </div>
   </header>
   <main class="main">
-    <div class="wake-dock-scrim" aria-hidden="true"></div>
     <section class="hero">
       <div class="hero-inner">
         <div class="hero-label">Legal intelligence per studi e legali d'impresa</div>
@@ -911,9 +892,14 @@
     /** Stato EC2 via Lambda (risposta rapida; vedi api/sgai_ec2_status/handler.py) */
     const EC2_STATUS_URL = 'https://r2hsvqju7dcd3m6ev5zjvqe3rq0ohgok.lambda-url.eu-north-1.on.aws/';
     const TARGET = 'https://sgailegal.com/';
-    const PROBE_URL = 'https://sgailegal.com/v1/user/login';
+    /** Piu origini: CORS o routing diversi tra apex/www/app */
+    const PROBE_URLS = [
+      'https://sgailegal.com/v1/user/login',
+      'https://www.sgailegal.com/v1/user/login',
+      'https://app.sgailegal.com/v1/user/login',
+    ];
     const STATUS_FETCH_MS = 12000;
-    const PROBE_FETCH_MS = 3500;
+    const PROBE_FETCH_MS = 8000;
     /** Attesa max dopo comando Lambda (avvio EC2 + Docker + app; cold start spesso >3 min) */
     const MAX_WAKE_WAIT_MS = 300000;
     const INSTANCE = 'SGAI-Production';
@@ -959,10 +945,20 @@
       var id = setTimeout(function () { c.abort(); }, ms);
       return fetch(url, Object.assign({}, options, { signal: c.signal })).finally(function () { clearTimeout(id); });
     }
+    /** Allineato a sgai-backend-health-probe: no richiesta esplicita di application/json (evita falsi negativi). */
     async function probeAppReachable() {
-      var r = await fetchWithTimeout(PROBE_URL, { method: 'GET', mode: 'cors', cache: 'no-store', credentials: 'omit' }, PROBE_FETCH_MS);
-      var ct = (r.headers.get('content-type') || '').toLowerCase();
-      return ct.indexOf('application/json') !== -1 && (r.ok || r.status === 401 || r.status === 400);
+      for (var pi = 0; pi < PROBE_URLS.length; pi++) {
+        try {
+          var r = await fetchWithTimeout(PROBE_URLS[pi], { method: 'GET', mode: 'cors', cache: 'no-store', credentials: 'omit' }, PROBE_FETCH_MS);
+          var ct = (r.headers.get('content-type') || '').toLowerCase();
+          var s = r.status;
+          if (s >= 500 || s === 404) continue;
+          if (ct.indexOf('text/html') !== -1) continue;
+          if (s >= 200 && s < 300) return true;
+          if ((s === 401 || s === 403 || s === 400) && ct.indexOf('text/html') === -1) return true;
+        } catch (_) {}
+      }
+      return false;
     }
     async function isOnline() {
       platformState = 'loading';
@@ -971,23 +967,29 @@
       try {
         var rs = await fetchWithTimeout(EC2_STATUS_URL, { method: 'GET', mode: 'cors', cache: 'no-store', credentials: 'omit' }, STATUS_FETCH_MS);
         if (rs.ok) {
-          var j = await rs.json();
-          if (j && j.ok && j.instance_state === 'stopped') {
+          var j = null;
+          try {
+            j = await rs.json();
+          } catch (_) {
+            j = null;
+          }
+          var stv = (j && typeof j.instance_state === 'string') ? j.instance_state.toLowerCase() : '';
+          if (j && j.ok && stv === 'stopped') {
             setWakeState('off', 'Stato: in pausa — puoi riattivare');
             applyPlatformState(false);
             return false;
           }
-          if (j && j.ok && (j.instance_state === 'stopping')) {
+          if (j && j.ok && stv === 'stopping') {
             setWakeState('loading', 'Stato: spegnimento in corso…');
             applyPlatformState(false);
             return false;
           }
-          if (j && j.ok && j.instance_state === 'pending') {
+          if (j && j.ok && stv === 'pending') {
             setWakeState('loading', 'Stato: avvio in corso…');
             applyPlatformState(false);
             return false;
           }
-          if (j && j.ok && j.instance_state === 'running') {
+          if (j && j.ok && stv === 'running') {
             setWakeState('loading', 'Verifica applicazione…');
             try {
               if (await probeAppReachable()) {
@@ -1022,6 +1024,7 @@
         body: bodyStr,
       });
       const raw = await r.text();
+      const rawSnippet = raw ? String(raw).replace(/\s+/g, ' ').slice(0, 220) : '';
       let data = {};
       try {
         data = raw ? JSON.parse(raw) : {};
@@ -1032,7 +1035,7 @@
           data = { ...data, ...inner };
         } catch (_) {}
       }
-      return { ok: r.ok, status: r.status, data };
+      return { ok: r.ok, status: r.status, data, rawSnippet };
     }
     function isApiGatewayOverloadStatus(code) {
       return code === 504 || code === 502 || code === 503;
@@ -1056,13 +1059,17 @@
         { force_start: true, body: JSON.stringify({ force_start: true, target_instance: INSTANCE }) },
       ];
       var accepted = false;
+      var lastWakeHint = '';
       /** Se la Lambda supera il timeout API Gateway (~29s) con EC2 spenta, arriva 502/503/504 mentre l'avvio prosegue. */
       var wakeMaybeStillRunning = false;
       for (var pi = 0; pi < payloads.length; pi++) {
         try {
           var x = await callWake(payloads[pi]);
           if (isApiGatewayOverloadStatus(x.status)) wakeMaybeStillRunning = true;
-          if (!x.ok) continue;
+          if (!x.ok) {
+            lastWakeHint = 'HTTP ' + x.status + (x.rawSnippet ? ' — ' + x.rawSnippet : '');
+            continue;
+          }
           var inst = x.data && x.data.instances && x.data.instances[INSTANCE];
           var forceOk = x.data && x.data.force_start === true;
           var st = inst && inst.status;
@@ -1070,7 +1077,10 @@
             accepted = true;
             break;
           }
-        } catch (_) {}
+          lastWakeHint = (inst && inst.message) ? String(inst.message) : ('stato: ' + (st || 'sconosciuto'));
+        } catch (ex) {
+          lastWakeHint = (ex && ex.message) ? String(ex.message) : 'Errore di rete o CORS';
+        }
       }
       if (!accepted && wakeMaybeStillRunning) {
         accepted = true;
@@ -1080,7 +1090,7 @@
       if (!accepted) {
         setWakeState('off', 'Riattivazione non riuscita — riprova tra qualche minuto');
         applyPlatformState(false);
-        setProgress(0, 'Riprova tra qualche minuto');
+        setProgress(0, lastWakeHint || 'Riprova tra qualche minuto. Se persiste: controlla API Gateway CORS e log Lambda wake.');
         setTryButtonsDisabled(false);
         return;
       }
@@ -1100,8 +1110,15 @@
         var p = 40 + Math.min(50, ((Date.now() - t0) / MAX_WAKE_WAIT_MS) * 50);
         setProgress(p, 'Inizializzazione…');
       }
-      setWakeState('run', 'Avvio in corso — riprova tra 1–2 minuti');
-      setProgress(96, 'Quasi pronto');
+      /** Evita limbo "Quasi pronto": se il wake era OK, apri comunque l'app (backend puo essere ancora in avvio). */
+      if (accepted) {
+        setWakeState('run', 'Apertura sgailegal.com — se vedi errore, aggiorna tra 1 minuto');
+        setProgress(100, 'Connessione…');
+        setTimeout(goToApp, 1200);
+      } else {
+        setWakeState('run', 'Avvio in corso — riprova tra 1–2 minuti');
+        setProgress(96, 'Quasi pronto');
+      }
       setTryButtonsDisabled(false);
     }
     document.getElementById('contactForm').addEventListener('submit', async function(e) {
