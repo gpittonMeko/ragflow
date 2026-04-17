@@ -4,9 +4,9 @@
 
 ## 📦 **FILE DA UPLOADARE:**
 
-Il file ZIP si chiama: **`lambda_deployment.zip`**
+ZIP consigliato dal repo: esegui **`python create_lambda_zip.py`** → **`lambda_function_updated.zip`** (sorgente `lambda_edit/`).
 
-Si trova in: `C:\Users\user\OneDrive - ME.KO. Srl\Documenti\Cursor\Ragflow\ragflow\lambda_deployment.zip`
+Se usi ancora un file manuale **`lambda_deployment.zip`**, verifica che il contenuto sia lo stesso di `lambda_edit/`.
 
 ---
 
@@ -46,25 +46,30 @@ Si trova in: `C:\Users\user\OneDrive - ME.KO. Srl\Documenti\Cursor\Ragflow\ragfl
 3. Scroll down fino a "**Code source**"
 4. Clicca sul pulsante "**Upload from**" → "**.zip file**"
 5. Clicca "**Upload**"
-6. Seleziona il file: **`lambda_deployment.zip`**
+6. Seleziona il file: **`lambda_function_updated.zip`** (o il tuo zip equivalente da `lambda_edit/`)
 7. Clicca "**Save**"
 
 ---
 
 ### **STEP 6: Verifica**
 1. Aspetta che appaia "Successfully uploaded..."
-2. Verifica nel code editor che ci sia il file `lambda_ec2_manager_updated.py`
-3. Cerca nel codice la funzione `set_force_start_flag` (circa linea 120)
-4. Se la vedi → ✅ Upload riuscito!
+2. Il pacchetto standard del repo è **`python create_lambda_zip.py`** → **`lambda_function_updated.zip`** con sorgente in **`lambda_edit/`** (file principale: `lambda_function.py`).
+3. Cerca nel codice `set_force_start_flag` o `AUTO-HEALING` per confermare la versione.
 
 ---
 
-### **STEP 7: Aggiorna Handler (IMPORTANTE!)**
+### **STEP 7: Handler (IMPORTANTE!)**
 1. Scroll su fino a "**Runtime settings**"
 2. Clicca "**Edit**"
-3. Handler attuale: probabilmente `lambda_function.lambda_handler`
-4. **Cambia in**: `lambda_ec2_manager_updated.lambda_handler`
+3. Se hai caricato lo zip generato da **`create_lambda_zip.py`** (cartella `lambda_edit/`), l'handler corretto è: **`lambda_function.lambda_handler`** (è quello atteso in produzione).
+4. Usa **`lambda_ec2_manager_updated.lambda_handler`** **solo** se nel zip hai messo `lambda_ec2_manager_updated.py` in root **senza** rinominarlo in `lambda_function.py`.
 5. Clicca "**Save**"
+
+Verifica rapida da PC: `powershell -File scripts/report_sgai_lambda_alignment.ps1`
+
+**Upload zip da PC (alternativa se `aws lambda update-function-code` va in timeout):** dopo `python create_lambda_zip.py`, esegui `python scripts/deploy_sgai_lambda_zip.py` (boto3; stesse credenziali AWS della CLI).
+
+**Allineare solo i file compose su EC2 (senza git pull):** `python scripts/sync_ec2_compose_files.py` (SFTP verso `/home/ubuntu/workspace/ragflow/docker/`; stessa chiave PEM su S3 della Lambda).
 
 ---
 
