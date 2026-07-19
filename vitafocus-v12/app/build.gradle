@@ -1,0 +1,27 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.meko.vitafocus'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.meko.vitafocus'
+        minSdk 26
+        targetSdk 35
+        versionCode 3
+        versionName '1.2.0'
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ''
+            versionNameSuffix '-stats'
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
