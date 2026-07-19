@@ -5,13 +5,13 @@ on:
     branches:
       - 'build/vitafocus-fixed-*'
     paths:
-      - 'vitafocus-fixed/project.b64'
+      - 'vitafocus-direct/**'
       - '.github/workflows/build-vitafocus.yml'
   pull_request:
     branches:
       - main
     paths:
-      - 'vitafocus-fixed/project.b64'
+      - 'vitafocus-direct/**'
       - '.github/workflows/build-vitafocus.yml'
   workflow_dispatch:
 
@@ -27,18 +27,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: Extract Android project
-        run: |
-          mkdir -p vitafocus-build
-          base64 -d vitafocus-fixed/project.b64 > /tmp/vitafocus-project.zip
-          unzip -q /tmp/vitafocus-project.zip -d vitafocus-build
       - name: Build debug APK
-        working-directory: vitafocus-build
+        working-directory: vitafocus-direct
         run: gradle :app:assembleDebug --stacktrace
       - name: Prepare artifact
         run: |
           mkdir -p artifact
-          cp vitafocus-build/app/build/outputs/apk/debug/app-debug.apk artifact/VitaFocus-fixed-v1.1.0.apk
+          cp vitafocus-direct/app/build/outputs/apk/debug/app-debug.apk artifact/VitaFocus-fixed-v1.1.0.apk
           sha256sum artifact/VitaFocus-fixed-v1.1.0.apk > artifact/VitaFocus-fixed-v1.1.0-SHA256.txt
       - uses: actions/upload-artifact@v4
         with:
