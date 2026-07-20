@@ -1,0 +1,47 @@
+name: Build VitaFocus v1.3 APK
+
+on:
+  push:
+    branches:
+      - build/vitafocus-v1.3-ui
+    paths:
+      - 'vitafocus-v13/**'
+      - '.github/workflows/build-vitafocus-v13.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Rebuild Android project
+        run: |
+          cat vitafocus-v13/chunks/00 vitafocus-v13/chunks/01 > /tmp/project.b64
+          cat vitafocus-v13/rest/* | base64 -d | gzip -dc >> /tmp/project.b64
+          base64 -d /tmp/project.b64 > /tmp/project.zip
+          mkdir -p vitafocus-v13-build
+          unzip -q /tmp/project.zip -d vitafocus-v13-build
+      - name: Build APK
+        working-directory: vitafocus-v13-build
+        run: gradle :app:assembleDebug --stacktrace
+      - name: Sign stable APK
+        run: |
+          mkdir -p artifact
+          keytool -genkeypair -noprompt -keystore /tmp/VitaFocus-signing-key.jks -storepass VitaFocus2026 -keypass VitaFocus2026 -alias vitafocus -keyalg RSA -keysize 4096 -validity 10000 -dname 'CN=VitaFocus, OU=Personal, O=MEKO, L=Noventa di Piave, C=IT'
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$APKSIGNER" sign --ks /tmp/VitaFocus-signing-key.jks --ks-key-alias vitafocus --ks-pass pass:VitaFocus2026 --key-pass pass:VitaFocus2026 --out artifact/VitaFocus-v1.3.0.apk vitafocus-v13-build/app/build/outputs/apk/debug/app-debug.apk
+          "$APKSIGNER" verify --verbose --print-certs artifact/VitaFocus-v1.3.0.apk
+          cp /tmp/VitaFocus-signing-key.jks artifact/VitaFocus-signing-key.jks
+          sha256sum artifact/VitaFocus-v1.3.0.apk > artifact/VitaFocus-v1.3.0-SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VitaFocus-v1.3.0
+          path: artifact/*
+          retention-days: 7
