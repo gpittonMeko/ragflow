@@ -7,6 +7,12 @@ on:
     paths:
       - 'vitafocus-v13/**'
       - '.github/workflows/build-vitafocus-v13.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'vitafocus-v13/**'
+      - '.github/workflows/build-vitafocus-v13.yml'
   workflow_dispatch:
 
 jobs:
