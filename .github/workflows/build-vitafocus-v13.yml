@@ -29,7 +29,7 @@ jobs:
           gradle-version: '8.10.2'
       - name: Rebuild Android project
         run: |
-          cat vitafocus-v13/chunks/00 vitafocus-v13/chunks/01 > /tmp/project.b64
+          cat vitafocus-v13/chunks/00 vitafocus-v13/chunk01parts/* > /tmp/project.b64
           cat vitafocus-v13/rest/* | base64 -d | gzip -dc >> /tmp/project.b64
           base64 -d /tmp/project.b64 > /tmp/project.zip
           mkdir -p vitafocus-v13-build
