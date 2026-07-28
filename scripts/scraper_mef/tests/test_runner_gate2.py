@@ -205,6 +205,104 @@ class TestRunnerGate2(unittest.TestCase):
             self.assertEqual(metrics.attempts, 1)
             self.assertEqual(cp.data["status"], "blocked")
 
+    def test_blocked_429_stops(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg, limits, index, cp, out = self._ctx(tmp)
+            rows = _rows(
+                ("Sentenza", "1", "2026", "CGT 2° Lombardia"),
+                ("Sentenza", "2", "2026", "CGT 2° Lombardia"),
+            )
+
+            def fetch_429(row: PortalRow):
+                raise MefBlockedError(429, "too many requests")
+
+            metrics = Metrics()
+            process_rows(
+                rows,
+                index=index,
+                checkpoint=cp,
+                metrics=metrics,
+                limits=limits,
+                cfg=cfg,
+                output_dir=out,
+                max_attempts=5,
+                page_number=1,
+                fetch_pdf=fetch_429,
+                resume=False,
+            )
+            self.assertEqual(metrics.blocked, 1)
+            self.assertEqual(metrics.attempts, 1)
+            self.assertEqual(cp.data["status"], "blocked")
+            self.assertIn("429", str(cp.data.get("block_reason") or ""))
+
+    def test_processed_missing_pdf_is_redownloaded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg, limits, index, cp, out = self._ctx(tmp)
+            rows = _rows(("Sentenza", "77", "2026", "CGT 2° Lombardia"))
+            nome = "Sentenza_V70_77_2026"
+            cp.mark_processed(nome, page=1, row_index=1)
+            # nessun PDF in out → deve invalidare e riscaricare
+            calls = {"n": 0}
+
+            def fetch(row: PortalRow):
+                calls["n"] += 1
+                return make_minimal_pdf(1200), row.to_meta()
+
+            metrics = Metrics()
+            items = process_rows(
+                rows,
+                index=index,
+                checkpoint=cp,
+                metrics=metrics,
+                limits=limits,
+                cfg=cfg,
+                output_dir=out,
+                max_attempts=1,
+                page_number=1,
+                fetch_pdf=fetch,
+                resume=True,
+            )
+            self.assertEqual(calls["n"], 1)
+            self.assertEqual(metrics.downloaded, 1)
+            self.assertTrue(any(i.get("action") == "checkpoint_invalidated" for i in items))
+            self.assertTrue((out / f"{nome}.pdf").exists())
+
+    def test_page_change_resets_row_skip(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg, limits, index, cp, out = self._ctx(tmp)
+            cp.set_position(page=1, row_index=5)
+            rows = _rows(
+                ("Sentenza", "1", "2026", "CGT 2° Lombardia"),
+                ("Sentenza", "2", "2026", "CGT 2° Lombardia"),
+            )
+
+            def fetch(row: PortalRow):
+                return make_minimal_pdf(1200), row.to_meta()
+
+            metrics = Metrics()
+            process_rows(
+                rows,
+                index=index,
+                checkpoint=cp,
+                metrics=metrics,
+                limits=limits,
+                cfg=cfg,
+                output_dir=out,
+                max_attempts=2,
+                page_number=2,  # pagina nuova
+                fetch_pdf=fetch,
+                resume=True,
+            )
+            self.assertEqual(cp.data["last_page"], 2)
+            self.assertEqual(metrics.downloaded, 2)
+            self.assertEqual(metrics.skipped_checkpoint, 0)
+
+    def test_max_zero_rejected(self):
+        from scraper_mef.cli import main
+
+        code = main(["run", "--max", "0", "--simulate"])
+        self.assertEqual(code, 2)
+
     def test_http_500_counts_attempt_continues(self):
         with tempfile.TemporaryDirectory() as tmp:
             cfg, limits, index, cp, out = self._ctx(tmp)

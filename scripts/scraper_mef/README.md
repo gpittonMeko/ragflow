@@ -8,10 +8,11 @@ Modulo scraper sentenze MEF **senza upload/requeue in produzione**.
 
 - Parse righe tabella + (live) associazione `Visualizza` → stessa `<tr>` via `href`
 - Live: metadati dalla **pagina dettaglio** confrontati con la lista prima del salvataggio
-- Skip A/B/C con validazione PDF locale (size, `%PDF-`, `%%EOF`) — file corrotti non bloccano il ridownload
+- Skip A/B/C con validazione PDF locale (size, `%PDF-`, `%%EOF`, struttura `pypdf` trailer/catalogo)
+- Checkpoint `processed` salta solo se PDF locale ancora valido o cache server; altrimenti invalida e riscarica
 - Naming canonico `{Tipo}_{Codice}_{Numero}_{Anno}.pdf` (tipo reale, non sempre `Sentenza`)
-- `--max` = tetto sui **tentativi** (successi + falliti); gli skip non consumano il budget
-- Checkpoint/resume: `last_page`, `last_row_index`, `last_document`, `processed`, `failed`, `status`
+- `--max` = tetto sui **tentativi** (successi + falliti), `>= 1` (`--max 0` = errore)
+- Checkpoint/resume: `last_page`, `last_row_index` (reset su cambio pagina), `processed`, `failed`, `status`
 - Stop su HTTP 403/429 / segnali WAF (status `blocked` + checkpoint)
 - Upload **disabilitato** (stub)
 

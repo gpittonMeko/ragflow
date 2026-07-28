@@ -113,6 +113,9 @@ def cmd_probe(nome: str, cfg: Config, args: argparse.Namespace) -> int:
 
 def cmd_run(cfg: Config, args: argparse.Namespace) -> int:
     mode = "live" if args.live else "simulate"
+    if int(args.max) < 1:
+        log.error("--max deve essere >= 1 (ricevuto %s); nessun tentativo", args.max)
+        return 2
     fixture = args.fixture
     if mode == "simulate":
         output_dir = Path(args.output_dir) if args.output_dir else (ROOT / ".tmp_out_simulate")
@@ -168,7 +171,7 @@ def main(argv: list[str] | None = None) -> int:
         "--max",
         type=int,
         default=1,
-        help="Max TENTATIVI download (successi + falliti). Default 1. Gli skip non contano.",
+        help="Max TENTATIVI download (successi + falliti), >= 1. Default 1. --max 0 = errore.",
     )
     p_run.add_argument(
         "--simulate",

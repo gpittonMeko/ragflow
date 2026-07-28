@@ -30,6 +30,24 @@ class TestNames(unittest.TestCase):
         self.assertEqual(meta["nomeFile"], "Ordinanza_V70_1205_2026.pdf")
         self.assertEqual(normalize_tipo("ordinanza"), "Ordinanza")
 
+    def test_corte_con_trattino(self):
+        emilia = row_to_filename("100", "2026", "CGT 2° Emilia-Romagna")
+        self.assertTrue(emilia["ok"], emilia)
+        self.assertEqual(emilia["codice"], "V92")
+        self.assertEqual(emilia["nomeFile"], "Sentenza_V92_100_2026.pdf")
+
+        trentino = row_to_filename("200", "2026", "CGT 2° Trentino-Alto Adige")
+        self.assertTrue(trentino["ok"], trentino)
+        self.assertEqual(trentino["codice"], "V75")
+        self.assertEqual(trentino["nomeFile"], "Sentenza_V75_200_2026.pdf")
+
+        detail = parse_detail_text(
+            "Ordinanza n. 100/2026 CGT 2° Emilia-Romagna",
+            page_url="/ricerca/dettaglio/x",
+        )
+        self.assertTrue(detail["ok"], detail)
+        self.assertEqual(detail["codice"], "V92")
+
     def test_fixture_rows(self):
         html = (ROOT / "fixtures" / "sample_rows.html").read_text(encoding="utf-8")
         rows = parse_table_html(html)

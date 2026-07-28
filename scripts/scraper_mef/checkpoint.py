@@ -66,6 +66,36 @@ class Checkpoint:
             self.data["last_row_index"] = int(row_index)
         self.save()
 
+    def sync_page(self, page: int) -> None:
+        """
+        Aggiorna last_page. Se la pagina cambia rispetto al checkpoint,
+        azzera last_row_index (altrimenti le prime righe della nuova pagina
+        verrebbero saltate).
+        """
+        page = int(page)
+        prev = int(self.data.get("last_page") or 0)
+        if prev != 0 and prev != page:
+            self.data["last_row_index"] = 0
+        self.data["last_page"] = page
+        self.save()
+
+    def unmark_processed(self, nome_base: str) -> None:
+        processed = self.data.setdefault("processed", [])
+        if nome_base in processed:
+            processed.remove(nome_base)
+            self.save()
+
+    def unmark_failed(self, nome_base: str) -> None:
+        failed = self.data.setdefault("failed", [])
+        if nome_base in failed:
+            failed.remove(nome_base)
+            self.save()
+
+    def invalidate_done(self, nome_base: str) -> None:
+        """Rimuove processed/failed per consentire ridownload."""
+        self.unmark_processed(nome_base)
+        self.unmark_failed(nome_base)
+
     def mark_processed(self, nome_base: str, *, page: int | None = None, row_index: int | None = None) -> None:
         processed = self.data.setdefault("processed", [])
         if nome_base not in processed:

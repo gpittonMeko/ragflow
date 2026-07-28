@@ -14,7 +14,7 @@ DETAIL_NUM_ANNO_RE = re.compile(
     re.IGNORECASE,
 )
 DETAIL_CORTE_RE = re.compile(
-    r"CGT\s*(1|2)\s*[°º]?\s+([A-Za-zÀ-ÿ' ]+?)(?:\s*$|\s{2,}|\n|<)",
+    r"CGT\s*(1|2)\s*[°º]?\s+([A-Za-zÀ-ÿ'\- ]+?)(?:\s*$|\s{2,}|\n|<)",
     re.IGNORECASE,
 )
 DETAIL_TIPO_RE = re.compile(

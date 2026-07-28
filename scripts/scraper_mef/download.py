@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import os
 import re
 from pathlib import Path
@@ -29,20 +30,74 @@ def sha256_bytes(data: bytes) -> str:
 
 
 def make_minimal_pdf(min_bytes: int = 1200) -> bytes:
-    """PDF sintetico solo per --simulate (non è una sentenza reale)."""
-    head = (
-        b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n"
-        b"1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n"
-        b"2 0 obj<< /Type /Pages /Kids [] /Count 0 >>endobj\n"
-        b"xref\n0 3\n0000000000 65535 f \n"
-        b"trailer<< /Size 3 /Root 1 0 R >>\n"
-        b"startxref\n0\n"
-    )
-    eof = b"%%EOF\n"
-    if len(head) + len(eof) >= min_bytes:
-        return head + eof
-    pad_len = min_bytes - len(head) - len(eof)
-    return head + (b"%" + b"0" * max(0, pad_len - 1) + b"\n")[:pad_len] + eof
+    """PDF sintetico valido per pypdf (solo --simulate; non è una sentenza reale)."""
+    from pypdf import PdfWriter
+
+    buf = io.BytesIO()
+    writer = PdfWriter()
+    writer.add_blank_page(width=72, height=72)
+    writer.write(buf)
+    data = buf.getvalue()
+    if len(data) >= min_bytes:
+        return data
+    # Padding dopo %%EOF: non altera trailer/catalogo; has_pdf_eof resta vero
+    pad_len = min_bytes - len(data)
+    return data + (b"\n%" + b"0" * max(0, pad_len - 2) + b"\n")[:pad_len]
+
+
+def verify_pdf_structure(data: bytes) -> list[str]:
+    """
+    Validazione strutturale con pypdf: trailer + catalogo /Root.
+    %PDF- + %%EOF da soli non bastano (payload non-PDF possono passarli).
+    """
+    errors: list[str] = []
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        return ["pypdf non disponibile (richiesto per validazione strutturale)"]
+
+    try:
+        reader = PdfReader(io.BytesIO(data), strict=False)
+    except Exception as exc:  # noqa: BLE001 — qualsiasi fallimento parser = PDF invalido
+        return [f"parser PDF fallito: {exc}"]
+
+    try:
+        trailer = reader.trailer
+        if trailer is None:
+            errors.append("trailer PDF assente")
+        else:
+            root = trailer.get("/Root")
+            if root is None:
+                errors.append("catalogo /Root assente nel trailer")
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"trailer PDF non leggibile: {exc}")
+
+    try:
+        root_obj = reader.root_object
+        if root_obj is None:
+            errors.append("root_object assente")
+        else:
+            rtype = root_obj.get("/Type") if hasattr(root_obj, "get") else None
+            if rtype is not None and str(rtype) not in ("/Catalog", "Catalog"):
+                errors.append(f"root non è Catalog: {rtype}")
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"catalogo PDF non accessibile: {exc}")
+
+    try:
+        # Accesso pagine: fallisce su strutture rotte anche se header/EOF ok
+        _ = len(reader.pages)
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"pagine PDF non leggibili: {exc}")
+
+    return errors
+
+
+def verify_pdf_structure_path(path: Path) -> list[str]:
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        return [f"non leggibile: {exc}"]
+    return verify_pdf_structure(data)
 
 
 def verify_pdf(
@@ -68,6 +123,10 @@ def verify_pdf(
     # bytes nulli eccessivi all'inizio = spesso download corrotto
     if data[:64].count(b"\x00") > 32:
         errors.append("troppi null bytes in testa (corrotto)")
+    # Se i check grezzi falliscono, non serve il parser
+    if errors:
+        return errors
+    errors.extend(verify_pdf_structure(data))
     return errors
 
 
@@ -77,7 +136,7 @@ def validate_local_pdf(
     min_bytes: int,
     max_bytes: int,
 ) -> list[str]:
-    """Validazione file già su disco: esistenza, size, firma, EOF, leggibilità base."""
+    """Validazione file già su disco: size, firma, EOF, struttura pypdf."""
     if not path.exists():
         return ["non esiste"]
     if not path.is_file():
@@ -95,14 +154,15 @@ def validate_local_pdf(
         errors.append(f"troppo grande: {size} > {max_bytes}")
     try:
         with path.open("rb") as fh:
-            if size <= 8192:
+            if size <= 2_000_000:
                 data = fh.read()
                 head = data[:1024]
-                tail = data
+                tail = data[-8192:] if len(data) > 8192 else data
             else:
                 head = fh.read(1024)
                 fh.seek(max(0, size - 8192))
                 tail = fh.read(8192)
+                data = None
     except OSError as exc:
         return [f"non leggibile: {exc}"]
     if looks_like_html(head):
@@ -113,6 +173,12 @@ def validate_local_pdf(
         errors.append("%%EOF assente (PDF incompleto/troncato)")
     if head[:64].count(b"\x00") > 32:
         errors.append("troppi null bytes in testa (corrotto)")
+    if errors:
+        return errors
+    if data is not None:
+        errors.extend(verify_pdf_structure(data))
+    else:
+        errors.extend(verify_pdf_structure_path(path))
     return errors
 
 

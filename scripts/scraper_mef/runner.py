@@ -59,7 +59,11 @@ def process_rows(
     non solo i PDF salvati. Skip A/B/C e invalid non consumano il budget.
     """
     results: list[dict[str, Any]] = []
-    max_attempts = max(1, int(max_attempts))
+    max_attempts = int(max_attempts)
+    if max_attempts < 1:
+        raise ValueError(f"max_attempts deve essere >= 1 (ricevuto {max_attempts})")
+    # Allinea pagina: se è cambiata rispetto al checkpoint, azzera last_row_index
+    checkpoint.sync_page(page_number)
     checkpoint.set_status("running")
 
     for row in rows:
@@ -84,20 +88,38 @@ def process_rows(
         nome_base = list_meta["nomeBase"]
 
         if resume and checkpoint.is_done(nome_base):
-            metrics.skipped_checkpoint += 1
+            # Skip solo se PDF locale ancora valido OPPURE cache server autorevole.
+            # Altrimenti invalida processed/failed e riscarica (file cancellato/corrotto).
+            local_ok = index.is_local(nome_base)
+            server_ok = index.is_server(nome_base) or index.is_embedded(nome_base)
+            if local_ok or server_ok:
+                metrics.skipped_checkpoint += 1
+                results.append(
+                    {
+                        "action": "skip_checkpoint",
+                        "nomeBase": nome_base,
+                        "nomeFile": list_meta["nomeFile"],
+                        "reason": "local_valid" if local_ok else "server_authoritative",
+                    }
+                )
+                checkpoint.set_position(page=page_number, row_index=row_index + 1)
+                continue
+            checkpoint.invalidate_done(nome_base)
             results.append(
                 {
-                    "action": "skip_checkpoint",
+                    "action": "checkpoint_invalidated",
                     "nomeBase": nome_base,
-                    "nomeFile": list_meta["nomeFile"],
+                    "detail": "processed/failed senza PDF locale valido né conferma server",
                 }
             )
-            checkpoint.set_position(page=page_number, row_index=row_index + 1)
-            continue
 
         if resume and row_index < int(checkpoint.data.get("last_row_index") or 0):
-            # stessa pagina: già superata in run precedente
-            if int(checkpoint.data.get("last_page") or 0) == page_number:
+            # stessa pagina: salta solo se il doc è ancora "done" (local/server ok).
+            # Se invalidato (PDF mancante/corrotto) deve essere riprocessato.
+            if (
+                int(checkpoint.data.get("last_page") or 0) == page_number
+                and checkpoint.is_done(nome_base)
+            ):
                 metrics.skipped_checkpoint += 1
                 results.append(
                     {
@@ -218,17 +240,18 @@ def process_rows(
         except MefBlockedError as exc:
             metrics.errors += 1
             metrics.blocked += 1
+            reason = f"HTTP {exc.status}: {exc}"[:300]
             item.update(
                 {
                     "action": "blocked",
-                    "error": str(exc)[:300],
+                    "error": reason,
                     "http_status": exc.status,
                 }
             )
             results.append(item)
             checkpoint.mark_failed(nome_base, page=page_number, row_index=row_index + 1)
-            checkpoint.set_status("blocked", block_reason=str(exc)[:300])
-            log.error("BLOCCATO (stop): %s", exc)
+            checkpoint.set_status("blocked", block_reason=reason)
+            log.error("BLOCCATO (stop): %s", reason)
             break
 
         except (MefHttpError, Exception) as exc:
@@ -268,9 +291,12 @@ def run_scraper(
     mode:
       - simulate: fixture + PDF sintetico (no portale)
       - live: CDP browser già aperto sulla pagina risultati MEF
-    max_downloads: budget TENTATIVI (non solo successi).
+    max_downloads: budget TENTATIVI (non solo successi). --max 0 → errore.
     """
-    max_attempts = max(1, int(max_downloads))
+    max_attempts = int(max_downloads)
+    if max_attempts < 1:
+        log.error("--max deve essere >= 1 (ricevuto %s); nessun tentativo", max_downloads)
+        return 2
     limits = RunLimits(
         max_download_concurrency=cfg.max_download_concurrency,
         delay_min=cfg.download_delay_min,
@@ -338,7 +364,8 @@ def run_scraper(
                     log.error("Nessun link Visualizza sulla tab MEF — fai prima una Ricerca")
                     return 2
                 page_number = client.current_page_number()
-                checkpoint.set_position(page=page_number)
+                # Se la pagina live è diversa da quella nel checkpoint, azzera le righe
+                checkpoint.sync_page(page_number)
 
                 def _fetch_live(row: PortalRow) -> tuple[bytes, dict | None]:
                     tmp = cfg.tmp_dir / f"live_{row.row_index or 0}.pdf"

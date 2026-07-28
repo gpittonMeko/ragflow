@@ -12,6 +12,7 @@ from scraper_mef.download import (  # noqa: E402
     make_minimal_pdf,
     validate_local_pdf,
     verify_pdf,
+    verify_pdf_structure,
 )
 
 
@@ -30,6 +31,19 @@ class TestDownloadValidate(unittest.TestCase):
     def test_valid_minimal(self):
         data = make_minimal_pdf(1200)
         self.assertEqual(verify_pdf(data, min_bytes=1000, max_bytes=1_000_000), [])
+
+    def test_fake_pdf_header_eof_rejected_by_parser(self):
+        """%PDF- + %%EOF non bastano: payload non strutturato deve fallire."""
+        fake = b"%PDF-1.4\n" + (b"NOT_A_REAL_PDF_OBJECT\n" * 80) + b"%%EOF\n"
+        self.assertGreaterEqual(len(fake), 1000)
+        errs = verify_pdf(fake, min_bytes=1000, max_bytes=1_000_000)
+        self.assertTrue(errs, "fake PDF avrebbe dovuto fallire")
+        self.assertTrue(
+            any("parser" in e.lower() or "trailer" in e.lower() or "catalogo" in e.lower() for e in errs),
+            errs,
+        )
+        # anche il solo check strutturale
+        self.assertTrue(verify_pdf_structure(fake))
 
     def test_local_empty_and_html(self):
         with tempfile.TemporaryDirectory() as tmp:

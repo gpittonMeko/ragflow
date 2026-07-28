@@ -56,10 +56,14 @@ def _load_codici() -> None:
 
 
 def _normalize_place(place: str) -> str:
+    """Normalizza sede corte: spazi e trattini → underscore (Emilia-Romagna → EMILIA_ROMAGNA)."""
     text = (place or "").strip().upper()
     text = text.replace("Â°", "").replace("°", "")
     text = text.replace("'", "'").replace("'", "'")
-    return re.sub(r"\s+", "_", text)
+    text = text.replace("-", "_")
+    text = re.sub(r"\s+", "_", text)
+    text = re.sub(r"_+", "_", text)
+    return text.strip("_")
 
 
 def corte_portale_to_codice(corte_portale: str) -> str | None:
