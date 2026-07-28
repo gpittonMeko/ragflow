@@ -1,8 +1,10 @@
-"""Skip a 3 livelli: locale (cartella PDF), server/archivio (liste nomi), embedding flag."""
+"""Skip a 3 livelli: locale (PDF valido), server/archivio (liste nomi), embedding flag."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+
+from .download import local_pdf_ok, validate_local_pdf
 
 
 def _norm_base(name: str) -> str:
@@ -10,20 +12,6 @@ def _norm_base(name: str) -> str:
     if text.lower().endswith(".pdf"):
         text = text[:-4]
     return text.lower()
-
-
-def _read_nome_keys(path: Path) -> set[str]:
-    keys: set[str] = set()
-    if not path.exists():
-        return keys
-    for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
-        key = line.strip()
-        if not key or key.startswith("#"):
-            continue
-        if "|embedded" in key.lower():
-            key = key.split("|", 1)[0].strip()
-        keys.add(_norm_base(key))
-    return keys
 
 
 @dataclass
@@ -38,10 +26,11 @@ class SkipDecision:
 
 class SkipIndex:
     """
-    Ordine di valutazione (come download_mef_2025):
-      1) locale  → PDF già in output_dir (downloads_mef)
-      2) server  → nome in cache_nomi_base / mef_skip_from_d_*
+    Ordine di valutazione:
+      1) locale  → PDF valido già in output_dir (size/firma/EOF)
+      2) server  → nome in cache / |embedded
       3) altrimenti → would_download
+    File locali corrotti/vuoti/HTML non fanno skip_local (consentono ridownload).
     """
 
     def __init__(
@@ -50,10 +39,14 @@ class SkipIndex:
         output_dir: Path | None = None,
         server_cache_files: list[Path] | None = None,
         embedded_files: list[Path] | None = None,
+        min_pdf_bytes: int = 1000,
+        max_pdf_bytes: int = 80_000_000,
     ) -> None:
         self.output_dir = output_dir
         self.server_cache_files = server_cache_files or []
         self.embedded_files = embedded_files or []
+        self.min_pdf_bytes = int(min_pdf_bytes)
+        self.max_pdf_bytes = int(max_pdf_bytes)
         self.server_keys: set[str] = set()
         self.embedded_keys: set[str] = set()
         self.sources: list[str] = []
@@ -98,9 +91,23 @@ class SkipIndex:
             return None
         return self.output_dir / f"{nome_base}.pdf"
 
+    def local_errors(self, nome_base: str) -> list[str]:
+        path = self.local_path(nome_base)
+        if not path:
+            return ["no output_dir"]
+        if not path.exists():
+            return ["non esiste"]
+        return validate_local_pdf(
+            path, min_bytes=self.min_pdf_bytes, max_bytes=self.max_pdf_bytes
+        )
+
     def is_local(self, nome_base: str) -> bool:
         path = self.local_path(nome_base)
-        return bool(path and path.exists())
+        if not path or not path.exists():
+            return False
+        return local_pdf_ok(
+            path, min_bytes=self.min_pdf_bytes, max_bytes=self.max_pdf_bytes
+        )
 
     def is_server(self, nome_base: str) -> bool:
         return _norm_base(nome_base) in self.server_keys
@@ -110,11 +117,20 @@ class SkipIndex:
 
     def decide(self, nome_base: str) -> SkipDecision:
         base = nome_base if not nome_base.lower().endswith(".pdf") else nome_base[:-4]
-        if self.is_local(base):
+        path = self.local_path(base)
+        if path and path.exists():
+            errs = self.local_errors(base)
+            if not errs:
+                return SkipDecision(
+                    action="skip_local",
+                    layer="A_locale",
+                    detail=str(path),
+                )
+            # file presente ma invalido → non skip; segnala per ridownload
             return SkipDecision(
-                action="skip_local",
-                layer="A_locale",
-                detail=str(self.local_path(base)),
+                action="would_download",
+                layer="A_locale_corrupt",
+                detail=f"locale invalido ({'; '.join(errs)}): {path}",
             )
         if self.is_embedded(base):
             return SkipDecision(

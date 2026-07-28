@@ -32,7 +32,13 @@ def _build_index(cfg: Config, args: argparse.Namespace) -> SkipIndex:
             continue
         seen.add(key)
         uniq.append(p)
-    return SkipIndex(output_dir=output_dir, server_cache_files=uniq, embedded_files=uniq)
+    return SkipIndex(
+        output_dir=output_dir,
+        server_cache_files=uniq,
+        embedded_files=uniq,
+        min_pdf_bytes=cfg.min_pdf_bytes,
+        max_pdf_bytes=cfg.max_pdf_bytes,
+    )
 
 
 def cmd_dry_run(fixture: Path, cfg: Config, args: argparse.Namespace) -> int:
@@ -64,6 +70,7 @@ def cmd_dry_run(fixture: Path, cfg: Config, args: argparse.Namespace) -> int:
                 "nomeFile": meta["nomeFile"],
                 "nomeBase": meta["nomeBase"],
                 "codice": meta["codice"],
+                "tipo": meta.get("tipo"),
             }
         )
     print(
@@ -89,7 +96,9 @@ def cmd_probe(nome: str, cfg: Config, args: argparse.Namespace) -> int:
         json.dumps(
             {
                 "nomeBase": base,
-                "local_exists": index.is_local(base),
+                "local_exists": bool(index.local_path(base) and index.local_path(base).exists()),
+                "local_valid": index.is_local(base),
+                "local_errors": index.local_errors(base) if index.local_path(base) else [],
                 "server_known": index.is_server(base),
                 "embedded_known": index.is_embedded(base),
                 **decision.to_dict(),
@@ -111,7 +120,6 @@ def cmd_run(cfg: Config, args: argparse.Namespace) -> int:
         output_dir = Path(args.output_dir) if args.output_dir else cfg.output_dir
 
     server_caches = [Path(p) for p in (args.server_cache or [])]
-    # punto 3: forza concorrenza <=2, default 1 da config
     if args.concurrency is not None:
         cfg.max_download_concurrency = max(1, min(2, int(args.concurrency)))
 
@@ -123,6 +131,7 @@ def cmd_run(cfg: Config, args: argparse.Namespace) -> int:
         output_dir=output_dir,
         server_caches=server_caches,
         cdp_url=args.cdp,
+        resume=not args.no_resume,
     )
 
 
@@ -132,7 +141,12 @@ def main(argv: list[str] | None = None) -> int:
 
     def add_skip_args(p: argparse.ArgumentParser) -> None:
         p.add_argument("--output-dir", type=Path, default=None)
-        p.add_argument("--server-cache", action="append", default=[])
+        p.add_argument(
+            "--server-cache",
+            action="append",
+            default=[],
+            help="File cache nomi (ripetibile). Oppure env MEF_SCRAPER_SERVER_CACHES",
+        )
 
     p_dry = sub.add_parser("dry-run", help="Solo skip A/B/C, nessun download")
     p_dry.add_argument(
@@ -150,7 +164,12 @@ def main(argv: list[str] | None = None) -> int:
         "run",
         help="Download limitato con skip A/B/C (default: --simulate)",
     )
-    p_run.add_argument("--max", type=int, default=1, help="Max PDF da scaricare (default 1)")
+    p_run.add_argument(
+        "--max",
+        type=int,
+        default=1,
+        help="Max TENTATIVI download (successi + falliti). Default 1. Gli skip non contano.",
+    )
     p_run.add_argument(
         "--simulate",
         action="store_true",
@@ -176,14 +195,18 @@ def main(argv: list[str] | None = None) -> int:
         "--concurrency",
         type=int,
         default=None,
-        help="Download concorrenti (1–2, default da env/config=1)",
+        help="Download concorrenti (1–2 stub, default 1). Non è multi-worker.",
+    )
+    p_run.add_argument(
+        "--no-resume",
+        action="store_true",
+        help="Ignora checkpoint (azzera posizione/processed/failed di questa sessione)",
     )
     add_skip_args(p_run)
 
     args = parser.parse_args(argv)
     cfg = Config()
 
-    # se --live, spegni simulate
     if getattr(args, "live", False):
         args.simulate = False
 

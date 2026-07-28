@@ -66,6 +66,8 @@ class RunLimits:
             self._sem.release()
 
     def pause_between_downloads(self, log=None) -> None:
+        if self.delay_max <= 0:
+            return
         delay = random.uniform(self.delay_min, self.delay_max)
         # jitter anti-pattern fisso
         delay += random.uniform(0.2, 2.5)

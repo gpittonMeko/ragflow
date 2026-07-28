@@ -1,57 +1,60 @@
 # scraper_mef (Fase 2 — locale)
 
-Modulo scraper sentenze MEF **senza upload/requeue in produzione** finché non arriva Gate 2.
+Modulo scraper sentenze MEF **senza upload/requeue in produzione**.
+
+**Nessun pilota, upload o deploy è autorizzato in questa versione.**
+
+## Cosa è implementato
+
+- Parse righe tabella + (live) associazione `Visualizza` → stessa `<tr>` via `href`
+- Live: metadati dalla **pagina dettaglio** confrontati con la lista prima del salvataggio
+- Skip A/B/C con validazione PDF locale (size, `%PDF-`, `%%EOF`) — file corrotti non bloccano il ridownload
+- Naming canonico `{Tipo}_{Codice}_{Numero}_{Anno}.pdf` (tipo reale, non sempre `Sentenza`)
+- `--max` = tetto sui **tentativi** (successi + falliti); gli skip non consumano il budget
+- Checkpoint/resume: `last_page`, `last_row_index`, `last_document`, `processed`, `failed`, `status`
+- Stop su HTTP 403/429 / segnali WAF (status `blocked` + checkpoint)
+- Upload **disabilitato** (stub)
+
+## Cosa NON è implementato (dichiarato)
+
+| Funzione | Stato |
+|----------|--------|
+| Paginazione automatica su tutte le pagine MEF | **NON implementata** |
+| Ricerca/navigazione autonoma senza tab CDP | **NON implementata** |
+| Concorrenza multi-worker / lease | **NON implementata** (semaforo locale 1–2 stub) |
+| Upload SGAI / parsing / embedding | **NON implementato** (stub disabilitato) |
+| Admin live / heartbeat remoto | **NON in questa PR** |
+| `page_delay` tra pagine | stub presente, inutilizzato senza paginazione |
+
+## Config (niente path assoluti del PC)
+
+| Env / flag | Default |
+|------------|---------|
+| `MEF_SCRAPER_OUTPUT` / `--output-dir` | `scripts/scraper_mef/downloads_out` |
+| `MEF_SCRAPER_SERVER_CACHES` / `--server-cache` | solo `data/cache_nomi_base_local.txt` |
+| `MEF_SCRAPER_CHECKPOINT` | `.checkpoint.json` |
+| `MEF_SCRAPER_UPLOAD` | `0` |
+| `MEF_SCRAPER_MIN_PDF_BYTES` | `1000` |
 
 ## Comandi
 
 Dalla root della repo `ragflow`:
 
-### dry-run (solo skip A/B/C)
 ```powershell
-python -m scripts.scraper_mef dry-run
+python -m scripts.scraper_mef dry-run --output-dir .\scripts\scraper_mef\downloads_out
+python -m scripts.scraper_mef probe Sentenza_V70_100_2025.pdf --output-dir ...
+python -m scripts.scraper_mef run --max 1 --no-resume
+python -m scripts.scraper_mef run --live --max 1 --cdp http://127.0.0.1:9222 --output-dir ...
 ```
 
-### probe
-```powershell
-python -m scripts.scraper_mef probe Sentenza_V70_100_2025.pdf
-```
-
-### run — simulate (default, sicuro, 1 PDF sintetico)
-```powershell
-python -m scripts.scraper_mef run --max 1
-```
-Salva in `scripts/scraper_mef/.tmp_out_simulate` (non sporca `downloads_mef`).
-
-### run — live (browser già aperto + CDP)
-```powershell
-python -m scripts.scraper_mef run --live --max 1 --cdp http://127.0.0.1:9222
-```
-Richiede Edge/Opera con remote debugging e pagina risultati MEF aperta.
-
-## Limiti (punto 3)
-- download concurrency default **1** (max 2)
-- delay tra download 18–32s (env `MEF_SCRAPER_DL_DELAY_*`)
-- upload **disabilitato** (`MEF_SCRAPER_UPLOAD=0`)
-- Ctrl+C = stop pulito dopo il file corrente
-- cleanup tmp (tiene pochi file recenti)
-
-## Skip
-- `skip_local` (A) — PDF in `downloads_mef`
-- `skip_server` (B) — cache nomi / skip D:
-- `skip_embedded` — `|embedded`
-- `would_download` / `downloaded` (C)
+`--live` richiede browser con remote debugging e pagina risultati MEF già aperta.
+Su CAPTCHA / 403 / 429 ripetuti: stop, checkpoint `blocked`, nessun bypass VPN.
 
 ## Test
 
 ```powershell
 cd scripts
-python -m unittest scraper_mef.tests.test_parse_names scraper_mef.tests.test_cache_skip scraper_mef.tests.test_checkpoint
+python -m unittest discover -s scraper_mef/tests -v
 ```
 
-## Mappa corti
-
-File: `data/codici_corte.json` (usato da `portal_to_filename.py` / `names.py`).
-
-## Upload
-
-Disabilitato di default (`MEF_SCRAPER_UPLOAD=0`). Non abilitare senza autorizzazione.
+Coprono: parse/tipo, skip locale corrotto, `--max` su tentativi falliti, resume checkpoint, allineamento lista/dettaglio, PDF/HTML invalidi, 403/429, righe incomplete, duplicati.

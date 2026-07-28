@@ -93,6 +93,20 @@ def codice_to_corte_label(codice: str) -> dict | None:
     return None
 
 
+def normalize_tipo(tipo: str | None) -> str:
+    """Tipo provvedimento → token filename (Sentenza, Ordinanza, Decreto, ...)."""
+    raw = (tipo or "Sentenza").strip()
+    if not raw:
+        return "Sentenza"
+    # rimuovi caratteri non sicuri per nome file
+    cleaned = re.sub(r"[^\wÀ-ÿ]+", "_", raw, flags=re.UNICODE).strip("_")
+    if not cleaned:
+        return "Sentenza"
+    # Title-case semplice: Sentenza / Ordinanza
+    parts = [p for p in cleaned.split("_") if p]
+    return "_".join(p[:1].upper() + p[1:].lower() for p in parts)
+
+
 def build_filename(
     corte_portale: str,
     numero: str | int,
@@ -100,6 +114,7 @@ def build_filename(
     tipo: str = "Sentenza",
 ) -> dict:
     codice = corte_portale_to_codice(corte_portale)
+    tipo_norm = normalize_tipo(tipo)
     if not codice:
         return {
             "ok": False,
@@ -107,11 +122,12 @@ def build_filename(
             "cortePortale": corte_portale,
             "numero": str(numero),
             "anno": str(anno),
+            "tipo": tipo_norm,
         }
-    base = f"Sentenza_{codice}_{numero}_{anno}"
+    base = f"{tipo_norm}_{codice}_{numero}_{anno}"
     return {
         "ok": True,
-        "tipo": tipo,
+        "tipo": tipo_norm,
         "codice": codice,
         "numero": str(numero),
         "anno": str(anno),
