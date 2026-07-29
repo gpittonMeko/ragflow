@@ -121,6 +121,44 @@ def parse_list_title(text: str, *, url: str = "") -> dict:
     }
 
 
+def meta_from_url(url: str) -> dict:
+    """Fallback naming quando il title HTML non è nel formato lista recente."""
+    from urllib.parse import unquote, urlparse
+    import hashlib
+
+    path = unquote(urlparse(url).path)
+    fname = filename_from_pdf_url(url) or "doc.pdf"
+    stem = fname[:-4] if fname.lower().endswith(".pdf") else fname
+    # protocollo se presente in testa al filename
+    m = re.match(r"^(\d{4,})", stem)
+    protocollo = m.group(1) if m else hashlib.sha1(path.encode("utf-8")).hexdigest()[:10]
+    mc = _CIRCOLARE_RE.search(stem) or _CIRCOLARE_ALT_RE.search(stem)
+    numero = mc.group("numero") if mc else ""
+    anno = mc.group("anno") if mc else ""
+    if not anno:
+        my = re.search(r"(20\d{2}|19\d{2})", stem)
+        anno = my.group(1) if my else "0000"
+    if numero:
+        nome_base = f"ADM_Circolare_{numero}_{anno}_{protocollo}"
+    else:
+        safe = _safe_token(stem, max_len=60)
+        nome_base = f"ADM_Doc_{protocollo}_{safe}"
+    return {
+        "ok": True,
+        "fonte": "ADM",
+        "tipo": "Circolare" if numero else "Documento",
+        "protocollo": str(protocollo),
+        "data": "",
+        "numero": numero,
+        "anno": anno,
+        "title": stem,
+        "nomeBase": nome_base,
+        "nomeFile": f"{nome_base}.pdf",
+        "rawTitle": stem,
+        "fromUrl": True,
+    }
+
+
 def filename_from_pdf_url(url: str) -> str | None:
     """Fallback: nome file dall'URL documents/.../name.pdf/uuid."""
     path = unquote(urlparse(url).path)

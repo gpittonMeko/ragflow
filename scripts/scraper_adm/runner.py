@@ -9,7 +9,7 @@ from typing import Any
 
 from .checkpoint import Checkpoint
 from .client import AdmBlockedError, AdmClient, AdmHttpError
-from .config import Config
+from .config import ARCHIVE_LIST_URLS, Config
 from .download import ingest_pdf_bytes, validate_local_pdf
 import logging
 
@@ -24,15 +24,21 @@ def _setup_log() -> logging.Logger:
     return logging.getLogger("scraper_adm")
 
 
-def dry_run(cfg: Config, *, fixture: Path | None = None) -> int:
-    _setup_log()
+def _load_items(cfg: Config, *, fixture: Path | None, all_years: bool):
     client = AdmClient(user_agent=cfg.user_agent)
     if fixture:
-        items = client.list_items_from_fixture(fixture)
-        source = str(fixture)
-    else:
-        items = client.list_items(cfg.list_url)
-        source = cfg.list_url
+        return client.list_items_from_fixture(fixture), str(fixture)
+    if all_years:
+        items = client.list_items_many(ARCHIVE_LIST_URLS)
+        return items, f"all-years:{len(ARCHIVE_LIST_URLS)}_pages"
+    return client.list_items(cfg.list_url), cfg.list_url
+
+
+def dry_run(
+    cfg: Config, *, fixture: Path | None = None, all_years: bool = False
+) -> int:
+    _setup_log()
+    items, source = _load_items(cfg, fixture=fixture, all_years=all_years)
 
     results = []
     ok = 0
@@ -84,6 +90,7 @@ def run_download(
     max_attempts: int,
     fixture: Path | None = None,
     resume: bool = True,
+    all_years: bool = False,
 ) -> int:
     log = _setup_log()
     max_attempts = int(max_attempts)
@@ -94,7 +101,8 @@ def run_download(
     cfg.output_dir.mkdir(parents=True, exist_ok=True)
     cfg.tmp_dir.mkdir(parents=True, exist_ok=True)
     checkpoint = Checkpoint(cfg.checkpoint_path)
-    checkpoint.data["list_url"] = cfg.list_url if not fixture else str(fixture)
+    items, source = _load_items(cfg, fixture=fixture, all_years=all_years)
+    checkpoint.data["list_url"] = source
     if not resume:
         checkpoint.data["processed"] = []
         checkpoint.data["failed"] = []
@@ -102,14 +110,10 @@ def run_download(
         checkpoint.save()
 
     client = AdmClient(user_agent=cfg.user_agent)
-    items = (
-        client.list_items_from_fixture(fixture)
-        if fixture
-        else client.list_items(cfg.list_url)
-    )
     if not items:
         log.error("Nessun PDF trovato nella lista ADM")
         return 2
+    log.info("Lista ADM: %s documenti da %s", len(items), source)
 
     checkpoint.set_status("running")
     results: list[dict[str, Any]] = []

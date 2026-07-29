@@ -5,7 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from .config import ROOT, Config
+from .config import Config
 from .runner import dry_run, run_download
 
 
@@ -16,6 +16,11 @@ def main(argv: list[str] | None = None) -> int:
     p_dry = sub.add_parser("dry-run", help="Elenca PDF dalla lista, nessun download")
     p_dry.add_argument("--fixture", type=Path, default=None)
     p_dry.add_argument("--list-url", default=None)
+    p_dry.add_argument(
+        "--all-years",
+        action="store_true",
+        help="Scansiona archivio circolari dogane (tutte le pagine anno)",
+    )
 
     p_run = sub.add_parser("run", help="Download limitato PDF ADM")
     p_run.add_argument(
@@ -28,6 +33,11 @@ def main(argv: list[str] | None = None) -> int:
     p_run.add_argument("--output-dir", type=Path, default=None)
     p_run.add_argument("--list-url", default=None)
     p_run.add_argument("--no-resume", action="store_true")
+    p_run.add_argument(
+        "--all-years",
+        action="store_true",
+        help="Scarica da archivio circolari dogane (tutte le pagine anno)",
+    )
 
     args = parser.parse_args(argv)
     cfg = Config()
@@ -37,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
         cfg.output_dir = args.output_dir
 
     if args.cmd == "dry-run":
-        return dry_run(cfg, fixture=args.fixture)
+        return dry_run(cfg, fixture=args.fixture, all_years=args.all_years)
     if args.cmd == "run":
         if int(args.max) < 1:
             print('{"error":"--max deve essere >= 1","max":%s}' % args.max)
@@ -47,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
             max_attempts=args.max,
             fixture=args.fixture,
             resume=not args.no_resume,
+            all_years=args.all_years,
         )
     parser.error(f"comando sconosciuto: {args.cmd}")
     return 2

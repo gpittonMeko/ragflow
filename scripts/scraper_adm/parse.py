@@ -7,7 +7,7 @@ from html.parser import HTMLParser
 from urllib.parse import urljoin
 
 from .config import SITE_ORIGIN
-from .names import parse_list_title
+from .names import meta_from_url, parse_list_title
 
 
 @dataclass
@@ -15,6 +15,7 @@ class AdmItem:
     href: str
     text: str
     row_index: int = 0
+    source_page: str = ""
 
     def to_meta(self) -> dict:
         meta = parse_list_title(self.text, url=self.href)
@@ -22,8 +23,12 @@ class AdmItem:
         # prova a ricavare protocollo/nome dall'URL.
         if not meta.get("ok"):
             meta = parse_list_title(self.text + " " + self.href, url=self.href)
+        if not meta.get("ok"):
+            meta = meta_from_url(self.href)
         meta["url"] = self.href
         meta["row_index"] = self.row_index
+        if self.source_page:
+            meta["sourcePage"] = self.source_page
         return meta
 
 

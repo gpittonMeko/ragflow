@@ -53,7 +53,28 @@ class AdmClient:
 
     def list_items(self, list_url: str) -> list[AdmItem]:
         html = self.fetch_list_html(list_url)
-        return parse_list_html(html)
+        items = parse_list_html(html)
+        for it in items:
+            it.source_page = list_url
+        return items
+
+    def list_items_many(self, list_urls: list[str]) -> list[AdmItem]:
+        """Unisce più pagine archivio, dedupe per URL senza query."""
+        merged: list[AdmItem] = []
+        seen: set[str] = set()
+        for url in list_urls:
+            try:
+                page_items = self.list_items(url)
+            except Exception:
+                continue
+            for it in page_items:
+                key = it.href.split("?", 1)[0]
+                if key in seen:
+                    continue
+                seen.add(key)
+                it.row_index = len(merged)
+                merged.append(it)
+        return merged
 
     def list_items_from_fixture(self, path: Path) -> list[AdmItem]:
         html = path.read_text(encoding="utf-8")

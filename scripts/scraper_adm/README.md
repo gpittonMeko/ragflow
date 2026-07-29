@@ -21,9 +21,12 @@ Dalla root repo `ragflow`:
 
 ```powershell
 python -m scripts.scraper_adm dry-run
+python -m scripts.scraper_adm dry-run --all-years
 python -m scripts.scraper_adm run --max 1 --no-resume
-python -m scripts.scraper_adm run --max 5
+python -m scripts.scraper_adm run --all-years --max 300
 ```
+
+`--all-years` scansiona le pagine archivio dogane (1997→oggi) oltre alla lista corrente.
 
 Output default: `scripts/scraper_adm/downloads_out`
 
