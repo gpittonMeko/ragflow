@@ -11,6 +11,7 @@ from scraper_mef.client import (
     SEARCH_YEAR_SELECTOR,
     VISUALIZZA_SELECTOR,
     LiveMefClient,
+    MefBlockedError,
     MefPortalError,
 )
 from scraper_mef.config import Config, parse_search_years
@@ -123,6 +124,17 @@ class TestEnsureResults(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "ambiguo"):
             self.client(page).ensure_results(2026, timeout_ms=50)
         self.assertEqual(page.clicks, 0)
+
+    def test_akamai_asset_name_alone_is_not_a_block(self):
+        self.client(FakeSearchPage("results"))._raise_if_blocked(
+            body_snippet='<script src="/akamai/bot-manager.js"></script>'
+        )
+
+    def test_explicit_access_denied_is_blocked(self):
+        with self.assertRaises(MefBlockedError):
+            self.client(FakeSearchPage("results"))._raise_if_blocked(
+                body_snippet="<h1>Access Denied</h1>"
+            )
 
 
 class TestSearchYearConfig(unittest.TestCase):

@@ -336,8 +336,6 @@ class LiveMefClient:
             for x in (
                 "captcha",
                 "access denied",
-                "akamai",
-                "bot manager",
                 "cf-chl",
                 "verify you are human",
                 "verifica di essere umano",
