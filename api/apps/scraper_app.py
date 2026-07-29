@@ -42,8 +42,10 @@ WORKER_REGISTRY = "sgai:scraper:workers"
 ADMIN_SESSION_KEY = "sgai_admin_authenticated"
 ADMIN_LOGIN_AT_KEY = "sgai_admin_login_at"
 ADMIN_SESSION_MAX_AGE = 8 * 60 * 60
-_MANIFEST_CACHE = {"expires": 0.0, "data": None, "kb": None, "summary": None}
+_MANIFEST_CACHE = {"expires": 0.0, "data": None, "kb": None}
 _MANIFEST_CACHE_LOCK = threading.Lock()
+DOCUMENT_LOOKUP_LIMIT = 200
+MANIFEST_BATCH_SIZE = 2000
 
 
 class LockUnavailable(RuntimeError):
@@ -274,11 +276,42 @@ def _as_dict(doc):
     }
 
 
-def _rows():
-    from api.db.services.document_service import DocumentService
+def _iter_document_rows(kb_id, batch_size=MANIFEST_BATCH_SIZE):
+    """Itera i documenti validi con keyset pagination, senza OFFSET crescente."""
+    from api.db import StatusEnum
+    from api.db.db_models import DB, Document
 
+    last_id = None
+    with DB.connection_context():
+        while True:
+            where = [
+                Document.kb_id == kb_id,
+                Document.status == StatusEnum.VALID.value,
+            ]
+            if last_id is not None:
+                where.append(Document.id > last_id)
+            rows = list(
+                Document
+                .select(
+                    Document.id, Document.name, Document.run, Document.progress,
+                    Document.progress_msg, Document.chunk_num, Document.token_num,
+                    Document.size, Document.update_time,
+                )
+                .where(*where)
+                .order_by(Document.id.asc())
+                .limit(batch_size)
+                .dicts()
+            )
+            if not rows:
+                break
+            yield from rows
+            last_id = rows[-1]["id"]
+
+
+def _rows():
+    """Compatibilità requeue: lettura batch, senza DocumentService.query globale."""
     kb = _dataset()
-    return [_as_dict(doc) for doc in DocumentService.query(kb_id=kb.id)], kb
+    return list(_iter_document_rows(kb.id)), kb
 
 
 def dataset_progress_summary(rows):
@@ -311,6 +344,71 @@ def dataset_progress_summary(rows):
     }
 
 
+def dataset_progress_summary_from_aggregates(rows):
+    """Compone la shape API da righe SQL aggregate per stato ``run``."""
+    counts = {name: 0 for name in RUN_NAMES.values()}
+    total = with_embedding = total_chunks = 0
+    weighted_progress = 0.0
+    minimum = maximum = None
+    for row in rows:
+        count = int(row.get("doc_count") or 0)
+        status = RUN_NAMES.get(str(row.get("run_status")), "unknown")
+        if status in counts:
+            counts[status] += count
+        total += count
+        with_embedding += int(row.get("with_embeddings") or 0)
+        total_chunks += int(row.get("chunk_sum") or 0)
+        weighted_progress += float(row.get("avg_progress") or 0) * count
+        if count:
+            row_min = float(row.get("min_progress") or 0)
+            row_max = float(row.get("max_progress") or 0)
+            minimum = row_min if minimum is None else min(minimum, row_min)
+            maximum = row_max if maximum is None else max(maximum, row_max)
+    average = weighted_progress / total if total else 0.0
+    return {
+        "totalDocuments": total,
+        "statusCounts": counts,
+        "withEmbedding": with_embedding,
+        "withoutEmbedding": total - with_embedding,
+        "totalChunks": total_chunks,
+        "averageProgress": average,
+        "progress": {
+            "average": average,
+            "minimum": minimum if minimum is not None else 0.0,
+            "maximum": maximum if maximum is not None else 0.0,
+        },
+    }
+
+
+def _progress_aggregate_rows(kb_id):
+    from peewee import Case, fn
+
+    from api.db import StatusEnum
+    from api.db.db_models import DB, Document
+
+    with DB.connection_context():
+        return list(
+            Document
+            .select(
+                Document.run.alias("run_status"),
+                fn.COUNT(Document.id).alias("doc_count"),
+                fn.SUM(Document.chunk_num).alias("chunk_sum"),
+                fn.SUM(
+                    Case(None, [(Document.chunk_num > 0, 1)], 0)
+                ).alias("with_embeddings"),
+                fn.AVG(Document.progress).alias("avg_progress"),
+                fn.MIN(Document.progress).alias("min_progress"),
+                fn.MAX(Document.progress).alias("max_progress"),
+            )
+            .where(
+                Document.kb_id == kb_id,
+                Document.status == StatusEnum.VALID.value,
+            )
+            .group_by(Document.run)
+            .dicts()
+        )
+
+
 def _manifest_cache_ttl():
     try:
         return max(1, int(os.getenv("SGAI_SCRAPER_MANIFEST_TTL", "300")))
@@ -320,7 +418,7 @@ def _manifest_cache_ttl():
 
 def _invalidate_manifest_cache():
     with _MANIFEST_CACHE_LOCK:
-        _MANIFEST_CACHE.update({"expires": 0.0, "data": None, "kb": None, "summary": None})
+        _MANIFEST_CACHE.update({"expires": 0.0, "data": None, "kb": None})
 
 
 def _manifest():
@@ -328,36 +426,62 @@ def _manifest():
     with _MANIFEST_CACHE_LOCK:
         if _MANIFEST_CACHE["data"] is not None and now < _MANIFEST_CACHE["expires"]:
             return _MANIFEST_CACHE["data"], _MANIFEST_CACHE["kb"]
-        rows, kb = _rows()
-        data = build_manifest_index(rows)
+        kb = _dataset()
+        data = build_manifest_index(_iter_document_rows(kb.id))
         _MANIFEST_CACHE.update({
             "expires": now + _manifest_cache_ttl(),
             "data": data,
             "kb": kb,
-            "summary": dataset_progress_summary(rows),
         })
         return data, kb
 
 
 def _progress_summary():
-    _manifest()
-    with _MANIFEST_CACHE_LOCK:
-        return dict(_MANIFEST_CACHE["summary"])
+    kb = _dataset()
+    return dataset_progress_summary_from_aggregates(
+        _progress_aggregate_rows(kb.id)
+    )
 
 
 def _docs_for_key(key):
-    from api.db.services.document_service import DocumentService
+    from api.db import StatusEnum
+    from api.db.db_models import DB, Document
 
     kb = _dataset()
-    docs, _ = DocumentService.get_list(
-        kb.id, 1, 200, "create_time", True, key, None, None
-    )
-    result = []
-    for doc in docs:
-        parsed = parse_sentenza_name(doc.get("name", ""))
-        if parsed and parsed["nomeBase"].lower() == key.lower():
-            result.append(doc)
+    canonical_name = f"{key}.pdf"
+    copy_prefix = f"{key} ("
+    with DB.connection_context():
+        docs = list(
+            Document
+            .select(
+                Document.id, Document.name, Document.run, Document.progress,
+                Document.progress_msg, Document.chunk_num,
+            )
+            .where(
+                Document.kb_id == kb.id,
+                Document.status == StatusEnum.VALID.value,
+                (
+                    (Document.name == canonical_name)
+                    | Document.name.startswith(copy_prefix)
+                ),
+            )
+            .order_by(Document.name.asc())
+            .limit(DOCUMENT_LOOKUP_LIMIT)
+            .dicts()
+        )
+    result = [
+        doc for doc in docs
+        if (
+            (parsed := parse_sentenza_name(doc.get("name", "")))
+            and parsed["nomeBase"].lower() == key.lower()
+        )
+    ]
     return result, kb
+
+
+def _existing_doc_for_key(key):
+    rows, _ = _docs_for_key(key)
+    return _doc_public(rows[0]) if rows else None
 
 
 def _doc_public(doc):
@@ -571,11 +695,7 @@ def upload():
         )
 
         def find_existing():
-            for candidate in DocumentService.query(kb_id=kb.id):
-                parsed = parse_sentenza_name(getattr(candidate, "name", ""))
-                if parsed and parsed["nomeBase"].lower() == nome.lower():
-                    return _doc_public(candidate)
-            return None
+            return _existing_doc_for_key(nome)
 
         def create():
             upload_file = FileStorage(

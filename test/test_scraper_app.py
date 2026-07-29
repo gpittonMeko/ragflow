@@ -286,6 +286,174 @@ def test_dataset_progress_summary():
     assert summary["averageProgress"] == pytest.approx(0.375)
 
 
+def test_aggregate_progress_summary_preserves_frontend_shape():
+    summary = scraper_app.dataset_progress_summary_from_aggregates([
+        {
+            "run_status": "0", "doc_count": 3, "chunk_sum": 0,
+            "with_embeddings": 0, "avg_progress": 0,
+            "min_progress": 0, "max_progress": 0,
+        },
+        {
+            "run_status": "1", "doc_count": 2, "chunk_sum": 7,
+            "with_embeddings": 1, "avg_progress": 0.5,
+            "min_progress": 0.25, "max_progress": 0.75,
+        },
+        {
+            "run_status": "3", "doc_count": 1, "chunk_sum": 11,
+            "with_embeddings": 1, "avg_progress": 1,
+            "min_progress": 1, "max_progress": 1,
+        },
+    ])
+    assert set(summary) == {
+        "totalDocuments", "statusCounts", "withEmbedding", "withoutEmbedding",
+        "totalChunks", "averageProgress", "progress",
+    }
+    assert summary["totalDocuments"] == 6
+    assert summary["statusCounts"] == {
+        "unstart": 3, "running": 2, "cancel": 0, "done": 1, "fail": 0,
+    }
+    assert summary["withEmbedding"] == 2
+    assert summary["withoutEmbedding"] == 4
+    assert summary["totalChunks"] == 18
+    assert summary["averageProgress"] == pytest.approx(1 / 3)
+    assert summary["progress"] == pytest.approx({
+        "average": 1 / 3, "minimum": 0, "maximum": 1,
+    })
+
+
+def test_progress_summary_uses_sql_aggregates_not_manifest(monkeypatch):
+    monkeypatch.setattr(
+        scraper_app, "_dataset", lambda: types.SimpleNamespace(id="kb")
+    )
+    monkeypatch.setattr(
+        scraper_app,
+        "_progress_aggregate_rows",
+        lambda kb_id: [{
+            "run_status": "3", "doc_count": 2, "chunk_sum": 8,
+            "with_embeddings": 2, "avg_progress": 1,
+            "min_progress": 1, "max_progress": 1,
+        }],
+    )
+    monkeypatch.setattr(
+        scraper_app,
+        "_manifest",
+        lambda: pytest.fail("progress summary must not build the manifest"),
+    )
+    assert scraper_app._progress_summary()["totalDocuments"] == 2
+
+
+def test_check_uses_targeted_document_lookup(client, monkeypatch):
+    calls = []
+    monkeypatch.setenv("SGAI_SCRAPER_API_TOKEN", "worker-secret")
+    monkeypatch.setattr(
+        scraper_app,
+        "_docs_for_key",
+        lambda key: (calls.append(key) or [], object()),
+    )
+    response = client.get(
+        "/v1/scraper/check?nome_base=Sentenza_V10_1_2026",
+        headers={"Authorization": "Bearer worker-secret"},
+    )
+    assert response.status_code == 200
+    assert calls == ["Sentenza_V10_1_2026"]
+
+
+def test_docs_for_key_uses_direct_limited_model_query(monkeypatch):
+    class Expression:
+        def __or__(self, other):
+            return self
+
+    class Field:
+        def __eq__(self, other):
+            return Expression()
+
+        def startswith(self, prefix):
+            assert prefix == "Sentenza_V10_1_2026 ("
+            return Expression()
+
+        def asc(self):
+            return self
+
+    class Query:
+        server_limit = None
+
+        def where(self, *conditions):
+            assert len(conditions) == 3
+            return self
+
+        def order_by(self, field):
+            return self
+
+        def limit(self, value):
+            Query.server_limit = value
+            return self
+
+        def dicts(self):
+            return iter([{
+                "id": "doc-1", "name": "Sentenza_V10_1_2026.pdf",
+                "run": "3", "progress": 1, "progress_msg": "",
+                "chunk_num": 2,
+            }])
+
+    fields = (
+        "id", "name", "run", "progress", "progress_msg", "chunk_num",
+        "kb_id", "status",
+    )
+    fake_document = type(
+        "FakeDocument",
+        (),
+        {
+            **{name: Field() for name in fields},
+            "select": classmethod(lambda cls, *selected: Query()),
+        },
+    )
+
+    class ConnectionContext:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    fake_db_models = types.ModuleType("api.db.db_models")
+    fake_db_models.DB = types.SimpleNamespace(
+        connection_context=lambda: ConnectionContext()
+    )
+    fake_db_models.Document = fake_document
+    fake_db = types.ModuleType("api.db")
+    fake_db.StatusEnum = types.SimpleNamespace(
+        VALID=types.SimpleNamespace(value="1")
+    )
+    monkeypatch.setitem(sys.modules, "api.db", fake_db)
+    monkeypatch.setitem(sys.modules, "api.db.db_models", fake_db_models)
+    monkeypatch.setattr(
+        scraper_app, "_dataset", lambda: types.SimpleNamespace(id="kb")
+    )
+
+    rows, _ = scraper_app._docs_for_key("Sentenza_V10_1_2026")
+    assert Query.server_limit == scraper_app.DOCUMENT_LOOKUP_LIMIT == 200
+    assert [row["id"] for row in rows] == ["doc-1"]
+
+
+def test_upload_existing_lookup_reuses_targeted_document_lookup(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        scraper_app,
+        "_docs_for_key",
+        lambda key: (
+            calls.append(key) or [{
+                "id": "doc-1", "name": f"{key}.pdf", "run": "3",
+                "chunk_num": 4,
+            }],
+            object(),
+        ),
+    )
+    result = scraper_app._existing_doc_for_key("Sentenza_V10_1_2026")
+    assert calls == ["Sentenza_V10_1_2026"]
+    assert result["id"] == "doc-1"
+    assert result["hasEmbedding"] is True
+
+
 def test_manifest_uses_run_not_row_validity_status():
     manifest = sentenze_utils.build_manifest_index([
         {
@@ -312,10 +480,14 @@ def test_manifest_cache_and_invalidation(monkeypatch):
     calls = []
     kb = types.SimpleNamespace(id="kb")
     monkeypatch.setenv("SGAI_SCRAPER_MANIFEST_TTL", "300")
+    monkeypatch.setattr(scraper_app, "_dataset", lambda: kb)
     monkeypatch.setattr(
         scraper_app,
-        "_rows",
-        lambda: (calls.append(1) or [{"name": "Sentenza_V10_1_2026.pdf", "run": "0"}], kb),
+        "_iter_document_rows",
+        lambda kb_id: iter(
+            calls.append(kb_id)
+            or [{"name": "Sentenza_V10_1_2026.pdf", "run": "0"}]
+        ),
     )
     scraper_app._invalidate_manifest_cache()
     first, _ = scraper_app._manifest()
