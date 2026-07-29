@@ -202,11 +202,7 @@ class LiveMefClient:
         if page.locator(VISUALIZZA_SELECTOR).count() > 0:
             return
 
-        try:
-            body = page.content()
-        except Exception:
-            body = ""
-        self._raise_if_blocked(body_snippet=body[:5000])
+        self._raise_if_blocked(body_snippet=self._visible_body_text(page)[:5000])
 
         year_select = page.locator(SEARCH_YEAR_SELECTOR)
         if year_select.count() != 1:
@@ -237,11 +233,9 @@ class LiveMefClient:
         while time.monotonic() < deadline:
             if page.locator(VISUALIZZA_SELECTOR).count() > 0:
                 return
-            try:
-                body = page.content()
-            except Exception:
-                body = ""
-            self._raise_if_blocked(body_snippet=body[:5000])
+            self._raise_if_blocked(
+                body_snippet=self._visible_body_text(page)[:5000]
+            )
             errors = page.get_by_text(SEARCH_ERROR_TEXT, exact=False)
             if errors.count() > 0:
                 raise MefPortalError(SEARCH_ERROR_TEXT)
@@ -343,6 +337,17 @@ class LiveMefClient:
         ):
             raise MefBlockedError(status or 403, "possibile WAF/CAPTCHA")
 
+    @staticmethod
+    def _visible_body_text(page) -> str:
+        """Usa il testo visibile: asset/script possono contenere falsi marker WAF."""
+        try:
+            return page.inner_text("body", timeout=3000)
+        except Exception:
+            try:
+                return page.content()
+            except Exception:
+                return ""
+
     def open_detail(self, row: PortalRow) -> dict:
         """Apre il dettaglio via href della riga; ritorna metadati pagina dettaglio."""
         assert self.page is not None
@@ -374,13 +379,9 @@ class LiveMefClient:
             links.nth(row.row_index).click()
         page.wait_for_url("**/ricerca/dettaglio/**", timeout=60000)
         # segnali blocco sulla pagina
-        try:
-            body = page.content()
-            self._raise_if_blocked(body_snippet=body[:2000])
-        except MefBlockedError:
-            raise
-        except Exception:
-            pass
+        self._raise_if_blocked(
+            body_snippet=self._visible_body_text(page)[:2000]
+        )
         page.wait_for_selector(DETTAGLIO_SCARICA_BTN, timeout=30000)
         return self.extract_detail_meta()
 

@@ -136,6 +136,20 @@ class TestEnsureResults(unittest.TestCase):
                 body_snippet="<h1>Access Denied</h1>"
             )
 
+    def test_visible_text_wins_over_script_markers(self):
+        class Page:
+            def inner_text(self, selector, timeout):
+                self.args = (selector, timeout)
+                return "Ricerca Giurisprudenza"
+
+            def content(self):
+                return "<script>captcha akamai bot manager</script>"
+
+        page = Page()
+        text = self.client(page)._visible_body_text(page)
+        self.assertEqual(text, "Ricerca Giurisprudenza")
+        self.client(page)._raise_if_blocked(body_snippet=text)
+
 
 class TestSearchYearConfig(unittest.TestCase):
     def test_list_interval_and_default(self):
