@@ -1,4 +1,4 @@
-import { LockOutlined, UserOutlined } from '@ant-design/icons';
+import { LockOutlined } from '@ant-design/icons';
 import { Button, Card, Form, Input, message } from 'antd';
 import React from 'react';
 import styles from './login.less';
@@ -11,26 +11,21 @@ const AdminLogin: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
 
-  const handleLogin = async (values: {
-    username: string;
-    password: string;
-  }) => {
+  const handleLogin = async (values: { password: string }) => {
     setLoading(true);
-
-    // Credenziali hardcoded per sicurezza
-    const ADMIN_EMAIL = 'info@sgailegal.com';
-    const ADMIN_PASSWORD = 'Sgailegal.upload89';
-
-    // Simula un piccolo delay per sembrare più realistico
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    if (values.username === ADMIN_EMAIL && values.password === ADMIN_PASSWORD) {
-      // Login successful
-      localStorage.setItem('admin-authenticated', 'true');
-      localStorage.setItem('admin-session', Date.now().toString());
+    try {
+      const response = await fetch('/v1/admin/auth/login', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: values.password }),
+      });
+      if (!response.ok) {
+        throw new Error('Credenziali non valide');
+      }
       message.success('Accesso effettuato con successo!');
       onLoginSuccess();
-    } else {
+    } catch {
       message.error('Credenziali non valide. Accesso negato.');
       form.setFields([
         {
@@ -38,9 +33,9 @@ const AdminLogin: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           errors: ['Username o password errati'],
         },
       ]);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -61,20 +56,6 @@ const AdminLogin: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
             layout="vertical"
             size="large"
           >
-            <Form.Item
-              name="username"
-              rules={[
-                { required: true, message: 'Inserisci username' },
-                { type: 'email', message: 'Inserisci un email valida' },
-              ]}
-            >
-              <Input
-                prefix={<UserOutlined />}
-                placeholder="Email"
-                autoComplete="username"
-              />
-            </Form.Item>
-
             <Form.Item
               name="password"
               rules={[{ required: true, message: 'Inserisci la password' }]}

@@ -11,6 +11,7 @@ della pagina dettaglio — mai all'indice tra sole righe "valide" filtrate.
 from __future__ import annotations
 
 import re
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,11 @@ from .parse import PortalRow, parse_detail_text, parse_table_html, rows_from_lin
 SITE_ORIGIN = "https://bancadatigiurisprudenza.giustiziatributaria.gov.it"
 VISUALIZZA_SELECTOR = 'a[title^="Visualizza provvedimento"]'
 DETTAGLIO_SCARICA_BTN = 'button[title="Scarica il pdf del provvedimento"]'
+ACTIVE_PAGE_SELECTOR = ".pagination .page-item.active .page-link, .pagination a.page-link.active"
+NEXT_PAGE_SELECTOR = (
+    '.pagination a[aria-label="Next"], .pagination a[aria-label="Successiva"], '
+    ".pagination .page-item.next a.page-link"
+)
 
 # JS: associa ogni Visualizza alla sua <tr> (non a un array filtrato a parte)
 EXTRACT_LINKED_ROWS_JS = """
@@ -75,25 +81,59 @@ class MefClient:
 
 
 class LiveMefClient:
-    """Si collega a Edge/Chromium già avviato con remote debugging."""
+    """CDP esistente oppure Chromium persistente gestito dal servizio."""
 
-    def __init__(self, cdp_url: str = "http://127.0.0.1:9222") -> None:
+    _rate_lock = threading.Lock()
+    _last_action = 0.0
+
+    def __init__(
+        self,
+        cdp_url: str = "http://127.0.0.1:9222",
+        *,
+        profile_dir: str | Path | None = None,
+        start_url: str = "",
+        headless: bool = True,
+        min_action_interval: float = 0.5,
+    ) -> None:
         self.cdp_url = cdp_url
+        self.profile_dir = Path(profile_dir) if profile_dir else None
+        self.start_url = start_url
+        self.headless = headless
+        self.min_action_interval = max(0, min_action_interval)
         self._pw = None
         self._browser = None
+        self._context = None
         self.page = None
+
+    def _rate_limit(self) -> None:
+        with self._rate_lock:
+            now = time.monotonic()
+            wait = self.min_action_interval - (now - type(self)._last_action)
+            if wait > 0:
+                time.sleep(wait)
+            type(self)._last_action = time.monotonic()
 
     def __enter__(self) -> "LiveMefClient":
         from playwright.sync_api import sync_playwright
 
         self._pw = sync_playwright().start()
-        self._browser = self._pw.chromium.connect_over_cdp(self.cdp_url)
-        contexts = self._browser.contexts
+        if self.profile_dir:
+            self.profile_dir.mkdir(parents=True, exist_ok=True)
+            self._context = self._pw.chromium.launch_persistent_context(
+                str(self.profile_dir), headless=self.headless, accept_downloads=True
+            )
+            contexts = [self._context]
+        else:
+            self._browser = self._pw.chromium.connect_over_cdp(self.cdp_url)
+            contexts = self._browser.contexts
         if not contexts:
             raise RuntimeError("Nessun context CDP — avvia Edge/Opera con remote debugging")
         pages = contexts[0].pages
         if not pages:
-            raise RuntimeError("Nessuna tab aperta nel browser CDP")
+            if self.profile_dir:
+                pages = [contexts[0].new_page()]
+            else:
+                raise RuntimeError("Nessuna tab aperta nel browser CDP")
         chosen = pages[0]
         for p in pages:
             try:
@@ -103,10 +143,17 @@ class LiveMefClient:
             except Exception:
                 continue
         self.page = chosen
+        if self.start_url and (
+            not self.page.url or self.page.url == "about:blank"
+        ):
+            self._rate_limit()
+            self.page.goto(self.start_url, timeout=60000, wait_until="domcontentloaded")
         return self
 
     def __exit__(self, *exc: Any) -> None:
         try:
+            if self._context:
+                self._context.close()
             if self._browser:
                 self._browser.close()
         except Exception:
@@ -119,11 +166,62 @@ class LiveMefClient:
 
     def current_page_number(self) -> int:
         assert self.page is not None
-        try:
-            text = self.page.locator("a.page-link.active").first.inner_text(timeout=2000)
-            return int(text.strip())
-        except Exception:
+        locator = self.page.locator(ACTIVE_PAGE_SELECTOR)
+        count = locator.count()
+        if count > 1:
+            raise RuntimeError("paginazione ambigua: più pagine attive")
+        if count == 0:
             return 1
+        text = locator.first.inner_text(timeout=2000)
+        if not str(text).strip().isdigit():
+            raise RuntimeError("paginazione ambigua: pagina attiva non numerica")
+        return int(str(text).strip())
+
+    def has_next_page(self) -> bool:
+        assert self.page is not None
+        locator = self.page.locator(NEXT_PAGE_SELECTOR)
+        count = locator.count()
+        if count > 1:
+            raise RuntimeError("paginazione ambigua: più controlli successiva")
+        if count == 0:
+            return False
+        link = locator.first
+        disabled = (
+            (link.get_attribute("aria-disabled") or "").lower() == "true"
+            or "disabled" in (link.get_attribute("class") or "").lower()
+        )
+        try:
+            parent_class = link.locator("xpath=..").get_attribute("class") or ""
+            disabled = disabled or "disabled" in parent_class.lower()
+        except Exception:
+            pass
+        return not disabled
+
+    def next_page(self, timeout_ms: int = 45000) -> bool:
+        assert self.page is not None
+        if not self.has_next_page():
+            return False
+        previous_page = self.current_page_number()
+        previous_marker = self.page.locator(VISUALIZZA_SELECTOR).first.get_attribute("href")
+        locator = self.page.locator(NEXT_PAGE_SELECTOR)
+        if locator.count() != 1:
+            raise RuntimeError("paginazione ambigua al click successiva")
+        self._rate_limit()
+        locator.first.click()
+        deadline = time.monotonic() + timeout_ms / 1000
+        while time.monotonic() < deadline:
+            try:
+                current = self.current_page_number()
+                marker = self.page.locator(VISUALIZZA_SELECTOR).first.get_attribute("href")
+                if current != previous_page or marker != previous_marker:
+                    self.page.wait_for_selector(VISUALIZZA_SELECTOR, timeout=5000)
+                    return True
+            except RuntimeError:
+                raise
+            except Exception:
+                pass
+            time.sleep(0.2)
+        raise TimeoutError("la pagina risultati non è cambiata dopo Successiva")
 
     def current_rows(self) -> list[PortalRow]:
         """Righe legate 1:1 al link Visualizza della stessa <tr>."""
@@ -168,6 +266,7 @@ class LiveMefClient:
             resp = None
             try:
                 # goto non espone sempre status; controlla dopo
+                self._rate_limit()
                 page.goto(href, timeout=60000, wait_until="domcontentloaded")
             except Exception as exc:
                 msg = str(exc)
@@ -180,7 +279,11 @@ class LiveMefClient:
             # fallback: click sul Visualizza con stesso title/href se possibile
             if row.row_index is None:
                 raise RuntimeError("riga senza href né row_index")
-            page.locator(VISUALIZZA_SELECTOR).nth(row.row_index).click()
+            links = page.locator(VISUALIZZA_SELECTOR)
+            if row.row_index >= links.count():
+                raise RuntimeError("selector Visualizza ambiguo o indice non valido")
+            self._rate_limit()
+            links.nth(row.row_index).click()
         page.wait_for_url("**/ricerca/dettaglio/**", timeout=60000)
         # segnali blocco sulla pagina
         try:
@@ -200,6 +303,7 @@ class LiveMefClient:
         tmp_path.parent.mkdir(parents=True, exist_ok=True)
         try:
             with page.expect_download(timeout=90000) as download_info:
+                self._rate_limit()
                 page.locator(DETTAGLIO_SCARICA_BTN).click()
             download_info.value.save_as(str(tmp_path))
         except Exception:
@@ -244,6 +348,7 @@ class LiveMefClient:
         page = self.page
         try:
             if page.url != lista_url:
+                self._rate_limit()
                 page.goto(lista_url, timeout=60000)
                 page.wait_for_selector(VISUALIZZA_SELECTOR, timeout=45000)
         except Exception:

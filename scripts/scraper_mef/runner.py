@@ -19,7 +19,7 @@ from .limits import RunLimits
 from .logging_utils import setup_logger
 from .metrics import Metrics
 from .parse import PortalRow, metas_match, validate_row
-from .upload import UploadDisabledError, enqueue_upload
+from .upload import UploadDisabledError, UploadQueue, enqueue_upload
 
 log = setup_logger()
 
@@ -52,6 +52,7 @@ def process_rows(
     fetch_pdf: FetchFn,
     require_detail_meta: bool = False,
     resume: bool = True,
+    upload_queue: UploadQueue | None = None,
 ) -> list[dict[str, Any]]:
     """
     Loop core testabile.
@@ -226,12 +227,17 @@ def process_rows(
                 }
             )
             try:
-                enqueue_upload(dest, enabled=cfg.upload_enabled)
-                metrics.uploaded += 1
+                queued = enqueue_upload(
+                    dest,
+                    enabled=cfg.upload_enabled,
+                    queue=upload_queue,
+                    nome_base=final_meta["nomeBase"],
+                    sha256=outcome["sha256"],
+                )
+                metrics.queued += 1
+                item["upload"] = f"queued:{queued['status']}"
             except UploadDisabledError:
                 item["upload"] = "disabled"
-            except NotImplementedError as exc:
-                item["upload"] = f"stub:{exc}"
             results.append(item)
             cleanup_tmp_dir(cfg.tmp_dir, keep_newest=20)
             if metrics.attempts < max_attempts and not limits.stop.should_stop:
@@ -326,6 +332,7 @@ def run_scraper(
     cfg.tmp_dir.mkdir(parents=True, exist_ok=True)
     output_dir.mkdir(parents=True, exist_ok=True)
     results: list[dict[str, Any]] = []
+    upload_queue = UploadQueue(cfg.queue_path) if cfg.upload_enabled else None
 
     if mode == "simulate":
         if not fixture or not fixture.exists():
@@ -353,39 +360,52 @@ def run_scraper(
             fetch_pdf=_fetch_sim,
             require_detail_meta=False,
             resume=resume,
+            upload_queue=upload_queue,
         )
 
     elif mode == "live":
         log.info("LIVE: connessione CDP %s (browser già aperto sulla lista risultati)", cdp_url)
         try:
-            with LiveMefClient(cdp_url=cdp_url) as client:
-                rows = client.current_rows()
-                if not rows:
-                    log.error("Nessun link Visualizza sulla tab MEF — fai prima una Ricerca")
-                    return 2
-                page_number = client.current_page_number()
-                # Se la pagina live è diversa da quella nel checkpoint, azzera le righe
-                checkpoint.sync_page(page_number)
+            with LiveMefClient(
+                cdp_url=cdp_url,
+                profile_dir=cfg.browser_profile or None,
+                start_url=cfg.browser_start_url,
+                headless=cfg.browser_headless,
+            ) as client:
+                while not limits.stop.should_stop and metrics.attempts < max_attempts:
+                    rows = client.current_rows()
+                    if not rows:
+                        log.error("Nessun link Visualizza sulla pagina risultati MEF")
+                        return 2
+                    page_number = client.current_page_number()
+                    checkpoint.sync_page(page_number)
 
-                def _fetch_live(row: PortalRow) -> tuple[bytes, dict | None]:
-                    tmp = cfg.tmp_dir / f"live_{row.row_index or 0}.pdf"
-                    data, detail_meta = client.fetch_row_pdf(row, tmp)
-                    return data, detail_meta
+                    def _fetch_live(row: PortalRow) -> tuple[bytes, dict | None]:
+                        tmp = cfg.tmp_dir / f"live_{page_number}_{row.row_index or 0}.pdf"
+                        return client.fetch_row_pdf(row, tmp)
 
-                results = process_rows(
-                    rows,
-                    index=index,
-                    checkpoint=checkpoint,
-                    metrics=metrics,
-                    limits=limits,
-                    cfg=cfg,
-                    output_dir=output_dir,
-                    max_attempts=max_attempts,
-                    page_number=page_number,
-                    fetch_pdf=_fetch_live,
-                    require_detail_meta=True,
-                    resume=resume,
-                )
+                    results.extend(
+                        process_rows(
+                            rows,
+                            index=index,
+                            checkpoint=checkpoint,
+                            metrics=metrics,
+                            limits=limits,
+                            cfg=cfg,
+                            output_dir=output_dir,
+                            max_attempts=max_attempts,
+                            page_number=page_number,
+                            fetch_pdf=_fetch_live,
+                            require_detail_meta=True,
+                            resume=resume,
+                            upload_queue=upload_queue,
+                        )
+                    )
+                    if metrics.attempts >= max_attempts or not client.has_next_page():
+                        break
+                    limits.pause_between_pages(log=lambda m: log.info(m))
+                    if not client.next_page():
+                        break
         except MefBlockedError as exc:
             log.error("LIVE bloccato: %s", exc)
             checkpoint.set_status("blocked", block_reason=str(exc)[:300])
@@ -412,9 +432,9 @@ def run_scraper(
             "delay_max": limits.delay_max,
             "page_delay": limits.page_delay,
             "upload_enabled": cfg.upload_enabled,
-            "pagination": "NOT_IMPLEMENTED",
+            "pagination": "ENABLED_LIVE",
             "multi_worker": "NOT_IMPLEMENTED",
-            "sgai_upload": "DISABLED_STUB",
+            "sgai_upload": "PERSISTENT_QUEUE" if cfg.upload_enabled else "DISABLED",
         },
         "output_dir": str(output_dir),
         "sources": index.sources,

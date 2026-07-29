@@ -15,7 +15,9 @@ class Metrics:
     would_download: int = 0
     attempts: int = 0
     downloaded: int = 0
+    queued: int = 0
     uploaded: int = 0
+    embedded: int = 0
     errors: int = 0
     blocked: int = 0
 

@@ -5,6 +5,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -18,7 +19,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -33,6 +34,7 @@ import {
 } from 'recharts';
 import styles from './index.less';
 import AdminLogin from './login';
+import AdminOperations from './operations';
 
 const { RangePicker } = DatePicker;
 
@@ -72,9 +74,52 @@ interface KnowledgeStats {
   found?: boolean;
 }
 
+function calculateDailyStats(sessionsList: UserSession[]) {
+  const dailyMap = new Map<
+    string,
+    {
+      date: string;
+      sessions: number;
+      messages: number;
+      tokens: number;
+      users: Set<string>;
+    }
+  >();
+  sessionsList.forEach((session) => {
+    if (!session.loginTime || session.loginTime === 'N/A') return;
+    const date = session.loginTime.split(' ')[0];
+    if (!dailyMap.has(date)) {
+      dailyMap.set(date, {
+        date,
+        sessions: 0,
+        messages: 0,
+        tokens: 0,
+        users: new Set(),
+      });
+    }
+    const day = dailyMap.get(date);
+    if (!day) return;
+    day.sessions += 1;
+    day.messages += session.messagesCount || 0;
+    day.tokens += session.tokens || 0;
+    day.users.add(session.userId);
+  });
+  return Array.from(dailyMap.values())
+    .map((day) => ({
+      date: day.date,
+      sessioni: day.sessions,
+      messaggi: day.messages,
+      tokens: day.tokens,
+      utenti: day.users.size,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 const AdminStats: React.FC = () => {
   // ⚠️ IMPORTANTE: Tutti gli useState DEVONO essere dichiarati PRIMA di qualsiasi return condizionale
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [sessionsError, setSessionsError] = useState('');
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
@@ -98,38 +143,43 @@ const AdminStats: React.FC = () => {
 
   // Check authentication on mount
   useEffect(() => {
-    const authenticated = localStorage.getItem('admin-authenticated');
-    const sessionTime = localStorage.getItem('admin-session');
-
-    if (authenticated === 'true' && sessionTime) {
-      // Session expires after 24 hours
-      const sessionAge = Date.now() - parseInt(sessionTime);
-      if (sessionAge < 24 * 60 * 60 * 1000) {
-        setIsAuthenticated(true);
-      } else {
-        // Session expired
-        localStorage.removeItem('admin-authenticated');
-        localStorage.removeItem('admin-session');
-      }
-    }
+    const controller = new AbortController();
+    fetch('/v1/admin/auth/status', {
+      credentials: 'same-origin',
+      signal: controller.signal,
+    })
+      .then((response) => response.json())
+      .then((result) => setIsAuthenticated(Boolean(result.data?.authenticated)))
+      .catch(() => setIsAuthenticated(false))
+      .finally(() => setAuthChecking(false));
+    return () => controller.abort();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin-authenticated');
-    localStorage.removeItem('admin-session');
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    try {
+      await fetch('/v1/admin/auth/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+    } finally {
+      setIsAuthenticated(false);
+    }
   };
 
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
   };
+  const handleUnauthorized = React.useCallback(
+    () => setIsAuthenticated(false),
+    [],
+  );
 
-  // ⚠️ fetchUserSessions e loadMockData DEVONO essere definiti PRIMA degli useEffect
-  const fetchUserSessions = async () => {
+  const fetchUserSessions = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch('/v1/admin/user-sessions', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
@@ -141,213 +191,42 @@ const AdminStats: React.FC = () => {
         const result = await response.json();
         if (result.code === 0 && result.data) {
           setSessions(result.data.sessions || []);
-          setStats(result.data.stats || stats);
+          if (result.data.stats) setStats(result.data.stats);
 
           // Calcola statistiche giornaliere per i grafici
           const dailyData = calculateDailyStats(result.data.sessions || []);
           setDailyStats(dailyData);
+          setSessionsError('');
         } else {
-          console.error('API error:', result.message);
-          loadMockData();
+          throw new Error(result.message || 'Risposta API non valida');
         }
       } else {
-        console.error('HTTP error:', response.status);
-        loadMockData();
+        if (response.status === 401) setIsAuthenticated(false);
+        throw new Error(`HTTP ${response.status}`);
       }
     } catch (error) {
       console.error('Error fetching user sessions:', error);
-      loadMockData();
+      setSessionsError(
+        error instanceof Error ? error.message : 'Errore caricamento sessioni',
+      );
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadMockData = () => {
-    const mockSessions: UserSession[] = [
-      {
-        id: '1',
-        sessionId: 'session-abc123',
-        userId: 'user@example.com',
-        email: 'user@example.com',
-        plan: 'premium',
-        loginTime: '2025-11-04 10:30:00',
-        ipAddress: '151.18.xx.xx',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        country: 'Italy',
-        city: 'Milan',
-        browser: 'Chrome',
-        os: 'Windows 10',
-        messagesCount: 4,
-        tokens: 1250,
-        duration: 45,
-        conversation: [
-          {
-            type: 'question',
-            text: 'Quali sono le scadenze fiscali di novembre?',
-            timestamp: 1730716200,
-          },
-          {
-            type: 'answer',
-            text: 'Le principali scadenze fiscali di novembre 2025 sono: 16 novembre - versamento IVA mensile, 18 novembre - contributi INPS, 30 novembre - presentazione modelli INTRASTAT.',
-            timestamp: 1730716215,
-          },
-          {
-            type: 'question',
-            text: 'E per le partite IVA forfettarie?',
-            timestamp: 1730716250,
-          },
-          {
-            type: 'answer',
-            text: 'Per i forfettari le scadenze principali sono: versamento acconto imposta sostitutiva entro il 30 novembre, non è richiesto il versamento IVA essendo regime forfettario.',
-            timestamp: 1730716265,
-          },
-        ],
-      },
-      {
-        id: '2',
-        sessionId: 'session-def456',
-        userId: 'anonymous_89.45.120.33',
-        plan: 'free',
-        loginTime: '2025-11-04 09:15:00',
-        ipAddress: '89.45.xx.xx',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)',
-        country: 'Italy',
-        city: 'Rome',
-        browser: 'Safari',
-        os: 'macOS',
-        messagesCount: 2,
-        tokens: 580,
-        duration: 28,
-        conversation: [
-          {
-            type: 'question',
-            text: 'Come funziona la rivalutazione TFR?',
-            timestamp: 1730711700,
-          },
-          {
-            type: 'answer',
-            text: "Il TFR viene rivalutato annualmente applicando un tasso fisso dell'1,5% più il 75% dell'aumento ISTAT rispetto all'anno precedente.",
-            timestamp: 1730711715,
-          },
-        ],
-      },
-      {
-        id: '3',
-        sessionId: 'session-ghi789',
-        userId: 'beta@test.com',
-        email: 'beta@test.com',
-        plan: 'beta',
-        loginTime: '2025-11-04 08:45:00',
-        ipAddress: '192.168.xx.xx',
-        userAgent: 'Mozilla/5.0 (X11; Linux x86_64)',
-        country: 'Italy',
-        city: 'Turin',
-        browser: 'Firefox',
-        os: 'Linux',
-        messagesCount: 6,
-        tokens: 2100,
-        duration: 120,
-        conversation: [
-          {
-            type: 'question',
-            text: 'Dammi informazioni sul regime forfettario 2025',
-            timestamp: 1730709900,
-          },
-          {
-            type: 'answer',
-            text: 'Il regime forfettario 2025 prevede: limite massimo 85.000€ di ricavi, aliquota 15% (5% primi 5 anni), nessun addebito IVA, contabilità semplificata.',
-            timestamp: 1730709915,
-          },
-          {
-            type: 'question',
-            text: 'Quali sono i limiti per rimanere nel regime?',
-            timestamp: 1730709950,
-          },
-          {
-            type: 'answer',
-            text: 'I principali limiti sono: ricavi max 85.000€, spese per collaboratori max 20.000€, non possedere partecipazioni in società, non essere socio in SNC/SAS.',
-            timestamp: 1730709965,
-          },
-          {
-            type: 'question',
-            text: 'E se supero gli 85.000€?',
-            timestamp: 1730710000,
-          },
-          {
-            type: 'answer',
-            text: "Se superi gli 85.000€, esci dal regime forfettario dall'anno successivo e passi al regime ordinario con obbligo di partita IVA ordinaria.",
-            timestamp: 1730710015,
-          },
-        ],
-      },
-    ];
-
-    setSessions(mockSessions);
-    setStats({
-      totalUsers: 3,
-      freeUsers: 1,
-      premiumUsers: 1,
-      betaTesters: 1,
-      todayLogins: 3,
-      uniqueCountries: 1,
-    });
-
-    // Mock daily stats
-    setDailyStats(calculateDailyStats(mockSessions));
-  };
-
-  // Funzione per calcolare statistiche giornaliere
-  const calculateDailyStats = (sessionsList: UserSession[]) => {
-    const dailyMap = new Map<string, any>();
-
-    sessionsList.forEach((session) => {
-      if (!session.loginTime || session.loginTime === 'N/A') return;
-
-      const date = session.loginTime.split(' ')[0]; // YYYY-MM-DD
-
-      if (!dailyMap.has(date)) {
-        dailyMap.set(date, {
-          date,
-          sessions: 0,
-          messages: 0,
-          tokens: 0,
-          users: new Set(),
-        });
-      }
-
-      const day = dailyMap.get(date);
-      day.sessions += 1;
-      day.messages += session.messagesCount || 0;
-      day.tokens += session.tokens || 0;
-      day.users.add(session.userId);
-    });
-
-    // Converti in array e calcola utenti unici per giorno
-    const result = Array.from(dailyMap.values())
-      .map((day) => ({
-        date: day.date,
-        sessioni: day.sessions,
-        messaggi: day.messages,
-        tokens: day.tokens,
-        utenti: day.users.size,
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    return result;
-  };
+  }, [dateRange]);
 
   // useEffect per caricare dati - DEVE essere prima del return condizionale
   useEffect(() => {
     if (isAuthenticated) {
       fetchUserSessions();
     }
-  }, [dateRange, isAuthenticated]);
+  }, [fetchUserSessions, isAuthenticated]);
 
   const fetchKnowledgeStats = async () => {
     setKnowledgeLoading(true);
     try {
       const response = await fetch(
         '/v1/admin/knowledge-status?dataset=SENTENZE%20BANCA%20DATI%20MEF',
+        { credentials: 'same-origin' },
       );
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -358,6 +237,9 @@ const AdminStats: React.FC = () => {
       }
     } catch (error) {
       console.error('Errore nel recupero stato knowledge:', error);
+      setSessionsError(
+        error instanceof Error ? error.message : 'Errore stato knowledge',
+      );
     } finally {
       setKnowledgeLoading(false);
     }
@@ -368,6 +250,10 @@ const AdminStats: React.FC = () => {
       fetchKnowledgeStats();
     }
   }, [isAuthenticated]);
+
+  if (authChecking) {
+    return <div className={styles.adminContainer}>Verifica sessione…</div>;
+  }
 
   // Show login if not authenticated
   if (!isAuthenticated) {
@@ -478,6 +364,18 @@ const AdminStats: React.FC = () => {
         </Button>
       </div>
 
+      <AdminOperations onUnauthorized={handleUnauthorized} />
+
+      {sessionsError && (
+        <Alert
+          className={styles.apiError}
+          type="error"
+          showIcon
+          message="Dati amministrativi non aggiornati"
+          description={sessionsError}
+        />
+      )}
+
       {/* Filtro date */}
       <Card className={styles.filterCard}>
         <Space>
@@ -489,6 +387,7 @@ const AdminStats: React.FC = () => {
             format="YYYY-MM-DD"
           />
           <button
+            type="button"
             onClick={() => setDateRange(null)}
             className={styles.resetButton}
           >
@@ -746,7 +645,7 @@ const AdminStats: React.FC = () => {
       <Card className={styles.warningCard}>
         <p>
           <strong>⚠️ Attenzione:</strong> Questa pagina contiene dati sensibili
-          degli utenti. L'accesso è limitato al personale autorizzato. Non
+          degli utenti. L&apos;accesso è limitato al personale autorizzato. Non
           condividere queste informazioni.
         </p>
       </Card>

@@ -14,7 +14,11 @@
 #  limitations under the License.
 #
 from datetime import datetime, timedelta
-from flask import request
+from functools import wraps
+import hmac
+import os
+import time
+from flask import jsonify, request, session
 from api.db import TaskStatus, StatusEnum
 from api.db.db_models import API4Conversation, DB, Document, Knowledgebase, Task
 from api.utils.api_utils import server_error_response, get_json_result
@@ -29,8 +33,84 @@ import logging
 from flask import Blueprint
 manager = Blueprint('admin', __name__)
 
+ADMIN_SESSION_KEY = "sgai_admin_authenticated"
+ADMIN_LOGIN_AT_KEY = "sgai_admin_login_at"
+ADMIN_SESSION_LIFETIME = timedelta(hours=8)
+
+
+@manager.record_once
+def _configure_admin_session(state):
+    """Mantiene il cookie server-side compatibile con la configurazione Flask-Session."""
+    state.app.config.setdefault("SESSION_COOKIE_HTTPONLY", True)
+    if not state.app.config.get("SESSION_COOKIE_SAMESITE"):
+        state.app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    state.app.config["PERMANENT_SESSION_LIFETIME"] = ADMIN_SESSION_LIFETIME
+
+
+def _bearer_token():
+    value = request.headers.get("Authorization", "")
+    if not value.lower().startswith("bearer "):
+        return ""
+    return value[7:].strip()
+
+
+def _constant_time_match(supplied, expected):
+    candidate = str(supplied or "").encode()
+    configured = str(expected or "").encode()
+    return bool(candidate) and bool(configured) and hmac.compare_digest(candidate, configured)
+
+
+def admin_authenticated():
+    if _constant_time_match(_bearer_token(), os.getenv("SGAI_ADMIN_API_TOKEN")):
+        return True
+    if not session.get(ADMIN_SESSION_KEY):
+        return False
+    try:
+        login_at = float(session.get(ADMIN_LOGIN_AT_KEY, 0))
+    except (TypeError, ValueError):
+        login_at = 0
+    if login_at <= 0 or time.time() - login_at > ADMIN_SESSION_LIFETIME.total_seconds():
+        session.clear()
+        return False
+    return True
+
+
+def require_admin_session(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        if not admin_authenticated():
+            return jsonify({"data": None, "error": "unauthorized"}), 401
+        return func(*args, **kwargs)
+    return wrapped
+
+
+@manager.route('/auth/login', methods=['POST'])
+def admin_login():
+    body = request.get_json(silent=True) or {}
+    if not _constant_time_match(body.get("password"), os.getenv("SGAI_ADMIN_PASSWORD")):
+        session.clear()
+        return jsonify({"data": {"authenticated": False}, "error": "invalid credentials"}), 401
+    session.clear()
+    session.permanent = True
+    session[ADMIN_SESSION_KEY] = True
+    session[ADMIN_LOGIN_AT_KEY] = time.time()
+    return jsonify({"data": {"authenticated": True, "expiresIn": 8 * 60 * 60}})
+
+
+@manager.route('/auth/status', methods=['GET'])
+def admin_auth_status():
+    return jsonify({"data": {"authenticated": admin_authenticated()}})
+
+
+@manager.route('/auth/logout', methods=['POST'])
+@require_admin_session
+def admin_logout():
+    session.clear()
+    return jsonify({"data": {"authenticated": False}})
+
 
 @manager.route('/user-sessions', methods=['POST'])
+@require_admin_session
 def get_user_sessions():
     """
     Endpoint per ottenere tutte le sessioni utente con conversazioni complete
@@ -206,6 +286,7 @@ def get_user_sessions():
 
 
 @manager.route('/knowledge-status', methods=['GET'])
+@require_admin_session
 def get_knowledge_status():
     """
     Ritorna lo stato di avanzamento del parsing documenti per un dataset.
@@ -329,6 +410,7 @@ def extract_ip(user_id: str):
 
 
 @manager.route('/requeue-unstart-documents', methods=['POST'])
+@require_admin_session
 def requeue_unstart_documents():
     """
     Rimette in coda tutti i documenti con stato 'unstart' per un dataset specifico.

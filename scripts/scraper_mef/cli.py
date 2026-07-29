@@ -13,6 +13,7 @@ from .logging_utils import setup_logger
 from .metrics import Metrics
 from .parse import iter_validated
 from .runner import run_scraper
+from .service import run_service
 
 log = setup_logger()
 
@@ -207,6 +208,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     add_skip_args(p_run)
 
+    p_service = sub.add_parser(
+        "service", help="Servizio continuo scrape + coda upload persistente"
+    )
+    p_service.add_argument(
+        "--once", action="store_true", help="Esegue un solo ciclo (test/diagnostica)"
+    )
+
     args = parser.parse_args(argv)
     cfg = Config()
 
@@ -223,6 +231,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_probe(args.nome, cfg, args)
     if args.cmd == "run":
         return cmd_run(cfg, args)
+    if args.cmd == "service":
+        return run_service(cfg, once=args.once)
 
     parser.error(f"comando sconosciuto: {args.cmd}")
     return 2
