@@ -20,6 +20,9 @@ from .parse import PortalRow, parse_detail_text, parse_table_html, rows_from_lin
 
 SITE_ORIGIN = "https://bancadatigiurisprudenza.giustiziatributaria.gov.it"
 VISUALIZZA_SELECTOR = 'a[title^="Visualizza provvedimento"]'
+SEARCH_YEAR_SELECTOR = r"select#Form\.ControlInput2"
+SEARCH_ERROR_TEXT = "si è verificato un errore!"
+SEARCH_URL = f"{SITE_ORIGIN}/ricerca"
 DETTAGLIO_SCARICA_BTN = 'button[title="Scarica il pdf del provvedimento"]'
 ACTIVE_PAGE_SELECTOR = ".pagination .page-item.active .page-link, .pagination a.page-link.active"
 NEXT_PAGE_SELECTOR = (
@@ -69,6 +72,15 @@ class MefHttpError(Exception):
 
 class MefBlockedError(MefHttpError):
     """403/429 o segnali di blocco WAF/CAPTCHA — stop + checkpoint."""
+
+
+class MefPortalError(MefHttpError):
+    """Errore applicativo temporaneo del portale, ritentabile dal servizio."""
+
+    retryable = True
+
+    def __init__(self, message: str = "errore applicativo portale MEF") -> None:
+        super().__init__(503, message)
 
 
 class MefClient:
@@ -177,6 +189,73 @@ class LiveMefClient:
             raise RuntimeError("paginazione ambigua: pagina attiva non numerica")
         return int(str(text).strip())
 
+    def ensure_results(self, search_year: int, timeout_ms: int = 45000) -> None:
+        """
+        Porta il modulo di ricerca alla lista risultati senza aggirare blocchi.
+
+        Fail-closed: una lista già presente non viene modificata; in assenza di
+        risultati sono accettati esattamente un select anno e un solo pulsante
+        Ricerca abilitato.
+        """
+        assert self.page is not None
+        page = self.page
+        if page.locator(VISUALIZZA_SELECTOR).count() > 0:
+            return
+
+        try:
+            body = page.content()
+        except Exception:
+            body = ""
+        self._raise_if_blocked(body_snippet=body[:5000])
+
+        year_select = page.locator(SEARCH_YEAR_SELECTOR)
+        if year_select.count() != 1:
+            raise RuntimeError(
+                f"modulo anno ambiguo o assente: trovati {year_select.count()} selettori"
+            )
+
+        buttons = page.get_by_role("button", name="Ricerca", exact=True)
+        enabled = []
+        for index in range(buttons.count()):
+            candidate = buttons.nth(index)
+            try:
+                if candidate.is_enabled():
+                    enabled.append(candidate)
+            except Exception:
+                continue
+        if len(enabled) != 1:
+            raise RuntimeError(
+                f"pulsante Ricerca ambiguo: trovati {len(enabled)} pulsanti abilitati"
+            )
+
+        self._rate_limit()
+        year_select.select_option(str(int(search_year)))
+        self._rate_limit()
+        enabled[0].click()
+
+        deadline = time.monotonic() + timeout_ms / 1000
+        while time.monotonic() < deadline:
+            if page.locator(VISUALIZZA_SELECTOR).count() > 0:
+                return
+            try:
+                body = page.content()
+            except Exception:
+                body = ""
+            self._raise_if_blocked(body_snippet=body[:5000])
+            errors = page.get_by_text(SEARCH_ERROR_TEXT, exact=False)
+            if errors.count() > 0:
+                raise MefPortalError(SEARCH_ERROR_TEXT)
+            time.sleep(0.2)
+        raise TimeoutError(
+            f"timeout ricerca MEF anno {search_year}: nessun risultato o errore"
+        )
+
+    def open_search_form(self) -> None:
+        """Ricarica il modulo per iniziare una ricerca di un anno diverso."""
+        assert self.page is not None
+        self._rate_limit()
+        self.page.goto(SEARCH_URL, timeout=60000, wait_until="domcontentloaded")
+
     def has_next_page(self) -> bool:
         assert self.page is not None
         locator = self.page.locator(NEXT_PAGE_SELECTOR)
@@ -252,7 +331,18 @@ class LiveMefClient:
             raise MefBlockedError(status, f"blocco HTTP {status}")
         if status and status >= 500:
             raise MefHttpError(status, f"HTTP {status}")
-        if any(x in snippet for x in ("captcha", "access denied", "akamai", "bot manager")):
+        if any(
+            x in snippet
+            for x in (
+                "captcha",
+                "access denied",
+                "akamai",
+                "bot manager",
+                "cf-chl",
+                "verify you are human",
+                "verifica di essere umano",
+            )
+        ):
             raise MefBlockedError(status or 403, "possibile WAF/CAPTCHA")
 
     def open_detail(self, row: PortalRow) -> dict:

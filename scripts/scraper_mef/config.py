@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -13,6 +14,40 @@ DEFAULT_LOCK = ROOT / ".service.lock"
 DEFAULT_CACHE_KEYS = ROOT / "data" / "cache_nomi_base_local.txt"
 # Output relativo al modulo; override con MEF_SCRAPER_OUTPUT o --output-dir
 DEFAULT_OUTPUT_DIR = ROOT / "downloads_out"
+MIN_SEARCH_YEAR = 2021
+
+
+def parse_search_years(raw: str | None, *, current_year: int | None = None) -> list[int]:
+    """Parsa una lista (2026,2025) o un intervallo (2021-2026)."""
+    current = int(current_year or datetime.now().year)
+    value = (raw or "").strip()
+    if not value:
+        return list(range(current, MIN_SEARCH_YEAR - 1, -1))
+    if "," in value and "-" in value:
+        raise ValueError("MEF_SCRAPER_SEARCH_YEARS: usare una lista o un intervallo")
+    if "-" in value:
+        parts = [part.strip() for part in value.split("-")]
+        if len(parts) != 2 or not all(part.isdigit() for part in parts):
+            raise ValueError("MEF_SCRAPER_SEARCH_YEARS: intervallo non valido")
+        first, last = map(int, parts)
+        low, high = sorted((first, last))
+        years = list(range(high, low - 1, -1))
+    else:
+        parts = [part.strip() for part in value.split(",")]
+        if not parts or any(not part.isdigit() for part in parts):
+            raise ValueError("MEF_SCRAPER_SEARCH_YEARS: lista non valida")
+        years = []
+        for part in parts:
+            year = int(part)
+            if year not in years:
+                years.append(year)
+    invalid = [year for year in years if not MIN_SEARCH_YEAR <= year <= current]
+    if invalid:
+        raise ValueError(
+            f"MEF_SCRAPER_SEARCH_YEARS: anni fuori intervallo "
+            f"{MIN_SEARCH_YEAR}..{current}: {invalid}"
+        )
+    return years
 
 
 def env_int(name: str, default: int) -> int:
@@ -87,8 +122,14 @@ class Config:
         self.min_free_bytes = max(0, env_int("MEF_SCRAPER_MIN_FREE_BYTES", 2 * 1024**3))
         self.cdp_url = os.environ.get("MEF_SCRAPER_CDP_URL", "http://127.0.0.1:9222")
         self.browser_profile = os.environ.get("MEF_SCRAPER_BROWSER_PROFILE", "")
-        self.browser_start_url = os.environ.get("MEF_SCRAPER_START_URL", "")
+        self.browser_start_url = os.environ.get(
+            "MEF_SCRAPER_START_URL",
+            "https://bancadatigiurisprudenza.giustiziatributaria.gov.it/ricerca",
+        )
         self.browser_headless = env_bool("MEF_SCRAPER_BROWSER_HEADLESS", True)
+        self.search_years = parse_search_years(
+            os.environ.get("MEF_SCRAPER_SEARCH_YEARS")
+        )
 
     def default_server_caches(self) -> list[Path]:
         """

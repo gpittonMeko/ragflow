@@ -44,6 +44,8 @@ ADMIN_LOGIN_AT_KEY = "sgai_admin_login_at"
 ADMIN_SESSION_MAX_AGE = 8 * 60 * 60
 _MANIFEST_CACHE = {"expires": 0.0, "data": None, "kb": None}
 _MANIFEST_CACHE_LOCK = threading.Lock()
+_PROGRESS_CACHE = {"expires": 0.0, "data": None, "kb_id": None}
+_PROGRESS_CACHE_LOCK = threading.Lock()
 DOCUMENT_LOOKUP_LIMIT = 200
 MANIFEST_BATCH_SIZE = 2000
 
@@ -309,7 +311,7 @@ def _iter_document_rows(kb_id, batch_size=MANIFEST_BATCH_SIZE):
 
 
 def _rows():
-    """Compatibilità requeue: lettura batch, senza DocumentService.query globale."""
+    """Compatibilità legacy/manifest: materializzazione batch dell'intero dataset."""
     kb = _dataset()
     return list(_iter_document_rows(kb.id)), kb
 
@@ -409,6 +411,18 @@ def _progress_aggregate_rows(kb_id):
         )
 
 
+def _progress_cache_ttl():
+    try:
+        return max(0, int(os.getenv("SGAI_SCRAPER_PROGRESS_TTL", "30")))
+    except ValueError:
+        return 30
+
+
+def _invalidate_progress_cache():
+    with _PROGRESS_CACHE_LOCK:
+        _PROGRESS_CACHE.update({"expires": 0.0, "data": None, "kb_id": None})
+
+
 def _manifest_cache_ttl():
     try:
         return max(1, int(os.getenv("SGAI_SCRAPER_MANIFEST_TTL", "300")))
@@ -438,9 +452,23 @@ def _manifest():
 
 def _progress_summary():
     kb = _dataset()
-    return dataset_progress_summary_from_aggregates(
-        _progress_aggregate_rows(kb.id)
-    )
+    now = time.monotonic()
+    with _PROGRESS_CACHE_LOCK:
+        if (
+            _PROGRESS_CACHE["data"] is not None
+            and _PROGRESS_CACHE["kb_id"] == kb.id
+            and now < _PROGRESS_CACHE["expires"]
+        ):
+            return _PROGRESS_CACHE["data"]
+        data = dataset_progress_summary_from_aggregates(
+            _progress_aggregate_rows(kb.id)
+        )
+        _PROGRESS_CACHE.update({
+            "expires": now + _progress_cache_ttl(),
+            "data": data,
+            "kb_id": kb.id,
+        })
+        return data
 
 
 def _docs_for_key(key):
@@ -709,6 +737,7 @@ def upload():
             DocumentService.update_by_id(doc["id"], {
                 "run": "1", "progress": 0, "progress_msg": "", "chunk_num": 0, "token_num": 0
             })
+            _invalidate_progress_cache()
             TaskService.filter_delete([Task.doc_id == doc["id"]])
             exists, stored_doc = DocumentService.get_by_id(doc["id"])
             if not exists:
@@ -723,6 +752,7 @@ def upload():
                 DocumentService.update_by_id(doc["id"], {
                     "run": "4", "progress": 0, "progress_msg": message[:1024]
                 })
+                _invalidate_progress_cache()
                 failed = _doc_public({**queued, "run": "4", "progress_msg": message})
                 logging.exception("[SGAI SCRAPER] %s doc=%s", message, doc["id"])
                 raise QueueSubmissionError(failed) from exc
@@ -757,40 +787,84 @@ def duplicates():
     return _json({"items": groups[start:start + size], "total": len(groups), "page": page})
 
 
+def _matches_requeue_status(row, status):
+    run_by_status = {
+        "unstart": "0",
+        "fail": "4",
+        "done_without_embeddings": "3",
+    }
+    if status not in run_by_status:
+        raise ValueError("invalid status")
+    return (
+        str(row.get("run")) == run_by_status[status]
+        and (
+            status != "done_without_embeddings"
+            or int(row.get("chunk_num") or 0) == 0
+        )
+    )
+
+
 def _selected_for_requeue(rows, status):
-    if status == "unstart":
-        return [row for row in rows if str(row.get("run")) == "0"]
-    if status == "fail":
-        return [row for row in rows if str(row.get("run")) == "4"]
+    return [row for row in rows if _matches_requeue_status(row, status)]
+
+
+def _requeue_rows(status, limit):
+    """Selezione server-side limitata; non materializza il dataset completo."""
+    from api.db import StatusEnum
+    from api.db.db_models import DB, Document
+
+    run_by_status = {
+        "unstart": "0",
+        "fail": "4",
+        "done_without_embeddings": "3",
+    }
+    if status not in run_by_status:
+        raise ValueError("invalid status")
+    kb = _dataset()
+    where = [
+        Document.kb_id == kb.id,
+        Document.status == StatusEnum.VALID.value,
+        Document.run == run_by_status[status],
+    ]
     if status == "done_without_embeddings":
-        return [row for row in rows if str(row.get("run")) == "3" and not (row.get("chunk_num") or 0)]
-    raise ValueError("invalid status")
+        where.append(Document.chunk_num == 0)
+    with DB.connection_context():
+        rows = list(
+            Document
+            .select()
+            .where(*where)
+            .order_by(Document.id.asc())
+            .limit(capped_requeue_limit(limit))
+            .dicts()
+        )
+    return rows, kb
 
 
 @manager.route("/requeue", methods=["POST"])
 @require_role("admin")
 def requeue():
-    from api.db.db_models import Task
-    from api.db.services.document_service import DocumentService
-    from api.db.services.file2document_service import File2DocumentService
-    from api.db.services.task_service import TaskService, queue_tasks
-
     body = request.get_json(silent=True) or {}
     status = str(body.get("status") or "unstart").lower()
     dry_run = body.get("dry_run", True) is not False
     limit = capped_requeue_limit(body.get("limit", MAX_REQUEUE))
     try:
-        rows, kb = _rows()
-        selected = _selected_for_requeue(rows, status)[:limit]
+        selected, kb = _requeue_rows(status, limit)
     except ValueError as exc:
         return _json(None, 400, error=str(exc))
     if dry_run:
         return _json({"dryRun": True, "matched": len(selected), "queued": 0, "limit": limit})
+    from api.db.db_models import Task
+    from api.db.services.document_service import DocumentService
+    from api.db.services.file2document_service import File2DocumentService
+    from api.db.services.task_service import TaskService, queue_tasks
+
     queued, errors = 0, []
     for row in selected:
         try:
             current = DocumentService.query(id=row["id"], kb_id=kb.id)
-            if not current or _as_dict(current[0]).get("run") != row.get("run"):
+            if not current or not _matches_requeue_status(
+                _as_dict(current[0]), status
+            ):
                 continue
             bucket, name = File2DocumentService.get_storage_address(doc_id=row["id"])
             if not bucket or not name:
@@ -811,6 +885,7 @@ def requeue():
             errors.append({"id": row.get("id"), "error": str(exc)})
     if selected:
         _invalidate_manifest_cache()
+        _invalidate_progress_cache()
     return _json({"dryRun": False, "matched": len(selected), "queued": queued, "errors": errors[:20]})
 
 

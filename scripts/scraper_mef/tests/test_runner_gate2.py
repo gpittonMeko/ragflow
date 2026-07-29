@@ -303,7 +303,7 @@ class TestRunnerGate2(unittest.TestCase):
         code = main(["run", "--max", "0", "--simulate"])
         self.assertEqual(code, 2)
 
-    def test_http_500_counts_attempt_continues(self):
+    def test_http_500_stops_retryable_without_advancing_checkpoint(self):
         with tempfile.TemporaryDirectory() as tmp:
             cfg, limits, index, cp, out = self._ctx(tmp)
             rows = _rows(
@@ -332,9 +332,11 @@ class TestRunnerGate2(unittest.TestCase):
                 fetch_pdf=fetch,
                 resume=False,
             )
-            self.assertEqual(metrics.attempts, 2)
-            self.assertEqual(metrics.downloaded, 1)
+            self.assertEqual(metrics.attempts, 1)
+            self.assertEqual(metrics.downloaded, 0)
             self.assertEqual(metrics.errors, 1)
+            self.assertEqual(cp.data["status"], "error")
+            self.assertEqual(cp.data["last_row_index"], 0)
 
     def test_duplicate_idempotent_second_pass(self):
         with tempfile.TemporaryDirectory() as tmp:

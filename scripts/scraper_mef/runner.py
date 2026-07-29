@@ -7,7 +7,13 @@ from typing import Any, Callable
 
 from .cache import SkipIndex
 from .checkpoint import Checkpoint
-from .client import LiveMefClient, MefBlockedError, MefClient, MefHttpError
+from .client import (
+    LiveMefClient,
+    MefBlockedError,
+    MefClient,
+    MefHttpError,
+    MefPortalError,
+)
 from .config import Config
 from .download import (
     cleanup_tmp_dir,
@@ -53,6 +59,7 @@ def process_rows(
     require_detail_meta: bool = False,
     resume: bool = True,
     upload_queue: UploadQueue | None = None,
+    finalize_status: bool = True,
 ) -> list[dict[str, Any]]:
     """
     Loop core testabile.
@@ -260,7 +267,25 @@ def process_rows(
             log.error("BLOCCATO (stop): %s", reason)
             break
 
-        except (MefHttpError, Exception) as exc:
+        except MefHttpError as exc:
+            metrics.errors += 1
+            reason = f"HTTP {exc.status}: {exc}"[:300]
+            item.update(
+                {
+                    "action": "portal_error",
+                    "error": reason,
+                    "http_status": exc.status,
+                    "retryable": True,
+                }
+            )
+            results.append(item)
+            # Non avanzare riga: il prossimo ciclo deve ritentare lo stesso
+            # documento e l'anno non può risultare completato.
+            checkpoint.set_status("error", block_reason=reason)
+            log.error("errore backend portale (retry): %s", reason)
+            break
+
+        except Exception as exc:
             metrics.errors += 1
             item.update({"action": "download_error", "error": str(exc)[:300]})
             results.append(item)
@@ -272,7 +297,7 @@ def process_rows(
             if not limits.stop.should_stop:
                 limits.pause_between_downloads(log=lambda m: log.info(m))
 
-    if checkpoint.data.get("status") == "running":
+    if finalize_status and checkpoint.data.get("status") == "running":
         if limits.stop.should_stop:
             checkpoint.set_status("stopped")
         elif metrics.blocked:
@@ -280,6 +305,15 @@ def process_rows(
         else:
             checkpoint.set_status("completed")
     return results
+
+
+def next_search_year(checkpoint: Checkpoint, search_years: list[int]) -> int | None:
+    """Ritorna l'anno da riprendere o il primo non completato."""
+    completed = {int(year) for year in checkpoint.data.get("completed_years", [])}
+    current = checkpoint.data.get("search_year")
+    if current is not None and int(current) in search_years and int(current) not in completed:
+        return int(current)
+    return next((year for year in search_years if year not in completed), None)
 
 
 def run_scraper(
@@ -296,7 +330,7 @@ def run_scraper(
     """
     mode:
       - simulate: fixture + PDF sintetico (no portale)
-      - live: CDP browser già aperto sulla pagina risultati MEF
+      - live: CDP esistente o Chromium gestito, con ricerca annuale autonoma
     max_downloads: budget TENTATIVI (non solo successi). --max 0 → errore.
     """
     max_attempts = int(max_downloads)
@@ -316,12 +350,14 @@ def run_scraper(
     if not resume:
         checkpoint.data["last_row_index"] = 0
         checkpoint.data["last_page"] = 0
+        checkpoint.data["search_year"] = None
+        checkpoint.data["completed_years"] = []
         checkpoint.data["processed"] = []
         checkpoint.data["failed"] = []
         checkpoint.data["status"] = "idle"
         checkpoint.data["block_reason"] = None
         checkpoint.save()
-    elif checkpoint.data.get("status") == "completed":
+    elif mode != "live" and checkpoint.data.get("status") == "completed":
         # Nuova run: riparti dalla riga 0 ma conserva processed/failed (idempotenza)
         checkpoint.data["last_row_index"] = 0
         checkpoint.data["status"] = "idle"
@@ -364,15 +400,54 @@ def run_scraper(
         )
 
     elif mode == "live":
-        log.info("LIVE: connessione CDP %s (browser già aperto sulla lista risultati)", cdp_url)
+        log.info("LIVE: connessione browser MEF e ricerca autonoma per anno")
         try:
+            search_years = list(cfg.search_years)
+            if not search_years:
+                raise ValueError("nessun anno MEF configurato")
+            completed = {int(year) for year in checkpoint.data.get("completed_years", [])}
+            if all(year in completed for year in search_years):
+                # Nuovo ciclo: riparte dall'anno più recente configurato senza
+                # cancellare processed, PDF o coda upload.
+                checkpoint.reset_completed_years()
             with LiveMefClient(
                 cdp_url=cdp_url,
                 profile_dir=cfg.browser_profile or None,
                 start_url=cfg.browser_start_url,
                 headless=cfg.browser_headless,
             ) as client:
-                while not limits.stop.should_stop and metrics.attempts < max_attempts:
+                search_year = next_search_year(checkpoint, search_years)
+                while (
+                    search_year is not None
+                    and not limits.stop.should_stop
+                    and metrics.attempts < max_attempts
+                ):
+                    previous_year = checkpoint.data.get("search_year")
+                    saved_page = (
+                        int(checkpoint.data.get("last_page") or 1)
+                        if previous_year == search_year
+                        else 1
+                    )
+                    changed_year = checkpoint.begin_year(search_year)
+                    if changed_year and (
+                        previous_year is not None or bool(cfg.browser_profile)
+                    ):
+                        client.open_search_form()
+                    client.ensure_results(search_year)
+
+                    current_page = client.current_page_number()
+                    if saved_page > 1 and current_page > saved_page:
+                        client.open_search_form()
+                        client.ensure_results(search_year)
+                        current_page = client.current_page_number()
+                    while current_page < saved_page:
+                        if not client.next_page():
+                            raise RuntimeError(
+                                f"checkpoint pagina {saved_page} oltre l'ultima pagina "
+                                f"per l'anno {search_year}"
+                            )
+                        current_page = client.current_page_number()
+
                     rows = client.current_rows()
                     if not rows:
                         log.error("Nessun link Visualizza sulla pagina risultati MEF")
@@ -399,17 +474,49 @@ def run_scraper(
                             require_detail_meta=True,
                             resume=resume,
                             upload_queue=upload_queue,
+                            finalize_status=False,
                         )
                     )
-                    if metrics.attempts >= max_attempts or not client.has_next_page():
+                    if checkpoint.data.get("status") == "blocked":
+                        return 3
+                    if checkpoint.data.get("status") == "error":
+                        return 4
+                    expected_row = max(
+                        int(row.row_index if row.row_index is not None else index)
+                        for index, row in enumerate(rows)
+                    ) + 1
+                    page_complete = (
+                        int(checkpoint.data.get("last_page") or 0) == page_number
+                        and int(checkpoint.data.get("last_row_index") or 0) >= expected_row
+                    )
+                    if not page_complete:
                         break
-                    limits.pause_between_pages(log=lambda m: log.info(m))
-                    if not client.next_page():
+                    if client.has_next_page():
+                        if metrics.attempts >= max_attempts:
+                            break
+                        limits.pause_between_pages(log=lambda m: log.info(m))
+                        if not client.next_page():
+                            raise RuntimeError("pagina successiva annunciata ma non raggiunta")
+                        continue
+
+                    checkpoint.mark_year_completed(search_year)
+                    search_year = next_search_year(checkpoint, search_years)
+                    if search_year is None:
+                        checkpoint.set_status("completed")
                         break
+                if (
+                    checkpoint.data.get("status") == "running"
+                    and (limits.stop.should_stop or metrics.attempts >= max_attempts)
+                ):
+                    checkpoint.set_status("stopped")
         except MefBlockedError as exc:
             log.error("LIVE bloccato: %s", exc)
             checkpoint.set_status("blocked", block_reason=str(exc)[:300])
             return 3
+        except MefPortalError as exc:
+            log.error("LIVE errore temporaneo portale: %s", exc)
+            checkpoint.set_status("error", block_reason=str(exc)[:300])
+            return 4
         except Exception as exc:
             log.error("LIVE fallito: %s", exc)
             log.error(
@@ -445,6 +552,8 @@ def run_scraper(
             "last_document": checkpoint.data.get("last_document"),
             "status": checkpoint.data.get("status"),
             "block_reason": checkpoint.data.get("block_reason"),
+            "search_year": checkpoint.data.get("search_year"),
+            "completed_years": checkpoint.data.get("completed_years"),
         },
         "metrics": metrics.as_dict(),
         "items": results,

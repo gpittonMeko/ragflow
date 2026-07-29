@@ -294,6 +294,22 @@ class TestService(unittest.TestCase):
             self.assertFalse(cfg.lock_path.exists())
             self.assertTrue(cfg.state_path.exists())
 
+    def test_retryable_portal_error_uses_short_service_backoff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = configured(tmp)
+            cfg.upload_enabled = False
+            cfg.blocked_backoff_sec = 21600
+            service = ScraperService(
+                cfg,
+                scrape=lambda: 4,
+                clock=lambda: 100.0,
+                jitter=lambda low, _high: low,
+            )
+            service.run_once(drain=False)
+            self.assertEqual(service.state, "error")
+            self.assertGreater(service.next_scrape_at, 100.0)
+            self.assertLess(service.next_scrape_at, 100.0 + cfg.blocked_backoff_sec)
+
     def test_control_pause_drain_resume_and_stop_transitions(self):
         with tempfile.TemporaryDirectory() as tmp:
             cfg = configured(tmp)

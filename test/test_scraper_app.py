@@ -158,6 +158,15 @@ def test_requeue_limit_is_capped():
     assert scraper_app.capped_requeue_limit("bad") == 200
 
 
+def test_requeue_current_status_includes_missing_embeddings():
+    assert scraper_app._matches_requeue_status(
+        {"run": "3", "chunk_num": 0}, "done_without_embeddings"
+    )
+    assert not scraper_app._matches_requeue_status(
+        {"run": "3", "chunk_num": 1}, "done_without_embeddings"
+    )
+
+
 class FakeLock:
     def __init__(self, acquired=True):
         self.acquired = acquired
@@ -322,6 +331,7 @@ def test_aggregate_progress_summary_preserves_frontend_shape():
 
 
 def test_progress_summary_uses_sql_aggregates_not_manifest(monkeypatch):
+    scraper_app._invalidate_progress_cache()
     monkeypatch.setattr(
         scraper_app, "_dataset", lambda: types.SimpleNamespace(id="kb")
     )
@@ -342,6 +352,32 @@ def test_progress_summary_uses_sql_aggregates_not_manifest(monkeypatch):
     assert scraper_app._progress_summary()["totalDocuments"] == 2
 
 
+def test_progress_summary_cache_hit_and_invalidation(monkeypatch):
+    calls = []
+    monkeypatch.setenv("SGAI_SCRAPER_PROGRESS_TTL", "30")
+    monkeypatch.setattr(
+        scraper_app, "_dataset", lambda: types.SimpleNamespace(id="kb")
+    )
+    monkeypatch.setattr(
+        scraper_app,
+        "_progress_aggregate_rows",
+        lambda kb_id: calls.append(kb_id) or [{
+            "run_status": "3", "doc_count": 1, "chunk_sum": 2,
+            "with_embeddings": 1, "avg_progress": 1,
+            "min_progress": 1, "max_progress": 1,
+        }],
+    )
+    scraper_app._invalidate_progress_cache()
+    first = scraper_app._progress_summary()
+    second = scraper_app._progress_summary()
+    assert first is second
+    assert calls == ["kb"]
+
+    scraper_app._invalidate_progress_cache()
+    scraper_app._progress_summary()
+    assert calls == ["kb", "kb"]
+
+
 def test_check_uses_targeted_document_lookup(client, monkeypatch):
     calls = []
     monkeypatch.setenv("SGAI_SCRAPER_API_TOKEN", "worker-secret")
@@ -356,6 +392,32 @@ def test_check_uses_targeted_document_lookup(client, monkeypatch):
     )
     assert response.status_code == 200
     assert calls == ["Sentenza_V10_1_2026"]
+
+
+def test_named_progress_bypasses_global_cache(client, monkeypatch):
+    monkeypatch.setenv("SGAI_SCRAPER_API_TOKEN", "worker-secret")
+    monkeypatch.setattr(
+        scraper_app,
+        "_progress_summary",
+        lambda: pytest.fail("named progress must remain authoritative"),
+    )
+    monkeypatch.setattr(
+        scraper_app,
+        "_docs_for_key",
+        lambda key: ([{
+            "id": "doc-1",
+            "name": f"{key}.pdf",
+            "run": "3",
+            "progress": 1,
+            "chunk_num": 2,
+        }], object()),
+    )
+    response = client.get(
+        "/v1/scraper/progress?nome_base=Sentenza_V10_1_2026",
+        headers={"Authorization": "Bearer worker-secret"},
+    )
+    assert response.status_code == 200
+    assert response.get_json()["data"]["hasEmbedding"] is True
 
 
 def test_docs_for_key_uses_direct_limited_model_query(monkeypatch):
@@ -433,6 +495,117 @@ def test_docs_for_key_uses_direct_limited_model_query(monkeypatch):
     rows, _ = scraper_app._docs_for_key("Sentenza_V10_1_2026")
     assert Query.server_limit == scraper_app.DOCUMENT_LOOKUP_LIMIT == 200
     assert [row["id"] for row in rows] == ["doc-1"]
+
+
+def test_requeue_query_filters_and_limits_server_side(monkeypatch):
+    class Expression:
+        def __init__(self, field, value):
+            self.field = field
+            self.value = value
+
+    class Field:
+        def __init__(self, name):
+            self.name = name
+
+        def __eq__(self, value):
+            return Expression(self.name, value)
+
+        def asc(self):
+            return self
+
+    class Query:
+        conditions = []
+        server_limit = None
+
+        def where(self, *conditions):
+            Query.conditions = [(item.field, item.value) for item in conditions]
+            return self
+
+        def order_by(self, _field):
+            return self
+
+        def limit(self, value):
+            Query.server_limit = value
+            return self
+
+        def dicts(self):
+            return iter([{"id": "doc-1", "run": "3", "chunk_num": 0}])
+
+    fields = ("id", "kb_id", "status", "run", "chunk_num")
+    fake_document = type(
+        "FakeDocument",
+        (),
+        {
+            **{name: Field(name) for name in fields},
+            "select": classmethod(lambda cls: Query()),
+        },
+    )
+
+    class ConnectionContext:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+    fake_db_models = types.ModuleType("api.db.db_models")
+    fake_db_models.DB = types.SimpleNamespace(
+        connection_context=lambda: ConnectionContext()
+    )
+    fake_db_models.Document = fake_document
+    fake_db = types.ModuleType("api.db")
+    fake_db.StatusEnum = types.SimpleNamespace(
+        VALID=types.SimpleNamespace(value="1")
+    )
+    monkeypatch.setitem(sys.modules, "api.db", fake_db)
+    monkeypatch.setitem(sys.modules, "api.db.db_models", fake_db_models)
+    monkeypatch.setattr(
+        scraper_app,
+        "_dataset",
+        lambda: types.SimpleNamespace(id="kb", tenant_id="tenant"),
+    )
+    monkeypatch.setattr(
+        scraper_app,
+        "_rows",
+        lambda: pytest.fail("requeue must not materialize all documents"),
+    )
+
+    rows, _ = scraper_app._requeue_rows("done_without_embeddings", 9999)
+    assert rows[0]["id"] == "doc-1"
+    assert Query.server_limit == scraper_app.MAX_REQUEUE == 200
+    assert set(Query.conditions) == {
+        ("kb_id", "kb"),
+        ("status", "1"),
+        ("run", "3"),
+        ("chunk_num", 0),
+    }
+
+
+def test_requeue_endpoint_does_not_call_rows(client, monkeypatch):
+    with client.session_transaction() as browser_session:
+        browser_session[scraper_app.ADMIN_SESSION_KEY] = True
+        browser_session[scraper_app.ADMIN_LOGIN_AT_KEY] = time.time()
+    monkeypatch.setattr(
+        scraper_app,
+        "_rows",
+        lambda: pytest.fail("requeue endpoint must not full-scan"),
+    )
+    monkeypatch.setattr(
+        scraper_app,
+        "_requeue_rows",
+        lambda status, limit: ([], types.SimpleNamespace(id="kb")),
+    )
+    response = client.post(
+        "/v1/scraper/requeue",
+        json={"status": "fail", "limit": 9999, "dry_run": True},
+    )
+    assert response.status_code == 200
+    assert response.get_json()["data"] == {
+        "dryRun": True,
+        "matched": 0,
+        "queued": 0,
+        "limit": 200,
+    }
 
 
 def test_upload_existing_lookup_reuses_targeted_document_lookup(monkeypatch):

@@ -14,9 +14,13 @@ python -m scripts.scraper_mef service
 python -m scripts.scraper_mef service --once
 ```
 
-`run --live` attraversa tutte le pagine fino all'ultima o al budget `--max`.
-`service` ripete i cicli, conserva checkpoint pagina/riga, applica i limiti
-disco, drena batch seriali e segue ogni documento fino a `hasEmbedding=true`.
+`run --live` apre autonomamente il modulo MEF, cerca gli anni configurati e
+attraversa tutte le pagine fino all'ultima o al budget `--max`. `service`
+ripete i cicli e conserva nel checkpoint anno/pagina/riga e anni completati.
+Un anno diventa completato soltanto dopo l'ultima pagina; terminato l'intero
+intervallo, il ciclo seguente riparte dall'anno più recente senza cancellare
+PDF o coda. Il servizio applica inoltre i limiti disco, drena batch seriali e
+segue ogni documento fino a `hasEmbedding=true`.
 I PDF non vengono mai eliminati automaticamente. Gli elementi `dead` non sono
 riaccodati automaticamente.
 
@@ -27,9 +31,11 @@ Il browser può essere:
   sessione riutilizzabile e URL iniziale `MEF_SCRAPER_START_URL`.
 
 La prima autenticazione/CAPTCHA può richiedere bootstrap manuale del profilo.
-In seguito il servizio non dipende da una tab manuale. Su 403, 429 o CAPTCHA
+In seguito il servizio non dipende da una tab manuale. Non tenta alcun bypass:
+su 403, 429 o CAPTCHA
 salva il checkpoint, entra in `blocked` e usa un backoff lungo; non esegue
-rotazione VPN/IP.
+rotazione VPN/IP. Un errore applicativo del portale resta ritentabile con
+backoff e non completa l'anno.
 
 ## Coda e wake
 
@@ -60,7 +66,9 @@ Copiare `.env.example`; nessun segreto è incluso. Variabili principali:
   `MEF_SCRAPER_WAKE_COOLDOWN`, `MEF_SCRAPER_WAKE_WAIT`;
 - portale: `MEF_SCRAPER_DL_DELAY_MIN`, `MEF_SCRAPER_DL_DELAY_MAX`,
   `MEF_SCRAPER_PAGE_DELAY`, `MEF_SCRAPER_BROWSER_PROFILE`,
-  `MEF_SCRAPER_START_URL`, `MEF_SCRAPER_BROWSER_HEADLESS`;
+  `MEF_SCRAPER_START_URL`, `MEF_SCRAPER_BROWSER_HEADLESS`,
+  `MEF_SCRAPER_SEARCH_YEARS` (lista `2026,2025` o intervallo `2021-2026`;
+  default dinamico dall'anno corrente al 2021 in ordine decrescente);
 - disco/PDF: `MEF_SCRAPER_MAX_SPOOL_BYTES`, `MEF_SCRAPER_MIN_FREE_BYTES`,
   `MEF_SCRAPER_MIN_PDF_BYTES`, `MEF_SCRAPER_MAX_PDF_BYTES`.
 

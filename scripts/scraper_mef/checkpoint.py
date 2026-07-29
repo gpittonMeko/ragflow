@@ -21,9 +21,11 @@ class Checkpoint:
     def __init__(self, path: Path) -> None:
         self.path = path
         self.data: dict[str, Any] = {
-            "version": 2,
+            "version": 3,
             "last_page": 0,
             "last_row_index": 0,
+            "search_year": None,
+            "completed_years": [],
             "last_nome_base": None,
             "last_document": None,
             "processed": [],
@@ -44,8 +46,10 @@ class Checkpoint:
         self.data.setdefault("failed", [])
         self.data.setdefault("last_row_index", 0)
         self.data.setdefault("last_page", 0)
+        self.data.setdefault("search_year", None)
+        self.data.setdefault("completed_years", [])
         self.data.setdefault("status", "idle")
-        self.data.setdefault("version", 2)
+        self.data.setdefault("version", 3)
 
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -77,6 +81,37 @@ class Checkpoint:
         if prev != 0 and prev != page:
             self.data["last_row_index"] = 0
         self.data["last_page"] = page
+        self.save()
+
+    def begin_year(self, year: int) -> bool:
+        """Seleziona l'anno; pagina/riga si azzerano soltanto al cambio anno."""
+        year = int(year)
+        changed = self.data.get("search_year") != year
+        if changed:
+            self.data["search_year"] = year
+            self.data["last_page"] = 0
+            self.data["last_row_index"] = 0
+        self.data["status"] = "running"
+        self.data["block_reason"] = None
+        self.save()
+        return changed
+
+    def mark_year_completed(self, year: int) -> None:
+        year = int(year)
+        completed = self.data.setdefault("completed_years", [])
+        if year not in completed:
+            completed.append(year)
+        self.data["search_year"] = year
+        self.data["last_page"] = 0
+        self.data["last_row_index"] = 0
+        self.save()
+
+    def reset_completed_years(self) -> None:
+        """Apre una nuova scansione senza toccare PDF, processed o coda."""
+        self.data["completed_years"] = []
+        self.data["search_year"] = None
+        self.data["last_page"] = 0
+        self.data["last_row_index"] = 0
         self.save()
 
     def unmark_processed(self, nome_base: str) -> None:

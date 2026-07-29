@@ -128,6 +128,7 @@ class ScraperService:
         self.last_heartbeat = 0.0
         self.last_progress_poll = 0.0
         self.last_control_poll = 0.0
+        self.scrape_failures = 0
         self.metrics = {
             "cycles": 0,
             "downloaded": 0,
@@ -161,6 +162,8 @@ class ScraperService:
             "row": cp.data.get("last_row_index"),
             "document": cp.data.get("last_document"),
             "status": cp.data.get("status"),
+            "searchYear": cp.data.get("search_year"),
+            "completedYears": cp.data.get("completed_years"),
         }
 
     def _write_state(self, disk: dict | None = None) -> None:
@@ -372,11 +375,17 @@ class ScraperService:
                 self.metrics["downloaded"] += max(0, after_downloads - before_downloads)
                 self.metrics["errors"] += int(code not in (0, 3))
                 if code == 3:
+                    self.scrape_failures = 0
                     self.state = "blocked"
                     self.next_scrape_at = now + self.cfg.blocked_backoff_sec
+                elif code != 0:
+                    self.scrape_failures += 1
+                    self.next_scrape_at = now + self._retry_delay(self.scrape_failures)
+                    self.state = "error"
                 else:
+                    self.scrape_failures = 0
                     self.next_scrape_at = now + self.cfg.cycle_interval_sec
-                    self.state = "idle" if code == 0 else "error"
+                    self.state = "idle"
             else:
                 self.state = "paused"
                 self.error = "download sospesi dai limiti disco"

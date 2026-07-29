@@ -183,7 +183,7 @@ def main(argv: list[str] | None = None) -> int:
     p_run.add_argument(
         "--live",
         action="store_true",
-        help="Download reale via CDP (browser già aperto sulla lista MEF)",
+        help="Download reale via CDP o Chromium gestito, con ricerca MEF autonoma",
     )
     p_run.add_argument(
         "--fixture",
