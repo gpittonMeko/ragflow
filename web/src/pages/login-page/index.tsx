@@ -1406,7 +1406,8 @@ const PresentationPage: React.FC = () => {
               position: 'relative',
               padding: 0,
               margin: 0,
-              overflow: 'hidden',
+              /* Docked: visible così autoSize del composer non viene tagliato */
+              overflow: chatExpanded ? 'hidden' : 'visible',
               boxSizing: 'border-box',
               ...(chatExpanded
                 ? {
@@ -1423,13 +1424,10 @@ const PresentationPage: React.FC = () => {
                     alignSelf: 'center',
                     width: '100%',
                     maxWidth: 'min(780px, calc(100vw - 16px))',
-                    minHeight: hasMessages ? 300 : 240,
-                    height: hasMessages
-                      ? 'min(54vh, 520px)'
-                      : 'min(40vh, 400px)',
-                    maxHeight: 'min(68vh, 640px)',
-                    transition:
-                      'height 0.35s cubic-bezier(0.4, 0, 0.2, 1), min-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                    minHeight: hasMessages ? 360 : 200,
+                    height: hasMessages ? 'min(62vh, 620px)' : 'auto',
+                    maxHeight: hasMessages ? 'min(74vh, 720px)' : 'none',
+                    transition: 'height 0.2s ease, min-height 0.2s ease',
                   }),
             }}
           >
@@ -1475,7 +1473,7 @@ const PresentationPage: React.FC = () => {
                   flexDirection: 'column',
                   background: 'transparent',
                   overflowX: 'hidden',
-                  overflowY: 'hidden',
+                  overflowY: chatExpanded ? 'hidden' : 'visible',
                   padding: 0,
                   margin: 0,
                 }}
@@ -1553,6 +1551,51 @@ const PresentationPage: React.FC = () => {
             )}
             items={[
               {
+                key: 'chat-help',
+                label: (
+                  <span className={styles.featureAccordionLabel}>
+                    <span
+                      className={styles.featureAccordionIconWrap}
+                      aria-hidden
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                      </svg>
+                    </span>
+                    Come funziona la chat
+                  </span>
+                ),
+                children: (
+                  <div className={styles.featureAccordionBody}>
+                    <p>
+                      Scrivi una domanda in linguaggio naturale oppure usa la{' '}
+                      <strong>proposta testuale</strong> suggerita:{' '}
+                      <strong>⇧ Invio</strong> la copia nel campo, poi Invio per
+                      inviare.
+                    </p>
+                    <p>
+                      Con <strong>Allega</strong> puoi caricare PDF e documenti
+                      Office; l’analisi userà il file insieme alla tua domanda.
+                      L’icona filtri apre opzioni su web, documenti e basi
+                      knowledge.
+                    </p>
+                    <p>
+                      Per conversazioni lunghe usa{' '}
+                      <strong>Apri chat a tutto schermo</strong>. Le risposte
+                      sono un supporto alla ricerca: non sostituiscono il parere
+                      professionale.
+                    </p>
+                  </div>
+                ),
+              },
+              {
                 key: 'privacy',
                 label: (
                   <span className={styles.featureAccordionLabel}>
@@ -1582,7 +1625,19 @@ const PresentationPage: React.FC = () => {
                     log tecnici, contenuti che inserisci) secondo l’informativa
                     privacy. Non vendiamo i tuoi dati a terzi per fini
                     commerciali; puoi esercitare i diritti previsti dalla
-                    normativa in qualsiasi momento.
+                    normativa in qualsiasi momento. Leggi la{' '}
+                    <a href="/privacy.html" target="_blank" rel="noopener">
+                      Privacy Policy
+                    </a>{' '}
+                    e la{' '}
+                    <a
+                      href="/cookie-policy.html"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      Cookie Policy
+                    </a>
+                    .
                   </p>
                 ),
               },
@@ -1679,8 +1734,8 @@ const PresentationPage: React.FC = () => {
         {/* Sede Legale - Separato e ben visibile sotto il disclaimer */}
         <div className={styles.legalFooter}>
           <p>
-            SGAI S.r.l. - Sede Legale: Via Ettore Majorana 32, Noventa di Piave
-            (VE)
+            SGAI SRL - P.IVA/C.F. 04980750279 - Sede legale: Via Ettore Maiorana
+            32, Noventa di Piave (VE)
           </p>
         </div>
       </div>
@@ -1830,18 +1885,6 @@ const PresentationPage: React.FC = () => {
           href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
           rel="stylesheet"
         />
-        <script
-          async
-          src="https://www.googletagmanager.com/gtag/js?id=G-P9QCNBXQKP"
-        />
-        <script>
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-P9QCNBXQKP');
-          `}
-        </script>
       </Helmet>
     </div>
   );

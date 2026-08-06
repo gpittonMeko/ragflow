@@ -66,13 +66,16 @@
 
 :root,
 [data-theme='light'] {
-  & * {
+  .pageContainer,
+  .heroSection,
+  .featureCard,
+  .featuresAccordion,
+  .iframeSectionDocked {
     transition:
-      background-color 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-      color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-      border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-      box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-      fill 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      background-color 0.18s ease,
+      color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
   }
 }
 
@@ -1317,11 +1320,18 @@ body {
   text-decoration: none;
   transition: all 0.2s ease;
   gap: 4px;
+  flex-shrink: 0;
 
   &:hover {
     background: var(--button-hover);
     color: var(--accent-color);
     text-decoration: none;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
   }
 }
 
@@ -1337,6 +1347,7 @@ body {
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 
   &:hover {
     background: #e53e3e;
@@ -1346,6 +1357,94 @@ body {
   &:active {
     transform: scale(0.95);
   }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Header chat: su mobile icone più piccole, niente label, logo compatto */
+@media (max-width: 768px) {
+  .chatFullHeader {
+    height: 44px;
+    min-height: 44px;
+    padding: 0 6px;
+    gap: 4px;
+  }
+
+  .chatFullHeaderActions {
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .chatFullHeaderBtnLabel {
+    display: none !important;
+  }
+
+  .chatFullHeaderBtn {
+    min-width: 30px;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 15px;
+    gap: 0;
+
+    svg {
+      width: 15px;
+      height: 15px;
+    }
+  }
+
+  .closeChatBtn {
+    width: 30px;
+    height: 30px;
+
+    svg {
+      width: 15px;
+      height: 15px;
+    }
+  }
+
+  .chatFullHeaderLogo {
+    min-width: 0;
+    height: 26px;
+    padding: 0 4px;
+    flex: 1 1 auto;
+    justify-content: center;
+    overflow: hidden;
+
+    svg {
+      max-width: 72px !important;
+      max-height: 24px !important;
+      height: 22px !important;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .chatFullHeader {
+    height: 40px;
+    min-height: 40px;
+    padding: 0 4px;
+  }
+
+  .chatFullHeaderBtn,
+  .closeChatBtn {
+    min-width: 28px;
+    width: 28px;
+    height: 28px;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  .chatFullHeaderLogo svg {
+    max-width: 64px !important;
+    height: 20px !important;
+  }
 }
 
 .iframeSection {
@@ -1354,16 +1453,11 @@ body {
   flex-direction: column;
   overflow: hidden;
   margin-top: 0;
+}
 
-  * {
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-    &::-webkit-scrollbar {
-      display: none !important;
-      width: 0 !important;
-      height: 0 !important;
-    }
-  }
+/* Docked: lascia crescere il composer (autoSize) senza tagliare il testo */
+.iframeSectionDocked {
+  overflow: visible !important;
 }
 
 /* Stato normale: fissa a 300px */
@@ -1544,11 +1638,15 @@ body {
   padding-right: 0;
   max-height: none;
   flex: 1 1 auto;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent-color) 45%, transparent)
+    transparent;
   &::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
+    width: 6px !important;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--accent-color) 40%, transparent);
+    border-radius: 999px;
   }
 }
 
@@ -1874,13 +1972,12 @@ body {
 /* Anteprima chat: vetro + bordo tenue (no arcobaleno “pesante”) */
 .iframeSectionDocked {
   contain: style;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: color-mix(in srgb, var(--card-bg) 96%, rgba(139, 92, 246, 0.06));
-  backdrop-filter: blur(14px) saturate(1.15);
+  border-radius: 18px;
+  border: 1px solid rgba(159, 216, 255, 0.18);
+  background: color-mix(in srgb, var(--card-bg) 98%, rgba(15, 98, 254, 0.04));
   box-shadow:
-    0 4px 28px rgba(0, 0, 0, 0.22),
-    0 0 0 1px rgba(139, 92, 246, 0.12) inset;
+    0 10px 38px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(159, 216, 255, 0.08) inset;
 }
 
 [data-theme='light'] .iframeSectionDocked {

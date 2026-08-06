@@ -57,6 +57,7 @@ function formatKnowledgeLabel(raw: string): string {
  */
 const RETRIEVAL_TOP_N_FORCED = { fast: 4, extended: 28 } as const;
 type RetrievalMode = 'standard' | keyof typeof RETRIEVAL_TOP_N_FORCED;
+const EMPTY_MESSAGE_REFERENCE = { doc_aggs: [], chunks: [], total: 0 };
 
 function retrievalTopNForPayload(mode: RetrievalMode): number | undefined {
   if (mode === 'standard') return undefined;
@@ -282,7 +283,9 @@ const DirectChat: React.FC<DirectChatProps> = ({
     return () => clearInterval(id);
   }, [showGhost]);
 
-  const ghostBody = SHARED_SUGGESTED_PROMPTS[suggestionIndex]?.body ?? '';
+  const ghostBody = (
+    SHARED_SUGGESTED_PROMPTS[suggestionIndex]?.body ?? ''
+  ).replace(/\n{2,}/g, '\n');
 
   const handleGhostAccept = useCallback(() => {
     if (ghostBody) setValue(ghostBody);
@@ -297,32 +300,42 @@ const DirectChat: React.FC<DirectChatProps> = ({
     },
   );
 
-  // Notify parent when messages change
+  // Notify parent when message count changes only. Streaming token updates must not rerender the whole landing page.
   useEffect(() => {
     if (onMessagesChange && derivedMessages) {
       onMessagesChange(derivedMessages.length);
     }
-  }, [derivedMessages, onMessagesChange]);
+  }, [derivedMessages?.length, onMessagesChange]);
 
-  // Update chat history when messages change
+  const lastChatUpdateSignatureRef = useRef<string>('');
+
+  // Update chat history after a turn settles. Updating on every streamed token makes the whole page feel stuck.
   useEffect(() => {
-    if (onChatUpdate && derivedMessages && derivedMessages.length > 0) {
-      const lastMessage = derivedMessages[derivedMessages.length - 1];
-      if (lastMessage && lastMessage.content) {
-        // Generate title from first user message
-        const firstUserMessage = derivedMessages.find(
-          (msg) => msg.role === 'user',
-        );
-        const title =
-          firstUserMessage?.content?.slice(0, 50) + '...' || 'Nuova Chat';
+    if (!onChatUpdate || !derivedMessages?.length || sendLoading) return;
+    const lastMessage = derivedMessages[derivedMessages.length - 1];
+    if (!lastMessage?.content) return;
+    const signature = `${derivedMessages.length}:${lastMessage.id}:${lastMessage.content.length}`;
+    if (lastChatUpdateSignatureRef.current === signature) return;
+    lastChatUpdateSignatureRef.current = signature;
+    const firstUserMessage = derivedMessages.find((msg) => msg.role === 'user');
+    const title =
+      firstUserMessage?.content?.slice(0, 50) + '...' || 'Nuova Chat';
+    const lastMessageContent = lastMessage.content.slice(0, 100) + '...';
+    onChatUpdate(title, lastMessageContent);
+  }, [derivedMessages?.length, onChatUpdate, sendLoading]);
 
-        // Get last message content
-        const lastMessageContent = lastMessage.content.slice(0, 100) + '...';
-
-        onChatUpdate(title, lastMessageContent);
-      }
-    }
-  }, [derivedMessages, onChatUpdate]);
+  const messageReferences = useMemo(() => {
+    const messages = derivedMessages ?? [];
+    const conversation = { message: messages, reference: [] };
+    return messages.map((message) => {
+      const ref = buildMessageItemReference(conversation, message);
+      const hasReference =
+        (ref?.doc_aggs?.length ?? 0) > 0 ||
+        (ref?.chunks?.length ?? 0) > 0 ||
+        (ref?.total ?? 0) > 0;
+      return hasReference ? ref : EMPTY_MESSAGE_REFERENCE;
+    });
+  }, [derivedMessages]);
 
   // Load historical messages when sessionId changes
   const prevSessionIdRef = useRef<string | undefined>(sessionId);
@@ -360,16 +373,19 @@ const DirectChat: React.FC<DirectChatProps> = ({
 
   const lastMessageIndex = derivedMessages ? derivedMessages.length - 1 : -1;
 
-  /** Embed dockato senza messaggi: evita che l’area messaggi mangi tutta l’altezza (fascia vuota sopra il compositore). */
+  /** Embed dockato senza messaggi: layout chat classico, con composer ancorato in basso. */
   const compactEmbedEmpty =
     !layoutExpanded && (derivedMessages?.length ?? 0) === 0;
 
   const embedTextareaAutoSize = useMemo(
     () =>
-      layoutExpanded
-        ? { minRows: 1, maxRows: 24 }
-        : { minRows: 2, maxRows: 28 },
-    [layoutExpanded],
+      // minRows basso + maxRows alto: il campo cresce con le righe (anche su mobile)
+      compactEmbedEmpty
+        ? { minRows: 2, maxRows: 14 }
+        : layoutExpanded
+          ? { minRows: 2, maxRows: 18 }
+          : { minRows: 2, maxRows: 12 },
+    [compactEmbedEmpty, layoutExpanded],
   );
   const keyboardOffset = useKeyboardOffset(omitKeyboardInset);
   const inputWrapperRef = useRef<HTMLDivElement>(null);
@@ -595,6 +611,8 @@ const DirectChat: React.FC<DirectChatProps> = ({
             >
               {derivedMessages?.map((message, i) => {
                 const isLastMessage = i === lastMessageIndex;
+                const messageReference =
+                  messageReferences[i] ?? EMPTY_MESSAGE_REFERENCE;
                 return (
                   <div key={buildMessageUuidWithRole(message)}>
                     <MessageItem
@@ -603,13 +621,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
                       avatarDialog={avatarData?.avatar}
                       item={message}
                       nickname="You"
-                      reference={buildMessageItemReference(
-                        {
-                          message: derivedMessages,
-                          reference: [],
-                        },
-                        message,
-                      )}
+                      reference={messageReference}
                       loading={
                         message.role === MessageType.Assistant &&
                         sendLoading &&
@@ -632,18 +644,15 @@ const DirectChat: React.FC<DirectChatProps> = ({
           className={styles.directChatInputColumn}
           style={{
             flexShrink: 0,
-            /* Compatta: solo altezza contenuto; lo spazio verticale resta all’area messaggi */
             flex: layoutExpanded ? undefined : '0 0 auto',
             minHeight: 0,
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
+            justifyContent: 'flex-end',
           }}
         >
-          <div
-            className={styles.embedChatInputShell}
-            data-sgai-compact-empty={compactEmbedEmpty ? '' : undefined}
-          >
+          <div className={styles.embedChatInputShell}>
             <MessageInput
               isShared
               value={value}
@@ -700,6 +709,7 @@ const DirectChat: React.FC<DirectChatProps> = ({
               stopOutputMessage={stopOutputMessage}
               textareaAutoSize={embedTextareaAutoSize}
               embedComposerCompact={!layoutExpanded}
+              embedComposerFill={false}
               wrapperRef={inputWrapperRef}
               onInputFocus={handleInputFocus}
               ghostSuggestionCycleKey={showGhost ? suggestionIndex : undefined}

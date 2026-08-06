@@ -42,6 +42,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -103,6 +104,8 @@ interface IProps {
   uploadAccept?: string;
   /** Chat embed minimizzata: compositore compatto (max righe / altezza proposta) */
   embedComposerCompact?: boolean;
+  /** Usa tutta l'altezza disponibile nel composer embed. */
+  embedComposerFill?: boolean;
 }
 
 const getBase64 = (file: FileType): Promise<string> =>
@@ -138,6 +141,7 @@ const MessageInput = ({
   leadingActions,
   uploadAccept = CHAT_UPLOAD_ACCEPT,
   embedComposerCompact = false,
+  embedComposerFill = false,
 }: IProps) => {
   const { t } = useTranslate('chat');
   const { removeDocument } = useRemoveNextDocument();
@@ -333,13 +337,58 @@ const MessageInput = ({
     }
   }, [onInputFocus, scrollRef]);
 
-  const resolvedTextareaAutoSize =
-    textareaAutoSize ??
-    (isShared
-      ? embedComposerCompact
-        ? { minRows: 4, maxRows: 28 }
-        : { minRows: 1, maxRows: 4 }
-      : { minRows: 1, maxRows: 10 });
+  const normalizedGhost =
+    ghostSuggestion?.replace(/\n{2,}/g, '\n').trim() ?? '';
+  const ghostActive = Boolean(ghostSuggestion && trim(value) === '');
+  const ghostLineCount = useMemo(() => {
+    if (!normalizedGhost) return 1;
+    const lines = normalizedGhost.split('\n').length;
+    // Testo lungo su una riga: stima wrap approssimativa
+    const wrapExtra = Math.floor(normalizedGhost.length / 42);
+    return Math.min(14, Math.max(lines, lines + wrapExtra));
+  }, [normalizedGhost]);
+
+  const resolvedTextareaAutoSize = useMemo(() => {
+    const base =
+      textareaAutoSize ??
+      (isShared
+        ? embedComposerCompact
+          ? { minRows: 2, maxRows: 28 }
+          : { minRows: 1, maxRows: 4 }
+        : { minRows: 1, maxRows: 10 });
+    if (ghostActive) {
+      // Compatta: ghost in blocco sopra → textarea minimo.
+      // Espansa: overlay → allinea minRows al suggerimento così l’area cresce.
+      if (embedComposerCompact) {
+        return { minRows: 1, maxRows: base.maxRows };
+      }
+      return {
+        minRows: Math.min(base.maxRows, Math.max(base.minRows, ghostLineCount)),
+        maxRows: base.maxRows,
+      };
+    }
+    return base;
+  }, [
+    textareaAutoSize,
+    isShared,
+    embedComposerCompact,
+    ghostActive,
+    ghostLineCount,
+  ]);
+
+  useEffect(() => {
+    if (!isShared) return;
+    const resize = () =>
+      embedTextAreaRef.current?.resizableTextArea?.resizeTextarea?.();
+    resize();
+    // Dopo layout / tastiera mobile autosize a volte non ricalcola al primo frame
+    const t1 = window.setTimeout(resize, 50);
+    const t2 = window.setTimeout(resize, 200);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [isShared, value, resolvedTextareaAutoSize, ghostActive, ghostLineCount]);
 
   const handleTextAreaChange = useCallback<
     ChangeEventHandler<HTMLTextAreaElement>
@@ -365,7 +414,11 @@ const MessageInput = ({
       ref={scrollRef}
       className={cn(
         styles.inputScrollAnchor,
-        isShared && embedComposerCompact && styles.inputScrollAnchorEmbedFill,
+        isShared &&
+          embedComposerCompact &&
+          embedComposerFill &&
+          styles.inputScrollAnchorEmbedFill,
+        isShared && embedComposerFill && styles.inputScrollAnchorEmbedArea,
       )}
     >
       <Flex
@@ -374,8 +427,12 @@ const MessageInput = ({
         className={cn(
           styles.messageInputWrapper,
           isShared && styles.messageInputShared,
-          isShared && embedComposerCompact && styles.messageInputEmbedGrow,
           isShared && embedComposerCompact && styles.messageInputEmbedTight,
+          isShared &&
+            embedComposerCompact &&
+            embedComposerFill &&
+            styles.messageInputEmbedGrow,
+          isShared && embedComposerFill && styles.messageInputEmbedFillArea,
           'dark:bg-black',
         )}
       >
@@ -384,13 +441,16 @@ const MessageInput = ({
             className={cn(
               styles.embedComposer,
               embedComposerCompact && styles.embedComposerCompact,
-              embedComposerCompact && styles.embedComposerFlexFill,
+              embedComposerCompact &&
+                embedComposerFill &&
+                styles.embedComposerFlexFill,
+              embedComposerFill && styles.embedComposerFillArea,
               ghostSuggestion &&
                 trim(value) === '' &&
                 styles.textareaWithGhostActive,
             )}
           >
-            {ghostSuggestion && trim(value) === '' && !embedComposerCompact ? (
+            {ghostActive ? (
               <div className={styles.embedComposerTopBar}>
                 <span className={styles.embedComposerProposalLabel}>
                   Proposta testuale
@@ -410,33 +470,16 @@ const MessageInput = ({
             <div
               className={cn(
                 styles.embedComposerEditor,
-                embedComposerCompact && styles.embedComposerEditorFlexFill,
-                ghostSuggestion &&
-                  trim(value) === '' &&
-                  embedComposerCompact &&
-                  styles.embedComposerEditorOverlayHost,
+                embedComposerCompact &&
+                  embedComposerFill &&
+                  styles.embedComposerEditorFlexFill,
+                embedComposerFill && styles.embedComposerEditorFillArea,
                 styles.textareaWithGhost,
                 styles.textareaWithGhostShared,
+                embedComposerCompact && styles.embedComposerEditorCompact,
               )}
             >
-              {ghostSuggestion && trim(value) === '' && embedComposerCompact ? (
-                <div className={styles.embedComposerTopBarOverlay}>
-                  <span className={styles.embedComposerProposalLabel}>
-                    Proposta testuale
-                  </span>
-                  {onGhostAccept ? (
-                    <Button
-                      type="link"
-                      size="small"
-                      className={styles.embedComposerAcceptBtn}
-                      onClick={handleGhostAcceptClick}
-                    >
-                      Usa nel campo
-                    </Button>
-                  ) : null}
-                </div>
-              ) : null}
-              {ghostSuggestion && trim(value) === '' ? (
+              {ghostActive ? (
                 <div
                   key={
                     typeof ghostSuggestionCycleKey === 'number'
@@ -444,28 +487,29 @@ const MessageInput = ({
                       : ghostSuggestion
                   }
                   className={cn(
-                    styles.inputGhostLayer,
                     styles.inputGhostLayerEmbed,
-                    embedComposerCompact &&
-                      styles.inputGhostLayerEmbedBelowOverlayBar,
+                    embedComposerCompact
+                      ? styles.inputGhostLayerEmbedBlock
+                      : styles.inputGhostLayer,
                     typeof ghostSuggestionCycleKey === 'number' &&
                       styles.embedGhostCycleShell,
                   )}
                   aria-hidden
                 >
-                  {ghostSuggestion}
+                  {normalizedGhost}
                 </div>
               ) : null}
               <TextArea
                 ref={embedTextAreaRef}
-                className={
-                  ghostSuggestion && trim(value) === ''
+                className={cn(
+                  ghostActive && !embedComposerCompact
                     ? styles.textareaOverGhost
-                    : undefined
-                }
+                    : undefined,
+                  embedComposerFill && styles.embedTextareaFillArea,
+                )}
                 size="middle"
                 placeholder={
-                  ghostSuggestion && trim(value) === ''
+                  ghostActive && !embedComposerCompact
                     ? ''
                     : t('sendPlaceholder')
                 }
@@ -526,12 +570,12 @@ const MessageInput = ({
                 className={styles.inputGhostLayer}
                 aria-hidden
               >
-                {ghostSuggestion}
+                {ghostSuggestion.replace(/\n{2,}/g, '\n').trim()}
               </div>
             ) : null}
           </div>
         )}
-        {ghostHint && ghostSuggestion && trim(value) === '' ? (
+        {ghostHint && ghostActive ? (
           <span className={styles.ghostHint}>{ghostHint}</span>
         ) : null}
         {!isShared && <Divider style={{ margin: '5px 30px 10px 0px' }} />}

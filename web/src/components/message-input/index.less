@@ -103,11 +103,24 @@
 /* Login embed compatta: margini esterni minimi (sovrascrive .messageInputWrapper 8px/12px) */
 .messageInputShared.messageInputEmbedTight.messageInputWrapper {
   margin: 0 !important;
-  padding: 2px 2px 4px !important;
-  border-radius: 6px;
+  padding: 10px 12px 10px !important;
+  border-radius: 18px;
+  flex: 0 0 auto !important;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-color: color-mix(
+    in srgb,
+    var(--border-color, #e0e0e0) 78%,
+    var(--accent-color, #0f62fe) 22%
+  );
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
 
   :global(.ant-input-affix-wrapper) {
-    padding: 2px 4px 0 !important;
+    padding: 0 !important;
   }
 }
 
@@ -117,14 +130,102 @@
   min-height: 0;
 }
 
-.messageInputEmbedTight .embedComposerFlexFill {
-  flex: 0 1 auto !important;
-  min-height: auto !important;
+/* Non-fill: editor alto quanto il contenuto (autoSize), non “assorbe” flex */
+.messageInputShared:not(.messageInputEmbedFillArea) .embedComposer {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
 }
 
-.messageInputEmbedTight .embedComposerEditorFlexFill {
-  flex: 0 1 auto !important;
+.messageInputShared:not(.messageInputEmbedFillArea) .embedComposerEditor,
+.messageInputEmbedTight .embedComposerEditor,
+.messageInputEmbedTight .embedComposerEditorCompact {
+  flex: 0 0 auto !important;
   min-height: auto !important;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.messageInputShared:not(.messageInputEmbedFillArea)
+  .embedComposerEditor
+  :global(.ant-input-textarea-affix-wrapper),
+.messageInputEmbedTight
+  .embedComposerEditor
+  :global(.ant-input-textarea-affix-wrapper) {
+  flex: 0 0 auto !important;
+  min-height: auto !important;
+  height: auto !important;
+  align-items: flex-start !important;
+}
+
+.messageInputEmbedTight textarea.ant-input,
+.messageInputEmbedTight :global(.ant-input-affix-wrapper textarea.ant-input) {
+  min-height: 28px !important;
+  max-height: min(50dvh, 480px) !important;
+  overflow-y: auto !important;
+  line-height: 1.5 !important;
+  font-size: clamp(0.95rem, 2.4vw, 1rem) !important;
+  resize: none;
+}
+
+.messageInputShared:not(.messageInputEmbedFillArea)
+  .embedComposerEditor
+  textarea.ant-input,
+.messageInputShared:not(.messageInputEmbedFillArea)
+  .embedComposerEditor
+  :global(.ant-input-affix-wrapper textarea.ant-input) {
+  min-height: 28px !important;
+  max-height: min(55dvh, 520px) !important;
+  overflow-y: auto !important;
+  resize: none;
+}
+
+.messageInputEmbedTight .messageInputFooter {
+  margin-top: 0;
+  flex: 0 0 auto;
+}
+
+.messageInputEmbedFillArea.messageInputWrapper {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.embedComposerFillArea {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.embedComposerEditorFillArea {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.messageInputEmbedFillArea
+  .embedComposerEditorFillArea
+  :global(.ant-input-textarea-affix-wrapper) {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+
+.messageInputEmbedFillArea
+  .embedComposerEditorFillArea
+  :global(.ant-input-textarea-affix-wrapper textarea.ant-input),
+.embedTextareaFillArea {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 180px !important;
+  max-height: none !important;
+  overflow-y: auto !important;
 }
 
 @media (max-width: 768px) {
@@ -282,6 +383,21 @@
   opacity: 1;
 }
 
+/* Compatta: ghost in block flow sotto la barra Proposta (niente overlay assoluto) */
+.inputGhostLayerEmbedBlock {
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  pointer-events: none;
+  padding: 2px var(--embed-composer-pad-x) 6px;
+  flex: 0 0 auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .embedGhostCycleShell {
   transform-origin: left top;
   animation: ghostPromptSwap 0.55s ease-out both;
@@ -357,6 +473,10 @@
 .embedComposerEditor.textareaWithGhost {
   overflow: visible;
   border-radius: 0 0 9px 9px;
+}
+
+.messageInputEmbedTight .embedComposerEditor.textareaWithGhost {
+  overflow: visible;
 }
 
 .embedComposer.textareaWithGhostActive
@@ -467,6 +587,9 @@
 
 /* Chat condivisa / login: testo allineato ai messaggi, non più grande del corpo UI */
 .messageInputShared {
+  --embed-composer-font: 0.9375rem;
+  --embed-composer-lh: 1.45;
+
   textarea.ant-input,
   .ant-input-affix-wrapper textarea.ant-input {
     box-sizing: border-box;
@@ -474,13 +597,51 @@
     max-width: 100%;
     overflow-wrap: anywhere;
     word-break: break-word;
-    max-height: min(55dvh, 420px);
+    max-height: min(62dvh, 640px);
     overflow-y: auto !important;
     resize: none;
-    font-size: 0.9375rem !important;
-    line-height: 1.45 !important;
-    field-sizing: content;
+    font-size: var(--embed-composer-font) !important;
+    line-height: var(--embed-composer-lh) !important;
     min-height: 28px;
+  }
+}
+
+@media (max-width: 768px) {
+  .messageInputShared {
+    --embed-composer-font: 0.8125rem; /* 13px */
+    --embed-composer-lh: 1.4;
+  }
+
+  .messageInputShared .embedComposerProposalLabel {
+    font-size: 0.625rem !important;
+  }
+
+  .messageInputShared .embedComposerAcceptBtn {
+    font-size: 0.6875rem !important;
+  }
+
+  .messageInputShared .ghostHint,
+  .messageInputShared .uploadHintSharedBelow {
+    font-size: 0.625rem !important;
+  }
+
+  .messageInputShared .inputGhostLayerEmbed,
+  .messageInputShared .inputGhostLayerEmbedBlock {
+    font-size: var(--embed-composer-font) !important;
+    line-height: var(--embed-composer-lh) !important;
+  }
+
+  .messageInputEmbedTight textarea.ant-input,
+  .messageInputEmbedTight :global(.ant-input-affix-wrapper textarea.ant-input) {
+    font-size: var(--embed-composer-font) !important;
+    line-height: var(--embed-composer-lh) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .messageInputShared {
+    --embed-composer-font: 0.75rem; /* 12px */
+    --embed-composer-lh: 1.38;
   }
 }
 
@@ -495,7 +656,7 @@
   .embedComposerEditorFlexFill
   :global(.ant-input-textarea-affix-wrapper) {
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: auto;
   display: flex;
   flex-direction: column;
 }
@@ -597,58 +758,25 @@
   flex-direction: column;
 }
 
+.inputScrollAnchor.inputScrollAnchorEmbedArea {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  width: 100%;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
 .inputScrollAnchorEmbedFill > :global(.ant-flex) {
   flex: 0 1 auto;
   min-height: 0;
   min-width: 0;
 }
 
-/*
- * Login embed: nessun messaggio — il parent imposta data-sgai-compact-empty sullo shell.
- * Ripristina catena flex + affix a colonna così rc-textarea autoSize ricalcola l’altezza con più righe.
- */
-:global([data-sgai-compact-empty])
-  .inputScrollAnchor.inputScrollAnchorEmbedFill {
-  flex: 1 1 0%;
-  min-height: 0;
-}
-
-:global([data-sgai-compact-empty])
-  .inputScrollAnchorEmbedFill
-  > :global(.ant-flex) {
-  flex: 1 1 0%;
-  min-height: 0;
-}
-
-:global([data-sgai-compact-empty])
-  .messageInputShared.messageInputEmbedTight.messageInputEmbedGrow.messageInputWrapper {
+.inputScrollAnchorEmbedArea > :global(.ant-flex) {
   flex: 1 1 0% !important;
   min-height: 0 !important;
-}
-
-:global([data-sgai-compact-empty])
-  .messageInputEmbedTight
-  .embedComposerFlexFill {
-  flex: 1 1 0% !important;
-  min-height: 0 !important;
-}
-
-:global([data-sgai-compact-empty])
-  .messageInputEmbedTight
-  .embedComposerEditorFlexFill {
-  flex: 1 1 0% !important;
-  min-height: 0 !important;
-}
-
-:global([data-sgai-compact-empty])
-  .messageInputEmbedTight.messageInputEmbedGrow
-  .embedComposerEditorFlexFill
-  :global(.ant-input-textarea-affix-wrapper) {
-  display: flex !important;
-  flex-direction: column !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  height: auto !important;
+  min-width: 0;
 }
 
 .attachLabelText {

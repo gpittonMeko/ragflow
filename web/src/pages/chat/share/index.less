@@ -261,15 +261,21 @@
     padding: 16px 16px 8px 16px;
     margin: 0 !important;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none !important;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--accent-color) 42%, transparent)
+      transparent;
     scroll-behavior: smooth;
     width: 100%;
     box-sizing: border-box;
 
     &::-webkit-scrollbar {
-      display: none !important;
-      width: 0 !important;
-      height: 0 !important;
+      width: 6px !important;
+      height: 6px !important;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: color-mix(in srgb, var(--accent-color) 38%, transparent);
+      border-radius: 999px;
     }
 
     :global(.messageItem___OK1Zd) {
@@ -306,6 +312,20 @@
     --dc-font-meta: 12px;
     --dc-font-meta-sm: 11px;
     --dc-font-input: clamp(0.9375rem, 2.4vw, 1rem);
+
+    @media (max-width: 768px) {
+      --dc-font-message: 0.8125rem;
+      --dc-font-meta: 11px;
+      --dc-font-meta-sm: 10px;
+      --dc-font-input: 0.8125rem;
+    }
+
+    @media (max-width: 480px) {
+      --dc-font-message: 0.75rem;
+      --dc-font-meta: 10px;
+      --dc-font-meta-sm: 9px;
+      --dc-font-input: 0.75rem;
+    }
     /* Opzioni: surface dedicate (non usare --bg-secondary light = bianco) */
     --dc-opts-surface: color-mix(
       in srgb,
@@ -557,6 +577,8 @@
     /* iOS/Android: evita che il parent rubi il gesture verticale */
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
+    scroll-padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    scrollbar-width: thin !important;
     /* alcuni browser non espandono l’area scroll senza altezza esplicita nel flex child */
     position: relative;
 
@@ -585,7 +607,7 @@
   &.directChatEmbed.directChatEmbedCompact .messageContainer {
     flex: 1 1 0% !important;
     max-height: none !important;
-    min-height: 80px !important;
+    min-height: 0 !important;
     padding: 0 6px !important;
   }
 
@@ -621,9 +643,10 @@
 
   &.directChatEmbed.directChatEmbedCompact .directChatInputColumn {
     gap: 0;
-    padding: 0 0 2px;
+    padding: 0 6px 8px;
     flex: 0 0 auto !important;
     align-self: stretch;
+    justify-content: flex-end;
   }
 
   &.directChatEmbed .embedChatInputShell {
@@ -644,25 +667,27 @@
     overflow: visible;
   }
 
-  /*
-   * Compatta senza messaggi: niente “buco” sopra il compositore — l’input occupa lo spazio verticale
-   * così il textarea può crescere (autoSize + colonna flex).
-   */
+  /* Compatta senza messaggi: niente area messaggi gigante sopra il composer. */
   &.directChatEmbed.directChatEmbedCompact.directChatEmbedCompactEmpty {
     .messageContainer {
       flex: 0 0 auto !important;
-      max-height: min(30vh, 200px) !important;
+      max-height: 0 !important;
       min-height: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: hidden !important;
     }
 
     .directChatInputColumn {
-      flex: 1 1 0% !important;
+      flex: 1 1 auto !important;
       min-height: 0 !important;
+      justify-content: flex-end;
     }
 
     .embedChatInputShell {
-      flex: 1 1 0% !important;
+      flex: 0 0 auto !important;
       min-height: 0 !important;
+      width: 100%;
     }
   }
 
@@ -1358,6 +1383,23 @@
     min-width: 0;
   }
 
+  /* Pattern “floating composer” (allineato a chat moderne: card + safe area iOS) */
+  &.directChatEmbed :global([class*='messageInputWrapper']) {
+    border-radius: 16px !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.05),
+      0 6px 20px rgba(15, 23, 42, 0.07) !important;
+    margin: 0 2px max(8px, env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  &.dark.directChatEmbed :global([class*='messageInputWrapper']) {
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.45),
+      0 8px 28px rgba(0, 0, 0, 0.38) !important;
+  }
+
   &.directChatEmbed
     .embedChatInputShell
     :global([class*='messageInputWrapper']) {
@@ -1368,12 +1410,12 @@
   &.directChatEmbed
     :global([class*='messageInputWrapper'])
     :global(textarea.ant-input) {
-    max-height: min(55dvh, 420px) !important;
+    max-height: min(62dvh, 640px);
     overflow-y: auto !important;
     font-size: 0.9375rem !important;
     line-height: 1.45 !important;
     min-height: 28px !important;
-    padding: 8px 10px !important;
+    padding: 6px 8px;
   }
 
   /* Clear (X): allineata al testo su più righe */
@@ -1381,8 +1423,17 @@
     :global([class*='messageInputWrapper'])
     :global(.ant-input-affix-wrapper) {
     align-items: flex-start !important;
-    padding-top: 4px !important;
+    padding-top: 0 !important;
     padding-inline-end: 30px !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  &.directChatEmbed
+    :global([class*='messageInputWrapper'])
+    :global(.ant-input-textarea-affix-wrapper) {
+    height: auto !important;
+    min-height: 0 !important;
   }
 
   &.directChatEmbed
