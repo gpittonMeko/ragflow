@@ -12,6 +12,9 @@ import {
   Maximize2,
   Menu,
   Moon,
+  PanelLeft,
+  PanelLeftClose,
+  Plus,
   Sun,
   X,
 } from 'lucide-react';
@@ -93,6 +96,9 @@ function getOrCreateSessionId(): string {
 
 // ✅ Codice beta tester hardcoded
 const BETA_TESTER_CODE = 'SGAI2024BETA';
+/** Larghezza pannello storico: resta a lato della chat, non sopra. */
+const CHAT_SIDEBAR_WIDTH_PX = 320;
+const CHAT_SIDEBAR_MQ = '(min-width: 769px)';
 // --- CHAT HISTORY FUNCTIONS ---
 const getChatHistory = (): ChatSession[] => {
   try {
@@ -298,7 +304,41 @@ const PresentationPage: React.FC = () => {
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [showLeftSidebar, setShowLeftSidebar] = useState(false);
+  const [desktopSidebarDock, setDesktopSidebarDock] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia(CHAT_SIDEBAR_MQ).matches
+      : true,
+  );
   const [currentChatTitle, setCurrentChatTitle] = useState('Nuova Chat');
+
+  const toggleLeftSidebar = useCallback(() => {
+    setShowLeftSidebar((open) => !open);
+  }, []);
+
+  const closeLeftSidebar = useCallback(() => {
+    setShowLeftSidebar(false);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia(CHAT_SIDEBAR_MQ);
+    const sync = () => setDesktopSidebarDock(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  useEffect(() => {
+    if (!showLeftSidebar) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowLeftSidebar(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showLeftSidebar]);
 
   const handleExpandChat = useCallback(() => {
     if (chatExpanded) return;
@@ -374,7 +414,13 @@ const PresentationPage: React.FC = () => {
     setCurrentChatTitle(chat.title);
     setHasMessages(true);
     setChatExpanded(true);
-    setShowLeftSidebar(false); // Chiudi sidebar
+    // Mobile: chiudi per liberare lo schermo. Desktop dock: resta aperta a lato.
+    if (
+      typeof window !== 'undefined' &&
+      !window.matchMedia(CHAT_SIDEBAR_MQ).matches
+    ) {
+      setShowLeftSidebar(false);
+    }
 
     // Aggiorna il timestamp quando si apre una chat esistente
     const updatedChat: ChatSession = {
@@ -887,7 +933,8 @@ const PresentationPage: React.FC = () => {
     }
   }, [chatExpanded]);
 
-  // iOS/Android: allinea la shell fullscreen a visualViewport così la tastiera non copre la chat
+  // iOS/Android: allinea la shell fullscreen a visualViewport così la tastiera non copre la chat.
+  // Su desktop, se lo storico è aperto, la shell lascia spazio a sinistra (pannello a lato, non sopra).
   useLayoutEffect(() => {
     if (!chatExpanded) {
       setExpandedShellFrame(null);
@@ -899,10 +946,14 @@ const PresentationPage: React.FC = () => {
     }
     const vv = window.visualViewport;
     const sync = () => {
+      const dock =
+        showLeftSidebar && window.matchMedia(CHAT_SIDEBAR_MQ).matches
+          ? CHAT_SIDEBAR_WIDTH_PX
+          : 0;
       setExpandedShellFrame({
         top: vv.offsetTop,
-        left: vv.offsetLeft,
-        width: vv.width,
+        left: vv.offsetLeft + dock,
+        width: Math.max(240, vv.width - dock),
         height: vv.height,
       });
     };
@@ -913,11 +964,14 @@ const PresentationPage: React.FC = () => {
       vv.removeEventListener('resize', sync);
       vv.removeEventListener('scroll', sync);
     };
-  }, [chatExpanded]);
+  }, [chatExpanded, showLeftSidebar]);
+
+  const sidebarDockActive =
+    showLeftSidebar && desktopSidebarDock && chatExpanded;
 
   return (
     <div
-      className={`${styles.pageContainer} ${hideExtras ? styles.fullscreen : ''} ${chatExpanded ? styles.chatExpandedMode : ''}`}
+      className={`${styles.pageContainer} ${hideExtras ? styles.fullscreen : ''} ${chatExpanded ? styles.chatExpandedMode : ''} ${showLeftSidebar ? styles.sidebarOpen : ''} ${sidebarDockActive ? styles.sidebarDocked : ''}`}
     >
       {/* Pulsante login + contatore oppure dati utente */}
       {!isLoggedIn ? (
@@ -999,13 +1053,13 @@ const PresentationPage: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  setShowLeftSidebar(!showLeftSidebar);
+                  toggleLeftSidebar();
                   setMenuOpen(false);
                 }}
                 className={styles.menuItem}
               >
-                <Menu size={20} />
-                <span>Gestione Chat</span>
+                <PanelLeft size={20} />
+                <span>Storico chat</span>
               </button>
               <button
                 onClick={() => {
@@ -1235,12 +1289,36 @@ const PresentationPage: React.FC = () => {
                   right: 'auto',
                   bottom: 'auto',
                 }
-              : undefined
+              : sidebarDockActive
+                ? {
+                    left: CHAT_SIDEBAR_WIDTH_PX,
+                    width: `calc(100% - ${CHAT_SIDEBAR_WIDTH_PX}px)`,
+                    right: 'auto',
+                    bottom: 'auto',
+                  }
+                : undefined
             : { display: 'contents' }
         }
       >
         {chatExpanded && (
           <div className={styles.chatFullHeader}>
+            <button
+              type="button"
+              onClick={toggleLeftSidebar}
+              className={`${styles.chatFullHeaderBtn} ${styles.chatSidebarToggle} ${showLeftSidebar ? styles.chatSidebarToggleActive : ''}`}
+              aria-label={
+                showLeftSidebar ? 'Chiudi storico chat' : 'Apri storico chat'
+              }
+              aria-expanded={showLeftSidebar}
+              title={showLeftSidebar ? 'Chiudi storico' : 'Storico chat'}
+            >
+              {showLeftSidebar ? (
+                <PanelLeftClose size={18} />
+              ) : (
+                <PanelLeft size={18} />
+              )}
+              <span className={styles.chatFullHeaderBtnLabel}>Storico</span>
+            </button>
             <button
               type="button"
               onClick={() => setChatExpanded(false)}
@@ -1296,13 +1374,13 @@ const PresentationPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    setShowLeftSidebar(!showLeftSidebar);
+                    toggleLeftSidebar();
                     setMenuOpen(false);
                   }}
                   className={styles.menuItem}
                 >
-                  <Menu size={20} />
-                  <span>Gestione Chat</span>
+                  <PanelLeft size={20} />
+                  <span>Storico chat</span>
                 </button>
                 <button
                   onClick={() => {
@@ -1610,76 +1688,105 @@ const PresentationPage: React.FC = () => {
       {/* WhatsApp Support Button - FIXED bottom left */}
       <WhatsAppSupport phoneNumber="3288216708" />
 
-      {/* Left Sidebar - Chat Management */}
-      {showLeftSidebar && (
-        <div
-          className={`${styles.leftSidebar} ${showLeftSidebar ? styles.show : ''}`}
+      {/* Tab laterale storico: a livello pagina (non dentro la chat), dock a sinistra */}
+      {chatExpanded && !showLeftSidebar && (
+        <button
+          type="button"
+          className={styles.sidebarEdgeTab}
+          onClick={toggleLeftSidebar}
+          aria-label="Apri storico chat"
+          title="Storico chat"
         >
-          <div className={styles.leftSidebarHeader}>
-            <h3>Gestione Chat</h3>
-            <button
-              onClick={() => setShowLeftSidebar(false)}
-              className={styles.closeButton}
-            >
-              <X size={20} />
-            </button>
-          </div>
-          <div className={styles.leftSidebarContent}>
-            <button onClick={createNewChat} className={styles.newChatButton}>
-              <X size={16} />
-              Nuova Chat
-            </button>
-            <div className={styles.chatHistorySection}>
-              <h4>Storico Chat</h4>
-              <div className={styles.chatHistoryList}>
-                {chatHistory.length === 0 ? (
-                  <div className={styles.noChats}>Nessuna chat precedente</div>
-                ) : (
-                  chatHistory.map((chat) => (
-                    <div
-                      key={chat.id}
-                      className={`${styles.chatItem} ${
-                        chat.sessionId === sessionId ? styles.activeChat : ''
-                      }`}
-                      onClick={() => switchToChat(chat)}
-                    >
-                      <div className={styles.chatTitle}>{chat.title}</div>
-                      <div className={styles.chatPreview}>
-                        {chat.lastMessage}
-                      </div>
-                      <div className={styles.chatTime}>
-                        {(() => {
-                          const date = new Date(chat.timestamp);
-                          const today = new Date();
-                          const isToday =
-                            date.toDateString() === today.toDateString();
-                          const isYesterday =
-                            date.toDateString() ===
-                            new Date(today.getTime() - 86400000).toDateString();
+          <PanelLeft size={18} />
+          <span>Storico</span>
+        </button>
+      )}
+      <div
+        className={`${styles.leftSidebarBackdrop} ${showLeftSidebar ? styles.show : ''}`}
+        onClick={closeLeftSidebar}
+        aria-hidden={!showLeftSidebar}
+      />
+      <aside
+        className={`${styles.leftSidebar} ${showLeftSidebar ? styles.show : ''}`}
+        aria-hidden={!showLeftSidebar}
+        aria-label="Storico chat"
+      >
+        <div className={styles.leftSidebarHeader}>
+          <h3>Storico chat</h3>
+          <button
+            type="button"
+            onClick={closeLeftSidebar}
+            className={styles.closeButton}
+            aria-label="Chiudi storico chat"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className={styles.leftSidebarContent}>
+          <button
+            type="button"
+            onClick={createNewChat}
+            className={styles.newChatButton}
+          >
+            <Plus size={16} />
+            Nuova chat
+          </button>
+          <div className={styles.chatHistorySection}>
+            <h4>Recenti</h4>
+            <div className={styles.chatHistoryList}>
+              {chatHistory.length === 0 ? (
+                <div className={styles.noChats}>Nessuna chat precedente</div>
+              ) : (
+                chatHistory.map((chat) => (
+                  <div
+                    key={chat.id}
+                    className={`${styles.chatItem} ${
+                      chat.sessionId === sessionId ? styles.activeChat : ''
+                    }`}
+                    onClick={() => switchToChat(chat)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        switchToChat(chat);
+                      }
+                    }}
+                  >
+                    <div className={styles.chatTitle}>{chat.title}</div>
+                    <div className={styles.chatPreview}>{chat.lastMessage}</div>
+                    <div className={styles.chatTime}>
+                      {(() => {
+                        const date = new Date(chat.timestamp);
+                        const today = new Date();
+                        const isToday =
+                          date.toDateString() === today.toDateString();
+                        const isYesterday =
+                          date.toDateString() ===
+                          new Date(today.getTime() - 86400000).toDateString();
 
-                          if (isToday) {
-                            return `Oggi alle ${date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
-                          } else if (isYesterday) {
-                            return `Ieri alle ${date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
-                          } else {
-                            return date.toLocaleString('it-IT', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            });
-                          }
-                        })()}
-                      </div>
+                        if (isToday) {
+                          return `Oggi alle ${date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+                        } else if (isYesterday) {
+                          return `Ieri alle ${date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+                        } else {
+                          return date.toLocaleString('it-IT', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          });
+                        }
+                      })()}
                     </div>
-                  ))
-                )}
-              </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
-      )}
+      </aside>
 
       {/* Modal Beta Tester */}
       {showBetaCodeModal && (

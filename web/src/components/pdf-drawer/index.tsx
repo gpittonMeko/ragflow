@@ -21,22 +21,22 @@ export const PdfDrawer = ({
   const [drawerWidth, setDrawerWidth] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth <= 768
-        ? '95vw'
+        ? 'min(100vw, 420px)'
         : window.innerWidth <= 1024
-          ? '80vw'
-          : '50vw';
+          ? 'min(42vw, 480px)'
+          : 'min(38vw, 520px)';
     }
-    return '50vw';
+    return 'min(38vw, 520px)';
   });
 
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth <= 768) {
-        setDrawerWidth('95vw');
+        setDrawerWidth('min(100vw, 420px)');
       } else if (window.innerWidth <= 1024) {
-        setDrawerWidth('80vw');
+        setDrawerWidth('min(42vw, 480px)');
       } else {
-        setDrawerWidth('50vw');
+        setDrawerWidth('min(38vw, 520px)');
       }
     };
 
@@ -75,7 +75,7 @@ export const PdfDrawer = ({
   return (
     <Drawer
       ref={drawerRef}
-      title={`Document Previewer - ${documentId.slice(-8)}`}
+      title={`Anteprima documento`}
       onClose={handleClose}
       open={visible}
       width={drawerWidth}
@@ -83,9 +83,12 @@ export const PdfDrawer = ({
       mask={false}
       maskClosable={false}
       placement="right"
+      getContainer={() => document.body}
+      rootStyle={{ pointerEvents: 'none' }}
       className="pdf-drawer-debug"
       zIndex={999999}
       styles={{
+        wrapper: { pointerEvents: 'auto' },
         body: {
           padding: '16px',
           height: 'calc(100% - 55px)',

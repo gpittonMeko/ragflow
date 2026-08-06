@@ -207,38 +207,115 @@
   }
 }
 
-/* Left Sidebar - Chat Management */
+/* Left Sidebar - storico a LATO della pagina (sopra la shell chat, non dentro) */
+.leftSidebarBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 16040;
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  border: none;
+
+  &.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* Desktop: niente overlay opaco — il resto resta cliccabile; in fullscreen la shell si riduce a lato */
+@media (min-width: 769px) {
+  .leftSidebarBackdrop {
+    display: none;
+  }
+}
+
 .leftSidebar {
   position: fixed;
   top: 0;
   left: 0;
-  width: 320px;
+  width: min(320px, 88vw);
   height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   background: var(--card-bg);
   border-right: 1px solid rgba(255, 255, 255, 0.1);
-  z-index: 1000;
+  /* Sopra chatExpandedShell (15000): deve stare a lato di TUTTO, non sotto/dentro la chat */
+  z-index: 16050;
   display: flex;
   flex-direction: column;
-  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.15);
-  transform: translateX(-100%);
-  transition: transform 0.3s ease;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.22);
+  transform: translateX(-105%);
+  transition: transform 0.28s ease;
+  pointer-events: none;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: border-box;
 
   &.show {
     transform: translateX(0);
+    pointer-events: auto;
   }
 }
 
+.sidebarEdgeTab {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 16055;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 1px solid var(--toggle-border);
+  border-left: none;
+  border-radius: 0 12px 12px 0;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.18);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+
+  span {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+  }
+
+  &:hover {
+    background: var(--button-hover);
+    color: var(--accent-color);
+    transform: translateY(-50%) translateX(2px);
+  }
+}
+
+.chatSidebarToggleActive {
+  background: rgba(15, 98, 254, 0.16) !important;
+  border-color: rgba(15, 98, 254, 0.35) !important;
+  color: var(--accent-color) !important;
+}
+
 .leftSidebarHeader {
-  padding: 20px;
+  padding: 16px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 
   h3 {
     margin: 0;
     color: var(--text-primary);
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 600;
   }
 
@@ -260,10 +337,12 @@
 
 .leftSidebarContent {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 20px;
-  gap: 20px;
+  padding: 16px 18px 20px;
+  gap: 16px;
+  overflow: hidden;
 }
 
 .chatHistorySection {
@@ -284,10 +363,13 @@
 
 .chatHistoryList {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding-right: 2px;
+  scrollbar-width: thin;
 }
 
 .chatItem {
@@ -370,15 +452,39 @@
   }
 }
 
-/* Mobile responsiveness for left sidebar */
+/* Mobile: pannello quasi full-width + backdrop per chiudere tap fuori */
 @media (max-width: 768px) {
   .leftSidebar {
-    width: 100vw;
-    transform: translateX(-100%);
+    width: min(100vw, 360px);
+    max-width: 100vw;
+    transform: translateX(-105%);
 
     &.show {
       transform: translateX(0);
     }
+  }
+
+  .sidebarEdgeTab {
+    top: auto;
+    bottom: max(96px, calc(env(safe-area-inset-bottom, 0px) + 88px));
+    transform: none;
+
+    span {
+      display: none;
+    }
+
+    &:hover {
+      transform: translateX(2px);
+    }
+  }
+}
+
+/* Desktop dock: transizione morbida della shell quando lo storico apre/chiude */
+@media (min-width: 769px) {
+  .pageContainer.chatExpandedMode.sidebarDocked .chatExpandedShell {
+    transition:
+      left 0.28s ease,
+      width 0.28s ease;
   }
 }
 
@@ -1048,14 +1154,13 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* Solo opacity: evita transform residuo che “intrappola” overlay/fixed figli */
 @keyframes chatExpandedShellIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -1142,6 +1247,20 @@ body {
 [data-theme='light'] .chatFullHeader {
   background: rgba(255, 255, 255, 0.92);
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='light'] .leftSidebar {
+  border-right-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme='light'] .leftSidebarHeader {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='light'] .sidebarEdgeTab {
+  background: #fff;
+  box-shadow: 4px 0 16px rgba(15, 23, 42, 0.1);
 }
 
 .chatFullHeaderLogo {

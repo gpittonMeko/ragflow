@@ -58,19 +58,25 @@
   }
 }
 
-/* NUOVO: Mobile responsive drawer - sopra tutto */
+/* Anteprima PDF a lato: non coprire quasi tutta la chat */
 :global(.pdf-drawer-debug) {
   z-index: 999999 !important;
 
   @media (max-width: 768px) {
     :global(.ant-drawer-content-wrapper) {
-      width: 95vw !important;
+      width: min(100vw, 420px) !important;
     }
   }
 
   @media (min-width: 769px) and (max-width: 1024px) {
     :global(.ant-drawer-content-wrapper) {
-      width: 80vw !important;
+      width: min(42vw, 480px) !important;
+    }
+  }
+
+  @media (min-width: 1025px) {
+    :global(.ant-drawer-content-wrapper) {
+      width: min(38vw, 520px) !important;
     }
   }
 }
