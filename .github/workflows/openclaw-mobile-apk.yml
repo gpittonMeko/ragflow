@@ -68,13 +68,23 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            adb install -r openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk
-            adb shell am start -W -n it.meko.openclawmobile/.OpenClawV5Activity
-            sleep 3
-            PID="$(adb shell pidof it.meko.openclawmobile | tr -d '\r')"
-            test -n "$PID"
-            adb shell dumpsys activity activities | grep -q "it.meko.openclawmobile/.OpenClawV5Activity"
+            set -e
+            APK="openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk"
+            PACKAGE="it.meko.openclawmobile"
+            ACTIVITY="$PACKAGE/.OpenClawV5Activity"
+            adb install -r "$APK"
+            adb shell am force-stop "$PACKAGE" || true
+            adb logcat -c
+            adb shell am start -W -n "$ACTIVITY"
+            sleep 4
+            PID="$(adb shell pidof "$PACKAGE" | tr -d '\r' || true)"
+            if [ -z "$PID" ]; then
+              echo "OpenClaw Mobile process is not alive after launch"
+              adb logcat -d -t 300 | grep -E "$PACKAGE|AndroidRuntime|FATAL EXCEPTION" || true
+              exit 1
+            fi
             echo "OpenClaw Mobile running as PID $PID"
+            adb shell dumpsys activity top | grep -E "OpenClawV5Activity|$PACKAGE" || true
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
