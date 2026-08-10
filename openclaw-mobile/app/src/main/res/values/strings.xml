@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OpenClaw Mobile</string>
+    <string name="accessibility_description">Consente a OpenClaw Mobile di eseguire, solo quando abilitato dall’utente, comandi di navigazione e interazione con gli elementi visibili sullo schermo.</string>
+</resources>
