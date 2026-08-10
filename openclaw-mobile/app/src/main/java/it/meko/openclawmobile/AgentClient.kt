@@ -17,12 +17,13 @@ import java.net.Inet6Address
 import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
-
 data class AgentResult(
     val text: String,
     val modelId: String,
     val costUsd: Double,
-    val toolActions: Int
+    val toolActions: Int,
+    val webSearches: Int,
+    val skillTrace: List<String>
 )
 
 class AgentClient(private val client: OkHttpClient = defaultClient()) {
@@ -38,9 +39,9 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
                 .dns(ipv4FirstDns)
                 .retryOnConnectionFailure(true)
                 .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(120, TimeUnit.SECONDS)
+                .readTimeout(150, TimeUnit.SECONDS)
                 .writeTimeout(90, TimeUnit.SECONDS)
-                .callTimeout(210, TimeUnit.SECONDS)
+                .callTimeout(240, TimeUnit.SECONDS)
                 .protocols(listOf(Protocol.HTTP_1_1))
                 .build()
         }
@@ -52,18 +53,21 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
         messages: List<ChatMessage>,
         attachments: List<ChatAttachment>,
         relevantMemory: String,
+        relevantSkills: String,
         maxOutputTokens: Int,
         enableDeviceTools: Boolean,
-        enableWebSearch: Boolean = true
+        enableWebTools: Boolean = true
     ): AgentResult = withContext(Dispatchers.IO) {
         require(apiKey.isNotBlank()) { "Inserisci la API key OpenRouter" }
-        require(maxOutputTokens >= 128 || model.isFree) { "Budget mensile quasi esaurito: passa a Gratis o aumenta il budget" }
+        require(maxOutputTokens >= 128 || model.isFree) {
+            "Budget mensile quasi esaurito: passa a Gratis o aumenta il budget"
+        }
 
         val wireMessages = JSONArray()
         wireMessages.put(
             JSONObject()
                 .put("role", "system")
-                .put("content", buildSystemPrompt(relevantMemory, enableDeviceTools, enableWebSearch))
+                .put("content", buildSystemPrompt(relevantMemory, relevantSkills, enableDeviceTools, enableWebTools))
         )
 
         val lastUserIndex = messages.indexOfLast { it.role == "user" }
@@ -71,7 +75,9 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
             val obj = JSONObject().put("role", message.role)
             if (index == lastUserIndex && attachments.isNotEmpty()) {
                 val parts = JSONArray()
-                if (message.content.isNotBlank()) parts.put(JSONObject().put("type", "text").put("text", message.content))
+                if (message.content.isNotBlank()) {
+                    parts.put(JSONObject().put("type", "text").put("text", message.content))
+                }
                 attachments.forEach { parts.put(attachmentPart(it)) }
                 obj.put("content", parts)
             } else {
@@ -82,26 +88,60 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
 
         var totalCost = 0.0
         var actions = 0
+        var webSearches = 0
         var lastText = ""
-        val deviceEnabled = enableDeviceTools && ClawAccessibilityService.available()
+        val trace = mutableListOf<String>()
+        val toolsEnabled = enableDeviceTools && ClawAccessibilityService.available()
 
-        repeat(7) { turn ->
+        repeat(8) { turn ->
             val body = JSONObject()
                 .put("model", model.id)
                 .put("messages", wireMessages)
                 .put("stream", false)
-                .put("max_tokens", if (model.isFree) maxOutputTokens.coerceAtLeast(4096) else maxOutputTokens)
+                .put("parallel_tool_calls", false)
+                .put("max_tokens", if (model.isFree) maxOutputTokens.coerceAtLeast(2048) else maxOutputTokens)
 
-            val tools = combinedTools(deviceEnabled, enableWebSearch)
+            val tools = JSONArray()
+            if (enableWebTools) {
+                tools.put(
+                    JSONObject()
+                        .put("type", "openrouter:web_search")
+                        .put(
+                            "parameters",
+                            JSONObject()
+                                .put("max_results", 3)
+                                .put("max_total_results", 6)
+                                .put("search_context_size", "low")
+                        )
+                )
+                tools.put(
+                    JSONObject()
+                        .put("type", "openrouter:web_fetch")
+                        .put(
+                            "parameters",
+                            JSONObject()
+                                .put("engine", "openrouter")
+                                .put("max_uses", 3)
+                                .put("max_content_tokens", 12_000)
+                        )
+                )
+                tools.put(JSONObject().put("type", "openrouter:datetime"))
+            }
+            if (toolsEnabled) {
+                val local = deviceTools()
+                for (i in 0 until local.length()) tools.put(local.getJSONObject(i))
+            }
             if (tools.length() > 0) {
                 body.put("tools", tools)
                 body.put("tool_choice", "auto")
             }
+
             if (attachments.any { it.mimeType.equals("application/pdf", true) }) {
                 body.put(
                     "plugins",
                     JSONArray().put(
-                        JSONObject().put("id", "file-parser")
+                        JSONObject()
+                            .put("id", "file-parser")
                             .put("pdf", JSONObject().put("engine", "cloudflare-ai"))
                     )
                 )
@@ -125,6 +165,8 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
                 val root = JSONObject(raw)
                 val usage = root.optJSONObject("usage")
                 totalCost += costFromUsage(usage, model)
+                webSearches += usage?.optJSONObject("server_tool_use")?.optInt("web_search_requests", 0) ?: 0
+
                 val choice = root.optJSONArray("choices")?.optJSONObject(0)
                     ?: error("Il provider ha risposto senza choices")
                 val assistant = choice.optJSONObject("message")
@@ -133,74 +175,57 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
                 if (content.isNotBlank()) lastText = content
 
                 val toolCalls = assistant.optJSONArray("tool_calls")
-                val localCalls = mutableListOf<JSONObject>()
-                if (toolCalls != null) {
-                    for (i in 0 until toolCalls.length()) {
-                        val call = toolCalls.optJSONObject(i) ?: continue
-                        val name = call.optJSONObject("function")?.optString("name").orEmpty()
-                        // OpenRouter server tools are executed server-side. Only local Android calls come back to us.
-                        if (name in LOCAL_TOOL_NAMES) localCalls += call
-                    }
-                }
-
-                if (!deviceEnabled || localCalls.isEmpty()) {
+                if (!toolsEnabled || toolCalls == null || toolCalls.length() == 0) {
                     val finalText = content.ifBlank { lastText }.ifBlank { "Operazione completata." }
-                    return@withContext AgentResult(finalText, model.id, totalCost, actions)
+                    return@withContext AgentResult(finalText, model.id, totalCost, actions, webSearches, trace)
                 }
 
                 wireMessages.put(JSONObject(assistant.toString()).put("role", "assistant"))
-                for (call in localCalls) {
+                for (i in 0 until toolCalls.length()) {
+                    val call = toolCalls.optJSONObject(i) ?: continue
                     val callId = call.optString("id")
                     val fn = call.optJSONObject("function") ?: continue
                     val name = fn.optString("name")
                     val args = runCatching { JSONObject(fn.optString("arguments", "{}")) }.getOrDefault(JSONObject())
                     val result = executeDeviceTool(name, args)
                     actions++
+                    trace += traceLine(name, args, result)
                     wireMessages.put(
                         JSONObject()
                             .put("role", "tool")
                             .put("tool_call_id", callId)
                             .put("content", result.take(12_000))
                     )
-                    delay(180)
+                    delay(220)
                 }
             }
 
-            if (turn == 6) {
-                return@withContext AgentResult(lastText.ifBlank { "Ho raggiunto il limite di azioni per questa richiesta." }, model.id, totalCost, actions)
+            if (turn == 7) {
+                return@withContext AgentResult(
+                    lastText.ifBlank { "Ho raggiunto il limite di azioni per questa richiesta." },
+                    model.id,
+                    totalCost,
+                    actions,
+                    webSearches,
+                    trace
+                )
             }
         }
-        AgentResult(lastText.ifBlank { "Operazione terminata." }, model.id, totalCost, actions)
+        AgentResult(lastText.ifBlank { "Operazione terminata." }, model.id, totalCost, actions, webSearches, trace)
     }
 
-    private fun buildSystemPrompt(memory: String, tools: Boolean, web: Boolean): String = buildString {
-        append("Sei OpenClaw Mobile, assistente personale Android e second brain dell'utente. Rispondi in modo naturale e conciso. ")
-        append("Usa i tool quando rendono la risposta più utile invece di descrivere soltanto cosa dovrebbe fare l'utente. ")
-        append("Non dire di non poter agire sul telefono quando i tool Android sono disponibili: usali. ")
-        append("Per task sul dispositivo, osserva la schermata quando serve, esegui un passo alla volta e verifica il risultato. ")
-        append("Non inventare di aver cliccato o aperto qualcosa: considera riuscita un'azione solo dopo il risultato del tool. ")
-        if (web) append("Per fatti recenti o informazioni che possono essere cambiate, usa il web search invece di indovinare. ")
-        append("Per azioni irreversibili, acquisti o comunicazioni esterne non già richieste esplicitamente dall'utente, chiedi conferma prima dell'ultimo passo. ")
-        append("Scrivi testo pulito. Evita asterischi decorativi e Markdown eccessivo; usa titoli semplici e liste solo quando servono. ")
-        if (!tools) append("I tool Android non sono attivi: per richieste sul telefono indica di abilitare Accessibilità nella sezione Device. ")
-        if (memory.isNotBlank()) append("\nMemoria rilevante recuperata localmente; usala soltanto se pertinente:\n$memory")
-    }
-
-    private fun combinedTools(device: Boolean, web: Boolean): JSONArray = JSONArray().apply {
-        if (web) {
-            // Current OpenRouter server-tool format. The provider executes this tool; no local round trip is required.
-            put(
-                JSONObject()
-                    .put("type", "openrouter:web_search")
-                    .put("engine", "auto")
-                    .put("max_total_results", 5)
-                    .put("search_context_size", "low")
-            )
-        }
-        if (device) {
-            val local = deviceTools()
-            for (i in 0 until local.length()) put(local.get(i))
-        }
+    private fun buildSystemPrompt(memory: String, skills: String, deviceTools: Boolean, webTools: Boolean): String = buildString {
+        append("Sei il second brain personale dell'utente su Android. Devi essere utile, operativo e trasparente. ")
+        append("Rispondi in italiano salvo richiesta diversa. Mantieni le risposte concise quando il compito è semplice. ")
+        append("Quando puoi completare un compito con gli strumenti disponibili, agisci invece di limitarti a spiegare. ")
+        append("Per task sul dispositivo osserva la schermata quando serve, esegui un passo alla volta e verifica il risultato. ")
+        append("Non inventare mai di aver cliccato, aperto o scritto qualcosa: considera riuscita un'azione solo dopo il risultato del tool. ")
+        append("Per inviare messaggi, pubblicare contenuti, acquisti, cancellazioni o altre azioni irreversibili, se l'utente non ha già dato un comando esplicito e specifico, chiedi conferma prima dell'ultimo passo. ")
+        append("Usa Markdown semanticamente ma senza decorazioni inutili. Non riempire la risposta di titoli o enfasi. ")
+        if (!deviceTools) append("I tool Android non sono attivi: per agire sulle app indica di abilitare Accessibilità nella sezione Device. ")
+        if (webTools) append("Hai strumenti web on-demand: usali solo quando servono informazioni attuali o quando l'utente chiede di leggere/cercare sul web. ")
+        if (memory.isNotBlank()) append("\n\nMemoria personale rilevante recuperata localmente; usala solo se pertinente:\n$memory")
+        if (skills.isNotBlank()) append("\n\nProcedure locali già riuscite in passato. Riutilizzale come guida, ma verifica sempre la UI corrente:\n$skills")
     }
 
     private fun deviceTools(): JSONArray = JSONArray().apply {
@@ -239,6 +264,19 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
         else -> "Tool non riconosciuto: $name"
     }
 
+    private fun traceLine(name: String, args: JSONObject, result: String): String {
+        val action = when (name) {
+            "open_app" -> "apri ${args.optString("app")}" 
+            "tap_text" -> "tocca ${args.optString("text")}" 
+            "type_text" -> "scrivi ${args.optString("text").take(80)}"
+            "scroll" -> "scorri ${args.optString("direction")}" 
+            "global_action" -> args.optString("action")
+            "screen_snapshot" -> "verifica schermata"
+            else -> name
+        }
+        return "$action → ${result.lineSequence().firstOrNull().orEmpty().take(90)}"
+    }
+
     private fun attachmentPart(attachment: ChatAttachment): JSONObject {
         val mime = attachment.mimeType.ifBlank { "application/octet-stream" }.lowercase()
         val dataUrl = "data:$mime;base64,${attachment.base64}"
@@ -256,8 +294,8 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
         if (usage == null) return 0.0
         val direct = usage.optDouble("cost", Double.NaN)
         if (direct.isFinite() && direct >= 0.0) return direct
-        val promptTokens = usage.optInt("prompt_tokens", 0).coerceAtLeast(0)
-        val completionTokens = usage.optInt("completion_tokens", 0).coerceAtLeast(0)
+        val promptTokens = usage.optInt("prompt_tokens", usage.optInt("input_tokens", 0)).coerceAtLeast(0)
+        val completionTokens = usage.optInt("completion_tokens", usage.optInt("output_tokens", 0)).coerceAtLeast(0)
         val input = model.promptPricePerMillion?.let { promptTokens * it / 1_000_000.0 } ?: 0.0
         val output = model.completionPricePerMillion?.let { completionTokens * it / 1_000_000.0 } ?: 0.0
         return input + output
@@ -294,9 +332,5 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
             else -> "Errore OpenRouter HTTP $code"
         }
         return if (msg.isNullOrBlank()) "$prefix (HTTP $code)" else "$prefix — $msg"
-    }
-
-    private companion object {
-        val LOCAL_TOOL_NAMES = setOf("screen_snapshot", "open_app", "tap_text", "type_text", "scroll", "global_action")
     }
 }
