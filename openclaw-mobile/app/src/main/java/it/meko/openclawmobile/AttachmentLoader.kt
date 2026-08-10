@@ -9,12 +9,12 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 import java.util.zip.ZipInputStream
 
-data class AttachmentLoadResult(
+data class LoadedChatAttachments(
     val attachments: List<ChatAttachment>,
     val note: String? = null
 )
 
-suspend fun loadChatAttachments(context: Context, uris: List<Uri>): AttachmentLoadResult = withContext(Dispatchers.IO) {
+suspend fun loadChatAttachments(context: Context, uris: List<Uri>): LoadedChatAttachments = withContext(Dispatchers.IO) {
     val output = mutableListOf<ChatAttachment>()
     val notes = mutableListOf<String>()
     var totalBytes = 0L
@@ -64,7 +64,7 @@ suspend fun loadChatAttachments(context: Context, uris: List<Uri>): AttachmentLo
         }
     }
 
-    AttachmentLoadResult(output, notes.takeIf { it.isNotEmpty() }?.joinToString(" · "))
+    LoadedChatAttachments(output, notes.takeIf { it.isNotEmpty() }?.joinToString(" · "))
 }
 
 private fun queryAttachmentMetadata(context: Context, uri: Uri): Pair<String, Long> {
