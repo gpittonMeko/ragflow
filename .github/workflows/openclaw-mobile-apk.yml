@@ -15,7 +15,7 @@ permissions:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -38,13 +38,40 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
+      - name: Run unit tests
+        run: gradle -p openclaw-mobile --no-daemon :app:testDebugUnitTest
+
       - name: Build debug APK
         run: gradle -p openclaw-mobile --no-daemon :app:assembleDebug
 
-      - name: Verify APK
+      - name: Verify APK package
         run: |
           test -s openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk
+          aapt dump badging openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk | grep "package: name='it.meko.openclawmobile'"
+          aapt dump badging openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk | grep "launchable-activity: name='it.meko.openclawmobile.OpenClawV5Activity'"
+          unzip -t openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk >/dev/null
           ls -lh openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Enable KVM for emulator
+        run: |
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
+
+      - name: Emulator install and launch smoke test
+        uses: ReactiveCircus/android-emulator-runner@v2.38.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb install -r openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk
+            adb shell am start -W -n it.meko.openclawmobile/.OpenClawV5Activity
+            sleep 3
+            PID="$(adb shell pidof it.meko.openclawmobile | tr -d '\r')"
+            test -n "$PID"
+            adb shell dumpsys activity activities | grep -q "it.meko.openclawmobile/.OpenClawV5Activity"
+            echo "OpenClaw Mobile running as PID $PID"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
