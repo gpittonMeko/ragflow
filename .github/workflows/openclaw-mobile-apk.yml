@@ -46,11 +46,14 @@ jobs:
 
       - name: Verify APK package
         run: |
-          test -s openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk
-          aapt dump badging openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk | grep "package: name='it.meko.openclawmobile'"
-          aapt dump badging openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk | grep "launchable-activity: name='it.meko.openclawmobile.OpenClawV5Activity'"
-          unzip -t openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk >/dev/null
-          ls -lh openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk
+          APK="openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk"
+          AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          test -s "$APK"
+          test -x "$AAPT"
+          "$AAPT" dump badging "$APK" | grep "package: name='it.meko.openclawmobile'"
+          "$AAPT" dump badging "$APK" | grep "launchable-activity: name='it.meko.openclawmobile.OpenClawV5Activity'"
+          unzip -t "$APK" >/dev/null
+          ls -lh "$APK"
 
       - name: Enable KVM for emulator
         run: |
