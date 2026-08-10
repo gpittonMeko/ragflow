@@ -53,7 +53,8 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
         attachments: List<ChatAttachment>,
         relevantMemory: String,
         maxOutputTokens: Int,
-        enableDeviceTools: Boolean
+        enableDeviceTools: Boolean,
+        enableWebSearch: Boolean = true
     ): AgentResult = withContext(Dispatchers.IO) {
         require(apiKey.isNotBlank()) { "Inserisci la API key OpenRouter" }
         require(maxOutputTokens >= 128 || model.isFree) { "Budget mensile quasi esaurito: passa a Gratis o aumenta il budget" }
@@ -62,10 +63,7 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
         wireMessages.put(
             JSONObject()
                 .put("role", "system")
-                .put(
-                    "content",
-                    buildSystemPrompt(relevantMemory, enableDeviceTools)
-                )
+                .put("content", buildSystemPrompt(relevantMemory, enableDeviceTools, enableWebSearch))
         )
 
         val lastUserIndex = messages.indexOfLast { it.role == "user" }
@@ -85,7 +83,7 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
         var totalCost = 0.0
         var actions = 0
         var lastText = ""
-        val toolsEnabled = enableDeviceTools && ClawAccessibilityService.available()
+        val deviceEnabled = enableDeviceTools && ClawAccessibilityService.available()
 
         repeat(7) { turn ->
             val body = JSONObject()
@@ -94,8 +92,9 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
                 .put("stream", false)
                 .put("max_tokens", if (model.isFree) maxOutputTokens.coerceAtLeast(4096) else maxOutputTokens)
 
-            if (toolsEnabled) {
-                body.put("tools", deviceTools())
+            val tools = combinedTools(deviceEnabled, enableWebSearch)
+            if (tools.length() > 0) {
+                body.put("tools", tools)
                 body.put("tool_choice", "auto")
             }
             if (attachments.any { it.mimeType.equals("application/pdf", true) }) {
@@ -134,14 +133,23 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
                 if (content.isNotBlank()) lastText = content
 
                 val toolCalls = assistant.optJSONArray("tool_calls")
-                if (!toolsEnabled || toolCalls == null || toolCalls.length() == 0) {
+                val localCalls = mutableListOf<JSONObject>()
+                if (toolCalls != null) {
+                    for (i in 0 until toolCalls.length()) {
+                        val call = toolCalls.optJSONObject(i) ?: continue
+                        val name = call.optJSONObject("function")?.optString("name").orEmpty()
+                        // OpenRouter server tools are executed server-side. Only local Android calls come back to us.
+                        if (name in LOCAL_TOOL_NAMES) localCalls += call
+                    }
+                }
+
+                if (!deviceEnabled || localCalls.isEmpty()) {
                     val finalText = content.ifBlank { lastText }.ifBlank { "Operazione completata." }
                     return@withContext AgentResult(finalText, model.id, totalCost, actions)
                 }
 
                 wireMessages.put(JSONObject(assistant.toString()).put("role", "assistant"))
-                for (i in 0 until toolCalls.length()) {
-                    val call = toolCalls.optJSONObject(i) ?: continue
+                for (call in localCalls) {
                     val callId = call.optString("id")
                     val fn = call.optJSONObject("function") ?: continue
                     val name = fn.optString("name")
@@ -165,15 +173,34 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
         AgentResult(lastText.ifBlank { "Operazione terminata." }, model.id, totalCost, actions)
     }
 
-    private fun buildSystemPrompt(memory: String, tools: Boolean): String = buildString {
-        append("Sei OpenClaw Mobile, assistente personale Android. Rispondi in modo naturale e conciso. ")
+    private fun buildSystemPrompt(memory: String, tools: Boolean, web: Boolean): String = buildString {
+        append("Sei OpenClaw Mobile, assistente personale Android e second brain dell'utente. Rispondi in modo naturale e conciso. ")
+        append("Usa i tool quando rendono la risposta più utile invece di descrivere soltanto cosa dovrebbe fare l'utente. ")
         append("Non dire di non poter agire sul telefono quando i tool Android sono disponibili: usali. ")
         append("Per task sul dispositivo, osserva la schermata quando serve, esegui un passo alla volta e verifica il risultato. ")
         append("Non inventare di aver cliccato o aperto qualcosa: considera riuscita un'azione solo dopo il risultato del tool. ")
+        if (web) append("Per fatti recenti o informazioni che possono essere cambiate, usa il web search invece di indovinare. ")
         append("Per azioni irreversibili, acquisti o comunicazioni esterne non già richieste esplicitamente dall'utente, chiedi conferma prima dell'ultimo passo. ")
-        append("Usa testo pulito; Markdown va bene ma evita decorazioni eccessive. ")
-        if (!tools) append("I tool Android non sono attivi: se l'utente chiede un'azione sul telefono, spiegagli di abilitare Accessibilità nella sezione Device. ")
-        if (memory.isNotBlank()) append("\nProfilo utente rilevante recuperato localmente; usalo solo se pertinente:\n$memory")
+        append("Scrivi testo pulito. Evita asterischi decorativi e Markdown eccessivo; usa titoli semplici e liste solo quando servono. ")
+        if (!tools) append("I tool Android non sono attivi: per richieste sul telefono indica di abilitare Accessibilità nella sezione Device. ")
+        if (memory.isNotBlank()) append("\nMemoria rilevante recuperata localmente; usala soltanto se pertinente:\n$memory")
+    }
+
+    private fun combinedTools(device: Boolean, web: Boolean): JSONArray = JSONArray().apply {
+        if (web) {
+            // Current OpenRouter server-tool format. The provider executes this tool; no local round trip is required.
+            put(
+                JSONObject()
+                    .put("type", "openrouter:web_search")
+                    .put("engine", "auto")
+                    .put("max_total_results", 5)
+                    .put("search_context_size", "low")
+            )
+        }
+        if (device) {
+            val local = deviceTools()
+            for (i in 0 until local.length()) put(local.get(i))
+        }
     }
 
     private fun deviceTools(): JSONArray = JSONArray().apply {
@@ -267,5 +294,9 @@ class AgentClient(private val client: OkHttpClient = defaultClient()) {
             else -> "Errore OpenRouter HTTP $code"
         }
         return if (msg.isNullOrBlank()) "$prefix (HTTP $code)" else "$prefix — $msg"
+    }
+
+    private companion object {
+        val LOCAL_TOOL_NAMES = setOf("screen_snapshot", "open_app", "tap_text", "type_text", "scroll", "global_action")
     }
 }
