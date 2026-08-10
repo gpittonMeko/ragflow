@@ -16,8 +16,30 @@ import java.io.IOException
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.util.concurrent.TimeUnit
+import kotlin.math.ln
+import kotlin.math.min
 
-data class ModelInfo(val id: String, val name: String = id)
+data class ModelInfo(
+    val id: String,
+    val name: String = id,
+    val contextLength: Int = 0,
+    val promptPricePerMillion: Double? = null,
+    val completionPricePerMillion: Double? = null,
+    val capabilityScore: Int = 0,
+    val reasoning: Boolean = false,
+    val vision: Boolean = false,
+    val tools: Boolean = false
+) {
+    val averagePricePerMillion: Double?
+        get() {
+            val prices = listOfNotNull(promptPricePerMillion, completionPricePerMillion)
+            return prices.takeIf { it.isNotEmpty() }?.average()
+        }
+
+    val isFree: Boolean
+        get() = promptPricePerMillion == 0.0 && completionPricePerMillion == 0.0
+}
+
 data class ChatMessage(val role: String, val content: String)
 
 enum class ProviderMode { OPENROUTER, OPENAI_COMPATIBLE }
@@ -41,8 +63,6 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
                 .readTimeout(90, TimeUnit.SECONDS)
                 .writeTimeout(45, TimeUnit.SECONDS)
                 .callTimeout(120, TimeUnit.SECONDS)
-                // Some Android/vendor cellular stacks abort reused HTTP/2 sockets.
-                // HTTP/1.1 is slower only marginally for these small API calls and is much more tolerant.
                 .protocols(listOf(Protocol.HTTP_1_1))
                 .build()
         }
@@ -61,7 +81,7 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
         val builder = Request.Builder()
             .url(url)
             .header("Accept", "application/json")
-            .header("User-Agent", "OpenClaw-Mobile/0.1")
+            .header("User-Agent", "OpenClaw-Mobile/0.2")
         if (apiKey.isNotBlank()) builder.header("Authorization", "Bearer ${apiKey.trim()}")
         if (mode == ProviderMode.OPENROUTER) builder.header("X-Title", "OpenClaw Mobile")
 
@@ -74,9 +94,48 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
                 for (i in 0 until data.length()) {
                     val obj = data.optJSONObject(i) ?: continue
                     val id = obj.optString("id")
-                    if (id.isNotBlank()) add(ModelInfo(id, obj.optString("name", id)))
+                    if (id.isBlank()) continue
+
+                    if (mode == ProviderMode.OPENROUTER) {
+                        val supported = jsonStringSet(obj.optJSONArray("supported_parameters"))
+                        val architecture = obj.optJSONObject("architecture")
+                        val modalities = jsonStringSet(architecture?.optJSONArray("input_modalities"))
+                        val modalityText = architecture?.optString("modality").orEmpty().lowercase()
+                        val pricing = obj.optJSONObject("pricing")
+                        val promptPrice = perMillion(pricing?.optString("prompt"))
+                        val completionPrice = perMillion(pricing?.optString("completion"))
+                        val contextLength = obj.optInt("context_length", 0).coerceAtLeast(0)
+                        val reasoning = supported.any { it.contains("reasoning") }
+                        val tools = supported.any { it == "tools" || it.contains("tool_choice") }
+                        val vision = modalities.any { it.contains("image") } || modalityText.contains("image")
+                        val structured = supported.any {
+                            it.contains("structured") || it.contains("json_schema") || it.contains("response_format")
+                        }
+
+                        add(
+                            ModelInfo(
+                                id = id,
+                                name = obj.optString("name", id).ifBlank { id },
+                                contextLength = contextLength,
+                                promptPricePerMillion = promptPrice,
+                                completionPricePerMillion = completionPrice,
+                                capabilityScore = capabilityScore(
+                                    contextLength = contextLength,
+                                    reasoning = reasoning,
+                                    vision = vision,
+                                    tools = tools,
+                                    structured = structured
+                                ),
+                                reasoning = reasoning,
+                                vision = vision,
+                                tools = tools
+                            )
+                        )
+                    } else {
+                        add(ModelInfo(id = id, name = obj.optString("name", id).ifBlank { id }))
+                    }
                 }
-            }.sortedBy { it.name.lowercase() }
+            }.sortedBy { model -> model.name.lowercase() }
         }
     }
 
@@ -107,7 +166,7 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
             .url(url)
             .header("Accept", "application/json")
             .header("Content-Type", "application/json")
-            .header("User-Agent", "OpenClaw-Mobile/0.1")
+            .header("User-Agent", "OpenClaw-Mobile/0.2")
             .post(bodyJson.toString().toRequestBody(jsonType))
         if (apiKey.isNotBlank()) requestBuilder.header("Authorization", "Bearer ${apiKey.trim()}")
         if (mode == ProviderMode.OPENROUTER) requestBuilder.header("X-Title", "OpenClaw Mobile")
@@ -179,5 +238,38 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
             else -> "Errore $operation HTTP $code"
         }
         return if (!apiMessage.isNullOrBlank()) "$prefix — $apiMessage" else "$prefix (HTTP $code)"
+    }
+
+    private fun perMillion(raw: String?): Double? {
+        val value = raw?.trim()?.toDoubleOrNull() ?: return null
+        return value * 1_000_000.0
+    }
+
+    private fun jsonStringSet(array: JSONArray?): Set<String> {
+        if (array == null) return emptySet()
+        return buildSet {
+            for (i in 0 until array.length()) {
+                array.optString(i).trim().lowercase().takeIf { it.isNotBlank() }?.let(::add)
+            }
+        }
+    }
+
+    private fun capabilityScore(
+        contextLength: Int,
+        reasoning: Boolean,
+        vision: Boolean,
+        tools: Boolean,
+        structured: Boolean
+    ): Int {
+        var score = 36
+        if (reasoning) score += 26
+        if (tools) score += 12
+        if (vision) score += 10
+        if (structured) score += 7
+        if (contextLength > 0) {
+            val contextBoost = (ln(contextLength.coerceAtLeast(8_000) / 8_000.0) / ln(2.0) * 3.5).toInt()
+            score += min(9, contextBoost.coerceAtLeast(0))
+        }
+        return score.coerceIn(0, 100)
     }
 }
