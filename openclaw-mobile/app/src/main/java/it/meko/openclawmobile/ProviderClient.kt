@@ -1,5 +1,6 @@
 package it.meko.openclawmobile
 
+import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -28,7 +29,9 @@ data class ModelInfo(
     val capabilityScore: Int = 0,
     val reasoning: Boolean = false,
     val vision: Boolean = false,
-    val tools: Boolean = false
+    val tools: Boolean = false,
+    val fileInput: Boolean = false,
+    val intelligenceRank: Int? = null
 ) {
     val averagePricePerMillion: Double?
         get() {
@@ -41,6 +44,13 @@ data class ModelInfo(
 }
 
 data class ChatMessage(val role: String, val content: String)
+
+data class ChatAttachment(
+    val name: String,
+    val mimeType: String,
+    val base64: String,
+    val sizeBytes: Long = 0L
+)
 
 enum class ProviderMode { OPENROUTER, OPENAI_COMPATIBLE }
 
@@ -60,9 +70,9 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
                 .dns(ipv4FirstDns)
                 .retryOnConnectionFailure(true)
                 .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(90, TimeUnit.SECONDS)
-                .writeTimeout(45, TimeUnit.SECONDS)
-                .callTimeout(120, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+                .writeTimeout(90, TimeUnit.SECONDS)
+                .callTimeout(180, TimeUnit.SECONDS)
                 .protocols(listOf(Protocol.HTTP_1_1))
                 .build()
         }
@@ -75,13 +85,14 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
     ): List<ModelInfo> = withContext(Dispatchers.IO) {
         requireCredentials(mode, apiKey, baseUrl)
         val url = when (mode) {
-            ProviderMode.OPENROUTER -> "https://openrouter.ai/api/v1/models"
+            // OpenRouter applies Artificial Analysis' intelligence ordering server-side.
+            ProviderMode.OPENROUTER -> "https://openrouter.ai/api/v1/models?sort=intelligence-high-to-low"
             ProviderMode.OPENAI_COMPATIBLE -> "${normalizeBaseUrl(baseUrl)}/models"
         }
         val builder = Request.Builder()
             .url(url)
             .header("Accept", "application/json")
-            .header("User-Agent", "OpenClaw-Mobile/0.2")
+            .header("User-Agent", "OpenClaw-Mobile/0.4")
         if (apiKey.isNotBlank()) builder.header("Authorization", "Bearer ${apiKey.trim()}")
         if (mode == ProviderMode.OPENROUTER) builder.header("X-Title", "OpenClaw Mobile")
 
@@ -108,6 +119,7 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
                         val reasoning = supported.any { it.contains("reasoning") }
                         val tools = supported.any { it == "tools" || it.contains("tool_choice") }
                         val vision = modalities.any { it.contains("image") } || modalityText.contains("image")
+                        val fileInput = modalities.any { it.contains("file") || it.contains("pdf") }
                         val structured = supported.any {
                             it.contains("structured") || it.contains("json_schema") || it.contains("response_format")
                         }
@@ -128,14 +140,16 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
                                 ),
                                 reasoning = reasoning,
                                 vision = vision,
-                                tools = tools
+                                tools = tools,
+                                fileInput = fileInput,
+                                intelligenceRank = i + 1
                             )
                         )
                     } else {
                         add(ModelInfo(id = id, name = obj.optString("name", id).ifBlank { id }))
                     }
                 }
-            }.sortedBy { model -> model.name.lowercase() }
+            }
         }
     }
 
@@ -144,7 +158,8 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
         apiKey: String,
         baseUrl: String,
         model: String,
-        messages: List<ChatMessage>
+        messages: List<ChatMessage>,
+        attachments: List<ChatAttachment> = emptyList()
     ): String = withContext(Dispatchers.IO) {
         requireCredentials(mode, apiKey, baseUrl)
         require(model.isNotBlank()) { "Seleziona un modello prima di inviare" }
@@ -154,19 +169,46 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
             ProviderMode.OPENAI_COMPATIBLE -> "${normalizeBaseUrl(baseUrl)}/chat/completions"
         }
         val array = JSONArray()
-        messages.forEach { message ->
-            array.put(JSONObject().put("role", message.role).put("content", message.content))
+        val lastUserIndex = messages.indexOfLast { it.role == "user" }
+        messages.forEachIndexed { index, message ->
+            val jsonMessage = JSONObject().put("role", message.role)
+            if (index == lastUserIndex && attachments.isNotEmpty()) {
+                val contentParts = JSONArray()
+                if (message.content.isNotBlank()) {
+                    contentParts.put(JSONObject().put("type", "text").put("text", message.content))
+                }
+                attachments.forEach { attachment ->
+                    contentParts.put(attachmentPart(attachment))
+                }
+                jsonMessage.put("content", contentParts)
+            } else {
+                jsonMessage.put("content", message.content)
+            }
+            array.put(jsonMessage)
         }
+
         val bodyJson = JSONObject()
             .put("model", model)
             .put("messages", array)
             .put("stream", false)
 
+        // Prefer the free text parser for PDFs. This keeps the Android app light and avoids OCR cost by default.
+        if (mode == ProviderMode.OPENROUTER && attachments.any { it.mimeType.equals("application/pdf", true) }) {
+            bodyJson.put(
+                "plugins",
+                JSONArray().put(
+                    JSONObject()
+                        .put("id", "file-parser")
+                        .put("pdf", JSONObject().put("engine", "cloudflare-ai"))
+                )
+            )
+        }
+
         val requestBuilder = Request.Builder()
             .url(url)
             .header("Accept", "application/json")
             .header("Content-Type", "application/json")
-            .header("User-Agent", "OpenClaw-Mobile/0.2")
+            .header("User-Agent", "OpenClaw-Mobile/0.4")
             .post(bodyJson.toString().toRequestBody(jsonType))
         if (apiKey.isNotBlank()) requestBuilder.header("Authorization", "Bearer ${apiKey.trim()}")
         if (mode == ProviderMode.OPENROUTER) requestBuilder.header("X-Title", "OpenClaw Mobile")
@@ -182,6 +224,45 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
                 ?.takeIf { text -> text.isNotBlank() }
                 ?: error("Il provider ha risposto senza testo")
         }
+    }
+
+    private fun attachmentPart(attachment: ChatAttachment): JSONObject {
+        val mime = attachment.mimeType.ifBlank { "application/octet-stream" }.lowercase()
+        val dataUrl = "data:$mime;base64,${attachment.base64}"
+        return when {
+            mime.startsWith("image/") -> JSONObject()
+                .put("type", "image_url")
+                .put("image_url", JSONObject().put("url", dataUrl))
+
+            isPlainTextDocument(mime, attachment.name) -> {
+                val text = runCatching {
+                    String(Base64.decode(attachment.base64, Base64.DEFAULT), Charsets.UTF_8)
+                }.getOrDefault("")
+                JSONObject()
+                    .put("type", "text")
+                    .put(
+                        "text",
+                        "Allegato ${attachment.name}:\n${text.take(160_000)}" +
+                            if (text.length > 160_000) "\n[contenuto troncato dall'app]" else ""
+                    )
+            }
+
+            else -> JSONObject()
+                .put("type", "file")
+                .put(
+                    "file",
+                    JSONObject()
+                        .put("filename", attachment.name)
+                        .put("file_data", dataUrl)
+                )
+        }
+    }
+
+    private fun isPlainTextDocument(mime: String, name: String): Boolean {
+        if (mime.startsWith("text/")) return true
+        val lower = name.lowercase()
+        return lower.endsWith(".md") || lower.endsWith(".json") || lower.endsWith(".csv") ||
+            lower.endsWith(".xml") || lower.endsWith(".yaml") || lower.endsWith(".yml") || lower.endsWith(".log")
     }
 
     private suspend fun executeWithRetry(request: Request): Response {
@@ -233,6 +314,7 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
             403 -> "Accesso al modello negato"
             404 -> "Modello o endpoint non trovato"
             408 -> "Timeout del provider"
+            413 -> "Allegato troppo grande per il provider"
             429 -> "Limite richieste raggiunto"
             in 500..599 -> "Errore temporaneo del provider"
             else -> "Errore $operation HTTP $code"
@@ -254,6 +336,7 @@ class ProviderClient(private val client: OkHttpClient = defaultClient()) {
         }
     }
 
+    // Kept for backwards compatibility with the previous UI. V4 uses OpenRouter's official intelligence order.
     private fun capabilityScore(
         contextLength: Int,
         reasoning: Boolean,
