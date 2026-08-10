@@ -12,8 +12,9 @@ class MemoryStore(context: Context) {
 
     companion object {
         const val MAX_PROFILE_ITEMS = 12
+        const val MAX_RETRIEVED_ITEMS = 4
+        const val MAX_CONTEXT_CHARS = 800
         private const val MAX_MEMORY_CHARS = 280
-        private const val MAX_CONTEXT_CHARS = 800
     }
 
     init {
@@ -44,9 +45,21 @@ class MemoryStore(context: Context) {
         addOrReplace(text.trim().take(MAX_MEMORY_CHARS))
     }
 
+    fun update(id: Long, text: String): Boolean {
+        val clean = text.trim().replace(Regex("\\s+"), " ").take(MAX_MEMORY_CHARS)
+        if (clean.length < 3) return false
+        val items = list().toMutableList()
+        val index = items.indexOfFirst { it.id == id }
+        if (index < 0) return false
+        val current = items[index]
+        items[index] = current.copy(text = clean, createdAt = System.currentTimeMillis())
+        save(items.sortedByDescending { it.createdAt }.take(MAX_PROFILE_ITEMS))
+        return true
+    }
+
     /**
-     * Learns only stable-looking facts/preferences with local heuristics.
-     * No extra LLM request is made, so this adds effectively zero model latency/cost.
+     * Lightweight local learning. It stores only stable-looking facts/preferences and never
+     * calls a model, so it does not add network latency or token cost.
      */
     fun learnFrom(text: String): Boolean {
         if (!isLearningEnabled()) return false
@@ -68,36 +81,43 @@ class MemoryStore(context: Context) {
     fun clear() = prefs.edit().putString("items", "[]").apply()
 
     /** Backwards-compatible entry point for older UI. */
-    fun contextText(limit: Int = 8): String = contextTextFor("", limit.coerceAtMost(4))
+    fun contextText(limit: Int = 8): String = contextTextFor("", limit.coerceAtMost(MAX_RETRIEVED_ITEMS))
 
     /**
-     * Returns at most a few relevant memories instead of injecting the full profile.
-     * Global style/preferences get a small baseline score so they remain useful.
+     * Tiny lexical RAG: score each profile fragment against the current prompt and inject only
+     * the best few. Global preferences have a baseline weight so style choices remain available.
      */
-    fun contextTextFor(prompt: String, limit: Int = 4): String {
+    fun contextTextFor(prompt: String, limit: Int = MAX_RETRIEVED_ITEMS): String {
         val memories = list()
         if (memories.isEmpty()) return ""
 
         val promptTokens = tokens(prompt)
+        val now = System.currentTimeMillis()
         val ranked = memories.map { memory ->
             val memoryTokens = tokens(memory.text)
-            val overlap = if (promptTokens.isEmpty()) 0 else memoryTokens.count { it in promptTokens }
-            val lower = memory.text.lowercase(Locale.ROOT)
-            val globalPreference = if (
-                lower.contains("preferisco") || lower.contains("mi piace") ||
-                lower.contains("non mi piace") || lower.contains("voglio che") ||
-                lower.contains("non voglio") || lower.contains("mi chiamo")
-            ) 2 else 0
-            memory to (overlap * 4 + globalPreference)
+            val intersection = memoryTokens.intersect(promptTokens)
+            val overlapScore = intersection.sumOf { token -> if (token.length >= 7) 6 else 4 }
+            val phraseScore = phraseAffinity(prompt, memory.text)
+            val globalPreference = if (isGlobalPreference(memory.text)) 3 else 0
+            val ageDays = ((now - memory.createdAt).coerceAtLeast(0L) / 86_400_000L).toInt()
+            val recency = when {
+                ageDays < 7 -> 2
+                ageDays < 30 -> 1
+                else -> 0
+            }
+            memory to (overlapScore + phraseScore + globalPreference + recency)
         }
 
         val selected = ranked
             .sortedWith(compareByDescending<Pair<MemoryItem, Int>> { it.second }.thenByDescending { it.first.createdAt })
-            .filter { it.second > 0 || promptTokens.isEmpty() }
-            .take(limit.coerceIn(1, 4))
+            .filter { it.second > 1 || promptTokens.isEmpty() }
+            .take(limit.coerceIn(1, MAX_RETRIEVED_ITEMS))
             .map { it.first }
             .ifEmpty {
-                ranked.sortedByDescending { it.first.createdAt }.take(2).map { it.first }
+                ranked.filter { isGlobalPreference(it.first.text) }
+                    .sortedByDescending { it.first.createdAt }
+                    .take(2)
+                    .map { it.first }
             }
 
         val lines = mutableListOf<String>()
@@ -116,35 +136,19 @@ class MemoryStore(context: Context) {
     private fun looksLikeStableMemory(sentence: String): Boolean {
         val s = sentence.lowercase(Locale.ROOT)
         val markers = listOf(
-            "mi chiamo ",
-            "lavoro come ",
-            "lavoro con ",
-            "vivo a ",
-            "abito a ",
-            "preferisco ",
-            "mi piace ",
-            "non mi piace ",
-            "odio ",
-            "voglio che ",
-            "non voglio che ",
-            "ricordati che ",
-            "ricorda che ",
-            "uso sempre ",
-            "di solito uso ",
-            "sono un ",
-            "sono una "
+            "mi chiamo ", "lavoro come ", "lavoro con ", "vivo a ", "abito a ",
+            "preferisco ", "mi piace ", "non mi piace ", "odio ", "voglio che ",
+            "non voglio che ", "ricordati che ", "ricorda che ", "uso sempre ",
+            "di solito uso ", "sono un ", "sono una ", "il mio ", "la mia "
         )
         return markers.any { s.contains(it) }
     }
 
     private fun cleanLearnedMemory(text: String): String {
         return text.trim()
-            .removePrefix("Ricordati che ")
-            .removePrefix("ricordati che ")
-            .removePrefix("Ricorda che ")
-            .removePrefix("ricorda che ")
-            .trim()
-            .take(MAX_MEMORY_CHARS)
+            .removePrefix("Ricordati che ").removePrefix("ricordati che ")
+            .removePrefix("Ricorda che ").removePrefix("ricorda che ")
+            .trim().take(MAX_MEMORY_CHARS)
     }
 
     private fun addOrReplace(raw: String): Boolean {
@@ -152,13 +156,31 @@ class MemoryStore(context: Context) {
         if (clean.length < 3) return false
 
         val current = list().toMutableList()
-        val duplicate = current.firstOrNull { similarity(it.text, clean) >= 0.72 }
+        val duplicate = current.firstOrNull { similarity(it.text, clean) >= 0.68 }
         if (duplicate != null && normalize(duplicate.text) == normalize(clean)) return false
 
         if (duplicate != null) current.remove(duplicate)
         current.add(0, MemoryItem(System.nanoTime(), clean, System.currentTimeMillis()))
         save(current.take(MAX_PROFILE_ITEMS))
         return true
+    }
+
+    private fun phraseAffinity(prompt: String, memory: String): Int {
+        val p = prompt.lowercase(Locale.ROOT)
+        val m = memory.lowercase(Locale.ROOT)
+        return when {
+            p.length >= 12 && m.contains(p.take(24)) -> 5
+            m.length >= 12 && p.contains(m.take(24)) -> 5
+            else -> 0
+        }
+    }
+
+    private fun isGlobalPreference(text: String): Boolean {
+        val lower = text.lowercase(Locale.ROOT)
+        return listOf(
+            "preferisco", "mi piace", "non mi piace", "voglio che", "non voglio",
+            "mi chiamo", "lavoro come", "uso sempre", "di solito uso"
+        ).any(lower::contains)
     }
 
     private fun similarity(a: String, b: String): Double {
