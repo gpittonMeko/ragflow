@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,8 +37,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DarkColorScheme
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -80,7 +77,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private val ClawColors: DarkColorScheme = darkColorScheme(
+private val ClawColors = darkColorScheme(
     background = Color(0xFF080A0F),
     surface = Color(0xFF11141B),
     surfaceVariant = Color(0xFF191D27),
@@ -134,7 +131,9 @@ fun OpenClawMobileApp() {
                     putExtra(RecognizerIntent.EXTRA_PROMPT, "Parla con OpenClaw")
                 }
                 speechLauncher.launch(intent)
-            } else status = "Permesso microfono non concesso"
+            } else {
+                status = "Permesso microfono non concesso"
+            }
         }
 
         Scaffold(
@@ -163,12 +162,16 @@ fun OpenClawMobileApp() {
             }
         ) { padding ->
             Column(
-                modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp, vertical = 12.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 18.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Header(selectedModel = selectedModel, providerMode = providerMode)
                 when (section) {
                     AppSection.CHAT -> ChatScreen(
+                        modifier = Modifier.weight(1f),
                         messages = messages,
                         prompt = prompt,
                         onPrompt = { prompt = it },
@@ -189,12 +192,14 @@ fun OpenClawMobileApp() {
                             } else {
                                 messages.add(ChatMessage("user", userText))
                                 loading = true
-                                status = "Sto interrogando ${selectedModel}…"
+                                status = "Sto interrogando $selectedModel…"
                                 scope.launch {
                                     runCatching {
                                         val memoryText = memoryStore.contextText()
                                         val outbound = buildList {
-                                            if (memoryText.isNotBlank()) add(ChatMessage("system", "Memoria personale dell’utente:\n$memoryText\nUsala solo se utile."))
+                                            if (memoryText.isNotBlank()) {
+                                                add(ChatMessage("system", "Memoria personale dell’utente:\n$memoryText\nUsala solo se utile."))
+                                            }
                                             addAll(messages.toList())
                                         }
                                         providerClient.chat(providerMode, apiKey, baseUrl, selectedModel, outbound)
@@ -207,14 +212,16 @@ fun OpenClawMobileApp() {
                                         }
                                     }.onFailure { error ->
                                         status = error.message ?: "Errore sconosciuto"
-                                        messages.add(ChatMessage("assistant", "Errore: ${status}"))
+                                        messages.add(ChatMessage("assistant", "Errore: $status"))
                                     }
                                     loading = false
                                 }
                             }
                         }
                     )
+
                     AppSection.MODELS -> ModelsScreen(
+                        modifier = Modifier.weight(1f),
                         providerMode = providerMode,
                         onProviderMode = {
                             providerMode = it
@@ -253,7 +260,9 @@ fun OpenClawMobileApp() {
                             status = "Modello selezionato: ${model.id}"
                         }
                     )
+
                     AppSection.MEMORY -> MemoryScreen(
+                        modifier = Modifier.weight(1f),
                         memoryStore = memoryStore,
                         learning = learning,
                         refresh = memoryRefresh,
@@ -263,11 +272,13 @@ fun OpenClawMobileApp() {
                         },
                         onRefresh = { memoryRefresh++ }
                     )
+
                     AppSection.DEVICE -> DeviceScreen(
+                        modifier = Modifier.weight(1f),
                         accessibilityAvailable = ClawAccessibilityService.available(),
                         notifications = ClawNotificationService.recentNotifications(),
                         openAccessibility = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
-                        openNotifications = { context.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")) },
+                        openNotifications = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                         openBluetooth = { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }
                     )
                 }
@@ -282,16 +293,24 @@ private fun Header(selectedModel: String, providerMode: ProviderMode) {
         Column(Modifier.weight(1f)) {
             Text("OPENCLAW", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             Text("Mobile Agent", fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+            Text("Private • adaptive • on-device controls", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         AssistChip(
             onClick = {},
-            label = { Text(selectedModel.ifBlank { if (providerMode == ProviderMode.OPENROUTER) "OpenRouter" else "Custom" }.take(24)) }
+            label = {
+                Text(
+                    selectedModel.ifBlank {
+                        if (providerMode == ProviderMode.OPENROUTER) "OpenRouter" else "Custom"
+                    }.take(24)
+                )
+            }
         )
     }
 }
 
 @Composable
 private fun ChatScreen(
+    modifier: Modifier,
     messages: List<ChatMessage>,
     prompt: String,
     onPrompt: (String) -> Unit,
@@ -300,40 +319,59 @@ private fun ChatScreen(
     onMic: () -> Unit,
     onSend: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth().weight(1f),
-        shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        if (messages.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(Icons.Rounded.SmartToy, null, tint = MaterialTheme.colorScheme.primary)
-                    Text("Pronto a lavorare sul telefono", fontSize = 20.sp, fontWeight = FontWeight.Medium)
-                    Text("Prova: “apri WhatsApp”, “indietro”, oppure fai una domanda al modello.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Card(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            if (messages.isEmpty()) {
+                Box(Modifier.fillMaxSize().padding(26.dp), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Card(
+                            shape = RoundedCornerShape(22.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+                        ) {
+                            Icon(
+                                Icons.Rounded.SmartToy,
+                                contentDescription = null,
+                                modifier = Modifier.padding(18.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Text("Il tuo agente, sempre pronto", fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Parla, scegli il modello e controlla il telefono con autorizzazioni esplicite.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-            }
-        } else {
-            LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(messages) { message ->
-                    MessageBubble(message)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(messages) { message -> MessageBubble(message) }
                 }
             }
         }
-    }
-    Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            value = prompt,
-            onValueChange = onPrompt,
-            modifier = Modifier.weight(1f),
-            placeholder = { Text("Scrivi o parla…") },
-            maxLines = 4,
-            shape = RoundedCornerShape(20.dp)
-        )
-        IconButton(onClick = onMic) { Icon(Icons.Rounded.Mic, "Microfono") }
-        IconButton(onClick = onSend, enabled = !loading) {
-            if (loading) CircularProgressIndicator(modifier = Modifier.height(24.dp)) else Icon(Icons.Rounded.Send, "Invia")
+
+        Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = prompt,
+                onValueChange = onPrompt,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Scrivi o parla…") },
+                maxLines = 4,
+                shape = RoundedCornerShape(22.dp)
+            )
+            IconButton(onClick = onMic) { Icon(Icons.Rounded.Mic, "Microfono") }
+            IconButton(onClick = onSend, enabled = !loading) {
+                if (loading) CircularProgressIndicator(modifier = Modifier.height(24.dp))
+                else Icon(Icons.Rounded.Send, "Invia")
+            }
         }
     }
 }
@@ -344,14 +382,20 @@ private fun MessageBubble(message: ChatMessage) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start) {
         Card(
             modifier = Modifier.fillMaxWidth(0.88f),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (isUser) MaterialTheme.colorScheme.primary.copy(alpha = 0.17f) else MaterialTheme.colorScheme.surfaceVariant
+                containerColor = if (isUser) MaterialTheme.colorScheme.primary.copy(alpha = 0.17f)
+                else MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
             Column(Modifier.padding(14.dp)) {
-                Text(if (isUser) "Tu" else "OpenClaw", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(4.dp))
+                Text(
+                    if (isUser) "TU" else "OPENCLAW",
+                    fontSize = 10.sp,
+                    color = if (isUser) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(5.dp))
                 Text(message.content)
             }
         }
@@ -360,6 +404,7 @@ private fun MessageBubble(message: ChatMessage) {
 
 @Composable
 private fun ModelsScreen(
+    modifier: Modifier,
     providerMode: ProviderMode,
     onProviderMode: (ProviderMode) -> Unit,
     apiKey: String,
@@ -374,45 +419,70 @@ private fun ModelsScreen(
     onLoadModels: () -> Unit,
     onSelect: (ModelInfo) -> Unit
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        AssistChip(onClick = { onProviderMode(ProviderMode.OPENROUTER) }, label = { Text(if (providerMode == ProviderMode.OPENROUTER) "✓ OpenRouter" else "OpenRouter") })
-        AssistChip(onClick = { onProviderMode(ProviderMode.OPENAI_COMPATIBLE) }, label = { Text(if (providerMode == ProviderMode.OPENAI_COMPATIBLE) "✓ API compatibile" else "API compatibile") })
-    }
-    OutlinedTextField(
-        value = apiKey,
-        onValueChange = onApiKey,
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text("API key") },
-        visualTransformation = PasswordVisualTransformation(),
-        singleLine = true
-    )
-    if (providerMode == ProviderMode.OPENAI_COMPATIBLE) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Provider & modelli", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AssistChip(
+                onClick = { onProviderMode(ProviderMode.OPENROUTER) },
+                label = { Text(if (providerMode == ProviderMode.OPENROUTER) "✓ OpenRouter" else "OpenRouter") }
+            )
+            AssistChip(
+                onClick = { onProviderMode(ProviderMode.OPENAI_COMPATIBLE) },
+                label = { Text(if (providerMode == ProviderMode.OPENAI_COMPATIBLE) "✓ API compatibile" else "API compatibile") }
+            )
+        }
         OutlinedTextField(
-            value = baseUrl,
-            onValueChange = onBaseUrl,
+            value = apiKey,
+            onValueChange = onApiKey,
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Base URL (es. bridge OpenClaw / OpenAI-compatible)") },
-            singleLine = true
+            label = { Text("API key") },
+            visualTransformation = PasswordVisualTransformation(),
+            singleLine = true,
+            shape = RoundedCornerShape(18.dp)
         )
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = onSave) { Icon(Icons.Rounded.Settings, null); Text(" Salva") }
-        Button(onClick = onLoadModels, enabled = !loading) { Icon(Icons.Rounded.Refresh, null); Text(" Carica modelli") }
-    }
-    Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-    HorizontalDivider()
-    Text("Catalogo", fontSize = 18.sp, fontWeight = FontWeight.Medium)
-    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        items(models, key = { it.id }) { model ->
-            Card(
-                onClick = { onSelect(model) },
-                colors = CardDefaults.cardColors(
-                    containerColor = if (model.id == selectedModel) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surface
-                )
-            ) {
-                Column(Modifier.fillMaxWidth().padding(13.dp)) {
-                    Text(model.name, fontWeight = FontWeight.Medium)
-                    if (model.name != model.id) Text(model.id, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        if (providerMode == ProviderMode.OPENAI_COMPATIBLE) {
+            OutlinedTextField(
+                value = baseUrl,
+                onValueChange = onBaseUrl,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Base URL") },
+                supportingText = { Text("OpenAI-compatible o bridge personale") },
+                singleLine = true,
+                shape = RoundedCornerShape(18.dp)
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onSave) {
+                Icon(Icons.Rounded.Settings, null)
+                Text("  Salva")
+            }
+            Button(onClick = onLoadModels, enabled = !loading) {
+                Icon(Icons.Rounded.Refresh, null)
+                Text("  Carica modelli")
+            }
+        }
+        Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        HorizontalDivider()
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Catalogo", fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            if (models.isNotEmpty()) Text("${models.size}", color = MaterialTheme.colorScheme.secondary)
+        }
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            items(models, key = { it.id }) { model ->
+                Card(
+                    onClick = { onSelect(model) },
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (model.id == selectedModel) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                        else MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp)) {
+                        Text(model.name, fontWeight = FontWeight.Medium)
+                        if (model.name != model.id) {
+                            Text(model.id, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        }
+                    }
                 }
             }
         }
@@ -421,6 +491,7 @@ private fun ModelsScreen(
 
 @Composable
 private fun MemoryScreen(
+    modifier: Modifier,
     memoryStore: MemoryStore,
     learning: Boolean,
     refresh: Int,
@@ -429,26 +500,57 @@ private fun MemoryScreen(
 ) {
     var note by remember { mutableStateOf("") }
     val items = remember(refresh) { memoryStore.list() }
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Apprendimento locale", fontWeight = FontWeight.Medium)
-                Text("Memoria trasparente, modificabile e cancellabile.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Card(
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Row(Modifier.fillMaxWidth().padding(17.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Apprendimento locale", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Memoria trasparente, modificabile e cancellabile.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+                Switch(checked = learning, onCheckedChange = onLearning)
             }
-            Switch(checked = learning, onCheckedChange = onLearning)
         }
-    }
-    OutlinedTextField(value = note, onValueChange = { note = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Aggiungi una memoria") })
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(onClick = { if (note.isNotBlank()) { memoryStore.add(note); note = ""; onRefresh() } }) { Text("Salva memoria") }
-        OutlinedButton(onClick = { memoryStore.clear(); onRefresh() }) { Text("Cancella tutto") }
-    }
-    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(items, key = { it.id }) { item ->
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(item.text, modifier = Modifier.weight(1f))
-                    IconButton(onClick = { memoryStore.remove(item.id); onRefresh() }) { Icon(Icons.Rounded.Delete, "Elimina") }
+        OutlinedTextField(
+            value = note,
+            onValueChange = { note = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Aggiungi una memoria") },
+            shape = RoundedCornerShape(18.dp)
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                if (note.isNotBlank()) {
+                    memoryStore.add(note)
+                    note = ""
+                    onRefresh()
+                }
+            }) { Text("Salva memoria") }
+            OutlinedButton(onClick = {
+                memoryStore.clear()
+                onRefresh()
+            }) { Text("Cancella tutto") }
+        }
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(items, key = { it.id }) { item ->
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(item.text, modifier = Modifier.weight(1f))
+                        IconButton(onClick = {
+                            memoryStore.remove(item.id)
+                            onRefresh()
+                        }) { Icon(Icons.Rounded.Delete, "Elimina") }
+                    }
                 }
             }
         }
@@ -457,36 +559,50 @@ private fun MemoryScreen(
 
 @Composable
 private fun DeviceScreen(
+    modifier: Modifier,
     accessibilityAvailable: Boolean,
     notifications: List<NotificationSnapshot>,
     openAccessibility: () -> Unit,
     openNotifications: () -> Unit,
     openBluetooth: () -> Unit
 ) {
-    CapabilityCard(
-        title = "Controllo UI Android",
-        subtitle = if (accessibilityAvailable) "Attivo. Comandi: home, indietro, recenti, scorri, clicca…, apri…" else "Richiede Accessibility Service esplicitamente abilitato.",
-        button = if (accessibilityAvailable) "Apri impostazioni" else "Abilita",
-        onClick = openAccessibility
-    )
-    CapabilityCard(
-        title = "Notifiche",
-        subtitle = "${notifications.size} notifiche recenti disponibili in memoria volatile dopo l’autorizzazione.",
-        button = "Gestisci accesso",
-        onClick = openNotifications
-    )
-    CapabilityCard(
-        title = "Meta glasses / Bluetooth",
-        subtitle = "Il microfono può usare il routing Bluetooth esposto da Android. Le funzioni display Meta richiedono SDK e credenziali Meta dedicate.",
-        button = "Bluetooth",
-        onClick = openBluetooth
-    )
-    if (notifications.isNotEmpty()) {
-        Text("Ultime notifiche", fontWeight = FontWeight.Medium)
-        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    LazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item {
+            CapabilityCard(
+                title = "Controllo UI Android",
+                subtitle = if (accessibilityAvailable) {
+                    "Attivo. Comandi: home, indietro, recenti, scorri, clicca…, apri…"
+                } else {
+                    "Richiede Accessibility Service esplicitamente abilitato."
+                },
+                button = if (accessibilityAvailable) "Apri impostazioni" else "Abilita",
+                onClick = openAccessibility
+            )
+        }
+        item {
+            CapabilityCard(
+                title = "Notifiche",
+                subtitle = "${notifications.size} notifiche recenti disponibili dopo l’autorizzazione.",
+                button = "Gestisci accesso",
+                onClick = openNotifications
+            )
+        }
+        item {
+            CapabilityCard(
+                title = "Glasses & Bluetooth",
+                subtitle = "Voce via routing Bluetooth Android. Per display smart-glasses la UI viene trattata come esperienza dedicata, non come mirroring forzato.",
+                button = "Bluetooth",
+                onClick = openBluetooth
+            )
+        }
+        if (notifications.isNotEmpty()) {
+            item { Text("Ultime notifiche", fontSize = 18.sp, fontWeight = FontWeight.Medium) }
             items(notifications.take(10)) { n ->
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(13.dp)) {
                         Text(n.title.ifBlank { n.app }, fontWeight = FontWeight.Medium)
                         Text(n.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -498,8 +614,11 @@ private fun DeviceScreen(
 
 @Composable
 private fun CapabilityCard(title: String, subtitle: String, button: String, onClick: () -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(22.dp)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(22.dp)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, fontSize = 18.sp, fontWeight = FontWeight.Medium)
             Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(onClick = onClick) { Text(button) }
