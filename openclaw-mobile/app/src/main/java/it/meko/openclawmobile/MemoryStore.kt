@@ -34,9 +34,7 @@ class MemoryStore(context: Context) {
             for (i in 0 until array.length()) {
                 val obj = array.optJSONObject(i) ?: continue
                 val text = obj.optString("text").trim()
-                if (text.isNotBlank()) {
-                    add(MemoryItem(obj.optLong("id"), text, obj.optLong("createdAt")))
-                }
+                if (text.isNotBlank()) add(MemoryItem(obj.optLong("id"), text, obj.optLong("createdAt")))
             }
         }.sortedByDescending { it.createdAt }
     }
@@ -51,16 +49,11 @@ class MemoryStore(context: Context) {
         val items = list().toMutableList()
         val index = items.indexOfFirst { it.id == id }
         if (index < 0) return false
-        val current = items[index]
-        items[index] = current.copy(text = clean, createdAt = System.currentTimeMillis())
+        items[index] = items[index].copy(text = clean, createdAt = System.currentTimeMillis())
         save(items.sortedByDescending { it.createdAt }.take(MAX_PROFILE_ITEMS))
         return true
     }
 
-    /**
-     * Lightweight local learning. It stores only stable-looking facts/preferences and never
-     * calls a model, so it does not add network latency or token cost.
-     */
     fun learnFrom(text: String): Boolean {
         if (!isLearningEnabled()) return false
         val candidates = text
@@ -70,8 +63,8 @@ class MemoryStore(context: Context) {
             .filter(::looksLikeStableMemory)
 
         var changed = false
-        candidates.take(2).forEach { candidate ->
-            changed = addOrReplace(cleanLearnedMemory(candidate)) || changed
+        for (candidate in candidates.take(2)) {
+            if (addOrReplace(cleanLearnedMemory(candidate))) changed = true
         }
         return changed
     }
@@ -80,52 +73,54 @@ class MemoryStore(context: Context) {
 
     fun clear() = prefs.edit().putString("items", "[]").apply()
 
-    /** Backwards-compatible entry point for older UI. */
     fun contextText(limit: Int = 8): String = contextTextFor("", limit.coerceAtMost(MAX_RETRIEVED_ITEMS))
 
-    /**
-     * Tiny lexical RAG: score each profile fragment against the current prompt and inject only
-     * the best few. Global preferences have a baseline weight so style choices remain available.
-     */
     fun contextTextFor(prompt: String, limit: Int = MAX_RETRIEVED_ITEMS): String {
-        val memories = list()
+        val memories: List<MemoryItem> = list()
         if (memories.isEmpty()) return ""
 
-        val promptTokens = tokens(prompt)
+        val promptTokens: Set<String> = tokens(prompt)
         val now = System.currentTimeMillis()
-        val ranked = memories.map { memory ->
-            val memoryTokens = tokens(memory.text)
-            val intersection = memoryTokens.intersect(promptTokens)
-            val overlapScore = intersection.sumOf { token -> if (token.length >= 7) 6 else 4 }
-            val phraseScore = phraseAffinity(prompt, memory.text)
-            val globalPreference = if (isGlobalPreference(memory.text)) 3 else 0
-            val ageDays = ((now - memory.createdAt).coerceAtLeast(0L) / 86_400_000L).toInt()
-            val recency = when {
+        val ranked: List<Pair<MemoryItem, Int>> = memories.map { memory: MemoryItem ->
+            val memoryTokens: Set<String> = tokens(memory.text)
+            val intersection: Set<String> = memoryTokens.intersect(promptTokens)
+            var overlapScore = 0
+            for (token in intersection) {
+                overlapScore += if (token.length >= 7) 6 else 4
+            }
+            val phraseScore: Int = phraseAffinity(prompt, memory.text)
+            val globalPreference: Int = if (isGlobalPreference(memory.text)) 3 else 0
+            val ageDays: Int = ((now - memory.createdAt).coerceAtLeast(0L) / 86_400_000L).toInt()
+            val recency: Int = when {
                 ageDays < 7 -> 2
                 ageDays < 30 -> 1
                 else -> 0
             }
-            memory to (overlapScore + phraseScore + globalPreference + recency)
+            Pair(memory, overlapScore + phraseScore + globalPreference + recency)
         }
 
-        val selected = ranked
-            .sortedWith(compareByDescending<Pair<MemoryItem, Int>> { it.second }.thenByDescending { it.first.createdAt })
-            .filter { it.second > 1 || promptTokens.isEmpty() }
+        val primary: List<MemoryItem> = ranked
+            .sortedWith(compareByDescending<Pair<MemoryItem, Int>> { pair -> pair.second }.thenByDescending { pair -> pair.first.createdAt })
+            .filter { pair -> pair.second > 1 || promptTokens.isEmpty() }
             .take(limit.coerceIn(1, MAX_RETRIEVED_ITEMS))
-            .map { it.first }
-            .ifEmpty {
-                ranked.filter { isGlobalPreference(it.first.text) }
-                    .sortedByDescending { it.first.createdAt }
-                    .take(2)
-                    .map { it.first }
-            }
+            .map { pair -> pair.first }
+
+        val selected: List<MemoryItem> = if (primary.isNotEmpty()) {
+            primary
+        } else {
+            ranked
+                .filter { pair -> isGlobalPreference(pair.first.text) }
+                .sortedByDescending { pair -> pair.first.createdAt }
+                .take(2)
+                .map { pair -> pair.first }
+        }
 
         val lines = mutableListOf<String>()
         var chars = 0
         for (item in selected) {
             val line = "- ${item.text}"
             if (chars + line.length > MAX_CONTEXT_CHARS) break
-            lines += line
+            lines.add(line)
             chars += line.length
         }
         return lines.joinToString("\n")
@@ -141,22 +136,20 @@ class MemoryStore(context: Context) {
             "non voglio che ", "ricordati che ", "ricorda che ", "uso sempre ",
             "di solito uso ", "sono un ", "sono una ", "il mio ", "la mia "
         )
-        return markers.any { s.contains(it) }
+        return markers.any { marker -> s.contains(marker) }
     }
 
-    private fun cleanLearnedMemory(text: String): String {
-        return text.trim()
-            .removePrefix("Ricordati che ").removePrefix("ricordati che ")
-            .removePrefix("Ricorda che ").removePrefix("ricorda che ")
-            .trim().take(MAX_MEMORY_CHARS)
-    }
+    private fun cleanLearnedMemory(text: String): String = text.trim()
+        .removePrefix("Ricordati che ").removePrefix("ricordati che ")
+        .removePrefix("Ricorda che ").removePrefix("ricorda che ")
+        .trim().take(MAX_MEMORY_CHARS)
 
     private fun addOrReplace(raw: String): Boolean {
         val clean = raw.trim().replace(Regex("\\s+"), " ").take(MAX_MEMORY_CHARS)
         if (clean.length < 3) return false
 
         val current = list().toMutableList()
-        val duplicate = current.firstOrNull { similarity(it.text, clean) >= 0.68 }
+        val duplicate = current.firstOrNull { item -> similarity(item.text, clean) >= 0.68 }
         if (duplicate != null && normalize(duplicate.text) == normalize(clean)) return false
 
         if (duplicate != null) current.remove(duplicate)
@@ -180,7 +173,7 @@ class MemoryStore(context: Context) {
         return listOf(
             "preferisco", "mi piace", "non mi piace", "voglio che", "non voglio",
             "mi chiamo", "lavoro come", "uso sempre", "di solito uso"
-        ).any(lower::contains)
+        ).any { marker -> lower.contains(marker) }
     }
 
     private fun similarity(a: String, b: String): Double {
@@ -196,7 +189,7 @@ class MemoryStore(context: Context) {
         .lowercase(Locale.ROOT)
         .replace(Regex("[^a-zà-ÿ0-9 ]"), " ")
         .split(Regex("\\s+"))
-        .filter { it.length >= 3 && it !in stopWords }
+        .filter { token -> token.length >= 3 && token !in stopWords }
         .toSet()
 
     private fun normalize(text: String): String = text
@@ -205,9 +198,9 @@ class MemoryStore(context: Context) {
 
     private fun purgeLegacyTranscriptMemories() {
         val existing = listWithoutMigration()
-        val cleaned = existing.filterNot {
-            it.text.startsWith("L’utente ha chiesto:", ignoreCase = true) ||
-                it.text.startsWith("L'utente ha chiesto:", ignoreCase = true)
+        val cleaned = existing.filterNot { item ->
+            item.text.startsWith("L’utente ha chiesto:", ignoreCase = true) ||
+                item.text.startsWith("L'utente ha chiesto:", ignoreCase = true)
         }.take(MAX_PROFILE_ITEMS)
         if (cleaned.size != existing.size) save(cleaned)
     }
@@ -226,7 +219,7 @@ class MemoryStore(context: Context) {
 
     private fun save(items: List<MemoryItem>) {
         val array = JSONArray()
-        items.take(MAX_PROFILE_ITEMS).forEach { item ->
+        for (item in items.take(MAX_PROFILE_ITEMS)) {
             array.put(JSONObject().put("id", item.id).put("text", item.text).put("createdAt", item.createdAt))
         }
         prefs.edit().putString("items", array.toString()).apply()
