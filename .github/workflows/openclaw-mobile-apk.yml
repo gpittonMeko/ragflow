@@ -71,23 +71,21 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             mkdir -p /tmp/openclaw-smoke
-            APK="openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk"
-            PACKAGE="it.meko.openclawmobile"
-            ACTIVITY="$PACKAGE/.OpenClawV5Activity"
-
             set +e
             adb devices -l > /tmp/openclaw-smoke/devices.txt 2>&1
-            adb install -r "$APK" > /tmp/openclaw-smoke/install.txt 2>&1
+            echo "$GITHUB_WORKSPACE/openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk" > /tmp/openclaw-smoke/apk-path.txt
+            ls -l "$GITHUB_WORKSPACE/openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk" > /tmp/openclaw-smoke/apk-ls.txt 2>&1
+            adb install -r "$GITHUB_WORKSPACE/openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk" > /tmp/openclaw-smoke/install.txt 2>&1
             INSTALL_RC=$?
             echo "$INSTALL_RC" > /tmp/openclaw-smoke/install.rc
-            adb shell am force-stop "$PACKAGE" >> /tmp/openclaw-smoke/install.txt 2>&1
+            adb shell am force-stop it.meko.openclawmobile >> /tmp/openclaw-smoke/install.txt 2>&1
             adb logcat -c
-            adb shell am start -W -n "$ACTIVITY" > /tmp/openclaw-smoke/start.txt 2>&1
+            adb shell am start -W -n it.meko.openclawmobile/.OpenClawV5Activity > /tmp/openclaw-smoke/start.txt 2>&1
             START_RC=$?
             echo "$START_RC" > /tmp/openclaw-smoke/start.rc
             sleep 5
-            PID="$(adb shell pidof "$PACKAGE" 2>/dev/null | tr -d '\r')"
-            echo "$PID" > /tmp/openclaw-smoke/pid.txt
+            adb shell pidof it.meko.openclawmobile > /tmp/openclaw-smoke/pid.txt 2>/dev/null
+            PID="$(cat /tmp/openclaw-smoke/pid.txt | tr -d '\r\n')"
             adb shell dumpsys activity top > /tmp/openclaw-smoke/activity-top.txt 2>&1
             adb logcat -d -t 500 > /tmp/openclaw-smoke/logcat.txt 2>&1
 
@@ -98,9 +96,11 @@ jobs:
             fi
 
             echo "Smoke test failed: install=$INSTALL_RC start=$START_RC pid='${PID}'"
+            cat /tmp/openclaw-smoke/apk-path.txt || true
+            cat /tmp/openclaw-smoke/apk-ls.txt || true
             cat /tmp/openclaw-smoke/install.txt || true
             cat /tmp/openclaw-smoke/start.txt || true
-            grep -E "$PACKAGE|AndroidRuntime|FATAL EXCEPTION|Process:" /tmp/openclaw-smoke/logcat.txt | tail -n 160 || true
+            grep -E 'it.meko.openclawmobile|AndroidRuntime|FATAL EXCEPTION|Process:' /tmp/openclaw-smoke/logcat.txt | tail -n 160 || true
             exit 1
 
       - name: Print smoke diagnostics
@@ -108,6 +108,9 @@ jobs:
         run: |
           echo '--- devices ---'
           cat /tmp/openclaw-smoke/devices.txt 2>/dev/null || true
+          echo '--- apk path ---'
+          cat /tmp/openclaw-smoke/apk-path.txt 2>/dev/null || true
+          cat /tmp/openclaw-smoke/apk-ls.txt 2>/dev/null || true
           echo '--- install ---'
           cat /tmp/openclaw-smoke/install.txt 2>/dev/null || true
           echo '--- start ---'
