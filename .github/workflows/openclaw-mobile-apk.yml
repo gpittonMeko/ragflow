@@ -60,6 +60,8 @@ jobs:
           if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
 
       - name: Emulator install and launch smoke test
+        id: emulator_smoke
+        continue-on-error: true
         uses: ReactiveCircus/android-emulator-runner@v2.38.0
         with:
           api-level: 35
@@ -68,23 +70,64 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            set -e
+            mkdir -p /tmp/openclaw-smoke
             APK="openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk"
             PACKAGE="it.meko.openclawmobile"
             ACTIVITY="$PACKAGE/.OpenClawV5Activity"
-            adb install -r "$APK"
-            adb shell am force-stop "$PACKAGE" || true
+
+            set +e
+            adb devices -l > /tmp/openclaw-smoke/devices.txt 2>&1
+            adb install -r "$APK" > /tmp/openclaw-smoke/install.txt 2>&1
+            INSTALL_RC=$?
+            echo "$INSTALL_RC" > /tmp/openclaw-smoke/install.rc
+            adb shell am force-stop "$PACKAGE" >> /tmp/openclaw-smoke/install.txt 2>&1
             adb logcat -c
-            adb shell am start -W -n "$ACTIVITY"
-            sleep 4
-            PID="$(adb shell pidof "$PACKAGE" | tr -d '\r' || true)"
-            if [ -z "$PID" ]; then
-              echo "OpenClaw Mobile process is not alive after launch"
-              adb logcat -d -t 300 | grep -E "$PACKAGE|AndroidRuntime|FATAL EXCEPTION" || true
-              exit 1
+            adb shell am start -W -n "$ACTIVITY" > /tmp/openclaw-smoke/start.txt 2>&1
+            START_RC=$?
+            echo "$START_RC" > /tmp/openclaw-smoke/start.rc
+            sleep 5
+            PID="$(adb shell pidof "$PACKAGE" 2>/dev/null | tr -d '\r')"
+            echo "$PID" > /tmp/openclaw-smoke/pid.txt
+            adb shell dumpsys activity top > /tmp/openclaw-smoke/activity-top.txt 2>&1
+            adb logcat -d -t 500 > /tmp/openclaw-smoke/logcat.txt 2>&1
+
+            if [ "$INSTALL_RC" -eq 0 ] && [ "$START_RC" -eq 0 ] && [ -n "$PID" ]; then
+              touch /tmp/openclaw-smoke/PASSED
+              echo "OpenClaw Mobile running as PID $PID"
+              exit 0
             fi
-            echo "OpenClaw Mobile running as PID $PID"
-            adb shell dumpsys activity top | grep -E "OpenClawV5Activity|$PACKAGE" || true
+
+            echo "Smoke test failed: install=$INSTALL_RC start=$START_RC pid='${PID}'"
+            cat /tmp/openclaw-smoke/install.txt || true
+            cat /tmp/openclaw-smoke/start.txt || true
+            grep -E "$PACKAGE|AndroidRuntime|FATAL EXCEPTION|Process:" /tmp/openclaw-smoke/logcat.txt | tail -n 160 || true
+            exit 1
+
+      - name: Print smoke diagnostics
+        if: always()
+        run: |
+          echo '--- devices ---'
+          cat /tmp/openclaw-smoke/devices.txt 2>/dev/null || true
+          echo '--- install ---'
+          cat /tmp/openclaw-smoke/install.txt 2>/dev/null || true
+          echo '--- start ---'
+          cat /tmp/openclaw-smoke/start.txt 2>/dev/null || true
+          echo '--- pid ---'
+          cat /tmp/openclaw-smoke/pid.txt 2>/dev/null || true
+          echo '--- relevant logcat ---'
+          grep -E 'it.meko.openclawmobile|AndroidRuntime|FATAL EXCEPTION|Process:' /tmp/openclaw-smoke/logcat.txt 2>/dev/null | tail -n 200 || true
+
+      - name: Upload smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenClaw-Mobile-Smoke-Diagnostics
+          path: /tmp/openclaw-smoke
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Assert emulator smoke test
+        run: test -f /tmp/openclaw-smoke/PASSED
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
