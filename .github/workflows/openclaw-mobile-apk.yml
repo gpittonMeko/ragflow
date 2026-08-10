@@ -60,8 +60,6 @@ jobs:
           if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
 
       - name: Emulator install and launch smoke test
-        id: emulator_smoke
-        continue-on-error: true
         uses: ReactiveCircus/android-emulator-runner@v2.38.0
         with:
           api-level: 35
@@ -70,67 +68,33 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            mkdir -p /tmp/openclaw-smoke
-            set +e
-            adb devices -l > /tmp/openclaw-smoke/devices.txt 2>&1
-            echo "$GITHUB_WORKSPACE/openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk" > /tmp/openclaw-smoke/apk-path.txt
-            ls -l "$GITHUB_WORKSPACE/openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk" > /tmp/openclaw-smoke/apk-ls.txt 2>&1
-            adb install -r "$GITHUB_WORKSPACE/openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk" > /tmp/openclaw-smoke/install.txt 2>&1
-            INSTALL_RC=$?
-            echo "$INSTALL_RC" > /tmp/openclaw-smoke/install.rc
-            adb shell am force-stop it.meko.openclawmobile >> /tmp/openclaw-smoke/install.txt 2>&1
+            set -e
+            mkdir -p "${{ github.workspace }}/openclaw-smoke"
+            adb devices -l | tee "${{ github.workspace }}/openclaw-smoke/devices.txt"
+            ls -l "${{ github.workspace }}/openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk" | tee "${{ github.workspace }}/openclaw-smoke/apk-ls.txt"
+            adb install -r "${{ github.workspace }}/openclaw-mobile/app/build/outputs/apk/debug/app-debug.apk" | tee "${{ github.workspace }}/openclaw-smoke/install.txt"
+            adb shell am force-stop it.meko.openclawmobile || true
             adb logcat -c
-            adb shell am start -W -n it.meko.openclawmobile/.OpenClawV5Activity > /tmp/openclaw-smoke/start.txt 2>&1
-            START_RC=$?
-            echo "$START_RC" > /tmp/openclaw-smoke/start.rc
+            adb shell am start -W -n it.meko.openclawmobile/.OpenClawV5Activity | tee "${{ github.workspace }}/openclaw-smoke/start.txt"
             sleep 5
-            adb shell pidof it.meko.openclawmobile > /tmp/openclaw-smoke/pid.txt 2>/dev/null
-            PID="$(cat /tmp/openclaw-smoke/pid.txt | tr -d '\r\n')"
-            adb shell dumpsys activity top > /tmp/openclaw-smoke/activity-top.txt 2>&1
-            adb logcat -d -t 500 > /tmp/openclaw-smoke/logcat.txt 2>&1
-
-            if [ "$INSTALL_RC" -eq 0 ] && [ "$START_RC" -eq 0 ] && [ -n "$PID" ]; then
-              touch /tmp/openclaw-smoke/PASSED
-              echo "OpenClaw Mobile running as PID $PID"
-              exit 0
-            fi
-
-            echo "Smoke test failed: install=$INSTALL_RC start=$START_RC pid='${PID}'"
-            cat /tmp/openclaw-smoke/apk-path.txt || true
-            cat /tmp/openclaw-smoke/apk-ls.txt || true
-            cat /tmp/openclaw-smoke/install.txt || true
-            cat /tmp/openclaw-smoke/start.txt || true
-            grep -E 'it.meko.openclawmobile|AndroidRuntime|FATAL EXCEPTION|Process:' /tmp/openclaw-smoke/logcat.txt | tail -n 160 || true
-            exit 1
-
-      - name: Print smoke diagnostics
-        if: always()
-        run: |
-          echo '--- devices ---'
-          cat /tmp/openclaw-smoke/devices.txt 2>/dev/null || true
-          echo '--- apk path ---'
-          cat /tmp/openclaw-smoke/apk-path.txt 2>/dev/null || true
-          cat /tmp/openclaw-smoke/apk-ls.txt 2>/dev/null || true
-          echo '--- install ---'
-          cat /tmp/openclaw-smoke/install.txt 2>/dev/null || true
-          echo '--- start ---'
-          cat /tmp/openclaw-smoke/start.txt 2>/dev/null || true
-          echo '--- pid ---'
-          cat /tmp/openclaw-smoke/pid.txt 2>/dev/null || true
-          echo '--- relevant logcat ---'
-          grep -E 'it.meko.openclawmobile|AndroidRuntime|FATAL EXCEPTION|Process:' /tmp/openclaw-smoke/logcat.txt 2>/dev/null | tail -n 200 || true
+            adb shell pidof it.meko.openclawmobile | tee "${{ github.workspace }}/openclaw-smoke/pid.txt" | grep -E '[0-9]+'
+            adb shell dumpsys activity top > "${{ github.workspace }}/openclaw-smoke/activity-top.txt" 2>&1
+            adb logcat -d -t 500 > "${{ github.workspace }}/openclaw-smoke/logcat.txt" 2>&1
+            touch "${{ github.workspace }}/openclaw-smoke/PASSED"
 
       - name: Upload smoke diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: OpenClaw-Mobile-Smoke-Diagnostics
-          path: /tmp/openclaw-smoke
+          path: openclaw-smoke
           if-no-files-found: warn
           retention-days: 3
 
       - name: Assert emulator smoke test
-        run: test -f /tmp/openclaw-smoke/PASSED
+        run: |
+          test -f openclaw-smoke/PASSED
+          echo "Emulator install + cold launch passed"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
