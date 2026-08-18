@@ -7,6 +7,12 @@ on:
     paths:
       - 'simredirect-build/**'
       - '.github/workflows/build-simredirect.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'simredirect-build/**'
+      - '.github/workflows/build-simredirect.yml'
   workflow_dispatch:
 
 jobs:
